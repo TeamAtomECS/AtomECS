@@ -161,6 +161,7 @@ impl <'a>System<'a> for Update_rand_kick{
 	fn run(&mut self, (_inter,mut _kick,_t,_atom):Self::SystemData){
 		for (_inter,mut _kick,_atom) in (&_inter,&mut _kick,&_atom).join(){
 			let mut total_impulse = 0.0 ; 
+			_kick.force =[0.,0.,0.];
 			for interaction in &_inter.content{
 				total_impulse = total_impulse + Maths::modulus(&interaction.force)*_t.t;
 			}

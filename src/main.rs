@@ -7,7 +7,7 @@ mod output;
 use crate::constant::pi as pi;
 use crate::initiate::step;
 use crate::atom::Position;
-use crate::atom::{Velocity,Interaction_lasers,Force,Mag_sampler};
+use crate::atom::{Velocity,Interaction_lasers,Force,Mag_sampler,rand_kick};
 use crate::initiate::{timestep,Laser,Mag_field_gaussian,Atom_info};
 use crate::maths::Maths;
 use crate::update::{Update_sampler,Update_position_euler,Update_force,Update_interaction_laser,Update_laser,Update_rand_kick};
@@ -112,7 +112,7 @@ fn main() {
 	exp_MOT.add_resource(timestep{t:1e-6});
 	// initiate
 		// build a oven
-	exp_MOT.create_entity().with(Oven{temperature:300.,position:[0.1,0.1,0.1],direction:[1e-6,1e-6,1.],number:1,size:[1e-2,1e-2,1e-2]})
+	exp_MOT.create_entity().with(Oven{temperature:200.,position:[0.1,0.1,0.1],direction:[1e-6,1e-6,1.],number:1,size:[1e-2,1e-2,1e-2]})
 	.with(Rb_atom).build();
 		// initiator dispatched
 	let mut init_dispatcher=DispatcherBuilder::new()

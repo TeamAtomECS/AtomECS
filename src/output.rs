@@ -16,7 +16,7 @@ impl <'a>System <'a> for Print_output{
 								ReadStorage<'a,Position>,
 								ReadStorage<'a,Velocity>,
 								ReadStorage<'a,Force>,
-								ReadStorage<'a,rand_kick>
+								ReadStorage<'a,rand_kick>,
 								ReadExpect<'a,step>,
 								ReadExpect<'a,timestep>,
 								);
