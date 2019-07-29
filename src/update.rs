@@ -100,6 +100,3 @@ impl <'a>System<'a> for UpdateRandKick{
 		}
 	}
 }
-
-
-pub struct Collision;

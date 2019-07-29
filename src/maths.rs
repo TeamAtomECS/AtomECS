@@ -61,30 +61,6 @@ pub mod Maths{
 		}
 	}
 	
-	pub fn RK4(f:&Box<Fn(&[f64;3],&[f64;3])->[f64;3] +Send+Sync>,v0:&[f64;3],y0:&[f64;3], delta_t:f64) -> [[f64;3];2]{
-		//checked
-		let k1 = array_multiply(&f(&v0,&y0),delta_t);
-		let l1 = array_multiply(&v0,delta_t);
-		let y1 = array_addition(&y0,&array_multiply(&l1,0.5));
-		let v1 = array_addition(&v0,&array_multiply(&k1,0.5));
-		let k2 = array_multiply(&f(&v1,&y1),delta_t);
-		let l2 = array_multiply(&v1,delta_t);
-		
-		let y2 = array_addition(&y0,&array_multiply(&l2,0.5));
-		let v2 = array_addition(&v0,&array_multiply(&k2,0.5));
-		let k3 = array_multiply(&f(&v2,&y2),delta_t);		
-		let l3 = array_multiply(&v2,delta_t);
-		
-		let y3 = array_addition(&y0,&l3);
-		let v3 = array_addition(&v0,&k3);
-		let k4 = array_multiply(&f(&v3,&y3),delta_t);		
-		let l4 = array_multiply(&v3,delta_t);
-		
-
-		[[y0[0]+l1[0]/6.0+l2[0]/3.0+l3[0]/3.0+l4[0]/6.0,y0[1]+l1[1]/6.0+l2[1]/3.0+l3[1]/3.0+l4[1]/6.0,y0[2]+l1[2]/6.0+l2[2]/3.0+l3[2]/3.0+l4[2]/6.0],[v0[0]+k1[0]/6.0+k2[0]/3.0+k3[0]/3.0+k4[0]/6.0,v0[1]+k1[1]/6.0+k2[1]/3.0+k3[1]/3.0+k4[1]/6.0,v0[2]+k1[2]/6.0+k2[2]/3.0+k3[2]/3.0+k4[2]/6.0]]
-	
-	}	
-	
 	pub fn jtheta(theta:f64)-> f64{
 		//checked (against dongyang matlab code)
 		// problem remained what is it? 
