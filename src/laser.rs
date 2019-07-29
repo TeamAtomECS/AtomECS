@@ -8,23 +8,34 @@ use crate::maths::Maths;
 use crate::constant;
 
 pub struct Laser{
+	
 	pub centre:[f64;3],
+	/// wavevector of the laser light in SI unit
 	pub wavenumber:[f64;3],
+	/// polarisation of the laser light, 1. for +, -1. for -,
 	pub polarization:f64,
+	/// power of the laser in W
 	pub power:f64,
+	/// stand deviation of the laser light gaussian distribution
 	pub std:f64,
+	/// frequency of the laser light
 	pub frequency:f64,
+
+	/// index of the laser light, it is used to record the interaction between any laser and any atom
 	pub index:u64,
 }
 
 impl Component for Laser{
 	type Storage = VecStorage<Self>;
 }
-pub struct InteractionLaser{	
+pub struct InteractionLaser{
+	/// which laser is involved
 	pub index:u64,
+	/// intensity of the this laser light at this position
 	pub intensity:f64,
 	pub polarization:f64,
 	pub wavenumber:[f64;3],
+	/// the detuning between the laser light and the atom 
 	pub detuning_doppler:f64,
 	pub force:[f64;3],
 }
@@ -38,7 +49,7 @@ impl InteractionLaser{
 }
 
 pub struct InteractionLaserALL{
-	// just a collection of laser
+	// just a collection of laser interactions 
 	pub content:Vec<InteractionLaser>,
 }
 
