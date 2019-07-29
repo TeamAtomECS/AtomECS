@@ -10,21 +10,23 @@ impl Component for MagSampler{
 	type Storage = VecStorage<Self>;
 }
 
-pub struct MagFieldGaussian{
+pub struct MagFieldQuogra{
 	pub gradient:f64,
 	pub centre:[f64;3],
 }
 
-impl Component for MagFieldGaussian{
+impl Component for MagFieldQuogra{
+	//this component represent a source of quodrapole field
 	type Storage = VecStorage<Self>;
 }
 
 pub struct UpdateSampler;
 
 impl <'a> System<'a> for UpdateSampler{
+	// based on Magnetic field component presented, magnetic sampler will be added for every entity with a position
 		type SystemData = (WriteStorage<'a,MagSampler>,
 									ReadStorage<'a,Position>,
-									ReadStorage<'a,MagFieldGaussian>,
+									ReadStorage<'a,MagFieldQuogra>,
 									);
 	fn run(&mut self,(mut _sampler,pos,_mag_gauss):Self::SystemData){
 		

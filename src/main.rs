@@ -35,7 +35,7 @@ fn mot_2Dplus(){
 	exp_mot.register::<Laser>();
 	exp_mot.register::<MagSampler>();
 	exp_mot.register::<InteractionLaserALL>();
-	exp_mot.register::<MagFieldGaussian>();
+	exp_mot.register::<MagFieldQuogra>();
 	exp_mot.register::<RandKick>();
 	exp_mot.register::<Detector>();
 	
@@ -49,7 +49,7 @@ fn mot_2Dplus(){
 	};
 	exp_mot.add_resource(Step{n:0});
 	exp_mot.add_resource(AtomOuput{number_of_atom:0,total_velocity:[0.,0.,0.]});
-	let mag= MagFieldGaussian{
+	let mag= MagFieldQuogra{
 		gradient:0.002,
 		centre:[0.,0.,0.],
 	};
@@ -161,7 +161,7 @@ fn MOT_3D(){
 	exp_MOT.register::<Laser>();
 	exp_MOT.register::<MagSampler>();
 	exp_MOT.register::<InteractionLaserALL>();
-	exp_MOT.register::<MagFieldGaussian>();
+	exp_MOT.register::<MagFieldQuogra>();
 	exp_MOT.register::<RandKick>();
 	
 	//component for the experiment
@@ -173,7 +173,7 @@ fn MOT_3D(){
 	gamma:constant::TRANSWIDTH
 	};
 	exp_MOT.add_resource(Step{n:0});
-	let mag= MagFieldGaussian{
+	let mag= MagFieldQuogra{
 		gradient:0.002,
 		centre:[0.,0.,0.],
 	};
