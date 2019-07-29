@@ -1,7 +1,7 @@
 extern crate specs;
 use specs::{System,ReadStorage,WriteStorage,Join,Component,VecStorage,HashMapStorage};
 use crate::atom::Position;
-use crate::maths::Maths;
+use crate::maths;
 
 /// A component that measures the magnetic field at a point in space.
 pub struct MagneticFieldSampler{
@@ -43,7 +43,7 @@ impl Sample3DQuadrupoleFieldSystem {
 	/// 
 	/// `gradient`: quadrupole gradient, in G/cm
 	pub fn calculate_field(pos:&[f64;3], centre:&[f64;3], gradient:f64) -> [f64;3]{
-		let rel_pos = Maths::array_subtraction(&pos, &centre);
+		let rel_pos = maths::array_subtraction(&pos, &centre);
 		[rel_pos[0]*gradient, rel_pos[1]*gradient, rel_pos[2]*-2.*gradient]
 	}
 }
@@ -62,9 +62,9 @@ impl <'a> System<'a> for Sample3DQuadrupoleFieldSystem{
 	}
 }
 
-pub struct ClearSampler;
+pub struct ClearMagneticFieldSamplerSystem;
 
-impl <'a> System<'a> for ClearSampler{
+impl <'a> System<'a> for ClearMagneticFieldSamplerSystem{
 	type SystemData = (WriteStorage<'a,MagneticFieldSampler>);
 	fn run (&mut self,mut _sampler:Self::SystemData){
 		for sampler in (&mut _sampler).join(){
@@ -74,13 +74,13 @@ impl <'a> System<'a> for ClearSampler{
 	}
 }
 
-pub struct MagMagnitude;
+pub struct CalculateMagneticFieldMagnitudeSystem;
 
-impl <'a> System<'a> for MagMagnitude{
+impl <'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
 	type SystemData = (WriteStorage<'a,MagneticFieldSampler>);
 	fn run (&mut self,mut _sampler:Self::SystemData){
 		for sampler in (&mut _sampler).join(){
-			sampler.magnitude = Maths::modulus(&sampler.field);
+			sampler.magnitude = maths::modulus(&sampler.field);
 		}
 	}
 }

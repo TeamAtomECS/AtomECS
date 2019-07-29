@@ -1,6 +1,6 @@
-use crate::maths::Maths;
-	extern crate rand;
-	use rand::Rng;
+use crate::maths;
+extern crate rand;
+use rand::Rng;
 use crate::initiate::*;
 use crate::constant::PI as PI;
 extern crate specs;
@@ -11,18 +11,18 @@ use specs::{System,ReadStorage,Join,Read,Component,VecStorage,Entities,LazyUpdat
 
 
 pub fn velocity_generate(_t:f64,_mass:f64,_dir:&[f64;3])->[f64;3]{
-	let v_mag = Maths::maxwell_generate(_t,_mass);
-	let dir = Maths::norm(&_dir);
-	let dir_1 = Maths::norm(&[1.0,0.0,-dir[0]/dir[2]]);
-	let dir_2 = Maths::norm(&[1.0,(dir[1].powf(2.0)-1.0)/dir[0]/dir[1],dir[2]/dir[0]]);
+	let v_mag = maths::maxwell_generate(_t,_mass);
+	let dir = maths::norm(&_dir);
+	let dir_1 = maths::norm(&[1.0,0.0,-dir[0]/dir[2]]);
+	let dir_2 = maths::norm(&[1.0,(dir[1].powf(2.0)-1.0)/dir[0]/dir[1],dir[2]/dir[0]]);
 	let mut rng = rand::thread_rng();
-	let theta = Maths::jtheta_gen();
+	let theta = maths::jtheta_gen();
 	let theta2 = rng.gen_range(0.0, 2.0*PI);
 	println!("angle one {},angle two {}",theta,theta2);
-	let dir_div = Maths::array_addition(&Maths::array_multiply(&dir_1,theta.sin()*theta2.cos()),&Maths::array_multiply(&dir_2,theta.sin()*theta2.sin()));
-	let dirf = Maths::array_addition(&Maths::array_multiply(&dir,theta.cos()),&dir_div);
-	println!("{:?}",Maths::array_multiply(&dirf,v_mag));
-	Maths::array_multiply(&dirf,v_mag)
+	let dir_div = maths::array_addition(&maths::array_multiply(&dir_1,theta.sin()*theta2.cos()),&maths::array_multiply(&dir_2,theta.sin()*theta2.sin()));
+	let dirf = maths::array_addition(&maths::array_multiply(&dir,theta.cos()),&dir_div);
+	println!("{:?}",maths::array_multiply(&dirf,v_mag));
+	maths::array_multiply(&dirf,v_mag)
 	//[0.,0.,100.]
 }
 

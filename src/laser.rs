@@ -4,7 +4,7 @@ use crate::atom::*;
 use crate::magnetic::*;
 use crate::initiate::AtomInfo;
 use crate::constant::HBAR as HBAR;
-use crate::maths::Maths;
+use crate::maths;
 use crate::constant;
 
 pub struct Laser{
@@ -88,18 +88,18 @@ impl <'a> System<'a> for UpdateInteractionLaser{
 				let _mum = _atom.mum;
 				let _muz = _atom.muz;	
 				let s0 = inter.intensity/constant::SATINTEN;
-				let omega = Maths::modulus(&inter.wavenumber) * constant::C;
+				let omega = maths::modulus(&inter.wavenumber) * constant::C;
 				let wave_vector = inter.wavenumber;
 				let p = inter.polarization;
 				let gamma = _atom.gamma;
 				let atom_frequency = _atom.frequency;
-				let costheta = Maths::dot_product(&wave_vector,&mag_field) / Maths::modulus(&wave_vector)/Maths::modulus(&mag_field);
-				let detuning = omega - atom_frequency * 2.0* constant::PI - Maths::dot_product(&wave_vector,&_vel.vel);
+				let costheta = maths::dot_product(&wave_vector,&mag_field) / maths::modulus(&wave_vector)/maths::modulus(&mag_field);
+				let detuning = omega - atom_frequency * 2.0* constant::PI - maths::dot_product(&wave_vector,&_vel.vel);
 				
 				let scatter1 = 0.25*(p*costheta + 1.).powf(2.)*gamma/2./(1.+s0+4.*(detuning - _mup/HBAR*br).powf(2.)/gamma.powf(2.));
 				let scatter2 = 0.25*(p*costheta - 1.).powf(2.)*gamma/2./(1.+s0+4.*(detuning - _mum/HBAR*br).powf(2.)/gamma.powf(2.));
 				let scatter3 = 0.5*(1. - costheta.powf(2.))*gamma/2./(1.+s0+4.*(detuning - _muz/HBAR*br).powf(2.)/gamma.powf(2.));
-				let force_new = Maths::array_multiply(&wave_vector,s0*HBAR*(scatter1+scatter2+scatter3));
+				let force_new = maths::array_multiply(&wave_vector,s0*HBAR*(scatter1+scatter2+scatter3));
 				
 				inter.force =force_new;
 				inter.detuning_doppler=detuning;
@@ -124,9 +124,9 @@ impl <'a> System<'a> for UpdateLaser{
 			for inter in &mut _inter.content{
 			for _laser in (&_laser).join(){
 				if _laser.index == inter.index{
-					let rela_cood = Maths::array_addition(&_pos.pos,&Maths::array_multiply(&_laser.centre,-1.));
-					let distance = Maths::modulus(&Maths::cross_product(&_laser.wavenumber,&rela_cood))/Maths::modulus(&_laser.wavenumber);
-					let laser_inten = _laser.power*Maths::gaussian_dis(_laser.std,distance);
+					let rela_cood = maths::array_addition(&_pos.pos,&maths::array_multiply(&_laser.centre,-1.));
+					let distance = maths::modulus(&maths::cross_product(&_laser.wavenumber,&rela_cood))/maths::modulus(&_laser.wavenumber);
+					let laser_inten = _laser.power*maths::gaussian_dis(_laser.std,distance);
 					inter.intensity = laser_inten;
 					inter.wavenumber = _laser.wavenumber;
 					inter.polarization = _laser.polarization;

@@ -5,7 +5,7 @@ use specs::{System,ReadStorage,WriteStorage,Join,ReadExpect,WriteExpect};
 
 use crate::atom::*;
 use crate::initiate::*;
-use crate::maths::Maths;
+use crate::maths;
 
 /// # Euler Integration
 /// 
@@ -34,8 +34,8 @@ impl <'a> System<'a> for EulerIntegrationSystem{
 		for (mut vel,mut pos,force,atom) in (&mut vel,&mut pos,&force,&atom).join(){
 			//println!("euler method used");
 			let mass = atom.mass;
-			vel.vel = Maths::array_addition(&vel.vel,&Maths::array_multiply(&force.force,1./mass*t.t));
-			pos.pos = Maths::array_addition(&pos.pos,&Maths::array_multiply(&vel.vel,t.t));
+			vel.vel = maths::array_addition(&vel.vel,&maths::array_multiply(&force.force,1./mass*t.t));
+			pos.pos = maths::array_addition(&pos.pos,&maths::array_multiply(&vel.vel,t.t));
 		}
 	}
 }

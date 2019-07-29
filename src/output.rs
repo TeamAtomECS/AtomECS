@@ -1,5 +1,5 @@
 extern crate specs;
-use crate::maths::Maths;
+use crate::maths;
 use crate::atom::*;
 use crate::laser::InteractionLaserALL;
 use crate::initiate::{Timestep,Step};
@@ -67,7 +67,7 @@ impl <'a>System<'a> for DetectingAtom{
 			if if_detect(&detector,&_pos.pos){
 				atom_output.number_of_atom = atom_output.number_of_atom + 1;
 				println!("detected velocity{:?},position{:?}",_vel.vel,_pos.pos);
-				atom_output.total_velocity = Maths::array_addition(&atom_output.total_velocity,&_vel.vel);
+				atom_output.total_velocity = maths::array_addition(&atom_output.total_velocity,&_vel.vel);
 				lazy.remove::<Position>(ent);
 				lazy.remove::<Velocity>(ent);
 			}
@@ -96,7 +96,7 @@ impl <'a>System<'a> for PrintDetect{
 	//print the final output of a detector
 	type SystemData = (WriteExpect<'a,AtomOuput>);
 	fn run(&mut self, atom_output:Self::SystemData){
-		let average_vel = Maths::array_multiply(&atom_output.total_velocity,1./atom_output.number_of_atom as f64);
+		let average_vel = maths::array_multiply(&atom_output.total_velocity,1./atom_output.number_of_atom as f64);
 		println!("atom captured{},average velocity{:?}",atom_output.number_of_atom,average_vel);
 	}
 }

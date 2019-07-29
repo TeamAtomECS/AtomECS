@@ -128,9 +128,9 @@ fn mot_2Dplus(){
 	// run loop
 	let mut runner=DispatcherBuilder::new().
 	with(UpdateLaser,"updatelaser",&[]).
-	with(ClearSampler,"clear",&[]).
+	with(ClearMagneticFieldSamplerSystem,"clear",&[]).
 	with(Sample3DQuadrupoleFieldSystem,"updatesampler",&[]).
-	with(MagMagnitude,"magnitudecal",&["updatesampler"]).
+	with(CalculateMagneticFieldMagnitudeSystem,"magnitudecal",&["updatesampler"]).
 	with(UpdateInteractionLaser,"updateinter",&["updatelaser","updatesampler","magnitudecal"]).
 	with(UpdateRandKick,"update_kick",&["updateinter"]).
 	with(UpdateForce,"updateforce",&["update_kick","updateinter"]).

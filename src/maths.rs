@@ -1,4 +1,3 @@
-pub mod Maths{
 	use crate::constant::BOLTZCONST;
 	use crate::constant::PI;
 	use crate::constant::EXP;
@@ -131,5 +130,4 @@ pub mod Maths{
 			
 			assert!(maxwell_dis(300.,1e-25,100.)>0.000839 && maxwell_dis(300.,1e-25,100.)<0.000840);
 		}
-}
-}
+	}
