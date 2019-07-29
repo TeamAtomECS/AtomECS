@@ -1,27 +1,26 @@
 extern crate specs;
-use specs::{System,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect};
+use specs::{System,ReadStorage,WriteStorage,Join,ReadExpect,WriteExpect};
 
 use crate::atom::*;
-use crate::laser::Interaction_lasers;
+use crate::laser::InteractionLaserALL;
 use crate::maths::Maths;
 use crate::initiate::*;
-use crate::constant::hbar as hbar;
 use crate::constant;
 extern crate rand;
 use rand::Rng;
 
 
-pub struct Update_position_euler;
+pub struct UpdateEuler;
 
 
 // update function will update the the position and the velocity of the particle in a given timespan/ timestep
-impl <'a> System<'a> for Update_position_euler{
+impl <'a> System<'a> for UpdateEuler{
 	type SystemData = (	WriteStorage<'a,Position>,
 									WriteStorage<'a,Velocity>,
-									ReadExpect<'a,timestep>,
-									WriteExpect<'a,step>,
+									ReadExpect<'a,Timestep>,
+									WriteExpect<'a,Step>,
 									ReadStorage<'a,Force>,
-									ReadStorage<'a,Atom_info>
+									ReadStorage<'a,AtomInfo>
 									);
 		
 	fn run(&mut self,(mut _pos,mut _vel,_t,mut _step,_force,_atom):Self::SystemData){
@@ -38,12 +37,12 @@ impl <'a> System<'a> for Update_position_euler{
 }
 
 
-pub struct Update_force;
+pub struct UpdateForce;
 
-impl <'a>System<'a> for Update_force{
+impl <'a>System<'a> for UpdateForce{
 	type SystemData = ( WriteStorage<'a,Force>,
-									ReadStorage<'a,Interaction_lasers>,
-									ReadStorage<'a,rand_kick>
+									ReadStorage<'a,InteractionLaserALL>,
+									ReadStorage<'a,RandKick>
 									);
 	fn run(&mut self,(mut _force,inter,kick):Self::SystemData){
 		for (mut _force, inter) in (&mut _force,&inter).join(){
@@ -61,13 +60,13 @@ impl <'a>System<'a> for Update_force{
 	}
 }
 
-pub struct Update_rand_kick;
+pub struct UpdateRandKick;
 //this system must be ran after update_force
-impl <'a>System<'a> for Update_rand_kick{
-	type SystemData = (ReadStorage<'a,Interaction_lasers>,
-								WriteStorage<'a,rand_kick>,
-								ReadExpect<'a,timestep>,
-								ReadStorage<'a,Atom_info>);	
+impl <'a>System<'a> for UpdateRandKick{
+	type SystemData = (ReadStorage<'a,InteractionLaserALL>,
+								WriteStorage<'a,RandKick>,
+								ReadExpect<'a,Timestep>,
+								ReadStorage<'a,AtomInfo>);	
 	fn run(&mut self, (_inter,mut _kick,_t,_atom):Self::SystemData){
 		for (_inter,mut _kick,_atom) in (&_inter,&mut _kick,&_atom).join(){
 			let mut total_impulse = 0.0 ; 
@@ -75,7 +74,7 @@ impl <'a>System<'a> for Update_rand_kick{
 			for interaction in &_inter.content{
 				total_impulse = total_impulse + Maths::modulus(&interaction.force)*_t.t;
 			}
-			let momentum_photon = constant::hbar * 2.*constant::pi*_atom.frequency/constant::c;
+			let momentum_photon = constant::HBAR * 2.*constant::PI*_atom.frequency/constant::c;
 			let mut num_kick = total_impulse/ momentum_photon;
 			loop{
 				if num_kick >1.{
@@ -97,4 +96,4 @@ impl <'a>System<'a> for Update_rand_kick{
 }
 
 
-pub struct collision;
+pub struct Collision;

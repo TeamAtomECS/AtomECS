@@ -1,16 +1,13 @@
 extern crate specs;
-use specs::{System,Write,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect,Component,VecStorage};
-use crate::maths::Maths;
-use crate::constant;
-use crate::constant::hbar as hbar;
-pub struct Create_DE;
+use specs::{Component,VecStorage};
+
 pub mod atom_create;
 
-pub struct step{
+pub struct Step{
 	pub n : u64,
 }
 
-pub struct timestep{
+pub struct Timestep{
 	pub t:f64,
 }
 
@@ -21,15 +18,16 @@ pub struct timestep{
 
 
 
-pub struct Atom_info{
+pub struct AtomInfo{
 	pub mass:f64,
 	pub mup:f64,
 	pub mum:f64,
+	
 	pub muz:f64,
 	pub frequency:f64,
 	pub gamma:f64,
 }
 
-impl Component for Atom_info{
+impl Component for AtomInfo{
 	type Storage = VecStorage<Self>;	
 }

@@ -2,30 +2,30 @@ extern crate specs;
 use crate::maths::Maths;
 use crate::constant;
 use crate::atom::*;
-use crate::laser::Interaction_lasers;
-use crate::initiate::{timestep,step};
+use crate::laser::InteractionLaserALL;
+use crate::initiate::{Timestep,Step};
 
-use specs::{System,Write,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect,Component,VecStorage,Entities,LazyUpdate};
+use specs::{System,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect,Component,VecStorage,Entities,LazyUpdate};
 
-pub struct Print_output;
+pub struct PrintOutput;
 
-impl <'a>System <'a> for Print_output{
+impl <'a>System <'a> for PrintOutput{
 
 	// print the output (whatever you want) to the console
 	type SystemData = (
-								ReadStorage<'a,Interaction_lasers>,
+								ReadStorage<'a,InteractionLaserALL>,
 								ReadStorage<'a,Position>,
 								ReadStorage<'a,Velocity>,
 								ReadStorage<'a,Force>,
-								ReadStorage<'a,rand_kick>,
-								ReadExpect<'a,step>,
-								ReadExpect<'a,timestep>,
+								ReadStorage<'a,RandKick>,
+								ReadExpect<'a,Step>,
+								ReadExpect<'a,Timestep>,
 								);
 	fn run(&mut self, (_lasers,_pos,_vel,_force,_kick,_step,_t):Self::SystemData){
 		let time = _t.t * _step.n as f64;
 		for (_lasers,_vel,_pos,_force,_kick) in (&_lasers,&_vel,&_pos,&_force,&_kick).join(){
 			if _step.n % 100 == 0{
-				for inter in &_lasers.content{
+				for _inter in &_lasers.content{
 					//println!("index{},detuning{},force{:?}",inter.index,inter.detuning_doppler,inter.force);
 				}
 				//println!("time{}position{:?},velocity{:?},acc{:?},kick{:?}",time,_pos.pos,_vel.vel,Maths::array_multiply(&_force.force,1./constant::MRb),Maths::array_multiply(&_kick.force,1./constant::MRb));
@@ -34,7 +34,7 @@ impl <'a>System <'a> for Print_output{
 		}
 	}
 }
-pub struct Atom_output{
+pub struct AtomOuput{
 	pub number_of_atom : u64,
 	pub total_velocity:[f64;3],
 }
@@ -50,20 +50,20 @@ impl Component for Detector{
 	type Storage = VecStorage<Self>;
 }
 
-pub struct Detecting_atom;
+pub struct DetectingAtom;
 
-impl <'a>System<'a> for Detecting_atom{
+impl <'a>System<'a> for DetectingAtom{
 	type SystemData = (
 								Entities<'a>,
 								ReadStorage<'a,Detector>,
 								WriteStorage<'a,Position>,
 								WriteStorage<'a,Velocity>,
-								WriteExpect<'a,Atom_output>,
+								WriteExpect<'a,AtomOuput>,
 								Read<'a,LazyUpdate>,
 								);
 	fn run(&mut self, (mut ent,detector,mut _pos,mut _vel,mut atom_output,lazy):Self::SystemData){
 		//check if an atom is within the detector
-		for (detector) in (&detector).join(){
+		for detector in (&detector).join(){
 		for (ent,mut _vel,_pos) in (&ent,&mut _vel,&_pos).join(){
 			if if_detect(&detector,&_pos.pos){
 				atom_output.number_of_atom = atom_output.number_of_atom + 1;
@@ -80,7 +80,7 @@ impl <'a>System<'a> for Detecting_atom{
 // a function here just for convenience
 	pub fn if_detect (_detector:&Detector, position:&[f64;3]) -> bool{
 		let mut result = true;
-		for i in (0..3){
+		for i in 0..3{
 			result = result && (position[i]<(_detector.centre[i]+_detector.range[i]))&&(position[i]>(_detector.centre[i]-_detector.range[i]));
 		}
 	result
@@ -91,11 +91,11 @@ impl <'a>System<'a> for Detecting_atom{
 	}
 	
 	
-pub struct Print_detect;
+pub struct PrintDetect;
 
-impl <'a>System<'a> for Print_detect{
-	type SystemData = (WriteExpect<'a,Atom_output>);
-	fn run(&mut self, (atom_output):Self::SystemData){
+impl <'a>System<'a> for PrintDetect{
+	type SystemData = (WriteExpect<'a,AtomOuput>);
+	fn run(&mut self, atom_output:Self::SystemData){
 		let average_vel = Maths::array_multiply(&atom_output.total_velocity,1./atom_output.number_of_atom as f64);
 		println!("atom captured{},average velocity{:?}",atom_output.number_of_atom,average_vel);
 	}

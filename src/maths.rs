@@ -1,14 +1,14 @@
 pub mod Maths{
-	use crate::constant::boltz_const;
-	use crate::constant::pi;
-	use crate::constant::exp;
+	use crate::constant::BOLTZCONST;
+	use crate::constant::PI;
+	use crate::constant::EXP;
 	extern crate rand;
 	use rand::Rng;
 	pub fn array_addition(a:&[f64;3],b:&[f64;3]) -> [f64;3]{
 		//addition of 3D array
 		//checked
 		let mut result = [0.0,0.0,0.0];
-		for i in (0..3){
+		for i in 0..3{
 			result[i]=a[i]+b[i];
 		}
 		result
@@ -37,17 +37,17 @@ pub mod Maths{
 	}
 	pub fn gaussian_dis(std:f64,distance:f64)->f64{
 		//checked
-		1.0/(2.0*pi*std.powf(2.0))*exp.powf(-distance.powf(2.0)/2.0/(std).powf(2.0))
+		1.0/(2.0*PI*std.powf(2.0))*EXP.powf(-distance.powf(2.0)/2.0/(std).powf(2.0))
 	}
 	pub fn maxwell_dis(_t:f64,_mass:f64,_velocity:f64) -> f64{
-		(_mass/2.0/pi/boltz_const/_t).powf(1.5)*exp.powf(-_mass*_velocity.powf(2.0)/2.0/boltz_const/_t)*4.0*pi*_velocity.powf(2.0)
+		(_mass/2.0/PI/BOLTZCONST/_t).powf(1.5)*EXP.powf(-_mass*_velocity.powf(2.0)/2.0/BOLTZCONST/_t)*4.0*PI*_velocity.powf(2.0)
 	}
 	
 	pub fn maxwell_generate(_t:f64,_mass:f64) -> f64{
 		// take about 20 times of the variance as range and do random uniform generation
 		// use 1/1000 times of the real PDF so that the maxwell distribution is everywhere lower than the uniform one
 		
-		let range = 20.0 * (boltz_const*_t/_mass).powf(0.5);
+		let range = 20.0 * (BOLTZCONST*_t/_mass).powf(0.5);
 		let mut i = 0;
 		loop{
 			let mut rng = rand::thread_rng();
@@ -92,15 +92,15 @@ pub mod Maths{
 		let L = 4.0e-3;
 		let beta = 2.0*r/L;
 		let q_theta = 1.0/beta*theta.tan();
-		let R_theta = q_theta.acos() - q_theta*(1.0-q_theta.powf(2.0)).powf(0.5);
+		let r_theta = q_theta.acos() - q_theta*(1.0-q_theta.powf(2.0)).powf(0.5);
 		let alpha = 1.0/2.0 - 1.0/(3.0*beta.powf(2.0))*(1.0-2.0*beta.powf(3.0) + (2.0*beta.powf(2.0) - 1.0)*(1.0+beta.powf(2.0)).powf(0.5))/((1.0+beta.powf(2.0)).powf(0.5) - beta.powf(2.0)*(1.0/beta).asinh());
-		let j1_theta = alpha*theta.cos() + 2.0/pi*theta.cos()*((1.0-alpha)*R_theta + 2.0/(3.0*q_theta)*(1.0-2.0*alpha)*(1.0-(1.0-q_theta.powf(2.0)).powf(3.0/2.0)));
-		let j2_theta = alpha*theta.cos() + 4.0/(3.0*pi*q_theta)*(1.0-2.0*alpha)*theta.cos();
+		let j1_theta = alpha*theta.cos() + 2.0/PI*theta.cos()*((1.0-alpha)*r_theta + 2.0/(3.0*q_theta)*(1.0-2.0*alpha)*(1.0-(1.0-q_theta.powf(2.0)).powf(3.0/2.0)));
+		let j2_theta = alpha*theta.cos() + 4.0/(3.0*PI*q_theta)*(1.0-2.0*alpha)*theta.cos();
 		if q_theta < 1.0{
-			j1_theta*2.0*pi*theta.sin()
+			j1_theta*2.0*PI*theta.sin()
 		}
 		else{
-			j2_theta*2.0*pi*theta.sin()
+			j2_theta*2.0*PI*theta.sin()
 		}
 	}
 	pub fn jtheta_gen()-> f64{
@@ -111,8 +111,8 @@ pub mod Maths{
 			let mut rng = rand::thread_rng();
 			i = i + 1;
 
-			let result = rng.gen_range(0.0, pi/2.0);
-			let height = rng.gen_range(0.0, 2.0/pi);
+			let result = rng.gen_range(0.0, PI/2.0);
+			let height = rng.gen_range(0.0, 2.0/PI);
 			if jtheta(result)>height*20.0{
 				return result
 			}
@@ -120,8 +120,8 @@ pub mod Maths{
 	}
 	pub fn random_direction()->[f64;3]{
 		let mut rng = rand::thread_rng();
-		let angle1 = rng.gen_range(0.0, pi);
-		let angle2 = rng.gen_range(0.,2.*pi);
+		let angle1 = rng.gen_range(0.0, PI);
+		let angle2 = rng.gen_range(0.,2.*PI);
 		let result = [angle1.cos(),angle1.sin()*angle2.sin(),angle1.sin()*angle2.cos()];
 		//println!("{:?}",result);
 		result

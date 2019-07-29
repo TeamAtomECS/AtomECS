@@ -28,10 +28,10 @@ impl Component for Force{
 
 
 
-pub struct rand_kick{
+pub struct RandKick{
 	pub force:[f64;3]
 }
 
-impl Component for rand_kick{
+impl Component for RandKick{
 	type Storage = VecStorage<Self>;
 }
