@@ -1,20 +1,21 @@
-//extern crate lib;
+extern crate magneto_optical_trap as lib;
 //use lib::*;
 
-mod lib;
+//mod lib;
 
-use magneto_optical_trap::constant::PI as PI;
-use magneto_optical_trap::initiate::Step;
-use magneto_optical_trap::atom::Position;
-use magneto_optical_trap::atom::{Velocity,Force,RandKick};
-use magneto_optical_trap::initiate::{Timestep,AtomInfo};
-use magneto_optical_trap::update::*;
-use magneto_optical_trap::laser::*;
-use magneto_optical_trap::magnetic::*;
-use magneto_optical_trap::initiate::atom_create::{AtomCreate,Oven,AtomInitiateMot};
-use magneto_optical_trap::integrator::EulerIntegrationSystem;
+use lib::constant as constant;
+use lib::constant::PI as PI;
+use lib::initiate::Step;
+use lib::atom::Position;
+use lib::atom::{Velocity,Force,RandKick};
+use lib::initiate::{Timestep,AtomInfo};
+use lib::update::*;
+use lib::laser::*;
+use lib::magnetic::*;
+use lib::initiate::atom_create::{AtomCreate,Oven,AtomInitiateMot};
+use lib::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder,RunNow};
-use output::{PrintOutput,Detector,DetectingAtom,PrintDetect,AtomOuput};
+use lib::output::{PrintOutput,Detector,DetectingAtom,PrintDetect,AtomOuput};
 fn main() {
 	mot_2Dplus();
 }
