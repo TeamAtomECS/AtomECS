@@ -78,7 +78,7 @@ impl <'a>System<'a> for UpdateRandKick{
 			for interaction in &_inter.content{
 				total_impulse = total_impulse + Maths::modulus(&interaction.force)*_t.t;
 			}
-			let momentum_photon = constant::HBAR * 2.*constant::PI*_atom.frequency/constant::c;
+			let momentum_photon = constant::HBAR * 2.*constant::PI*_atom.frequency/constant::C;
 			let mut num_kick = total_impulse/ momentum_photon;
 			//num_kick will be the expected number of random kick involved
 			loop{
