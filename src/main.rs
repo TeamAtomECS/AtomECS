@@ -5,9 +5,9 @@ extern crate magneto_optical_trap as lib;
 
 use lib::constant as constant;
 use lib::constant::PI as PI;
-use lib::initiate::Step;
+use lib::integrator::{Timestep,Step};
 use lib::atom::{Mass,Position,Velocity,Force,RandKick};
-use lib::initiate::{Timestep,AtomInfo};
+use lib::initiate::AtomInfo;
 use lib::update::*;
 use lib::laser::*;
 use lib::magnetic::*;

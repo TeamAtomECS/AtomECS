@@ -2,7 +2,7 @@ extern crate specs;
 use crate::maths;
 use crate::atom::*;
 use crate::laser::InteractionLaserALL;
-use crate::initiate::{Timestep,Step};
+use crate::integrator::{Timestep,Step};
 
 use specs::{System,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect,Component,VecStorage,Entities,LazyUpdate};
 

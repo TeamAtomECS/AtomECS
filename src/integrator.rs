@@ -3,8 +3,15 @@ extern crate rand;
 
 use specs::{System,ReadStorage,WriteStorage,Join,ReadExpect,WriteExpect};
 
+pub struct Step{
+	pub n : u64,
+}
+
+pub struct Timestep{
+	pub t:f64,
+}
+
 use crate::atom::*;
-use crate::initiate::*;
 use crate::maths;
 use crate::constant;
 
