@@ -16,10 +16,10 @@ use lib::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder,RunNow};
 use lib::output::{PrintOutput,Detector,DetectingAtom,PrintDetect,AtomOuput};
 fn main() {
-	mot_2Dplus();
+	mot_2d_plus();
 }
 
-fn mot_2Dplus(){
+fn mot_2d_plus(){
    // create the world
    let mut exp_mot = World::new();
    
@@ -148,33 +148,34 @@ fn mot_2Dplus(){
 	print_detect.run_now(&exp_mot.res);	
 }
 
-fn MOT_3D(){
+#[allow(dead_code)]
+fn mot_3d(){
    // create the world
-   let mut exp_MOT = World::new();
+   let mut exp_mot = World::new();
    
 	// create the resources and component, and entities for experimental setup
-	exp_MOT.register::<Velocity>();
-	exp_MOT.register::<Position>();
-	exp_MOT.register::<Oven>();
-	exp_MOT.register::<Force>();
-	exp_MOT.register::<AtomInfo>();
-	exp_MOT.register::<Laser>();
-	exp_MOT.register::<MagneticFieldSampler>();
-	exp_MOT.register::<InteractionLaserALL>();
-	exp_MOT.register::<QuadrupoleField3D>();
-	exp_MOT.register::<RandKick>();
+	exp_mot.register::<Velocity>();
+	exp_mot.register::<Position>();
+	exp_mot.register::<Oven>();
+	exp_mot.register::<Force>();
+	exp_mot.register::<AtomInfo>();
+	exp_mot.register::<Laser>();
+	exp_mot.register::<MagneticFieldSampler>();
+	exp_mot.register::<InteractionLaserALL>();
+	exp_mot.register::<QuadrupoleField3D>();
+	exp_mot.register::<RandKick>();
 	
 	//component for the experiment
-	let Rb_atom = AtomInfo{
+	let rb_atom = AtomInfo{
 	mup:constant::MUP,
 	mum:constant::MUM,
 	muz:constant::MUZ,
 	frequency:constant::ATOMFREQUENCY,
 	gamma:constant::TRANSWIDTH
 	};
-	exp_MOT.add_resource(Step{n:0});
+	exp_mot.add_resource(Step{n:0});
 	let mag= QuadrupoleField3D{gradient:0.002};
-	exp_MOT.create_entity().with(mag).build();
+	exp_mot.create_entity().with(mag).build();
 	// adding all six lasers
 	let laser_1 = Laser{
 		centre:[0.,0.,0.],
@@ -232,30 +233,30 @@ fn MOT_3D(){
 		index:6,
 	};
 	//six laser introduced
-	exp_MOT.create_entity().with(laser_1).build();
-	exp_MOT.create_entity().with(laser_2).build();
-	exp_MOT.create_entity().with(laser_3).build();
-	exp_MOT.create_entity().with(laser_4).build();
-	exp_MOT.create_entity().with(laser_5).build();
-	exp_MOT.create_entity().with(laser_6).build();
+	exp_mot.create_entity().with(laser_1).build();
+	exp_mot.create_entity().with(laser_2).build();
+	exp_mot.create_entity().with(laser_3).build();
+	exp_mot.create_entity().with(laser_4).build();
+	exp_mot.create_entity().with(laser_5).build();
+	exp_mot.create_entity().with(laser_6).build();
 	
 	
-	exp_MOT.add_resource(Timestep{t:1e-6});
+	exp_mot.add_resource(Timestep{t:1e-6});
 	// initiate
 		// build a oven
-	exp_MOT.create_entity().with(Oven{temperature:200.,position:[0.1,0.1,0.1],direction:[1e-6,1e-6,1.],number:1,size:[1e-2,1e-2,1e-2]})
-	.with(Rb_atom).build();
+	exp_mot.create_entity().with(Oven{temperature:200.,position:[0.1,0.1,0.1],direction:[1e-6,1e-6,1.],number:1,size:[1e-2,1e-2,1e-2]})
+	.with(rb_atom).build();
 		// initiator dispatched
 	let mut init_dispatcher=DispatcherBuilder::new()
 			.with(AtomCreate,"atomcreate",&[])
       	.build();
 		
 	//init_dispatcher.setup(&mut exp_MOT.res);
-	init_dispatcher.dispatch(&mut exp_MOT.res);
-	exp_MOT.maintain();
+	init_dispatcher.dispatch(&mut exp_mot.res);
+	exp_mot.maintain();
 	//two initiators cannot be dispatched at the same time apparently for some unknown reason
 	let mut init_dispatcher2=DispatcherBuilder::new().with(AtomInitiateMot, "initiate", &[]).build();
-	init_dispatcher2.dispatch(&mut exp_MOT.res);
+	init_dispatcher2.dispatch(&mut exp_mot.res);
 	// run loop
 	let mut runner=DispatcherBuilder::new().
 	with(UpdateLaser,"updatelaser",&[]).
@@ -265,10 +266,10 @@ fn MOT_3D(){
 	with(UpdateForce,"updateforce",&["update_kick","updateinter"]).
 	with(EulerIntegrationSystem,"updatepos",&["update_kick"]).
 	with(PrintOutput,"print",&["updatepos"]).build();
-	runner.setup(&mut exp_MOT.res);
+	runner.setup(&mut exp_mot.res);
 	for _i in 0..2000{
-		runner.dispatch(&mut exp_MOT.res);
-		exp_MOT.maintain();
+		runner.dispatch(&mut exp_mot.res);
+		exp_mot.maintain();
 		//println!("t{}",time);
 	}
 	

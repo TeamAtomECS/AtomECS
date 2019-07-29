@@ -6,6 +6,7 @@ use specs::{System,ReadStorage,WriteStorage,Join,ReadExpect,WriteExpect};
 use crate::atom::*;
 use crate::initiate::*;
 use crate::maths;
+use crate::constant;
 
 /// # Euler Integration
 /// 
@@ -32,7 +33,7 @@ impl <'a> System<'a> for EulerIntegrationSystem{
 		
 		step.n = step.n +1;
 		for (mut vel,mut pos,force,mass) in (&mut vel,&mut pos,&force,&mass).join(){
-			vel.vel = maths::array_addition(&vel.vel,&maths::array_multiply(&force.force,1./mass.value*t.t));
+			vel.vel = maths::array_addition(&vel.vel,&maths::array_multiply(&force.force,1./(constant::AMU*mass.value)*t.t));
 			pos.pos = maths::array_addition(&pos.pos,&maths::array_multiply(&vel.vel,t.t));
 		}
 	}

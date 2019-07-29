@@ -74,8 +74,8 @@
 		//checked (against dongyang matlab code)
 		// problem remained what is it? 
 		let r = 0.2e-3;
-		let L = 4.0e-3;
-		let beta = 2.0*r/L;
+		let length = 4.0e-3;
+		let beta = 2.0*r/length;
 		let q_theta = 1.0/beta*theta.tan();
 		let r_theta = q_theta.acos() - q_theta*(1.0-q_theta.powf(2.0)).powf(0.5);
 		let alpha = 1.0/2.0 - 1.0/(3.0*beta.powf(2.0))*(1.0-2.0*beta.powf(3.0) + (2.0*beta.powf(2.0) - 1.0)*(1.0+beta.powf(2.0)).powf(0.5))/((1.0+beta.powf(2.0)).powf(0.5) - beta.powf(2.0)*(1.0/beta).asinh());
