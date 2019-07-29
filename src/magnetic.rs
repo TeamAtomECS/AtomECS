@@ -19,7 +19,7 @@ impl Component for MagneticFieldSampler{
 
 /// A component representing a 3D quadrupole field.
 pub struct QuadrupoleField3D{
-	/// Gradient of the quadrupole field, in units of Gauss/cm
+	/// Gradient of the quadrupole field, in units of Tesla/m
 	pub gradient:f64
 }
 
