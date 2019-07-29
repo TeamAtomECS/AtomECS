@@ -19,7 +19,7 @@ impl Component for MagneticFieldSampler{
 
 /// A component representing a 3D quadrupole field.
 pub struct QuadrupoleField3D{
-	/// Gradient of the quadrupole field, in units of Tesla/m
+	/// Gradient of the quadrupole field, in units of Gauss/cm
 	pub gradient:f64
 }
 
@@ -27,12 +27,34 @@ impl Component for QuadrupoleField3D{
 	type Storage = HashMapStorage<Self>;
 }
 
+/// A component representing a uniform bias field, of the form `B = [ B_x, B_y, B_z ]`
+pub struct UniformMagneticField { 
+	/// Vector field components with respect to the x,y,z cartesian axes, in units of Tesla.
+	pub field:[f64;3],
+}
+
+impl Component for UniformMagneticField {
+	type Storage = HashMapStorage<Self>;
+}
+
+impl UniformMagneticField {
+	/// Create a UniformMagneticField with components specified in units of Gauss.
+	pub fn gauss(components:[f64;3]) -> UniformMagneticField{ 
+		UniformMagneticField{field: maths::array_multiply(&components,1e-4)}
+		}
+
+	/// Create a UniformMagneticField with components specified in units of Tesla.
+	pub fn tesla(components:[f64;3]) -> UniformMagneticField{ 
+		UniformMagneticField{field: components}
+	}
+}
+
 /// Updates the values of magnetic field samplers to include quadrupole fields in the world.
 pub struct Sample3DQuadrupoleFieldSystem;
 
 impl Sample3DQuadrupoleFieldSystem {
 
-	/// Calculates the quadrupole magnetic field in units of Gauss.
+	/// Calculates the quadrupole magnetic field.
 	/// The field is defined with components `Bx = grad*x`, `By = grad*y`, `Bz = -2 * grad * z`.
 	/// 
 	/// # Arguments
@@ -41,7 +63,7 @@ impl Sample3DQuadrupoleFieldSystem {
 	/// 
 	/// `centre`: position of the quadrupole node, m
 	/// 
-	/// `gradient`: quadrupole gradient, in G/cm
+	/// `gradient`: quadrupole gradient, in Tesla/m
 	pub fn calculate_field(pos:&[f64;3], centre:&[f64;3], gradient:f64) -> [f64;3]{
 		let rel_pos = maths::array_subtraction(&pos, &centre);
 		[rel_pos[0]*gradient, rel_pos[1]*gradient, rel_pos[2]*-2.*gradient]
@@ -56,12 +78,30 @@ impl <'a> System<'a> for Sample3DQuadrupoleFieldSystem{
 	fn run(&mut self,(mut _sampler,pos,_quadrupoles):Self::SystemData){
 		for (centre, quadrupole) in (&pos, &_quadrupoles).join(){
 			for (pos,mut sampler) in (&pos,&mut _sampler).join(){
-				sampler.field = Sample3DQuadrupoleFieldSystem::calculate_field(&pos.pos, &centre.pos, quadrupole.gradient);
+				let quad_field = Sample3DQuadrupoleFieldSystem::calculate_field(&pos.pos, &centre.pos, quadrupole.gradient);
+				sampler.field = maths::array_addition(&quad_field, &sampler.field);
 			}
 		}
 	}
 }
 
+/// Updates the values of magnetic field samplers to include uniform magnetic fields in the world.
+pub struct UniformMagneticFieldSystem;
+
+impl <'a> System<'a> for UniformMagneticFieldSystem{
+		type SystemData = (WriteStorage<'a,MagneticFieldSampler>,
+									ReadStorage<'a,UniformMagneticField>,
+									);
+	fn run(&mut self,(mut _sampler,fields):Self::SystemData){
+		for field in (&fields).join() {
+			for mut sampler in (&mut _sampler).join(){
+				sampler.field = maths::array_addition(&sampler.field, &field.field);
+			}
+		}
+	}
+}
+
+/// System that clears the magnetic field samplers each frame.
 pub struct ClearMagneticFieldSamplerSystem;
 
 impl <'a> System<'a> for ClearMagneticFieldSamplerSystem{
@@ -74,6 +114,10 @@ impl <'a> System<'a> for ClearMagneticFieldSamplerSystem{
 	}
 }
 
+/// System that calculates the magnitude of the magnetic field.
+/// 
+/// The magnetic field magnitude is frequently used, so it makes sense to calculate it once and cache the result.
+/// This system runs after all other magnetic field systems.
 pub struct CalculateMagneticFieldMagnitudeSystem;
 
 impl <'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
