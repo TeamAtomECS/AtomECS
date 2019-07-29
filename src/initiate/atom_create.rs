@@ -22,6 +22,7 @@ pub fn velocity_generate(_t:f64,_mass:f64,_dir:&[f64;3])->[f64;3]{
 	let dir_div = maths::array_addition(&maths::array_multiply(&dir_1,theta.sin()*theta2.cos()),&maths::array_multiply(&dir_2,theta.sin()*theta2.sin()));
 	let dirf = maths::array_addition(&maths::array_multiply(&dir,theta.cos()),&dir_div);
 	println!("{:?}",maths::array_multiply(&dirf,v_mag));
+	assert!(maths::modulus(&dirf)<1.01 && maths::modulus(&dirf)>0.99);
 	maths::array_multiply(&dirf,v_mag)
 }
 

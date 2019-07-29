@@ -124,9 +124,7 @@ impl <'a> System<'a> for UpdateLaser{
 			for inter in &mut _inter.content{
 			for _laser in (&_laser).join(){
 				if _laser.index == inter.index{
-					let rela_cood = maths::array_addition(&_pos.pos,&maths::array_multiply(&_laser.centre,-1.));
-					let distance = maths::modulus(&maths::cross_product(&_laser.wavenumber,&rela_cood))/maths::modulus(&_laser.wavenumber);
-					let laser_inten = _laser.power*maths::gaussian_dis(_laser.std,distance);
+					let laser_inten =_laser.power*maths::gaussian_dis(_laser.std, get_perpen_distance(&_pos.pos,&_laser.centre,&_laser.wavenumber));
 					inter.intensity = laser_inten;
 					inter.wavenumber = _laser.wavenumber;
 					inter.polarization = _laser.polarization;
@@ -135,4 +133,26 @@ impl <'a> System<'a> for UpdateLaser{
 			}
 		}
 	}
+}
+fn get_perpen_distance(pos:&[f64;3],centre:&[f64;3],dir:&[f64;3]) ->f64{
+	let rela_cood = maths::array_addition(&pos,&maths::array_multiply(&centre,-1.));
+	let distance = maths::modulus(&maths::cross_product(&dir,&rela_cood))/maths::modulus(&dir);
+	distance
+}
+
+#[cfg(test)]
+pub mod tests {
+
+	use super::*;
+
+	/// Tests the correct implementation of the quadrupole 3D field
+	#[test]
+	fn test_gaussian_beam() {
+		let pos = [1.,1.,1.];
+		let centre = [0.,1.,1.];
+		let dir = [1.,2.,2.];
+		let distance = get_perpen_distance(&pos,&centre,&dir);
+		assert_eq!(distance>0.942,distance<0.943);
+	}
+
 }

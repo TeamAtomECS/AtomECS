@@ -19,8 +19,7 @@ use crate::constant;
 /// 
 /// The EulerIntegrationSystem integrates the classical equations of motion for particles using the euler method:
 /// ```  
-/// x = x + v * dt
-/// v = v + F/m*dt
+
 /// ```
 /// This integrator is simple to implement but prone to integration error.
 /// 
@@ -40,8 +39,28 @@ impl <'a> System<'a> for EulerIntegrationSystem{
 		
 		step.n = step.n +1;
 		for (mut vel,mut pos,force,mass) in (&mut vel,&mut pos,&force,&mass).join(){
-			vel.vel = maths::array_addition(&vel.vel,&maths::array_multiply(&force.force,1./(constant::AMU*mass.value)*t.t));
-			pos.pos = maths::array_addition(&pos.pos,&maths::array_multiply(&vel.vel,t.t));
+			EulerUpdating(&mut vel,&mut pos,&force,&mass,t.t);
 		}
 	}
+}
+fn EulerUpdating(vel:&mut Velocity,pos:&mut Position,force:&Force,mass:&Mass,time:f64){
+		vel.vel = maths::array_addition(&vel.vel,&maths::array_multiply(&force.force,1./(constant::AMU*mass.value)*time));
+		pos.pos = maths::array_addition(&pos.pos,&maths::array_multiply(&vel.vel,time));
+}
+pub mod tests {
+
+	use super::*;
+
+	#[test]
+	fn test_euler() {
+		let mut pos = Position{pos:[1.,1.,1.]};
+		let mut vel = Velocity{vel:[0.,1.,0.]};
+		let time = 1.;
+		let mass = Mass{value:1./constant::AMU};
+		let force = Force{force:[0.,0.,1.]};
+		EulerUpdating(&mut vel,&mut pos,&force,&mass,time);
+		assert_eq!(vel.vel, [0.,1.,1.]);
+		assert_eq!(pos.pos,[1.,2.,2.]);
+	}
+
 }

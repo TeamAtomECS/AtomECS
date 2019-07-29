@@ -22,6 +22,7 @@ pub fn create(){
 	exp_mot.register::<Oven>();
 	exp_mot.register::<Force>();
 	exp_mot.register::<AtomInfo>();
+	exp_mot.register::<Mass>();
 	exp_mot.register::<Laser>();
 	exp_mot.register::<MagneticFieldSampler>();
 	exp_mot.register::<InteractionLaserALL>();
@@ -47,7 +48,7 @@ pub fn create(){
 	let laser_1 = Laser{
 		centre:[0.,0.,0.],
 		wavenumber:[0.0,0.0,2.0*PI/(461e-9)],
-		polarization:-1.,
+		polarization:1.,
 		power:10.,
 		std:0.1,
 		frequency:constant::C/461e-9,
@@ -56,7 +57,7 @@ pub fn create(){
 		let laser_2 = Laser{
 		centre:[0.,0.,0.],
 		wavenumber:[0.0,0.0,-2.0*PI/(461e-9)],
-		polarization:-1.,
+		polarization:1.,
 		power:10.,
 		std:0.1,
 		frequency:constant::C/461e-9,
@@ -66,7 +67,7 @@ pub fn create(){
 		let laser_3 = Laser{
 		centre:[0.,0.,0.],
 		wavenumber:[0.0,2.0*PI/(461e-9),0.],
-		polarization:1.,
+		polarization:-1.,
 		power:10.,
 		std:0.1,
 		frequency:constant::C/461e-9,
@@ -75,7 +76,7 @@ pub fn create(){
 		let laser_4 = Laser{
 		centre:[0.,0.,0.],
 		wavenumber:[0.0,-2.0*PI/(461e-9),0.],
-		polarization:1.,
+		polarization:-1.,
 		power:10.,
 		std:0.1,
 		frequency:constant::C/461e-9,
@@ -84,7 +85,7 @@ pub fn create(){
 		let laser_5 = Laser{
 		centre:[0.,0.,0.],
 		wavenumber:[2.0*PI/(461e-9),0.,0.],
-		polarization:1.,
+		polarization:-1.,
 		power:10.,
 		std:0.1,
 		frequency:constant::C/461e-9,
