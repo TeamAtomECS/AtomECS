@@ -33,9 +33,9 @@ fn mot_2Dplus(){
 	exp_mot.register::<Force>();
 	exp_mot.register::<AtomInfo>();
 	exp_mot.register::<Laser>();
-	exp_mot.register::<MagSampler>();
+	exp_mot.register::<MagneticFieldSampler>();
 	exp_mot.register::<InteractionLaserALL>();
-	exp_mot.register::<MagFieldGaussian>();
+	exp_mot.register::<QuadrupoleField3D>();
 	exp_mot.register::<RandKick>();
 	exp_mot.register::<Detector>();
 	
@@ -49,9 +49,8 @@ fn mot_2Dplus(){
 	};
 	exp_mot.add_resource(Step{n:0});
 	exp_mot.add_resource(AtomOuput{number_of_atom:0,total_velocity:[0.,0.,0.]});
-	let mag= MagFieldGaussian{
-		gradient:0.002,
-		centre:[0.,0.,0.],
+	let mag= QuadrupoleField3D{
+		gradient:0.002
 	};
 	exp_mot.create_entity().with(mag).build();
 	// adding all six lasers
@@ -131,7 +130,7 @@ fn mot_2Dplus(){
 	// run loop
 	let mut runner=DispatcherBuilder::new().
 	with(UpdateLaser,"updatelaser",&[]).
-	with(UpdateSampler,"updatesampler",&[]).
+	with(Sample3DQuadrupoleFieldSystem,"updatesampler",&[]).
 	with(UpdateInteractionLaser,"updateinter",&["updatelaser","updatesampler"]).
 	with(UpdateRandKick,"update_kick",&["updateinter"]).
 	with(UpdateForce,"updateforce",&["update_kick","updateinter"]).
@@ -159,9 +158,9 @@ fn MOT_3D(){
 	exp_MOT.register::<Force>();
 	exp_MOT.register::<AtomInfo>();
 	exp_MOT.register::<Laser>();
-	exp_MOT.register::<MagSampler>();
+	exp_MOT.register::<MagneticFieldSampler>();
 	exp_MOT.register::<InteractionLaserALL>();
-	exp_MOT.register::<MagFieldGaussian>();
+	exp_MOT.register::<QuadrupoleField3D>();
 	exp_MOT.register::<RandKick>();
 	
 	//component for the experiment
@@ -173,10 +172,7 @@ fn MOT_3D(){
 	gamma:constant::TRANSWIDTH
 	};
 	exp_MOT.add_resource(Step{n:0});
-	let mag= MagFieldGaussian{
-		gradient:0.002,
-		centre:[0.,0.,0.],
-	};
+	let mag= QuadrupoleField3D{gradient:0.002};
 	exp_MOT.create_entity().with(mag).build();
 	// adding all six lasers
 	let laser_1 = Laser{
@@ -262,7 +258,7 @@ fn MOT_3D(){
 	// run loop
 	let mut runner=DispatcherBuilder::new().
 	with(UpdateLaser,"updatelaser",&[]).
-	with(UpdateSampler,"updatesampler",&[]).
+	with(Sample3DQuadrupoleFieldSystem,"updatesampler",&[]).
 	with(UpdateInteractionLaser,"updateinter",&["updatelaser","updatesampler"]).
 	with(UpdateRandKick,"update_kick",&["updateinter"]).
 	with(UpdateForce,"updateforce",&["update_kick","updateinter"]).

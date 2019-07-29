@@ -1,4 +1,5 @@
 pub const HBAR:f64=1.0545718e-34;
+#[allow(dead_code)]
 pub const GC:f64 = 9.80665;
 pub const EXP:f64 = 2.718281828;
 pub const PI:f64 = 3.1415926535;

@@ -6,7 +6,7 @@ use crate::constant::PI as PI;
 extern crate specs;
 use crate::atom::*;
 use crate::laser::*;
-use crate::magnetic::MagSampler;
+use crate::magnetic::MagneticFieldSampler;
 use specs::{System,ReadStorage,Join,Read,Component,VecStorage,Entities,LazyUpdate};
 
 
@@ -107,7 +107,7 @@ impl <'a> System<'a> for AtomInitiateMot{
 
 		let empty_laser = InteractionLaserALL{content};
 		for (ent,_atom,_position,_velocity) in (&ent,&atom,&position,&velocity).join(){
-			let empty_mag = MagSampler{mag_sampler:[0.,0.,0.]};
+			let empty_mag = MagneticFieldSampler{field:[0.,0.,0.], magnitude:0.};
 			updater.insert(ent,RandKick{force:[0.,0.,0.]});
 			updater.insert(ent,empty_mag);
 			updater.insert(ent,empty_laser.clone());

@@ -59,7 +59,7 @@ impl <'a> System<'a> for UpdateInteractionLaser{
 	type SystemData = (
 									ReadStorage<'a,Position>,
 									ReadStorage<'a,Velocity>,
-									ReadStorage<'a,MagSampler>,
+									ReadStorage<'a,MagneticFieldSampler>,
 									WriteStorage<'a,InteractionLaserALL>,
 									ReadStorage<'a,AtomInfo>,
 									);
@@ -68,7 +68,7 @@ impl <'a> System<'a> for UpdateInteractionLaser{
 		
 		for (_vel,_pos,_mag,mut _inter,_atom) in (&_vel,&_pos,&_mag,&mut _inter,&_atom).join(){
 			//println!("laser interaction updated");
-			let mag_field = _mag.mag_sampler;
+			let mag_field = _mag.field;
 			let Br = Maths::modulus(&mag_field);
 			for inter in &mut _inter.content{
 				let _mup = _atom.mup;
