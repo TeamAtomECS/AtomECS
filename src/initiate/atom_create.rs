@@ -5,6 +5,8 @@ use crate::initiate::*;
 use crate::constant::pi as pi;
 extern crate specs;
 use crate::atom::*;
+use crate::laser::*;
+use crate::magnetic::Mag_sampler;
 use specs::{System,Write,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect,Component,VecStorage,Entities,LazyUpdate};
 
 

@@ -1,7 +1,8 @@
 extern crate specs;
 use crate::maths::Maths;
 use crate::constant;
-use crate::atom::{Position,Velocity,Force,Interaction_lasers,rand_kick};
+use crate::atom::*;
+use crate::laser::Interaction_lasers;
 use crate::initiate::{timestep,step};
 
 use specs::{System,Write,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect,Component,VecStorage,Entities,LazyUpdate};
