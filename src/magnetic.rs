@@ -1,5 +1,5 @@
 extern crate specs;
-use specs::{System,ReadStorage,WriteStorage,Join,Component,VecStorage,HashMapStorage};
+use specs::{System,ReadStorage,WriteStorage,Join,Component,VecStorage,HashMapStorage,Dispatcher,DispatcherBuilder,World};
 use crate::atom::Position;
 use crate::maths;
 
@@ -15,6 +15,12 @@ pub struct MagneticFieldSampler{
 
 impl Component for MagneticFieldSampler{
 	type Storage = VecStorage<Self>;
+}
+
+impl Default for MagneticFieldSampler {
+	fn default() -> Self {
+		MagneticFieldSampler{field: [0.0,0.0,0.0], magnitude: 0.0}
+	}
 }
 
 /// A component representing a 3D quadrupole field.
@@ -129,10 +135,35 @@ impl <'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
 	}
 }
 
+/// Adds the systems required by magnetics to the dispatcher.
+/// 
+/// #Arguments
+/// 
+/// `builder`: the dispatch builder to modify
+/// 
+/// `deps`: any dependencies that must be completed before the magnetics systems run.
+pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static> {
+	builder.
+	with(ClearMagneticFieldSamplerSystem,"magnetics_clear", deps).
+	with(Sample3DQuadrupoleFieldSystem,"magnetics_quadrupole",&["magnetics_clear"]).
+	with(Sample3DQuadrupoleFieldSystem,"magnetics_uniform",&["magnetics_quadrupole"]).
+	with(CalculateMagneticFieldMagnitudeSystem,"magnetics_magnitude",&["magnetics_uniform"])
+}
+
+/// Registers resources required by magnetics to the ecs world.
+pub fn register_resources(world: &mut World) {
+		world.register::<Position>();
+		world.register::<UniformMagneticField>();
+		world.register::<QuadrupoleField3D>();
+		world.register::<MagneticFieldSampler>();
+}
+
 #[cfg(test)]
 pub mod tests {
 
 	use super::*;
+	extern crate specs;
+	use specs::{World,Builder,DispatcherBuilder};
 
 	/// Tests the correct implementation of the quadrupole 3D field
 	#[test]
@@ -144,4 +175,34 @@ pub mod tests {
 		assert_eq!(field, [1.,0.,-2.]);
 	}
 
-}
+	/// Tests the correct implementation of the magnetics systems and dispatcher.
+	/// This is done by setting up a test world and ensuring that the magnetic systems perform the correct operations on test entities.
+	#[test]
+	fn test_magnetics_systems()
+	{
+		let mut test_world = World::new();
+		register_resources(&mut test_world);
+
+		let builder=DispatcherBuilder::new();
+		let configured_builder = add_systems_to_dispatch(builder, &[]);
+		let mut dispatcher = configured_builder.build();
+		dispatcher.setup(&mut test_world.res);
+
+		test_world.create_entity()
+		.with(UniformMagneticField{field: [2.0, 0.0, 0.0]})
+		.with(QuadrupoleField3D{gradient: 1.0})
+		.with(Position{pos:[0.0,0.0,0.0]})
+		.build();
+
+		let sampler_entity = test_world.create_entity()
+		.with(Position { pos: [ 1.0, 1.0, 1.0 ]})
+		.with(MagneticFieldSampler::default())
+		.build();
+
+		dispatcher.dispatch(&mut test_world.res);
+
+		let samplers = test_world.read_storage::<MagneticFieldSampler>();
+		let sampler = samplers.get(sampler_entity);
+		assert_eq!(sampler.expect("entity not found").field,[2.0+1.0,1.0,-2.0]);
+	}
+}	
