@@ -52,7 +52,7 @@ fn mot_2Dplus(){
 	let mag= QuadrupoleField3D{
 		gradient:0.002
 	};
-	exp_mot.create_entity().with(mag).build();
+	exp_mot.create_entity().with(mag).with(Position{pos:[0.,0.,0.]}).build();
 	// adding all six lasers
 	let laser_1 = Laser{
 		centre:[0.,0.,0.],
@@ -130,8 +130,10 @@ fn mot_2Dplus(){
 	// run loop
 	let mut runner=DispatcherBuilder::new().
 	with(UpdateLaser,"updatelaser",&[]).
+	with(ClearSampler,"clear",&[]).
 	with(Sample3DQuadrupoleFieldSystem,"updatesampler",&[]).
-	with(UpdateInteractionLaser,"updateinter",&["updatelaser","updatesampler"]).
+	with(MagMagnitude,"magnitudecal",&["updatesampler"]).
+	with(UpdateInteractionLaser,"updateinter",&["updatelaser","updatesampler","magnitudecal"]).
 	with(UpdateRandKick,"update_kick",&["updateinter"]).
 	with(UpdateForce,"updateforce",&["update_kick","updateinter"]).
 	with(UpdateEuler,"updatepos",&["update_kick"]).
