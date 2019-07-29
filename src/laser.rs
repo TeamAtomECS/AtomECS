@@ -38,6 +38,7 @@ impl InteractionLaser{
 }
 
 pub struct InteractionLaserALL{
+	// just a collection of laser
 	pub content:Vec<InteractionLaser>,
 }
 
@@ -56,6 +57,7 @@ impl InteractionLaserALL{
 }
 pub struct UpdateInteractionLaser;
 impl <'a> System<'a> for UpdateInteractionLaser{
+	// this system will update the information regarding interaction between the lasers and the atoms
 	type SystemData = (
 									ReadStorage<'a,Position>,
 									ReadStorage<'a,Velocity>,
@@ -69,7 +71,7 @@ impl <'a> System<'a> for UpdateInteractionLaser{
 		for (_vel,_pos,_mag,mut _inter,_atom) in (&_vel,&_pos,&_mag,&mut _inter,&_atom).join(){
 			//println!("laser interaction updated");
 			let mag_field = _mag.field;
-			let Br = Maths::modulus(&mag_field);
+			let br = Maths::modulus(&mag_field);
 			for inter in &mut _inter.content{
 				let _mup = _atom.mup;
 				let _mum = _atom.mum;
@@ -83,9 +85,9 @@ impl <'a> System<'a> for UpdateInteractionLaser{
 				let costheta = Maths::dot_product(&wave_vector,&mag_field) / Maths::modulus(&wave_vector)/Maths::modulus(&mag_field);
 				let detuning = omega - atom_frequency * 2.0* constant::PI - Maths::dot_product(&wave_vector,&_vel.vel);
 				
-				let scatter1 = 0.25*(p*costheta + 1.).powf(2.)*gamma/2./(1.+s0+4.*(detuning - _mup/HBAR*Br).powf(2.)/gamma.powf(2.));
-				let scatter2 = 0.25*(p*costheta - 1.).powf(2.)*gamma/2./(1.+s0+4.*(detuning - _mum/HBAR*Br).powf(2.)/gamma.powf(2.));
-				let scatter3 = 0.5*(1. - costheta.powf(2.))*gamma/2./(1.+s0+4.*(detuning - _muz/HBAR*Br).powf(2.)/gamma.powf(2.));
+				let scatter1 = 0.25*(p*costheta + 1.).powf(2.)*gamma/2./(1.+s0+4.*(detuning - _mup/HBAR*br).powf(2.)/gamma.powf(2.));
+				let scatter2 = 0.25*(p*costheta - 1.).powf(2.)*gamma/2./(1.+s0+4.*(detuning - _mum/HBAR*br).powf(2.)/gamma.powf(2.));
+				let scatter3 = 0.5*(1. - costheta.powf(2.))*gamma/2./(1.+s0+4.*(detuning - _muz/HBAR*br).powf(2.)/gamma.powf(2.));
 				let force_new = Maths::array_multiply(&wave_vector,s0*HBAR*(scatter1+scatter2+scatter3));
 				
 				inter.force =force_new;

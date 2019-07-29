@@ -94,6 +94,7 @@ impl <'a>System<'a> for DetectingAtom{
 pub struct PrintDetect;
 
 impl <'a>System<'a> for PrintDetect{
+	//print the final output of a detector
 	type SystemData = (WriteExpect<'a,AtomOuput>);
 	fn run(&mut self, atom_output:Self::SystemData){
 		let average_vel = Maths::array_multiply(&atom_output.total_velocity,1./atom_output.number_of_atom as f64);
