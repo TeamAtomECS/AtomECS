@@ -11,13 +11,6 @@ pub struct Timestep{
 	pub t:f64,
 }
 
-
-// when initializing the world, all the environmental variable will be added to the world as resources
-
-
-
-
-
 pub struct AtomInfo{
 	pub mass:f64,
 	pub mup:f64,

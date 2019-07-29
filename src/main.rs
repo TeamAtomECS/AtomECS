@@ -1,21 +1,18 @@
-mod initiate;
-mod maths;
-mod constant;
-mod atom;
-mod update;
-mod output;
-mod laser;
-mod magnetic;
-use crate::constant::PI as PI;
-use crate::initiate::Step;
-use crate::atom::Position;
-use crate::atom::{Velocity,Force,RandKick};
-use crate::initiate::{Timestep,AtomInfo};
+//extern crate lib;
+//use lib::*;
 
-use crate::update::*;
-use crate::laser::*;
-use crate::magnetic::*;
-use crate::initiate::atom_create::{AtomCreate,Oven,AtomInitiateMot};
+mod lib;
+
+use magneto_optical_trap::constant::PI as PI;
+use magneto_optical_trap::initiate::Step;
+use magneto_optical_trap::atom::Position;
+use magneto_optical_trap::atom::{Velocity,Force,RandKick};
+use magneto_optical_trap::initiate::{Timestep,AtomInfo};
+use magneto_optical_trap::update::*;
+use magneto_optical_trap::laser::*;
+use magneto_optical_trap::magnetic::*;
+use magneto_optical_trap::initiate::atom_create::{AtomCreate,Oven,AtomInitiateMot};
+use magneto_optical_trap::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder,RunNow};
 use output::{PrintOutput,Detector,DetectingAtom,PrintDetect,AtomOuput};
 fn main() {
@@ -136,7 +133,7 @@ fn mot_2Dplus(){
 	with(UpdateInteractionLaser,"updateinter",&["updatelaser","updatesampler","magnitudecal"]).
 	with(UpdateRandKick,"update_kick",&["updateinter"]).
 	with(UpdateForce,"updateforce",&["update_kick","updateinter"]).
-	with(UpdateEuler,"updatepos",&["update_kick"]).
+	with(EulerIntegrationSystem,"updatepos",&["update_kick"]).
 	with(PrintOutput,"print",&["updatepos"]).
 	with(DetectingAtom,"detect",&["updatepos"]).build();
 	runner.setup(&mut exp_mot.res);
@@ -264,7 +261,7 @@ fn MOT_3D(){
 	with(UpdateInteractionLaser,"updateinter",&["updatelaser","updatesampler"]).
 	with(UpdateRandKick,"update_kick",&["updateinter"]).
 	with(UpdateForce,"updateforce",&["update_kick","updateinter"]).
-	with(UpdateEuler,"updatepos",&["update_kick"]).
+	with(EulerIntegrationSystem,"updatepos",&["update_kick"]).
 	with(PrintOutput,"print",&["updatepos"]).build();
 	runner.setup(&mut exp_MOT.res);
 	for _i in 0..2000{

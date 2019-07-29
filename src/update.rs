@@ -1,5 +1,5 @@
 extern crate specs;
-use specs::{System,ReadStorage,WriteStorage,Join,ReadExpect,WriteExpect};
+use specs::{System,ReadStorage,WriteStorage,Join,ReadExpect};
 
 use crate::atom::*;
 use crate::laser::InteractionLaserALL;
@@ -8,34 +8,6 @@ use crate::initiate::*;
 use crate::constant;
 extern crate rand;
 use rand::Rng;
-
-
-pub struct UpdateEuler;
-
-
-// update function will update the the position and the velocity of the particle in a given timespan/ timestep
-impl <'a> System<'a> for UpdateEuler{
-	type SystemData = (	WriteStorage<'a,Position>,
-									WriteStorage<'a,Velocity>,
-									ReadExpect<'a,Timestep>,
-									WriteExpect<'a,Step>,
-									ReadStorage<'a,Force>,
-									ReadStorage<'a,AtomInfo>
-									);
-		
-	fn run(&mut self,(mut _pos,mut _vel,_t,mut _step,_force,_atom):Self::SystemData){
-		
-		_step.n = _step.n +1;
-		for (mut _vel,mut _pos,_force,_atom) in (&mut _vel,&mut _pos,&_force,&_atom).join(){
-			//println!("euler method used");
-			let _mass = _atom.mass;
-			_vel.vel = Maths::array_addition(&_vel.vel,&Maths::array_multiply(&_force.force,1./_mass*_t.t));
-			_pos.pos = Maths::array_addition(&_pos.pos,&Maths::array_multiply(&_vel.vel,_t.t));
-
-		}
-	}
-}
-
 
 pub struct UpdateForce;
 
