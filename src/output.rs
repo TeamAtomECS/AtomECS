@@ -1,6 +1,5 @@
 extern crate specs;
 use crate::maths::Maths;
-use crate::constant;
 use crate::atom::*;
 use crate::laser::InteractionLaserALL;
 use crate::initiate::{Timestep,Step};
@@ -22,7 +21,7 @@ impl <'a>System <'a> for PrintOutput{
 								ReadExpect<'a,Timestep>,
 								);
 	fn run(&mut self, (_lasers,_pos,_vel,_force,_kick,_step,_t):Self::SystemData){
-		let time = _t.t * _step.n as f64;
+		let _time = _t.t * _step.n as f64;
 		for (_lasers,_vel,_pos,_force,_kick) in (&_lasers,&_vel,&_pos,&_force,&_kick).join(){
 			if _step.n % 100 == 0{
 				for _inter in &_lasers.content{
@@ -61,7 +60,7 @@ impl <'a>System<'a> for DetectingAtom{
 								WriteExpect<'a,AtomOuput>,
 								Read<'a,LazyUpdate>,
 								);
-	fn run(&mut self, (mut ent,detector,mut _pos,mut _vel,mut atom_output,lazy):Self::SystemData){
+	fn run(&mut self, (ent, detector,mut _pos,mut _vel,mut atom_output,lazy):Self::SystemData){
 		//check if an atom is within the detector
 		for detector in (&detector).join(){
 		for (ent,mut _vel,_pos) in (&ent,&mut _vel,&_pos).join(){
