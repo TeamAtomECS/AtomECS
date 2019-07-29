@@ -77,7 +77,7 @@ impl <'a> System<'a> for UpdateInteractionLaser{
 				let _mum = _atom.mum;
 				let _muz = _atom.muz;	
 				let s0 = inter.intensity/constant::SATINTEN;
-				let omega = Maths::modulus(&inter.wavenumber) * constant::c;
+				let omega = Maths::modulus(&inter.wavenumber) * constant::C;
 				let wave_vector = inter.wavenumber;
 				let p = inter.polarization;
 				let gamma = _atom.gamma;

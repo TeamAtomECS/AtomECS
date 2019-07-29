@@ -60,7 +60,7 @@ fn mot_2Dplus(){
 		polarization:-1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::c/461e-9,
+		frequency:constant::C/461e-9,
 		index:1,
 	};
 		let laser_2 = Laser{
@@ -69,7 +69,7 @@ fn mot_2Dplus(){
 		polarization:-1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::c/461e-9,
+		frequency:constant::C/461e-9,
 		
 		index:2,
 	};
@@ -79,7 +79,7 @@ fn mot_2Dplus(){
 		polarization:1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::c/461e-9,
+		frequency:constant::C/461e-9,
 		index:3,
 	};
 		let laser_4 = Laser{
@@ -88,7 +88,7 @@ fn mot_2Dplus(){
 		polarization:1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::c/461e-9,
+		frequency:constant::C/461e-9,
 		index:4,
 	};
 		let laser_5 = Laser{
@@ -97,7 +97,7 @@ fn mot_2Dplus(){
 		polarization:1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::c/461e-9,
+		frequency:constant::C/461e-9,
 		index:5,
 	};
 
@@ -183,7 +183,7 @@ fn MOT_3D(){
 		polarization:-1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::c/461e-9,
+		frequency:constant::C/461e-9,
 		index:1,
 	};
 		let laser_2 = Laser{
@@ -192,7 +192,7 @@ fn MOT_3D(){
 		polarization:-1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::c/461e-9,
+		frequency:constant::C/461e-9,
 		
 		index:2,
 	};
@@ -202,7 +202,7 @@ fn MOT_3D(){
 		polarization:1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::c/461e-9,
+		frequency:constant::C/461e-9,
 		index:3,
 	};
 		let laser_4 = Laser{
@@ -211,7 +211,7 @@ fn MOT_3D(){
 		polarization:1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::c/461e-9,
+		frequency:constant::C/461e-9,
 		index:4,
 	};
 		let laser_5 = Laser{
@@ -220,7 +220,7 @@ fn MOT_3D(){
 		polarization:1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::c/461e-9,
+		frequency:constant::C/461e-9,
 		index:5,
 	};
 		let laser_6 = Laser{
@@ -229,7 +229,7 @@ fn MOT_3D(){
 		polarization:1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::c/461e-9,
+		frequency:constant::C/461e-9,
 		index:6,
 	};
 	//six laser introduced
