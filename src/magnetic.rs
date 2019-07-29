@@ -1,5 +1,5 @@
 extern crate specs;
-use specs::{System,ReadStorage,WriteStorage,Join,Component,VecStorage};
+use specs::{System,ReadStorage,WriteStorage,Join,Component,VecStorage,HashMapStorage};
 use crate::atom::Position;
 use crate::maths::Maths;
 
@@ -24,7 +24,7 @@ pub struct QuadrupoleField3D{
 }
 
 impl Component for QuadrupoleField3D{
-	type Storage = VecStorage<Self>;
+	type Storage = HashMapStorage<Self>;
 }
 
 /// Updates the values of magnetic field samplers to include quadrupole fields in the world.
