@@ -1,5 +1,3 @@
-
-
 use crate::constant as constant;
 use crate::constant::PI as PI;
 use crate::integrator::{Timestep,Step};
@@ -12,9 +10,12 @@ use crate::initiate::atom_create::{AtomCreate,Oven,AtomInitiateMot};
 use crate::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder,RunNow};
 use crate::output::{PrintOutput,Detector,DetectingAtom,PrintDetect,AtomOuput};
+// maybe this will work as an alternative way of testing
+#[cfg(test)]
+mod tests {
 
-#[allow(dead_code)]
-pub fn create(){
+    #[test]
+pub fn testing_ground(){
    // create the world
    let mut exp_mot = World::new();
    
@@ -42,7 +43,7 @@ pub fn create(){
 	exp_mot.add_resource(Step{n:0});
 	let mag= QuadrupoleField3D{gradient:0.002};
 	exp_mot.create_entity().with(mag).build();
-	// adding all six lasers
+
 	let laser_1 = Laser{
 		centre:[0.,0.,0.],
 		wavenumber:[0.0,0.0,2.0*PI/(461e-9)],
@@ -62,56 +63,19 @@ pub fn create(){
 		
 		index:2,
 	};
-		let laser_3 = Laser{
-		centre:[0.,0.,0.],
-		wavenumber:[0.0,2.0*PI/(461e-9),0.],
-		polarization:-1.,
-		power:10.,
-		std:0.1,
-		frequency:constant::C/461e-9,
-		index:3,
-	};
-		let laser_4 = Laser{
-		centre:[0.,0.,0.],
-		wavenumber:[0.0,-2.0*PI/(461e-9),0.],
-		polarization:-1.,
-		power:10.,
-		std:0.1,
-		frequency:constant::C/461e-9,
-		index:4,
-	};
-		let laser_5 = Laser{
-		centre:[0.,0.,0.],
-		wavenumber:[2.0*PI/(461e-9),0.,0.],
-		polarization:-1.,
-		power:10.,
-		std:0.1,
-		frequency:constant::C/461e-9,
-		index:5,
-	};
-		let laser_6 = Laser{
-		centre:[0.,0.,0.],
-		wavenumber:[-2.0*PI/(461e-9),0.,0.],
-		polarization:-1.,
-		power:10.,
-		std:0.1,
-		frequency:constant::C/461e-9,
-		index:6,
-	};
+
 	//six laser introduced
 	exp_mot.create_entity().with(laser_1).build();
 	exp_mot.create_entity().with(laser_2).build();
-	exp_mot.create_entity().with(laser_3).build();
-	exp_mot.create_entity().with(laser_4).build();
-	exp_mot.create_entity().with(laser_5).build();
-	exp_mot.create_entity().with(laser_6).build();
+
 	
 	
 	exp_mot.add_resource(Timestep{t:1e-6});
 	// initiate
 		// build a oven
-	exp_mot.create_entity().with(Oven{temperature:200.,position:[0.1,0.1,0.1],direction:[1e-6,1e-6,1.],number:1,size:[1e-2,1e-2,1e-2]})
+	exp_mot.create_entity().with(Oven{temperature:0.,position:[0.1,0.1,0.1],direction:[1e-6,1e-6,1.],number:1,size:[1e-2,1e-2,1e-2]})
 	.with(rb_atom).build();
+	assert
 		// initiator dispatched
 	let mut init_dispatcher=DispatcherBuilder::new()
 			.with(AtomCreate,"atomcreate",&[])
@@ -139,4 +103,5 @@ pub fn create(){
 		//println!("t{}",time);
 	}
 	
+}
 }
