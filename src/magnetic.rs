@@ -30,6 +30,24 @@ impl Component for QuadrupoleField3D{
 /// Updates the values of magnetic field samplers to include quadrupole fields in the world.
 pub struct Sample3DQuadrupoleFieldSystem;
 
+impl Sample3DQuadrupoleFieldSystem {
+
+	/// Calculates the quadrupole magnetic field in units of Gauss.
+	/// The field is defined with components `Bx = grad*x`, `By = grad*y`, `Bz = -2 * grad * z`.
+	/// 
+	/// # Arguments
+	/// 
+	/// `pos`: position of the sampler, m
+	/// 
+	/// `centre`: position of the quadrupole node, m
+	/// 
+	/// `gradient`: quadrupole gradient, in G/cm
+	pub fn calculate_field(pos:&[f64;3], centre:&[f64;3], gradient:f64) -> [f64;3]{
+		let rel_pos = Maths::array_subtraction(&pos, &centre);
+		[rel_pos[0]*gradient, rel_pos[1]*gradient, rel_pos[2]*-2.*gradient]
+	}
+}
+
 impl <'a> System<'a> for Sample3DQuadrupoleFieldSystem{
 		type SystemData = (WriteStorage<'a,MagneticFieldSampler>,
 									ReadStorage<'a,Position>,
@@ -38,14 +56,7 @@ impl <'a> System<'a> for Sample3DQuadrupoleFieldSystem{
 	fn run(&mut self,(mut _sampler,pos,_quadrupoles):Self::SystemData){
 		for (centre, quadrupole) in (&pos, &_quadrupoles).join(){
 			for (pos,mut sampler) in (&pos,&mut _sampler).join(){
-			
-			
-				let rela_pos = Maths::array_addition(&pos.pos,&Maths::array_multiply(&centre.pos,-1.));
-				let new_field = Maths::array_multiply(&[-rela_pos[0],-rela_pos[1],2.0*rela_pos[2]],quadrupole.gradient);
-				sampler.field = Maths::array_addition(&new_field,&sampler.field);
-				
-
-				//TODO: Value should be added to magnetic field sampler, which is cleared at the start of every frame. This will then support multiple different field sources.
+				sampler.field = Sample3DQuadrupoleFieldSystem::calculate_field(&pos.pos, &centre.pos, quadrupole.gradient);
 			}
 		}
 	}
@@ -72,4 +83,21 @@ impl <'a> System<'a> for MagMagnitude{
 			sampler.magnitude = Maths::modulus(&sampler.field);
 		}
 	}
+}
+
+#[cfg(test)]
+pub mod tests {
+
+	use super::*;
+
+	/// Tests the correct implementation of the quadrupole 3D field
+	#[test]
+	fn test_quadrupole3dfield() {
+		let pos = [1.,1.,1.];
+		let centre = [0.,1.,0.];
+		let gradient = 1.;
+		let field = Sample3DQuadrupoleFieldSystem::calculate_field(&pos, &centre, gradient);
+		assert_eq!(field, [1.,0.,-2.]);
+	}
+
 }

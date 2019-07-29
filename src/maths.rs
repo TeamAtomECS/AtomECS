@@ -13,6 +13,16 @@ pub mod Maths{
 		}
 		result
 	}
+
+	/// Calculates a - b
+	pub fn array_subtraction(a:&[f64;3],b:&[f64;3]) -> [f64;3]{
+		let mut result = [0.0,0.0,0.0];
+		for i in 0..3{
+			result[i]=a[i]-b[i];
+		}
+		result
+	}
+
 	pub fn array_multiply(a:&[f64;3],b:f64) -> [f64;3]{
 		//checked
 		[a[0]*b,a[1]*b,a[2]*b]
