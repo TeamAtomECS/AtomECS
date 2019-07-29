@@ -12,7 +12,6 @@ pub struct Timestep{
 }
 
 pub struct AtomInfo{
-	pub mass:f64,
 	pub mup:f64,
 	pub mum:f64,
 	

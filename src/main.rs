@@ -6,8 +6,7 @@ extern crate magneto_optical_trap as lib;
 use lib::constant as constant;
 use lib::constant::PI as PI;
 use lib::initiate::Step;
-use lib::atom::Position;
-use lib::atom::{Velocity,Force,RandKick};
+use lib::atom::{Mass,Position,Velocity,Force,RandKick};
 use lib::initiate::{Timestep,AtomInfo};
 use lib::update::*;
 use lib::laser::*;
@@ -38,7 +37,7 @@ fn mot_2Dplus(){
 	exp_mot.register::<Detector>();
 	
 	//component for the experiment
-	let rb_atom = AtomInfo{	mass:constant::MRB,
+	let rb_atom = AtomInfo{
 	mup:constant::MUP,
 	mum:constant::MUM,
 	muz:constant::MUZ,
@@ -113,7 +112,9 @@ fn mot_2Dplus(){
 	// initiate
 		// build a oven
 	exp_mot.create_entity().with(Oven{temperature:200.,position:[0.0,0.0,0.0],direction:[1e-6,1e-6,1.],number:100,size:[1e-2,1e-2,1e-2]})
-	.with(rb_atom).build();
+	.with(rb_atom)
+	.with(Mass{value:87.})
+	.build();
 		// initiator dispatched
 	let mut init_dispatcher=DispatcherBuilder::new()
 			.with(AtomCreate,"atomcreate",&[])
@@ -164,7 +165,7 @@ fn MOT_3D(){
 	exp_MOT.register::<RandKick>();
 	
 	//component for the experiment
-	let Rb_atom = AtomInfo{	mass:constant::MRB,
+	let Rb_atom = AtomInfo{
 	mup:constant::MUP,
 	mum:constant::MUM,
 	muz:constant::MUZ,

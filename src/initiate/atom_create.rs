@@ -23,7 +23,6 @@ pub fn velocity_generate(_t:f64,_mass:f64,_dir:&[f64;3])->[f64;3]{
 	let dirf = maths::array_addition(&maths::array_multiply(&dir,theta.cos()),&dir_div);
 	println!("{:?}",maths::array_multiply(&dirf,v_mag));
 	maths::array_multiply(&dirf,v_mag)
-	//[0.,0.,100.]
 }
 
 pub struct Oven{
@@ -51,7 +50,8 @@ impl <'a> System<'a> for AtomCreate{
 	
 	fn run (&mut self, (entities,_oven,atom,_pos,_vel,updater):Self::SystemData){
 
-
+		//TODO: Temporary, needs to be fixed properly, eg drawn randomly from distribution. Discuss tomorrow.
+		let mass = 87.;
 	
 		
 		let mut rng = rand::thread_rng();
@@ -62,7 +62,7 @@ impl <'a> System<'a> for AtomCreate{
 		let _iposition = _oven.position.clone();
 		for _i in 0.._oven.number{
 			let new_atom = entities.create();
-			let new_vel = velocity_generate(_oven.temperature,atom.mass,&dir);
+			let new_vel = velocity_generate(_oven.temperature,mass,&dir);
 			let pos1 = rng.gen_range(- 0.5*size[0], 0.5*size[0]);
 			let pos2 = rng.gen_range(- 0.5*size[1], 0.5*size[1]);
 			let pos3 = rng.gen_range(- 0.5*size[2], 0.5*size[2]);
@@ -70,7 +70,8 @@ impl <'a> System<'a> for AtomCreate{
 			updater.insert(new_atom,Position{pos:start_position});
 			updater.insert(new_atom,Velocity{vel:new_vel});
 			updater.insert(new_atom,Force{force:[0.,0.,0.]});
-			updater.insert(new_atom,AtomInfo{mass:atom.mass,mup:atom.mup,muz:atom.muz,mum:atom.mum,frequency:atom.frequency,gamma:atom.gamma});
+			updater.insert(new_atom,Mass{value:mass});
+			updater.insert(new_atom,AtomInfo{mup:atom.mup,muz:atom.muz,mum:atom.mum,frequency:atom.frequency,gamma:atom.gamma});
 
 			println!("atom created");
 		}

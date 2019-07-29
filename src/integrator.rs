@@ -25,16 +25,14 @@ impl <'a> System<'a> for EulerIntegrationSystem{
 									ReadExpect<'a,Timestep>,
 									WriteExpect<'a,Step>,
 									ReadStorage<'a,Force>,
-									ReadStorage<'a,AtomInfo>
+									ReadStorage<'a,Mass>
 									);
 		
-	fn run(&mut self,(mut pos,mut vel,t,mut step,force,atom):Self::SystemData){
+	fn run(&mut self,(mut pos,mut vel,t,mut step,force,mass):Self::SystemData){
 		
 		step.n = step.n +1;
-		for (mut vel,mut pos,force,atom) in (&mut vel,&mut pos,&force,&atom).join(){
-			//println!("euler method used");
-			let mass = atom.mass;
-			vel.vel = maths::array_addition(&vel.vel,&maths::array_multiply(&force.force,1./mass*t.t));
+		for (mut vel,mut pos,force,mass) in (&mut vel,&mut pos,&force,&mass).join(){
+			vel.vel = maths::array_addition(&vel.vel,&maths::array_multiply(&force.force,1./mass.value*t.t));
 			pos.pos = maths::array_addition(&pos.pos,&maths::array_multiply(&vel.vel,t.t));
 		}
 	}
