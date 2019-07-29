@@ -23,8 +23,8 @@ let mut rng = rand::thread_rng();
 	let dir_div = Maths::array_addition(&Maths::array_multiply(&dir_1,theta.sin()*theta2.cos()),&Maths::array_multiply(&dir_2,theta.sin()*theta2.sin()));
 	let dirf = Maths::array_addition(&Maths::array_multiply(&dir,theta.cos()),&dir_div);
 	println!("{:?}",Maths::array_multiply(&dirf,v_mag));
-	Maths::array_multiply(&dirf,v_mag)
-	//[0.,0.,100.]
+	//Maths::array_multiply(&dirf,v_mag)
+	[0.,0.,100.]
 }
 
 pub struct Oven{

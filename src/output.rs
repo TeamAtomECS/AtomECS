@@ -26,9 +26,9 @@ impl <'a>System <'a> for Print_output{
 		for (_lasers,_vel,_pos,_force,_kick) in (&_lasers,&_vel,&_pos,&_force,&_kick).join(){
 			if _step.n % 100 == 0{
 				for inter in &_lasers.content{
-					println!("index{},detuning{},force{:?}",inter.index,inter.detuning_doppler,inter.force);
+					//println!("index{},detuning{},force{:?}",inter.index,inter.detuning_doppler,inter.force);
 				}
-				println!("time{}position{:?},velocity{:?},acc{:?},kick{:?}",time,_pos.pos,_vel.vel,Maths::array_multiply(&_force.force,1./constant::MRb),Maths::array_multiply(&_kick.force,1./constant::MRb));
+				//println!("time{}position{:?},velocity{:?},acc{:?},kick{:?}",time,_pos.pos,_vel.vel,Maths::array_multiply(&_force.force,1./constant::MRb),Maths::array_multiply(&_kick.force,1./constant::MRb));
 			}
 		//println!("position{:?},velocity{:?}",_pos.pos,_vel.vel);
 		}
@@ -36,7 +36,7 @@ impl <'a>System <'a> for Print_output{
 }
 pub struct Atom_output{
 	pub number_of_atom : u64,
-	pub total_velcotiy:[f64;3],
+	pub total_velocity:[f64;3],
 }
 
 pub struct Detector{
@@ -67,7 +67,8 @@ impl <'a>System<'a> for Detecting_atom{
 		for (ent,mut _vel,_pos) in (&ent,&mut _vel,&_pos).join(){
 			if if_detect(&detector,&_pos.pos){
 				atom_output.number_of_atom = atom_output.number_of_atom + 1;
-				atom_output.total_velcotiy = Maths::array_addition(&atom_output.total_velcotiy,&_vel.vel);
+				println!("detected velocity{:?},position{:?}",_vel.vel,_pos.pos);
+				atom_output.total_velocity = Maths::array_addition(&atom_output.total_velocity,&_vel.vel);
 				lazy.remove::<Position>(ent);
 				lazy.remove::<Velocity>(ent);
 			}
@@ -95,7 +96,7 @@ pub struct Print_detect;
 impl <'a>System<'a> for Print_detect{
 	type SystemData = (WriteExpect<'a,Atom_output>);
 	fn run(&mut self, (atom_output):Self::SystemData){
-		let average_vel = Maths::array_multiply(&atom_output.total_velcotiy,1./atom_output.number_of_atom as f64);
+		let average_vel = Maths::array_multiply(&atom_output.total_velocity,1./atom_output.number_of_atom as f64);
 		println!("atom captured{},average velocity{:?}",atom_output.number_of_atom,average_vel);
 	}
 }
