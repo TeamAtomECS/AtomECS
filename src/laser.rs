@@ -71,7 +71,7 @@ impl <'a> System<'a> for UpdateInteractionLaser{
 		for (_vel,_pos,_mag,mut _inter,_atom) in (&_vel,&_pos,&_mag,&mut _inter,&_atom).join(){
 			//println!("laser interaction updated");
 			let mag_field = _mag.field;
-			let br = Maths::modulus(&mag_field);
+			let br = _mag.magnitude;
 			for inter in &mut _inter.content{
 				let _mup = _atom.mup;
 				let _mum = _atom.mum;

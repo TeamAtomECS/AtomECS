@@ -36,17 +36,40 @@ impl <'a> System<'a> for Sample3DQuadrupoleFieldSystem{
 									ReadStorage<'a,QuadrupoleField3D>,
 									);
 	fn run(&mut self,(mut _sampler,pos,_quadrupoles):Self::SystemData){
-		
 		for (centre, quadrupole) in (&pos, &_quadrupoles).join(){
 			for (pos,mut sampler) in (&pos,&mut _sampler).join(){
+			
+			
 				let rela_pos = Maths::array_addition(&pos.pos,&Maths::array_multiply(&centre.pos,-1.));
-				sampler.field = Maths::array_multiply(&[-rela_pos[0],-rela_pos[1],2.0*rela_pos[2]],quadrupole.gradient);
-
-				//TODO: Set value for sampler.magnitude
-				// sampler.magnitude = 
+				let new_field = Maths::array_multiply(&[-rela_pos[0],-rela_pos[1],2.0*rela_pos[2]],quadrupole.gradient);
+				sampler.field = Maths::array_addition(&new_field,&sampler.field);
+				
 
 				//TODO: Value should be added to magnetic field sampler, which is cleared at the start of every frame. This will then support multiple different field sources.
 			}
+		}
+	}
+}
+
+pub struct ClearSampler;
+
+impl <'a> System<'a> for ClearSampler{
+	type SystemData = (WriteStorage<'a,MagneticFieldSampler>);
+	fn run (&mut self,mut _sampler:Self::SystemData){
+		for sampler in (&mut _sampler).join(){
+			sampler.magnitude = 0.;
+			sampler.field = [0.,0.,0.]
+		}
+	}
+}
+
+pub struct MagMagnitude;
+
+impl <'a> System<'a> for MagMagnitude{
+	type SystemData = (WriteStorage<'a,MagneticFieldSampler>);
+	fn run (&mut self,mut _sampler:Self::SystemData){
+		for sampler in (&mut _sampler).join(){
+			sampler.magnitude = Maths::modulus(&sampler.field);
 		}
 	}
 }
