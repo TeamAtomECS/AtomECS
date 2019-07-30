@@ -161,6 +161,7 @@ impl<'a> System<'a> for AtomInitiateMotSystem {
 			);
 			updater.insert(ent, empty_mag);
 			updater.insert(ent, empty_laser.clone());
+			updater.insert(ent,Gravity{force:[0.,0.,-1.*_atom.mass as f64*constant::GC*constant::AMU]});
 			println!("atom initiated");
 		}
 	}

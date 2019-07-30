@@ -15,11 +15,12 @@ pub struct UpdateForce;
 impl <'a>System<'a> for UpdateForce{
 	// this system will update the force component for atoms based on interaction with lasers and random kick
 	type SystemData = ( WriteStorage<'a,Force>,
+									ReadStorage<'a,Gravity>,
 									ReadStorage<'a,InteractionLaserALL>,
 									ReadStorage<'a,RandKick>
 									);
 									
-	fn run(&mut self,(mut _force,inter,kick):Self::SystemData){
+	fn run(&mut self,(mut _force,gravity,inter,kick):Self::SystemData){
 		for (mut _force, inter) in (&mut _force,&inter).join(){
 			let mut new_force = [0.,0.,0.];
 			//println!("force updated");
@@ -31,6 +32,9 @@ impl <'a>System<'a> for UpdateForce{
 		}
 		for (mut _force,_kick) in (&mut _force,&kick).join(){
 			_force.force = maths::array_addition(&_kick.force,&_force.force);
+		}
+		for (mut _force,_gravity) in (&mut _force,&gravity).join(){
+			_force.force = maths::array_addition(&_force.force,&_gravity.force);
 		}
 	}
 }
