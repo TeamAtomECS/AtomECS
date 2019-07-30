@@ -213,6 +213,7 @@ version = "0.1.0"
 dependencies = [
  "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "specs 0.14.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "specs-derive 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -433,6 +434,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "specs-derive"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quote 0.6.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 0.15.42 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -529,6 +540,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum shrev 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b5752e017e03af9d735b4b069f53b7a7fd90fefafa04d8bd0c25581b0bff437f"
 "checksum smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)" = "ab606a9c5e214920bb66c458cd7be8ef094f813f20fe77a54cc7dbfff220d4b7"
 "checksum specs 0.14.3 (registry+https://github.com/rust-lang/crates.io-index)" = "de65613ada4338aa7ba71eca60eca24c60483433eec0077bc4f33cfc31f4bdf0"
+"checksum specs-derive 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a63549fa0d4a6f76e99e6634c328f25d0c9fa8ad6f8498aef74f6c35c0b269e5"
 "checksum stable_deref_trait 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "dba1a27d3efae4351c8051072d619e3ade2820635c3958d826bfea39d59b54c8"
 "checksum syn 0.15.42 (registry+https://github.com/rust-lang/crates.io-index)" = "eadc09306ca51a40555dd6fc2b415538e9e18bc9f870e47b1a524a79fe2dcf5e"
 "checksum tuple_utils 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cbfecd7bb8f0a3e96b3b31c46af2677a55a588767c0091f484601424fcb20e7e"

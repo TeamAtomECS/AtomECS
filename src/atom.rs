@@ -1,5 +1,8 @@
 extern crate specs;
-use specs::{Component, VecStorage};
+extern crate specs_derive;
+
+use specs::{Component, VecStorage, NullStorage};
+
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes. 
 /// 
@@ -52,4 +55,14 @@ pub struct RandKick{
 
 impl Component for RandKick{
 	type Storage = VecStorage<Self>;
+}
+
+/// Component that marks an entity as an [atom](struct.Atom.html).
+/// This provides a simple way for systems to get only [atom](struct.Atom.html)s, even though non-atom entities may also share components, eg [position](struct.Position.html).
+#[derive(Component)]
+#[storage(NullStorage)]
+pub struct Atom;
+
+impl Default for Atom {
+	fn default() -> Self { Atom{} }
 }

@@ -18,9 +18,7 @@ use crate::constant;
 /// # Euler Integration
 /// 
 /// The EulerIntegrationSystem integrates the classical equations of motion for particles using the euler method:
-/// ```  
-/// x' = x + v * dt
-/// ```
+/// `x' = x + v * dt`.
 /// This integrator is simple to implement but prone to integration error.
 /// 
 /// The timestep duration is specified by the ```Timestep``` system resource.

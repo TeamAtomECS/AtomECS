@@ -36,6 +36,7 @@ pub fn velocity_generate(_t: f64, _mass: f64, _dir: &[f64; 3]) -> [f64; 3] {
 pub struct Oven {
 	/// Temperature of the oven, in Kelvin
 	pub temperature: f64,
+
 	/// Size of the oven's aperture, SI units of metres.
 	pub size: [f64; 3],
 
