@@ -1,11 +1,12 @@
 extern crate specs;
-use specs::{Component,VecStorage,System,ReadStorage,WriteStorage,Join};
+use specs::{Component,VecStorage,System,ReadStorage,WriteStorage,Join,Builder,World,RunNow};
 use crate::atom::*;
 use crate::magnetic::*;
 use crate::initiate::AtomInfo;
 use crate::constant::HBAR as HBAR;
 use crate::maths;
 use crate::constant;
+use crate::constant::PI as PI;
 
 pub struct Laser{
 	
@@ -153,6 +154,68 @@ pub mod tests {
 		let dir = [1.,2.,2.];
 		let distance = get_perpen_distance(&pos,&centre,&dir);
 		assert_eq!(distance>0.942,distance<0.943);
+	}
+
+	#[test]
+	fn test_laser_interaction(){
+		let mut test_world = World::new();
+		test_world.register::<InteractionLaserALL>();
+		test_world.register::<Force>();
+		test_world.register::<Laser>();
+		test_world.register::<MagneticFieldSampler>();
+		test_world.register::<Position>();
+		test_world.register::<Velocity>();
+		test_world.register::<AtomInfo>();
+		let rb_atom = AtomInfo{
+			mass:87,
+			mup:constant::MUP,
+			mum:constant::MUM,
+			muz:constant::MUZ,
+			frequency:constant::ATOMFREQUENCY,
+			gamma:constant::TRANSWIDTH
+		};
+		let mut content = Vec::new();
+		content.push(InteractionLaser{wavenumber:[1.,1.,2.],index:1,intensity:1.,polarization:1.,detuning_doppler:1.,force:[1.,0.,0.]});
+		content.push(InteractionLaser{wavenumber:[1.,1.,2.],index:2,intensity:1.,polarization:1.,detuning_doppler:1.,force:[2.,0.,0.]});
+		let test_interaction = InteractionLaserALL{content};
+		let sample_entity= test_world.create_entity().
+		with(test_interaction).
+		with(MagneticFieldSampler{magnitude:5.,field:[3.,4.,0.]}).
+		with(rb_atom).
+		with(Position{pos:[0.,0.,0.]}).
+		with(Velocity{vel:[0.,0.,0.]}).build();
+
+
+		let laser_1 = Laser{
+			centre:[0.,0.,0.],
+			wavenumber:[0.0,0.0,2.0*PI/(461e-9)],
+			polarization:1.,
+			power:10.,
+			std:0.1,
+			frequency:constant::C/461e-9,
+			index:1,
+		};
+			let laser_2 = Laser{
+			centre:[0.,0.,0.],
+			wavenumber:[0.0,0.0,-2.0*PI/(461e-9)],
+			polarization:1.,
+			power:10.,
+			std:0.1,
+			frequency:constant::C/461e-9,
+		
+			index:2,
+		};
+
+		let mut update_test = UpdateLaserSystem;
+		let mut update_test_two = UpdateInteractionLaserSystem;
+		update_test.run_now(&test_world.res);
+		update_test_two.run_now(&test_world.res);
+
+
+
+		let samplers = test_world.read_storage::<InteractionLaserALL>();
+		let sampler = samplers.get(sample_entity);
+		assert_eq!((sampler.expect("entity not found").content[0].force[0]*1e45) as u64,181);
 	}
 
 }
