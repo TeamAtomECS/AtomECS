@@ -15,3 +15,9 @@ pub struct AtomInfo{
 impl Component for AtomInfo{
 	type Storage = VecStorage<Self>;	
 }
+
+pub struct NewlyCreated;
+
+impl Component for NewlyCreated{
+	type Storage = VecStorage<Self>;
+}

@@ -3,6 +3,7 @@ use crate::maths;
 use crate::atom::*;
 use crate::laser::InteractionLaserALL;
 use crate::integrator::{Timestep,Step};
+use crate::constant;
 
 use specs::{System,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect,Component,VecStorage,Entities,LazyUpdate};
 
@@ -15,19 +16,20 @@ impl <'a>System <'a> for PrintOutputSytem{
 								ReadStorage<'a,InteractionLaserALL>,
 								ReadStorage<'a,Position>,
 								ReadStorage<'a,Velocity>,
+								ReadStorage<'a,Atom>,
 								ReadStorage<'a,Force>,
 								ReadStorage<'a,RandKick>,
 								ReadExpect<'a,Step>,
 								ReadExpect<'a,Timestep>,
 								);
-	fn run(&mut self, (_lasers,_pos,_vel,_force,_kick,_step,_t):Self::SystemData){
+	fn run(&mut self, (_lasers,_pos,_vel,_,_force,_kick,_step,_t):Self::SystemData){
 		let _time = _t.t * _step.n as f64;
 		for (_lasers,_vel,_pos,_force,_kick) in (&_lasers,&_vel,&_pos,&_force,&_kick).join(){
 			if _step.n % 100 == 0{
 				for _inter in &_lasers.content{
 					//println!("index{},detuning{},force{:?}",inter.index,inter.detuning_doppler,inter.force);
 				}
-				//println!("time{}position{:?},velocity{:?},acc{:?},kick{:?}",time,_pos.pos,_vel.vel,Maths::array_multiply(&_force.force,1./constant::MRb),Maths::array_multiply(&_kick.force,1./constant::MRb));
+				println!("time{}position{:?},velocity{:?},acc{:?},kick{:?}",_time,_pos.pos,_vel.vel,maths::array_multiply(&_force.force,1./constant::AMU/87.),maths::array_multiply(&_kick.force,1./constant::AMU/87.));
 			}
 		//println!("position{:?},velocity{:?}",_pos.pos,_vel.vel);
 		}

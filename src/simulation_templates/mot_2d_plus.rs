@@ -1,8 +1,8 @@
 use crate::constant as constant;
 use crate::constant::PI as PI;
 use crate::integrator::{Timestep,Step};
-use crate::atom::{Mass,Position,Velocity,Force,RandKick};
-use crate::initiate::AtomInfo;
+use crate::atom::{Atom,Mass,Position,Velocity,Force,RandKick};
+use crate::initiate::{AtomInfo,NewlyCreated};
 use crate::update::*;
 use crate::laser::*;
 use crate::magnetic::*;
@@ -29,6 +29,8 @@ pub fn create(){
 	exp_mot.register::<QuadrupoleField3D>();
 	exp_mot.register::<RandKick>();
 	exp_mot.register::<Detector>();
+	exp_mot.register::<NewlyCreated>();
+	exp_mot.register::<Atom>();
 	
 	//component for the experiment
 	let rb_atom = AtomInfo{
@@ -106,7 +108,7 @@ pub fn create(){
 	// initiate
 		// build a oven
 	exp_mot.create_entity()
-	.with(Oven{temperature:200.,direction:[1e-6,1e-6,1.],number:100,size:[1e-2,1e-2,1e-2]})
+	.with(Oven{temperature:200.,direction:[1e-6,1e-6,1.],number:1,size:[1e-2,1e-2,1e-2]})
 	.with(rb_atom)
 	.with(Mass{value:87.})
 	.with(Position{pos:[0.0,0.0,0.0]})

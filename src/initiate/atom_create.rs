@@ -108,6 +108,8 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 						gamma: atom.gamma,
 					},
 				);
+				updater.insert(new_atom,Atom);
+				updater.insert(new_atom,NewlyCreated);
 
 				println!("atom created");
 			}
@@ -120,6 +122,7 @@ pub struct AtomInitiateMotSystem;
 impl<'a> System<'a> for AtomInitiateMotSystem {
 	type SystemData = (
 		Entities<'a>,
+		ReadStorage<'a,NewlyCreated>,
 		ReadStorage<'a, AtomInfo>,
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, Velocity>,
@@ -127,7 +130,7 @@ impl<'a> System<'a> for AtomInitiateMotSystem {
 		ReadStorage<'a, Laser>,
 	);
 
-	fn run(&mut self, (ent, atom, position, velocity, updater, _laser): Self::SystemData) {
+	fn run(&mut self, (ent,_, atom, position, velocity, updater, _laser): Self::SystemData) {
 		let mut content = Vec::new();
 		println!("atom initiate 1");
 		for _laser in (&_laser).join() {
