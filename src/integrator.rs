@@ -52,6 +52,8 @@ fn EulerUpdating(vel:&mut Velocity,pos:&mut Position,force:&Force,mass:&Mass,tim
 pub mod tests {
 
 	use super::*;
+	extern crate specs;
+	use specs::{World,DispatcherBuilder,Builder};
 
 	#[test]
 	fn test_euler() {
@@ -63,6 +65,43 @@ pub mod tests {
 		EulerUpdating(&mut vel,&mut pos,&force,&mass,time);
 		assert_eq!(vel.vel, [0.,1.,1.]);
 		assert_eq!(pos.pos,[1.,2.,2.]);
+	}
+
+	/// Tests the [EulerIntegrationSystem] by creating a mock world and integrating the trajectory of one entity.
+	#[test]
+	fn test_euler_system()
+	{
+		let mut test_world = World::new();
+
+		let mut dispatcher=DispatcherBuilder::new()
+		.with(EulerIntegrationSystem, "integrator", &[])
+		.build();
+		
+		dispatcher.setup(&mut test_world.res);
+
+		let initial_position = [ 0.0, 0.1, 0.0];
+		let initial_velocity = [ 1.0, 1.5, 0.4];
+		let initial_force = [ 0.4, 0.5, -0.4];
+		let mass = 2.0;
+		let test_entity = test_world.create_entity()
+		.with(Position{pos:initial_position})
+		.with(Velocity{vel:initial_velocity})
+		.with(Force{force:initial_force})
+		.with(Mass{value:mass})
+		.build();
+
+		let dt = 1.0;
+		test_world.add_resource(Timestep{t:1.0});
+		test_world.add_resource(Step{n:0});
+
+		dispatcher.dispatch(&mut test_world.res);
+
+		let positions = test_world.read_storage::<Position>();
+		let position = positions.get(test_entity).expect("entity not found");
+		assert_eq!(position.pos,maths::array_addition(&initial_position, &maths::array_multiply(&initial_velocity, dt)));
+		let velocities = test_world.read_storage::<Velocity>();
+		let velocity = velocities.get(test_entity).expect("entity not found");
+		assert_eq!(velocity.vel,maths::array_addition(&initial_velocity,&maths::array_multiply(&initial_force,&dt/&mass)));
 	}
 
 }
