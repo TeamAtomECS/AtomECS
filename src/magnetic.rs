@@ -146,7 +146,7 @@ pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps
 	builder.
 	with(ClearMagneticFieldSamplerSystem,"magnetics_clear", deps).
 	with(Sample3DQuadrupoleFieldSystem,"magnetics_quadrupole",&["magnetics_clear"]).
-	with(Sample3DQuadrupoleFieldSystem,"magnetics_uniform",&["magnetics_quadrupole"]).
+	with(UniformMagneticFieldSystem,"magnetics_uniform",&["magnetics_quadrupole"]).
 	with(CalculateMagneticFieldMagnitudeSystem,"magnetics_magnitude",&["magnetics_uniform"])
 }
 
