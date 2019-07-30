@@ -1,5 +1,6 @@
 use crate::maths;
 extern crate rand;
+use crate::constant;
 use crate::constant::PI;
 use crate::initiate::*;
 use rand::Rng;
@@ -27,7 +28,7 @@ pub fn velocity_generate(_t: f64, _mass: f64, _dir: &[f64; 3]) -> [f64; 3] {
 		&maths::array_multiply(&dir_2, theta.sin() * theta2.sin()),
 	);
 	let dirf = maths::array_addition(&maths::array_multiply(&dir, theta.cos()), &dir_div);
-	println!("{:?}", maths::array_multiply(&dirf, v_mag));
+	println!("velocity{:?}", maths::array_multiply(&dirf, v_mag));
 	assert!(maths::modulus(&dirf) < 1.01 && maths::modulus(&dirf) > 0.99);
 	maths::array_multiply(&dirf, v_mag)
 }
@@ -75,7 +76,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 			let size = oven.size.clone();
 			for _i in 0..oven.number {
 				let new_atom = entities.create();
-				let new_vel = velocity_generate(oven.temperature, mass, &dir);
+				let new_vel = velocity_generate(oven.temperature, mass*constant::AMU, &dir);
 				let pos1 = rng.gen_range(-0.5 * size[0], 0.5 * size[0]);
 				let pos2 = rng.gen_range(-0.5 * size[1], 0.5 * size[1]);
 				let pos3 = rng.gen_range(-0.5 * size[2], 0.5 * size[2]);
