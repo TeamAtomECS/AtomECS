@@ -39,20 +39,22 @@ impl <'a> System<'a> for EulerIntegrationSystem{
 		
 		step.n = step.n +1;
 		for (mut vel,mut pos,force,mass) in (&mut vel,&mut pos,&force,&mass).join(){
-			EulerUpdating(&mut vel,&mut pos,&force,&mass,t.t);
+			euler_updating(&mut vel,&mut pos,&force,&mass,t.t);
 		}
 	}
 }
 
-fn EulerUpdating(vel:&mut Velocity,pos:&mut Position,force:&Force,mass:&Mass,time:f64){
+fn euler_updating(vel:&mut Velocity,pos:&mut Position,force:&Force,mass:&Mass,time:f64){
 		vel.vel = maths::array_addition(&vel.vel,&maths::array_multiply(&force.force,1./(constant::AMU*mass.value)*time));
 		pos.pos = maths::array_addition(&pos.pos,&maths::array_multiply(&vel.vel,time));
 }
 
 pub mod tests {
-
+	// These imports are actually needed! The compiler is getting confused and warning they are not.
+	#[allow(unused_imports)]
 	use super::*;
 	extern crate specs;
+	#[allow(unused_imports)]
 	use specs::{World,DispatcherBuilder,Builder};
 
 	#[test]
@@ -62,7 +64,7 @@ pub mod tests {
 		let time = 1.;
 		let mass = Mass{value:1./constant::AMU};
 		let force = Force{force:[0.,0.,1.]};
-		EulerUpdating(&mut vel,&mut pos,&force,&mass,time);
+		euler_updating(&mut vel,&mut pos,&force,&mass,time);
 		assert_eq!(vel.vel, [0.,1.,1.]);
 		assert_eq!(pos.pos,[1.,2.,2.]);
 	}

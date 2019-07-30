@@ -6,7 +6,7 @@ use crate::initiate::AtomInfo;
 use crate::update::*;
 use crate::laser::*;
 use crate::magnetic::*;
-use crate::initiate::atom_create::{AtomCreate,Oven,AtomInitiateMot};
+use crate::initiate::atom_create::{OvenCreateAtomsSystem,Oven,AtomInitiateMot};
 use crate::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder,RunNow};
 use crate::output::{PrintOutput,Detector,DetectingAtom,PrintDetect,AtomOuput};
@@ -105,13 +105,15 @@ pub fn create(){
 	exp_mot.add_resource(Timestep{t:1e-6});
 	// initiate
 		// build a oven
-	exp_mot.create_entity().with(Oven{temperature:200.,position:[0.0,0.0,0.0],direction:[1e-6,1e-6,1.],number:100,size:[1e-2,1e-2,1e-2]})
+	exp_mot.create_entity()
+	.with(Oven{temperature:200.,direction:[1e-6,1e-6,1.],number:100,size:[1e-2,1e-2,1e-2]})
 	.with(rb_atom)
 	.with(Mass{value:87.})
+	.with(Position{pos:[0.0,0.0,0.0]})
 	.build();
 		// initiator dispatched
 	let mut init_dispatcher=DispatcherBuilder::new()
-			.with(AtomCreate,"atomcreate",&[])
+			.with(OvenCreateAtomsSystem,"atomcreate",&[])
       	.build();
 		
 	//init_dispatcher.setup(&mut exp_MOT.res);
