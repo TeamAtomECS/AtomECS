@@ -148,3 +148,29 @@ impl <'a>System<'a> for PrintDetectSystem{
 }
 
 pub struct FileOutputSystem;
+
+impl <'a>System<'a> for FileOutputSystem{
+		// print the output (whatever you want) to the console
+	type SystemData = (
+								ReadStorage<'a,InteractionLaserALL>,
+								ReadStorage<'a,Position>,
+								ReadStorage<'a,Velocity>,
+								ReadStorage<'a,Atom>,
+								ReadStorage<'a,Force>,
+								ReadStorage<'a,RandKick>,
+								ReadExpect<'a,Step>,
+								ReadExpect<'a,Timestep>,
+								);
+	fn run(&mut self, (_lasers,_pos,_vel,_,_force,_kick,_step,_t):Self::SystemData){
+		let _time = _t.t * _step.n as f64;
+		for (_lasers,_vel,_pos,_force,_kick) in (&_lasers,&_vel,&_pos,&_force,&_kick).join(){
+			if _step.n % 100 == 0{
+				for _inter in &_lasers.content{
+					// TODO print the necessary information to a file, maybe a CSV?
+					// complete after finding out what to print and what file format is prefered
+				}
+			}
+
+		}
+	}
+}
