@@ -1,5 +1,6 @@
 use crate::maths;
 extern crate rand;
+use crate::constant;
 use crate::constant::PI;
 use crate::initiate::*;
 use rand::Rng;
@@ -27,7 +28,7 @@ pub fn velocity_generate(_t: f64, _mass: f64, _dir: &[f64; 3]) -> [f64; 3] {
 		&maths::array_multiply(&dir_2, theta.sin() * theta2.sin()),
 	);
 	let dirf = maths::array_addition(&maths::array_multiply(&dir, theta.cos()), &dir_div);
-	println!("{:?}", maths::array_multiply(&dirf, v_mag));
+	println!("velocity{:?}", maths::array_multiply(&dirf, v_mag));
 	assert!(maths::modulus(&dirf) < 1.01 && maths::modulus(&dirf) > 0.99);
 	maths::array_multiply(&dirf, v_mag)
 }
@@ -67,15 +68,16 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 
 	fn run(&mut self, (entities, oven, atom, pos, updater): Self::SystemData) {
 		//TODO: Temporary, needs to be fixed properly, eg drawn randomly from distribution. Discuss tomorrow.
-		let mass = 87.;
+		
 		let mut rng = rand::thread_rng();
 
 		for (oven, atom, oven_position) in (&oven, &atom, &pos).join() {
+			let mass = atom.mass as f64;
 			let dir = oven.direction.clone();
 			let size = oven.size.clone();
 			for _i in 0..oven.number {
 				let new_atom = entities.create();
-				let new_vel = velocity_generate(oven.temperature, mass, &dir);
+				let new_vel = velocity_generate(oven.temperature, mass*constant::AMU, &dir);
 				let pos1 = rng.gen_range(-0.5 * size[0], 0.5 * size[0]);
 				let pos2 = rng.gen_range(-0.5 * size[1], 0.5 * size[1]);
 				let pos3 = rng.gen_range(-0.5 * size[2], 0.5 * size[2]);
@@ -101,6 +103,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				updater.insert(
 					new_atom,
 					AtomInfo {
+						mass:atom.mass,
 						mup: atom.mup,
 						muz: atom.muz,
 						mum: atom.mum,
@@ -108,6 +111,8 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 						gamma: atom.gamma,
 					},
 				);
+				updater.insert(new_atom,Atom);
+				updater.insert(new_atom,NewlyCreated);
 
 				println!("atom created");
 			}
@@ -115,11 +120,12 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 	}
 }
 
-pub struct AtomInitiateMot;
+pub struct AtomInitiateMotSystem;
 
-impl<'a> System<'a> for AtomInitiateMot {
+impl<'a> System<'a> for AtomInitiateMotSystem {
 	type SystemData = (
 		Entities<'a>,
+		ReadStorage<'a,NewlyCreated>,
 		ReadStorage<'a, AtomInfo>,
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, Velocity>,
@@ -127,7 +133,7 @@ impl<'a> System<'a> for AtomInitiateMot {
 		ReadStorage<'a, Laser>,
 	);
 
-	fn run(&mut self, (ent, atom, position, velocity, updater, _laser): Self::SystemData) {
+	fn run(&mut self, (ent,_, atom, position, velocity, updater, _laser): Self::SystemData) {
 		let mut content = Vec::new();
 		println!("atom initiate 1");
 		for _laser in (&_laser).join() {
@@ -155,6 +161,7 @@ impl<'a> System<'a> for AtomInitiateMot {
 			);
 			updater.insert(ent, empty_mag);
 			updater.insert(ent, empty_laser.clone());
+			updater.insert(ent,Gravity{force:[0.,0.,-1.*_atom.mass as f64*constant::GC*constant::AMU]});
 			println!("atom initiated");
 		}
 	}

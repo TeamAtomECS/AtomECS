@@ -1,15 +1,15 @@
 use crate::constant as constant;
 use crate::constant::PI as PI;
 use crate::integrator::{Timestep,Step};
-use crate::atom::{Mass,Position,Velocity,Force,RandKick};
-use crate::initiate::AtomInfo;
+use crate::atom::{Atom,Mass,Position,Velocity,Force,RandKick};
+use crate::initiate::{AtomInfo,NewlyCreated};
 use crate::update::*;
 use crate::laser::*;
 use crate::magnetic::*;
-use crate::initiate::atom_create::{OvenCreateAtomsSystem,Oven,AtomInitiateMot};
+use crate::initiate::atom_create::{OvenCreateAtomsSystem,Oven,AtomInitiateMotSystem};
 use crate::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder,RunNow};
-use crate::output::{PrintOutput,Detector,DetectingAtom,PrintDetect,AtomOuput};
+use crate::output::{PrintOutputSytem,Detector,DetectingAtomSystem,PrintDetectSystem,AtomOuput};
 
 #[allow(dead_code)]
 pub fn create(){
@@ -29,9 +29,12 @@ pub fn create(){
 	exp_mot.register::<QuadrupoleField3D>();
 	exp_mot.register::<RandKick>();
 	exp_mot.register::<Detector>();
+	exp_mot.register::<NewlyCreated>();
+	exp_mot.register::<Atom>();
 	
 	//component for the experiment
 	let rb_atom = AtomInfo{
+	mass:87,
 	mup:constant::MUP,
 	mum:constant::MUM,
 	muz:constant::MUZ,
@@ -106,7 +109,7 @@ pub fn create(){
 	// initiate
 		// build a oven
 	exp_mot.create_entity()
-	.with(Oven{temperature:200.,direction:[1e-6,1e-6,1.],number:100,size:[1e-2,1e-2,1e-2]})
+	.with(Oven{temperature:200.,direction:[1e-6,1e-6,1.],number:1,size:[1e-2,1e-2,1e-2]})
 	.with(rb_atom)
 	.with(Mass{value:87.})
 	.with(Position{pos:[0.0,0.0,0.0]})
@@ -120,26 +123,26 @@ pub fn create(){
 	init_dispatcher.dispatch(&mut exp_mot.res);
 	exp_mot.maintain();
 	//two initiators cannot be dispatched at the same time apparently for some unknown reason
-	let mut init_dispatcher2=DispatcherBuilder::new().with(AtomInitiateMot, "initiate", &[]).build();
+	let mut init_dispatcher2=DispatcherBuilder::new().with(AtomInitiateMotSystem, "initiate", &[]).build();
 	init_dispatcher2.dispatch(&mut exp_mot.res);
 	// run loop
 	let mut runner=DispatcherBuilder::new().
-	with(UpdateLaser,"updatelaser",&[]).
+	with(UpdateLaserSystem,"updatelaser",&[]).
 	with(ClearMagneticFieldSamplerSystem,"clear",&[]).
 	with(Sample3DQuadrupoleFieldSystem,"updatesampler",&[]).
 	with(CalculateMagneticFieldMagnitudeSystem,"magnitudecal",&["updatesampler"]).
-	with(UpdateInteractionLaser,"updateinter",&["updatelaser","updatesampler","magnitudecal"]).
+	with(UpdateInteractionLaserSystem,"updateinter",&["updatelaser","updatesampler","magnitudecal"]).
 	with(UpdateRandKick,"update_kick",&["updateinter"]).
 	with(UpdateForce,"updateforce",&["update_kick","updateinter"]).
 	with(EulerIntegrationSystem,"updatepos",&["update_kick"]).
-	with(PrintOutput,"print",&["updatepos"]).
-	with(DetectingAtom,"detect",&["updatepos"]).build();
+	with(PrintOutputSytem,"print",&["updatepos"]).
+	with(DetectingAtomSystem,"detect",&["updatepos"]).build();
 	runner.setup(&mut exp_mot.res);
 	for _i in 0..10000{
 		runner.dispatch(&mut exp_mot.res);
 		exp_mot.maintain();
 		//println!("t{}",time);
 	}
-	let mut print_detect = PrintDetect;
+	let mut print_detect = PrintDetectSystem;
 	print_detect.run_now(&exp_mot.res);	
 }

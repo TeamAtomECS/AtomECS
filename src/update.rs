@@ -15,11 +15,12 @@ pub struct UpdateForce;
 impl <'a>System<'a> for UpdateForce{
 	// this system will update the force component for atoms based on interaction with lasers and random kick
 	type SystemData = ( WriteStorage<'a,Force>,
+									ReadStorage<'a,Gravity>,
 									ReadStorage<'a,InteractionLaserALL>,
 									ReadStorage<'a,RandKick>
 									);
 									
-	fn run(&mut self,(mut _force,inter,kick):Self::SystemData){
+	fn run(&mut self,(mut _force,gravity,inter,kick):Self::SystemData){
 		for (mut _force, inter) in (&mut _force,&inter).join(){
 			let mut new_force = [0.,0.,0.];
 			//println!("force updated");
@@ -31,6 +32,9 @@ impl <'a>System<'a> for UpdateForce{
 		}
 		for (mut _force,_kick) in (&mut _force,&kick).join(){
 			_force.force = maths::array_addition(&_kick.force,&_force.force);
+		}
+		for (mut _force,_gravity) in (&mut _force,&gravity).join(){
+			_force.force = maths::array_addition(&_force.force,&_gravity.force);
 		}
 	}
 }
@@ -73,3 +77,46 @@ impl <'a>System<'a> for UpdateRandKick{
 		}
 	}
 }
+
+#[cfg(test)]
+pub mod tests {
+
+	use super::*;
+	extern crate specs;
+	use crate::laser::InteractionLaser;
+
+	/// Tests the correct implementation of update force
+	#[test]
+	
+	/// Tests the correct implementation of the magnetics systems and dispatcher.
+	/// This is done by setting up a test world and ensuring that the magnetic systems perform the correct operations on test entities.
+	#[test]
+	fn test_magnetics_systems()
+	{
+		use specs::{RunNow,World,Builder};
+		let mut test_world = World::new();
+		test_world.register::<RandKick>();
+		test_world.register::<Force>();
+		test_world.register::<InteractionLaserALL>();
+
+		let mut content = Vec::new();
+		content.push(InteractionLaser{wavenumber:[1.,1.,2.],index:1,intensity:1.,polarization:1.,detuning_doppler:1.,force:[1.,0.,0.]});
+		content.push(InteractionLaser{wavenumber:[1.,1.,2.],index:2,intensity:1.,polarization:1.,detuning_doppler:1.,force:[2.,0.,0.]});
+
+		let test_interaction = InteractionLaserALL{content};
+		let test_kick = RandKick{force:[1.,0.,0.]};
+		let sample_entity= test_world.create_entity().
+		with(test_interaction).
+		with(test_kick).
+		with(Force{force:[0.,0.,0.]}).build();
+
+		let mut update_test = UpdateForce;
+		update_test.run_now(&test_world.res);
+
+
+
+		let samplers = test_world.read_storage::<Force>();
+		let sampler = samplers.get(sample_entity);
+		assert_eq!(sampler.expect("entity not found").force,[4.,0.,0.]);
+	}
+}	

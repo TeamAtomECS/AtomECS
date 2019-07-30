@@ -48,6 +48,13 @@ impl Component for Mass {
 	type Storage = VecStorage<Self>;
 }
 
+pub struct Gravity{
+	pub force:[f64;3],
+}
+
+impl Component for Gravity{
+	type Storage = VecStorage<Self>;
+}
 
 pub struct RandKick{
 	pub force:[f64;3]
