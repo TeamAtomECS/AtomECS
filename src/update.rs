@@ -1,5 +1,5 @@
 extern crate specs;
-use specs::{System,ReadStorage,WriteStorage,Join,ReadExpect};
+use specs::{System,ReadStorage,WriteStorage,Join,RunNow,World,ReadExpect,Builder};
 
 use crate::atom::*;
 use crate::laser::InteractionLaserALL;
@@ -73,3 +73,45 @@ impl <'a>System<'a> for UpdateRandKick{
 		}
 	}
 }
+
+#[cfg(test)]
+pub mod tests {
+
+	use super::*;
+	extern crate specs;
+	use crate::laser::InteractionLaser;
+
+	/// Tests the correct implementation of update force
+	#[test]
+	
+	/// Tests the correct implementation of the magnetics systems and dispatcher.
+	/// This is done by setting up a test world and ensuring that the magnetic systems perform the correct operations on test entities.
+	#[test]
+	fn test_magnetics_systems()
+	{
+		let mut test_world = World::new();
+		test_world.register::<RandKick>();
+		test_world.register::<Force>();
+		test_world.register::<InteractionLaserALL>();
+
+		let mut content = Vec::new();
+		content.push(InteractionLaser{wavenumber:[1.,1.,2.],index:1,intensity:1.,polarization:1.,detuning_doppler:1.,force:[1.,0.,0.]});
+		content.push(InteractionLaser{wavenumber:[1.,1.,2.],index:2,intensity:1.,polarization:1.,detuning_doppler:1.,force:[2.,0.,0.]});
+
+		let test_interaction = InteractionLaserALL{content};
+		let test_kick = RandKick{force:[1.,0.,0.]};
+		let sample_entity= test_world.create_entity().
+		with(test_interaction).
+		with(test_kick).
+		with(Force{force:[0.,0.,0.]}).build();
+
+		let mut update_test = UpdateForce;
+		update_test.run_now(&test_world.res);
+
+
+
+		let samplers = test_world.read_storage::<Force>();
+		let sampler = samplers.get(sample_entity);
+		assert_eq!(sampler.expect("entity not found").force,[4.,0.,0.]);
+	}
+}	
