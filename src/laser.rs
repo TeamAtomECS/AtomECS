@@ -1,5 +1,7 @@
 extern crate specs;
-use specs::{Component,VecStorage,System,ReadStorage,WriteStorage,Join,Builder,World,RunNow};
+use specs::{Component,VecStorage,System,ReadStorage,WriteStorage,Join};
+
+// do not think the warning here is correct
 use crate::atom::*;
 use crate::magnetic::*;
 use crate::initiate::AtomInfo;
@@ -158,6 +160,7 @@ pub mod tests {
 
 	#[test]
 	fn test_laser_interaction(){
+		use specs::{Builder,World,RunNow};
 		let mut test_world = World::new();
 		test_world.register::<InteractionLaserALL>();
 		test_world.register::<Force>();
@@ -186,7 +189,7 @@ pub mod tests {
 		with(Velocity{vel:[0.,0.,0.]}).build();
 
 
-		let laser_1 = Laser{
+		let _laser_1 = Laser{
 			centre:[0.,0.,0.],
 			wavenumber:[0.0,0.0,2.0*PI/(461e-9)],
 			polarization:1.,
@@ -195,7 +198,7 @@ pub mod tests {
 			frequency:constant::C/461e-9,
 			index:1,
 		};
-			let laser_2 = Laser{
+			let _laser_2 = Laser{
 			centre:[0.,0.,0.],
 			wavenumber:[0.0,0.0,-2.0*PI/(461e-9)],
 			polarization:1.,
@@ -205,6 +208,8 @@ pub mod tests {
 		
 			index:2,
 		};
+		test_world.create_entity().with(_laser_1).build();
+		test_world.create_entity().with(_laser_2).build();
 
 		let mut update_test = UpdateLaserSystem;
 		let mut update_test_two = UpdateInteractionLaserSystem;
@@ -215,7 +220,7 @@ pub mod tests {
 
 		let samplers = test_world.read_storage::<InteractionLaserALL>();
 		let sampler = samplers.get(sample_entity);
-		assert_eq!((sampler.expect("entity not found").content[0].force[0]*1e45) as u64,181);
+		assert_eq!((sampler.expect("entity not found").content[0].force[2]*1e22) as u64,46);
 	}
 
 }

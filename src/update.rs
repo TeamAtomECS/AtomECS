@@ -1,5 +1,5 @@
 extern crate specs;
-use specs::{System,ReadStorage,WriteStorage,Join,RunNow,World,ReadExpect,Builder};
+use specs::{System,ReadStorage,WriteStorage,Join,ReadExpect};
 
 use crate::atom::*;
 use crate::laser::InteractionLaserALL;
@@ -89,6 +89,7 @@ pub mod tests {
 	#[test]
 	fn test_magnetics_systems()
 	{
+		use specs::{RunNow,World,Builder};
 		let mut test_world = World::new();
 		test_world.register::<RandKick>();
 		test_world.register::<Force>();
