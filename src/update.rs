@@ -91,7 +91,7 @@ pub mod tests {
 	/// Tests the correct implementation of the magnetics systems and dispatcher.
 	/// This is done by setting up a test world and ensuring that the magnetic systems perform the correct operations on test entities.
 	#[test]
-	fn test_magnetics_systems()
+	fn test_update_systems()
 	{
 		use specs::{RunNow,World,Builder};
 		let mut test_world = World::new();
