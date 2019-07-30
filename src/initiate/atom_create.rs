@@ -115,9 +115,9 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 	}
 }
 
-pub struct AtomInitiateMot;
+pub struct AtomInitiateMotSystem;
 
-impl<'a> System<'a> for AtomInitiateMot {
+impl<'a> System<'a> for AtomInitiateMotSystem {
 	type SystemData = (
 		Entities<'a>,
 		ReadStorage<'a, AtomInfo>,

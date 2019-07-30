@@ -66,8 +66,8 @@ impl InteractionLaserALL{
 		InteractionLaserALL{content:new}
 	}
 }
-pub struct UpdateInteractionLaser;
-impl <'a> System<'a> for UpdateInteractionLaser{
+pub struct UpdateInteractionLaserSystem;
+impl <'a> System<'a> for UpdateInteractionLaserSystem{
 	// this system will update the information regarding interaction between the lasers and the atoms
 	type SystemData = (
 									ReadStorage<'a,Position>,
@@ -108,9 +108,9 @@ impl <'a> System<'a> for UpdateInteractionLaser{
 	}
 }
 
-pub struct UpdateLaser;
+pub struct UpdateLaserSystem;
 
-impl <'a> System<'a> for UpdateLaser{
+impl <'a> System<'a> for UpdateLaserSystem{
 	type SystemData = ( ReadStorage<'a,Position>,
 									ReadStorage<'a,Laser>,
 									WriteStorage<'a,InteractionLaserALL>

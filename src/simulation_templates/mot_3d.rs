@@ -8,10 +8,10 @@ use crate::initiate::AtomInfo;
 use crate::update::*;
 use crate::laser::*;
 use crate::magnetic::*;
-use crate::initiate::atom_create::{OvenCreateAtomsSystem,Oven,AtomInitiateMot};
+use crate::initiate::atom_create::{OvenCreateAtomsSystem,Oven,AtomInitiateMotSystem};
 use crate::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder};
-use crate::output::{PrintOutput};
+use crate::output::{PrintOutputSytem};
 
 #[allow(dead_code)]
 pub fn create(){
@@ -123,17 +123,17 @@ pub fn create(){
 	init_dispatcher.dispatch(&mut exp_mot.res);
 	exp_mot.maintain();
 	//two initiators cannot be dispatched at the same time apparently for some unknown reason
-	let mut init_dispatcher2=DispatcherBuilder::new().with(AtomInitiateMot, "initiate", &[]).build();
+	let mut init_dispatcher2=DispatcherBuilder::new().with(AtomInitiateMotSystem, "initiate", &[]).build();
 	init_dispatcher2.dispatch(&mut exp_mot.res);
 	// run loop
 	let mut runner=DispatcherBuilder::new().
-	with(UpdateLaser,"updatelaser",&[]).
+	with(UpdateLaserSystem,"updatelaser",&[]).
 	with(Sample3DQuadrupoleFieldSystem,"updatesampler",&[]).
-	with(UpdateInteractionLaser,"updateinter",&["updatelaser","updatesampler"]).
+	with(UpdateInteractionLaserSystem,"updateinter",&["updatelaser","updatesampler"]).
 	with(UpdateRandKick,"update_kick",&["updateinter"]).
 	with(UpdateForce,"updateforce",&["update_kick","updateinter"]).
 	with(EulerIntegrationSystem,"updatepos",&["update_kick"]).
-	with(PrintOutput,"print",&["updatepos"]).build();
+	with(PrintOutputSytem,"print",&["updatepos"]).build();
 	runner.setup(&mut exp_mot.res);
 	for _i in 0..2000{
 		runner.dispatch(&mut exp_mot.res);

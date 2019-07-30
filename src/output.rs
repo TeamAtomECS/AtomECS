@@ -6,9 +6,9 @@ use crate::integrator::{Timestep,Step};
 
 use specs::{System,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect,Component,VecStorage,Entities,LazyUpdate};
 
-pub struct PrintOutput;
+pub struct PrintOutputSytem;
 
-impl <'a>System <'a> for PrintOutput{
+impl <'a>System <'a> for PrintOutputSytem{
 
 	// print the output (whatever you want) to the console
 	type SystemData = (
@@ -49,9 +49,9 @@ impl Component for Detector{
 	type Storage = VecStorage<Self>;
 }
 
-pub struct DetectingAtom;
+pub struct DetectingAtomSystem;
 
-impl <'a>System<'a> for DetectingAtom{
+impl <'a>System<'a> for DetectingAtomSystem{
 	type SystemData = (
 								Entities<'a>,
 								ReadStorage<'a,Detector>,
@@ -90,9 +90,9 @@ impl <'a>System<'a> for DetectingAtom{
 	}
 	
 	
-pub struct PrintDetect;
+pub struct PrintDetectSystem;
 
-impl <'a>System<'a> for PrintDetect{
+impl <'a>System<'a> for PrintDetectSystem{
 	//print the final output of a detector
 	type SystemData = (WriteExpect<'a,AtomOuput>);
 	fn run(&mut self, atom_output:Self::SystemData){
@@ -100,3 +100,5 @@ impl <'a>System<'a> for PrintDetect{
 		println!("atom captured{},average velocity{:?}",atom_output.number_of_atom,average_vel);
 	}
 }
+
+pub struct FileOutputSystem;
