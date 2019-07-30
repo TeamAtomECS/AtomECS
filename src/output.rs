@@ -5,7 +5,7 @@ use crate::laser::InteractionLaserALL;
 use crate::integrator::{Timestep,Step};
 use crate::constant;
 
-use specs::{System,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect,Component,VecStorage,Entities,LazyUpdate,HashMapStorage};
+use specs::{System,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect,Component,Entities,LazyUpdate,HashMapStorage};
 
 pub struct PrintOutputSytem;
 
@@ -99,7 +99,7 @@ pub struct RingDetector{
 	pub radius:f64,
 	pub width:f64,
 	pub thickness:f64,
-};
+}
 
 impl Component for RingDetector{
 	type Storage = HashMapStorage<Self>;
