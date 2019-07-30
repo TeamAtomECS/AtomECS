@@ -82,7 +82,7 @@ pub mod tests {
 		let initial_position = [ 0.0, 0.1, 0.0];
 		let initial_velocity = [ 1.0, 1.5, 0.4];
 		let initial_force = [ 0.4, 0.5, -0.4];
-		let mass = 2.0;
+		let mass = 2.0/constant::AMU;
 		let test_entity = test_world.create_entity()
 		.with(Position{pos:initial_position})
 		.with(Velocity{vel:initial_velocity})
@@ -96,12 +96,13 @@ pub mod tests {
 
 		dispatcher.dispatch(&mut test_world.res);
 
-		let positions = test_world.read_storage::<Position>();
-		let position = positions.get(test_entity).expect("entity not found");
-		assert_eq!(position.pos,maths::array_addition(&initial_position, &maths::array_multiply(&initial_velocity, dt)));
 		let velocities = test_world.read_storage::<Velocity>();
 		let velocity = velocities.get(test_entity).expect("entity not found");
-		assert_eq!(velocity.vel,maths::array_addition(&initial_velocity,&maths::array_multiply(&initial_force,&dt/&mass)));
+		assert_eq!(velocity.vel,maths::array_addition(&initial_velocity,&maths::array_multiply(&initial_force,&dt/2.)));
+		let positions = test_world.read_storage::<Position>();
+		let position = positions.get(test_entity).expect("entity not found");
+		assert_eq!(position.pos,maths::array_addition(&initial_position, &maths::array_multiply(&velocity.vel, dt)));
+	
 	}
 
 }
