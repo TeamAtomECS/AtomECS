@@ -5,7 +5,7 @@ use crate::laser::InteractionLaserALL;
 use crate::integrator::{Timestep,Step};
 use crate::constant;
 
-use specs::{System,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect,Component,VecStorage,Entities,LazyUpdate};
+use specs::{System,ReadStorage,WriteStorage,Join,Read,ReadExpect,WriteExpect,Component,VecStorage,Entities,LazyUpdate,HashMapStorage};
 
 pub struct PrintOutputSytem;
 
@@ -48,7 +48,7 @@ pub struct Detector{
 }
 
 impl Component for Detector{
-	type Storage = VecStorage<Self>;
+	type Storage = HashMapStorage<Self>;
 }
 
 pub struct DetectingAtomSystem;
@@ -56,13 +56,14 @@ pub struct DetectingAtomSystem;
 impl <'a>System<'a> for DetectingAtomSystem{
 	type SystemData = (
 								Entities<'a>,
+								ReadStorage<'a,RingDetector>,
 								ReadStorage<'a,Detector>,
 								WriteStorage<'a,Position>,
 								WriteStorage<'a,Velocity>,
 								WriteExpect<'a,AtomOuput>,
 								Read<'a,LazyUpdate>,
 								);
-	fn run(&mut self, (ent, detector,mut _pos,mut _vel,mut atom_output,lazy):Self::SystemData){
+	fn run(&mut self, (ent,ring_detector, detector,mut _pos,mut _vel,mut atom_output,lazy):Self::SystemData){
 		//check if an atom is within the detector
 		for detector in (&detector).join(){
 		for (ent,mut _vel,_pos) in (&ent,&mut _vel,&_pos).join(){
@@ -90,8 +91,21 @@ impl <'a>System<'a> for DetectingAtomSystem{
 	fn test_if_detect(){
 		assert!(if_detect(&Detector{centre:[0.,0.,0.],range:[1.,1.,1.]},&[0.9,0.8,-0.7]));
 	}
-	
-	
+pub struct RingDetector{
+	/// a detector with the shape of a ring
+	/// could be used in the "reversed" simulation
+	/// could also be used as a type of boudary in the experiment
+	pub centre:[f64;3],
+	pub radius:f64,
+	pub width:f64,
+	pub thickness:f64,
+};
+
+impl Component for RingDetector{
+	type Storage = HashMapStorage<Self>;
+}
+
+
 pub struct PrintDetectSystem;
 
 impl <'a>System<'a> for PrintDetectSystem{
