@@ -19,7 +19,7 @@ use crate::constant;
 /// 
 /// The EulerIntegrationSystem integrates the classical equations of motion for particles using the euler method:
 /// ```  
-
+/// x' = x + v * dt
 /// ```
 /// This integrator is simple to implement but prone to integration error.
 /// 
@@ -43,10 +43,12 @@ impl <'a> System<'a> for EulerIntegrationSystem{
 		}
 	}
 }
+
 fn EulerUpdating(vel:&mut Velocity,pos:&mut Position,force:&Force,mass:&Mass,time:f64){
 		vel.vel = maths::array_addition(&vel.vel,&maths::array_multiply(&force.force,1./(constant::AMU*mass.value)*time));
 		pos.pos = maths::array_addition(&pos.pos,&maths::array_multiply(&vel.vel,time));
 }
+
 pub mod tests {
 
 	use super::*;

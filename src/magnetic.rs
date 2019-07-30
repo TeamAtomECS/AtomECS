@@ -1,5 +1,5 @@
 extern crate specs;
-use specs::{System,ReadStorage,WriteStorage,Join,Component,VecStorage,HashMapStorage,Dispatcher,DispatcherBuilder,World};
+use specs::{System,ReadStorage,WriteStorage,Join,Component,VecStorage,HashMapStorage,DispatcherBuilder,World};
 use crate::atom::Position;
 use crate::maths;
 
