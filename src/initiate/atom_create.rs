@@ -68,10 +68,11 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 
 	fn run(&mut self, (entities, oven, atom, pos, updater): Self::SystemData) {
 		//TODO: Temporary, needs to be fixed properly, eg drawn randomly from distribution. Discuss tomorrow.
-		let mass = 87.;
+		
 		let mut rng = rand::thread_rng();
 
 		for (oven, atom, oven_position) in (&oven, &atom, &pos).join() {
+			let mass = atom.mass as f64;
 			let dir = oven.direction.clone();
 			let size = oven.size.clone();
 			for _i in 0..oven.number {
@@ -102,6 +103,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				updater.insert(
 					new_atom,
 					AtomInfo {
+						mass:atom.mass,
 						mup: atom.mup,
 						muz: atom.muz,
 						mum: atom.mum,

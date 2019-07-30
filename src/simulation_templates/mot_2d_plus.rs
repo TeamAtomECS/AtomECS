@@ -34,6 +34,7 @@ pub fn create(){
 	
 	//component for the experiment
 	let rb_atom = AtomInfo{
+	mass:87,
 	mup:constant::MUP,
 	mum:constant::MUM,
 	muz:constant::MUZ,
