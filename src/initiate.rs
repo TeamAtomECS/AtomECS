@@ -11,6 +11,9 @@ pub struct AtomInfo{
 	pub mass:u64,
 	pub frequency:f64,
 	pub gamma:f64,
+	
+	/// Saturation intensity, in units of W/m^2.
+	pub saturation_intensity:f64
 }
 
 impl Component for AtomInfo{

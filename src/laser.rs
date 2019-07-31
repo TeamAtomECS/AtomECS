@@ -3,28 +3,35 @@ use specs::{
 	DispatcherBuilder, World, Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage, WriteStorage,
 };
 
-// do not think the warning here is correct
 use crate::atom::*;
 use crate::constant;
 use crate::constant::HBAR;
-use crate::constant::PI;
 use crate::initiate::{AtomInfo, NewlyCreated};
 use crate::magnetic::*;
 use crate::maths;
 
+/// Represents a laser beam that is used to provide cooling forces to atoms in the simulation.
 pub struct Laser {
+	
+	/// A point that lies on the laser beam
 	pub centre: [f64; 3],
-	/// wavevector of the laser light in SI unit
+
+	/// wavevector of the laser light in SI unit. 
+	/// This quantity is a vector, which points along the direction of the laser beam.
 	pub wavenumber: [f64; 3],
+	
 	/// polarisation of the laser light, 1. for +, -1. for -,
 	pub polarization: f64,
+	
 	/// power of the laser in W
 	pub power: f64,
-	/// stand deviation of the laser light gaussian distribution
+	
+	/// stand deviation of the laser light gaussian distribution, SI units of metres
 	pub std: f64,
+	
 	/// frequency of the laser light
 	pub frequency: f64,
-
+	
 	/// index of the laser light, it is used to record the interaction between any laser and any atom
 	pub index: u64,
 }
@@ -32,6 +39,97 @@ pub struct Laser {
 impl Component for Laser {
 	type Storage = VecStorage<Self>;
 }
+
+/// Cooling force exerted on an entity by the cooling laser beams
+pub struct CoolingForce {
+	pub force: [f64;3]
+}
+
+impl Component for CoolingForce {
+	type Storage = VecStorage<Self>;
+}
+
+
+/// System that clears the cooling forces.
+pub struct ClearCoolingForcesSystem;
+impl <'a> System<'a> for ClearCoolingForcesSystem {
+	type SystemData = (WriteStorage<'a,CoolingForce>);
+	fn run (&mut self,mut cooling_forces:Self::SystemData){
+		for cooling_forces in (&mut cooling_forces).join(){
+			cooling_forces.force = [ 0.0, 0.0, 0.0];
+		}
+	}
+}
+
+/// This system calculates cooling forces exerted by the cooling lasers on atoms.
+pub struct CalculateCoolingForcesSystem;
+impl<'a> System<'a> for CalculateCoolingForcesSystem {
+	
+	type SystemData = (
+		ReadStorage<'a, Position>,
+		ReadStorage<'a, Laser>,
+		ReadStorage<'a, Velocity>,
+		ReadStorage<'a, MagneticFieldSampler>,
+		WriteStorage<'a, CoolingForce>,
+		ReadStorage<'a, AtomInfo>,
+	);
+
+	fn run(&mut self, (pos, laser, vel, mag, mut cooling_force, atom): Self::SystemData) {
+
+		// Outer loop over laser beams
+		for laser in (&laser).join()
+		{
+		// Inner loop over atoms
+		for (vel, pos, mag, mut cooling_force, atom) in
+			(&vel, &pos, &mag, &mut cooling_force, &atom).join()
+		{
+			let br = mag.magnitude;
+
+			let laser_intensity = get_gaussian_beam_intensity(&laser, &pos);
+			let s0 = laser_intensity / atom.saturation_intensity;
+			let laser_omega = maths::modulus(&laser.wavenumber) * constant::C;
+
+
+				let costheta = maths::dot_product(&laser.wavenumber, &mag.field)
+					/ maths::modulus(&laser.wavenumber)
+					/ maths::modulus(&mag.field);
+				let detuning = laser_omega
+					- atom.frequency * 2.0 * constant::PI
+					- maths::dot_product(&laser.wavenumber, &vel.vel);
+
+				let scatter1 =
+					0.25 * (laser.polarization * costheta + 1.).powf(2.) * atom.gamma
+						/ 2. / (1. + s0 + 4. * (detuning - atom.mup / HBAR * br).powf(2.) / atom.gamma.powf(2.));
+				let scatter2 =
+					0.25 * (laser.polarization * costheta - 1.).powf(2.) * atom.gamma
+						/ 2. / (1. + s0 + 4. * (detuning - atom.mum / HBAR * br).powf(2.) / atom.gamma.powf(2.));
+				let scatter3 =
+					0.5 * (1. - costheta.powf(2.)) * atom.gamma
+						/ 2. / (1. + s0 + 4. * (detuning - atom.muz / HBAR * br).powf(2.) / atom.gamma.powf(2.));
+				let force_new = maths::array_multiply(
+					&laser.wavenumber,
+					s0 * HBAR * (scatter1 + scatter2 + scatter3),
+				);
+			}
+		}
+	}
+}
+
+fn get_perpen_distance(pos: &[f64; 3], centre: &[f64; 3], dir: &[f64; 3]) -> f64 {
+	let rela_cood = maths::array_addition(&pos, &maths::array_multiply(&centre, -1.));
+	let distance = maths::modulus(&maths::cross_product(&dir, &rela_cood)) / maths::modulus(&dir);
+	distance
+}
+
+/// Gets the intensity of a gaussian laser beam at the specified position.
+fn get_gaussian_beam_intensity(laser: &Laser, pos: &Position) -> f64 {
+	laser.power * maths::gaussian_dis(
+		laser.std,
+		get_perpen_distance(&pos.pos, &laser.centre, &laser.wavenumber),
+	)
+}
+
+
 pub struct InteractionLaser {
 	/// which laser is involved
 	pub index: u64,
@@ -75,6 +173,7 @@ impl InteractionLaserALL {
 		InteractionLaserALL { content: new }
 	}
 }
+
 pub struct UpdateInteractionLaserSystem;
 impl<'a> System<'a> for UpdateInteractionLaserSystem {
 	// this system will update the information regarding interaction between the lasers and the atoms
@@ -161,11 +260,6 @@ impl<'a> System<'a> for UpdateLaserSystem {
 		}
 	}
 }
-fn get_perpen_distance(pos: &[f64; 3], centre: &[f64; 3], dir: &[f64; 3]) -> f64 {
-	let rela_cood = maths::array_addition(&pos, &maths::array_multiply(&centre, -1.));
-	let distance = maths::modulus(&maths::cross_product(&dir, &rela_cood)) / maths::modulus(&dir);
-	distance
-}
 
 /// Attachs components used for optical force calculation to newly created atoms.
 ///
@@ -206,6 +300,7 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 		}
 	}
 }
+
 /// add all Systems that are necessary to run the laser part of the simulation
 pub fn add_systems_to_dispatch_laser(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static> {
 	builder.
@@ -214,7 +309,6 @@ pub fn add_systems_to_dispatch_laser(builder: DispatcherBuilder<'static,'static>
 	with(AttachLaserComponentsToNewlyCreatedAtomsSystem, "add_laser", &[])
 }
 
-/// Registers resources required by magnetics to the ecs world.
 pub fn register_resources_laser(world: &mut World) {
 		world.register::<InteractionLaserALL>();
 
@@ -227,7 +321,6 @@ pub mod tests {
 	extern crate specs;
 	use specs::{Builder, DispatcherBuilder, World};
 
-	/// Tests the correct implementation of the quadrupole 3D field
 	#[test]
 	fn test_gaussian_beam() {
 		let pos = [1., 1., 1.];
@@ -265,7 +358,7 @@ pub mod tests {
 			index: 6,
 		};
 		test_world.create_entity().with(laser).build();
-		
+
 		let test_entity = test_world.create_entity().with(NewlyCreated).build();
 
 		dispatcher.dispatch(&mut test_world.res);
