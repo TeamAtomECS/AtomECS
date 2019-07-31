@@ -123,7 +123,7 @@ pub fn create(){
 	init_dispatcher.dispatch(&mut exp_mot.res);
 	exp_mot.maintain();
 	//two initiators cannot be dispatched at the same time apparently for some unknown reason
-	let mut init_dispatcher2=DispatcherBuilder::new().with(AttachLaserForceComponentsToNewlyCreatedAtomsSystem, "initiate", &[]).build();
+	let mut init_dispatcher2=DispatcherBuilder::new().with(AttachLaserComponentsToNewlyCreatedAtomsSystem, "initiate", &[]).build();
 	init_dispatcher2.dispatch(&mut exp_mot.res);
 	// run loop
 	let mut runner=DispatcherBuilder::new().

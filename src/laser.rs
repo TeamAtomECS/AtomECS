@@ -1,6 +1,6 @@
 extern crate specs;
 use specs::{
-	Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage, WriteStorage,
+	DispatcherBuilder, World, Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage, WriteStorage,
 };
 
 // do not think the warning here is correct
@@ -171,9 +171,9 @@ fn get_perpen_distance(pos: &[f64; 3], centre: &[f64; 3], dir: &[f64; 3]) -> f64
 ///
 /// This system attaches the `RandKick` and `InteractionLaserALL` components to `NewlyCreated` entities.
 /// Both components are required by other laser `System`s to perform calculations of optical scattering forces.
-pub struct AttachLaserForceComponentsToNewlyCreatedAtomsSystem;
+pub struct AttachLaserComponentsToNewlyCreatedAtomsSystem;
 
-impl<'a> System<'a> for AttachLaserForceComponentsToNewlyCreatedAtomsSystem {
+impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 	type SystemData = (
 		Entities<'a>,
 		ReadStorage<'a, NewlyCreated>,
@@ -206,6 +206,19 @@ impl<'a> System<'a> for AttachLaserForceComponentsToNewlyCreatedAtomsSystem {
 		}
 	}
 }
+/// add all Systems that are necessary to run the laser part of the simulation
+pub fn add_systems_to_dispatch_laser(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static> {
+	builder.
+	with(UpdateLaserSystem,"updatelaser", deps).
+	with(UpdateInteractionLaserSystem,"updatelaserinter",&["updatelaser"]).
+	with(AttachLaserComponentsToNewlyCreatedAtomsSystem, "add_laser", &[])
+}
+
+/// Registers resources required by magnetics to the ecs world.
+pub fn register_resources_laser(world: &mut World) {
+		world.register::<InteractionLaserALL>();
+
+}
 
 #[cfg(test)]
 pub mod tests {
@@ -235,7 +248,7 @@ pub mod tests {
 
 		let mut dispatcher = DispatcherBuilder::new()
 			.with(
-				AttachLaserForceComponentsToNewlyCreatedAtomsSystem,
+				AttachLaserComponentsToNewlyCreatedAtomsSystem,
 				"attach_comps",
 				&[],
 			)
