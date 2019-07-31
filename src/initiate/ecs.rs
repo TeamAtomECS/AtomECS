@@ -1,15 +1,11 @@
-
-use crate::constant as constant;
-use crate::constant::PI as PI;
-use crate::integrator::{Timestep,Step};
 use crate::atom::{Atom,Mass,Position,Velocity,Force,RandKick,Gravity};
 use crate::initiate::{AtomInfo,NewlyCreated};
 use crate::update::*;
 use crate::laser::*;
 use crate::magnetic::*;
-use crate::initiate::atom_create::{OvenCreateAtomsSystem,Oven};
+use crate::initiate::atom_create::{Oven};
 use crate::integrator::EulerIntegrationSystem;
-use specs::{World,Builder,DispatcherBuilder,RunNow,Dispatcher};
+use specs::{World,Builder,DispatcherBuilder,Dispatcher};
 use crate::output::*;
 pub fn register_resources_general(world: &mut World) {
 
@@ -45,13 +41,20 @@ pub fn register_lazy(mut world: &mut World){
 
 }
 
+fn add_systems_to_dispatch_general_update(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static> {
+	builder.
+	with(UpdateRandKick,"update_kick",deps).
+	with(UpdateForce,"updateforce",&["update_kick"]).
+	with(EulerIntegrationSystem,"updatepos",&["update_kick"]).
+	with(PrintOutputSytem,"print",&["updatepos"]).
+	with(DetectingAtomSystem,"detect",&["updatepos"])
+}
 
-
-fn create_dispatcher_running()->Dispatcher<'static,'static>{
+pub fn create_dispatcher_running()->Dispatcher<'static,'static>{
     let builder=DispatcherBuilder::new();
-    let configured_builder = add_systems_to_dispatch_magnetic(builder, &[]);
-    let builder=DispatcherBuilder::new();
-    let configured_builder = add_systems_to_dispatch_laser(builder, &["magnetics_magnitude"]);
-    let mut dispatcher = configured_builder.build();
+    let builder_1 = add_systems_to_dispatch_magnetic(builder, &[]);
+    let builder_2 = add_systems_to_dispatch_laser(builder_1, &["magnetics_magnitude"]);
+    let builder_3 = add_systems_to_dispatch_general_update(builder_2, &["updatelaserinter"]);
+    let mut dispatcher = builder_3.build();
     dispatcher
 }

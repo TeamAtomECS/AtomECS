@@ -112,17 +112,18 @@ pub fn create(){
 	let mut init_dispatcher2=DispatcherBuilder::new().with(AttachLaserComponentsToNewlyCreatedAtomsSystem, "initiate", &[]).build();
 	init_dispatcher2.dispatch(&mut exp_mot.res);
 	// run loop
-	let mut runner=DispatcherBuilder::new().
-	with(UpdateLaserSystem,"updatelaser",&[]).
-	with(ClearMagneticFieldSamplerSystem,"clear",&[]).
-	with(Sample3DQuadrupoleFieldSystem,"updatesampler",&[]).
-	with(CalculateMagneticFieldMagnitudeSystem,"magnitudecal",&["updatesampler"]).
-	with(UpdateInteractionLaserSystem,"updateinter",&["updatelaser","updatesampler","magnitudecal"]).
-	with(UpdateRandKick,"update_kick",&["updateinter"]).
-	with(UpdateForce,"updateforce",&["update_kick","updateinter"]).
-	with(EulerIntegrationSystem,"updatepos",&["update_kick"]).
-	with(PrintOutputSytem,"print",&["updatepos"]).
-	with(DetectingAtomSystem,"detect",&["updatepos"]).build();
+	let mut runner = ecs::create_dispatcher_running();
+	//let mut runner=DispatcherBuilder::new().
+	//with(UpdateLaserSystem,"updatelaser",&[]).
+	//with(ClearMagneticFieldSamplerSystem,"clear",&[]).
+	//with(Sample3DQuadrupoleFieldSystem,"updatesampler",&[]).
+	//with(CalculateMagneticFieldMagnitudeSystem,"magnitudecal",&["updatesampler"]).
+	//with(UpdateInteractionLaserSystem,"updateinter",&["updatelaser","updatesampler","magnitudecal"]).
+	//with(UpdateRandKick,"update_kick",&["updateinter"]).
+	//with(UpdateForce,"updateforce",&["update_kick","updateinter"]).
+	//with(EulerIntegrationSystem,"updatepos",&["update_kick"]).
+	//with(PrintOutputSytem,"print",&["updatepos"]).
+	//with(DetectingAtomSystem,"detect",&["updatepos"]).build();
 	runner.setup(&mut exp_mot.res);
 	for _i in 0..10000{
 		runner.dispatch(&mut exp_mot.res);
