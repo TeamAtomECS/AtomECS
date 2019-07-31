@@ -166,7 +166,7 @@ pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps
 }
 
 /// Registers all resources required by the laser module.
-pub fn register_resources(world: &mut World) {
+pub fn register_components(world: &mut World) {
 		world.register::<Laser>();
 		world.register::<CoolingForce>();
 }
@@ -191,7 +191,7 @@ pub mod tests {
 	fn test_laser_components_are_added_to_new_atoms() {
 		let mut test_world = World::new();
 		test_world.register::<NewlyCreated>();
-		register_resources(&mut test_world);
+		register_components(&mut test_world);
 
 		let mut dispatcher = DispatcherBuilder::new()
 			.with(

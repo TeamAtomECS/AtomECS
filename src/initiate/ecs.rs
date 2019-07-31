@@ -1,47 +1,56 @@
 use crate::atom::{Atom,Mass,Position,Velocity,Force,RandKick,Gravity};
-use crate::initiate::{AtomInfo,NewlyCreated};
 use crate::laser;
 use crate::magnetic;
+use crate::initiate::{AtomInfo,NewlyCreated,DeflagNewAtomsSystem};
+use crate::integrator::{Timestep,Step};
 use crate::initiate::atom_create::{Oven};
 use crate::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder,Dispatcher};
 use crate::output::*;
-
-pub fn register_resources_general(world: &mut World) {
+/// register some general component
+pub fn register_component_general(world: &mut World) {
 
 		world.register::<Position>();
 		world.register::<Velocity>();
 		world.register::<Force>();
 		world.register::<Mass>();
 }
-pub fn register_resources_atomcreation(world: &mut World) {
+
+/// register component related to atom creation
+pub fn register_component_atomcreation(world: &mut World) {
 
 		world.register::<Oven>();
 		world.register::<AtomInfo>();
         world.register::<Atom>();
 		world.register::<NewlyCreated>();
 }
-pub fn register_resource_otherforce(world: &mut World) {
+
+/// register component related to forces other than laser force
+pub fn register_component_otherforce(world: &mut World) {
 		world.register::<Gravity>();
 		world.register::<RandKick>();
 }
 
-pub fn register_resource_output(world: &mut World) {
+/// register component for output system
+pub fn register_component_output(world: &mut World) {
 		world.register::<Detector>();
 		world.register::<RingDetector>();
 }
 
+/// if you are lazy and have no idea what you want, use this function to register everything
 pub fn register_lazy(mut world: &mut World){
-    register_resource_output(&mut world);
-    register_resource_otherforce(&mut world);
-    register_resources_atomcreation(&mut world);
-    register_resources_general(&mut world);
-    magnetic::register_resources(&mut world);
-    laser::register_resources(&mut world);
+    register_component_output(&mut world);
+    register_component_otherforce(&mut world);
+    register_component_atomcreation(&mut world);
+    register_component_general(&mut world);
+    magnetic::register_components(&mut world);
+    laser::register_components(&mut world);
 }
 
+///  add general update system to dispatcher 
 fn add_systems_to_dispatch_general_update(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static> {
 	builder.
+    with(DeflagNewAtomsSystem,"deflag",&[]).
 	with(EulerIntegrationSystem,"updatepos",&["update_kick"]).
 	with(PrintOutputSytem,"print",&["updatepos"]).
 	with(DetectingAtomSystem,"detect",&["updatepos"])
@@ -56,4 +65,11 @@ pub fn create_simulation_dispatcher()->Dispatcher<'static,'static>{
 	builder.add_barrier();
     builder = add_systems_to_dispatch_general_update(builder, &[]);
     builder.build()
+}
+
+/// add resources that is necessary easily
+pub fn register_resources_lazy(mut world: &mut World){
+    world.add_resource(Timestep{delta:1e-6});
+    world.add_resource(Step{n:0});
+	world.add_resource(AtomOuput{number_of_atom:0,total_velocity:[0.,0.,0.]});
 }

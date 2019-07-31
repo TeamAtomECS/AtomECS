@@ -166,7 +166,7 @@ pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps
 }
 
 /// Registers resources required by magnetics to the ecs world.
-pub fn register_resources(world: &mut World) {
+pub fn register_components(world: &mut World) {
 		world.register::<UniformMagneticField>();
 		world.register::<QuadrupoleField3D>();
 		world.register::<MagneticFieldSampler>();
@@ -195,7 +195,7 @@ pub mod tests {
 	fn test_magnetics_systems()
 	{
 		let mut test_world = World::new();
-		register_resources(&mut test_world);
+		register_components(&mut test_world);
 		test_world.register::<Position>();
 		let builder=DispatcherBuilder::new();
 		let configured_builder = add_systems_to_dispatch(builder, &[]);
@@ -225,7 +225,7 @@ pub mod tests {
 	fn test_field_samplers_are_added()
 	{
 		let mut test_world = World::new();
-		register_resources(&mut test_world);
+		register_components(&mut test_world);
 		test_world.register::<NewlyCreated>();
 		let builder=DispatcherBuilder::new();
 		let configured_builder = add_systems_to_dispatch(builder, &[]);
