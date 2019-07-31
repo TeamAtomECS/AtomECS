@@ -24,24 +24,24 @@ impl<'a> System<'a> for PrintOutputSytem {
 		ReadExpect<'a, Step>,
 		ReadExpect<'a, Timestep>,
 	);
-	fn run(&mut self, (_lasers, _pos, _vel, _, _force, _kick, _step, _t): Self::SystemData) {
-		let _time = _t.delta * _step.n as f64;
-		for (_lasers, _vel, _pos, _force, _kick) in (&_lasers, &_vel, &_pos, &_force, &_kick).join()
+	fn run(&mut self, (lasers, pos, vel, _, force, kick, step, t): Self::SystemData) {
+		let _time = t.delta * step.n as f64;
+		for (lasers, vel, pos, force, kick) in (&lasers, &vel, &pos, &force, &kick).join()
 		{
-			if _step.n % 100 == 0 {
-				for _inter in &_lasers.content {
+			if step.n % 100 == 0 {
+				for _inter in &lasers.content {
 					//println!("index{},detuning{},force{:?}",inter.index,inter.detuning_doppler,inter.force);
 				}
 				println!(
 					"time{}position{:?},velocity{:?},acc{:?},kick{:?}",
 					_time,
-					_pos.pos,
-					_vel.vel,
-					maths::array_multiply(&_force.force, 1. / constant::AMU / 87.),
-					maths::array_multiply(&_kick.force, 1. / constant::AMU / 87.)
+					pos.pos,
+					vel.vel,
+					maths::array_multiply(&force.force, 1. / constant::AMU / 87.),
+					maths::array_multiply(&kick.force, 1. / constant::AMU / 87.)
 				);
 			}
-			//println!("position{:?},velocity{:?}",_pos.pos,_vel.vel);
+			//println!("position{:?},velocity{:?}",pos.pos,vel.vel);
 		}
 	}
 }
@@ -74,16 +74,16 @@ impl<'a> System<'a> for DetectingAtomSystem {
 	);
 	fn run(
 		&mut self,
-		(ent, ring_detector, detector, mut _pos, mut _vel, mut atom_output, lazy): Self::SystemData,
+		(ent, ring_detector, detector, mut pos, mut vel, mut atom_output, lazy): Self::SystemData,
 	) {
 		//check if an atom is within the detector
 		for detector in (&detector).join() {
-			for (ent, mut _vel, _pos) in (&ent, &mut _vel, &_pos).join() {
-				if if_detect(&detector, &_pos.pos) {
+			for (ent, mut vel, pos) in (&ent, &mut vel, &pos).join() {
+				if if_detect(&detector, &pos.pos) {
 					atom_output.number_of_atom = atom_output.number_of_atom + 1;
-					println!("detected velocity{:?},position{:?}", _vel.vel, _pos.pos);
+					println!("detected velocity{:?},position{:?}", vel.vel, pos.pos);
 					atom_output.total_velocity =
-						maths::array_addition(&atom_output.total_velocity, &_vel.vel);
+						maths::array_addition(&atom_output.total_velocity, &vel.vel);
 					lazy.remove::<Position>(ent);
 					lazy.remove::<Velocity>(ent);
 				}
@@ -91,12 +91,12 @@ impl<'a> System<'a> for DetectingAtomSystem {
 			}
 		}
 		for ring_detector in (&ring_detector).join() {
-			for (ent, mut _vel, _pos) in (&ent, &mut _vel, &_pos).join() {
-				if if_detect_ring(&ring_detector, &_pos.pos) {
+			for (ent, mut vel, pos) in (&ent, &mut vel, &pos).join() {
+				if if_detect_ring(&ring_detector, &pos.pos) {
 					atom_output.number_of_atom = atom_output.number_of_atom + 1;
-					println!("detected velocity{:?},position{:?}", _vel.vel, _pos.pos);
+					println!("detected velocity{:?},position{:?}", vel.vel, pos.pos);
 					atom_output.total_velocity =
-						maths::array_addition(&atom_output.total_velocity, &_vel.vel);
+						maths::array_addition(&atom_output.total_velocity, &vel.vel);
 					lazy.remove::<Position>(ent);
 					lazy.remove::<Velocity>(ent);
 				}
@@ -191,12 +191,12 @@ impl<'a> System<'a> for FileOutputSystem {
 		ReadExpect<'a, Step>,
 		ReadExpect<'a, Timestep>,
 	);
-	fn run(&mut self, (_lasers, _pos, _vel, _, _force, _kick, _step, _t): Self::SystemData) {
-		let _time = _t.delta * _step.n as f64;
-		for (_lasers, _vel, _pos, _force, _kick) in (&_lasers, &_vel, &_pos, &_force, &_kick).join()
+	fn run(&mut self, (lasers, pos, vel, _, force, kick, step, t): Self::SystemData) {
+		let _time = t.delta * step.n as f64;
+		for (lasers, vel, pos, force, kick) in (&lasers, &vel, &pos, &force, &kick).join()
 		{
-			if _step.n % 100 == 0 {
-				for _inter in &_lasers.content {
+			if step.n % 100 == 0 {
+				for _inter in &lasers.content {
 					// TODO print the necessary information to a file, maybe a CSV?
 					// complete after finding out what to print and what file format is prefered
 				}

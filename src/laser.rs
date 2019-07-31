@@ -86,29 +86,29 @@ impl<'a> System<'a> for UpdateInteractionLaserSystem {
 		ReadStorage<'a, AtomInfo>,
 	);
 
-	fn run(&mut self, (_pos, _vel, _mag, mut _inter, _atom): Self::SystemData) {
-		for (_vel, _pos, _mag, mut _inter, _atom) in
-			(&_vel, &_pos, &_mag, &mut _inter, &_atom).join()
+	fn run(&mut self, (_pos, vel, mag, mut interall, atom): Self::SystemData) {
+		for (vel, _pos, mag, mut interall, atom) in
+			(&vel, &_pos, &mag, &mut interall, &atom).join()
 		{
 			//println!("laser interaction updated");
-			let mag_field = _mag.field;
-			let br = _mag.magnitude;
-			for inter in &mut _inter.content {
-				let _mup = _atom.mup;
-				let _mum = _atom.mum;
-				let _muz = _atom.muz;
+			let mag_field = mag.field;
+			let br = mag.magnitude;
+			for inter in &mut interall.content {
+				let _mup = atom.mup;
+				let _mum = atom.mum;
+				let _muz = atom.muz;
 				let s0 = inter.intensity / constant::SATINTEN;
 				let omega = maths::modulus(&inter.wavenumber) * constant::C;
 				let wave_vector = inter.wavenumber;
 				let p = inter.polarization;
-				let gamma = _atom.gamma;
-				let atom_frequency = _atom.frequency;
+				let gamma = atom.gamma;
+				let atom_frequency = atom.frequency;
 				let costheta = maths::dot_product(&wave_vector, &mag_field)
 					/ maths::modulus(&wave_vector)
 					/ maths::modulus(&mag_field);
 				let detuning = omega
 					- atom_frequency * 2.0 * constant::PI
-					- maths::dot_product(&wave_vector, &_vel.vel);
+					- maths::dot_product(&wave_vector, &vel.vel);
 
 				let scatter1 =
 					0.25 * (p * costheta + 1.).powf(2.) * gamma
@@ -140,17 +140,17 @@ impl<'a> System<'a> for UpdateLaserSystem {
 		WriteStorage<'a, InteractionLaserALL>,
 	);
 
-	fn run(&mut self, (_pos, _laser, mut _inter): Self::SystemData) {
+	fn run(&mut self, (pos, _laser, mut interall): Self::SystemData) {
 		//update the sampler for laser, namely intensity, wavenumber? , polarization
-		for (mut _inter, _pos) in (&mut _inter, &_pos).join() {
+		for (mut interall, pos) in (&mut interall, &pos).join() {
 			//println!("laser updated");
-			for inter in &mut _inter.content {
+			for inter in &mut interall.content {
 				for _laser in (&_laser).join() {
 					if _laser.index == inter.index {
 						let laser_inten = _laser.power
 							* maths::gaussian_dis(
 								_laser.std,
-								get_perpen_distance(&_pos.pos, &_laser.centre, &_laser.wavenumber),
+								get_perpen_distance(&pos.pos, &_laser.centre, &_laser.wavenumber),
 							);
 						inter.intensity = laser_inten;
 						inter.wavenumber = _laser.wavenumber;

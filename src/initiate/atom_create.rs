@@ -9,9 +9,9 @@ use crate::atom::*;
 
 use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
-pub fn velocity_generate(_t: f64, _mass: f64, _dir: &[f64; 3]) -> [f64; 3] {
-	let v_mag = maths::maxwell_generate(_t, _mass);
-	let dir = maths::norm(&_dir);
+pub fn velocity_generate(t: f64, mass: f64, new_dir: &[f64; 3]) -> [f64; 3] {
+	let v_mag = maths::maxwell_generate(t, mass);
+	let dir = maths::norm(&new_dir);
 	let dir_1 = maths::norm(&[1.0, 0.0, -dir[0] / dir[2]]);
 	let dir_2 = maths::norm(&[
 		1.0,

@@ -82,9 +82,9 @@ impl <'a> System<'a> for Sample3DQuadrupoleFieldSystem{
 									ReadStorage<'a,Position>,
 									ReadStorage<'a,QuadrupoleField3D>,
 									);
-	fn run(&mut self,(mut _sampler,pos,_quadrupoles):Self::SystemData){
-		for (centre, quadrupole) in (&pos, &_quadrupoles).join(){
-			for (pos,mut sampler) in (&pos,&mut _sampler).join(){
+	fn run(&mut self,(mut sampler,pos,quadrupole):Self::SystemData){
+		for (centre, quadrupole) in (&pos, &quadrupole).join(){
+			for (pos,mut sampler) in (&pos,&mut sampler).join(){
 				let quad_field = Sample3DQuadrupoleFieldSystem::calculate_field(&pos.pos, &centre.pos, quadrupole.gradient);
 				sampler.field = maths::array_addition(&quad_field, &sampler.field);
 			}
@@ -99,9 +99,9 @@ impl <'a> System<'a> for UniformMagneticFieldSystem{
 		type SystemData = (WriteStorage<'a,MagneticFieldSampler>,
 									ReadStorage<'a,UniformMagneticField>,
 									);
-	fn run(&mut self,(mut _sampler,fields):Self::SystemData){
+	fn run(&mut self,(mut sampler,fields):Self::SystemData){
 		for field in (&fields).join() {
-			for mut sampler in (&mut _sampler).join(){
+			for mut sampler in (&mut sampler).join(){
 				sampler.field = maths::array_addition(&sampler.field, &field.field);
 			}
 		}
@@ -113,8 +113,8 @@ pub struct ClearMagneticFieldSamplerSystem;
 
 impl <'a> System<'a> for ClearMagneticFieldSamplerSystem{
 	type SystemData = (WriteStorage<'a,MagneticFieldSampler>);
-	fn run (&mut self,mut _sampler:Self::SystemData){
-		for sampler in (&mut _sampler).join(){
+	fn run (&mut self,mut sampler:Self::SystemData){
+		for sampler in (&mut sampler).join(){
 			sampler.magnitude = 0.;
 			sampler.field = [0.,0.,0.]
 		}
@@ -129,8 +129,8 @@ pub struct CalculateMagneticFieldMagnitudeSystem;
 
 impl <'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
 	type SystemData = (WriteStorage<'a,MagneticFieldSampler>);
-	fn run (&mut self,mut _sampler:Self::SystemData){
-		for sampler in (&mut _sampler).join(){
+	fn run (&mut self,mut sampler:Self::SystemData){
+		for sampler in (&mut sampler).join(){
 			sampler.magnitude = maths::modulus(&sampler.field);
 		}
 	}
