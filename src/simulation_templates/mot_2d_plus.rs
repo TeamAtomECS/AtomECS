@@ -6,7 +6,7 @@ use crate::initiate::{AtomInfo,NewlyCreated};
 use crate::update::*;
 use crate::laser::*;
 use crate::magnetic::*;
-use crate::initiate::atom_create::{OvenCreateAtomsSystem,Oven,AtomInitiateMotSystem};
+use crate::initiate::atom_create::{OvenCreateAtomsSystem,Oven};
 use crate::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder,RunNow};
 use crate::output::{PrintOutputSytem,Detector,DetectingAtomSystem,PrintDetectSystem,AtomOuput};
@@ -123,7 +123,7 @@ pub fn create(){
 	init_dispatcher.dispatch(&mut exp_mot.res);
 	exp_mot.maintain();
 	//two initiators cannot be dispatched at the same time apparently for some unknown reason
-	let mut init_dispatcher2=DispatcherBuilder::new().with(AtomInitiateMotSystem, "initiate", &[]).build();
+	let mut init_dispatcher2=DispatcherBuilder::new().with(AttachLaserForceComponentsToNewlyCreatedAtomsSystem, "initiate", &[]).build();
 	init_dispatcher2.dispatch(&mut exp_mot.res);
 	// run loop
 	let mut runner=DispatcherBuilder::new().

@@ -6,7 +6,7 @@ use crate::initiate::*;
 use rand::Rng;
 extern crate specs;
 use crate::atom::*;
-use crate::laser::*;
+
 use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
 pub fn velocity_generate(_t: f64, _mass: f64, _dir: &[f64; 3]) -> [f64; 3] {
@@ -115,48 +115,6 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 
 				println!("atom created");
 			}
-		}
-	}
-}
-
-pub struct AtomInitiateMotSystem;
-
-impl<'a> System<'a> for AtomInitiateMotSystem {
-	type SystemData = (
-		Entities<'a>,
-		ReadStorage<'a,NewlyCreated>,
-		ReadStorage<'a, AtomInfo>,
-		ReadStorage<'a, Position>,
-		ReadStorage<'a, Velocity>,
-		Read<'a, LazyUpdate>,
-		ReadStorage<'a, Laser>,
-	);
-
-	fn run(&mut self, (ent,_, atom, position, velocity, updater, _laser): Self::SystemData) {
-		let mut content = Vec::new();
-		println!("atom initiate 1");
-		for _laser in (&_laser).join() {
-			content.push(InteractionLaser {
-				index: _laser.index,
-				intensity: 0.,
-				polarization: 0.,
-				wavenumber: [0., 0., 0.],
-				detuning_doppler: 0.,
-				force: [0., 0., 0.],
-			})
-		}
-
-		let empty_laser = InteractionLaserALL { content };
-		for (ent, _atom, _position, _velocity) in (&ent, &atom, &position, &velocity).join() {
-			updater.insert(
-				ent,
-				RandKick {
-					force: [0., 0., 0.],
-				},
-			);
-			updater.insert(ent, empty_laser.clone());
-			updater.insert(ent,Gravity{force:[0.,0.,-1.*_atom.mass as f64*constant::GC*constant::AMU]});
-			println!("atom initiated");
 		}
 	}
 }
