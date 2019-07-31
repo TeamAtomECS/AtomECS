@@ -4,7 +4,7 @@ use crate::atom::Position;
 use crate::initiate::NewlyCreated;
 use crate::maths;
 
-/// A component that measures the magnetic field at a point in space.
+/// A component that stores the magnetic field at an entity's location.
 pub struct MagneticFieldSampler{
 	
 	/// Vector representing the magnetic field components along x,y,z in units of Gauss.

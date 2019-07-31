@@ -7,7 +7,6 @@ use rand::Rng;
 extern crate specs;
 use crate::atom::*;
 use crate::laser::*;
-use crate::magnetic::MagneticFieldSampler;
 use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
 pub fn velocity_generate(_t: f64, _mass: f64, _dir: &[f64; 3]) -> [f64; 3] {
@@ -120,33 +119,6 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 	}
 }
 
-/// This system is responsible for removing the `NewlyCreated` marker component from atoms.
-/// 
-/// The marker is originally added to atoms when they are first added to the simulation, which allows other Systems
-/// to add any required components to atoms.
-/// 
-/// ## When should this system run?
-/// 
-/// This system runs *before* new atoms are added to the world.
-/// Thus, any atoms flagged as `NewlyCreated` from the previous frame are deflagged before the new flagged atoms are created.
-/// Be careful of properly maintaining the world at the correct time;
-/// LazyUpdate is used, so changes to remove the `NewlyCreated` components will only be enacted after the call to `world.maintain()`.
-pub struct DeflagNewAtomsSystem;
-
-impl<'a> System<'a> for DeflagNewAtomsSystem {
-	type SystemData = (
-		Entities<'a>,
-		ReadStorage<'a,NewlyCreated>,
-		Read<'a, LazyUpdate>,
-	);
-
-	fn run(&mut self, (ent,newly_created, updater): Self::SystemData) {
-		for (ent,_newly_created) in (&ent, &newly_created).join() {
-			updater.remove::<NewlyCreated>(ent);
-		}
-	}
-}
-
 pub struct AtomInitiateMotSystem;
 
 impl<'a> System<'a> for AtomInitiateMotSystem {
@@ -176,17 +148,12 @@ impl<'a> System<'a> for AtomInitiateMotSystem {
 
 		let empty_laser = InteractionLaserALL { content };
 		for (ent, _atom, _position, _velocity) in (&ent, &atom, &position, &velocity).join() {
-			let empty_mag = MagneticFieldSampler {
-				field: [0., 0., 0.],
-				magnitude: 0.,
-			};
 			updater.insert(
 				ent,
 				RandKick {
 					force: [0., 0., 0.],
 				},
 			);
-			updater.insert(ent, empty_mag);
 			updater.insert(ent, empty_laser.clone());
 			updater.insert(ent,Gravity{force:[0.,0.,-1.*_atom.mass as f64*constant::GC*constant::AMU]});
 			println!("atom initiated");
