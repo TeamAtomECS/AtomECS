@@ -311,7 +311,7 @@ pub fn add_systems_to_dispatch_laser(builder: DispatcherBuilder<'static,'static>
 
 pub fn register_resources_laser(world: &mut World) {
 		world.register::<InteractionLaserALL>();
-
+		world.register::<Laser>();
 }
 
 #[cfg(test)]

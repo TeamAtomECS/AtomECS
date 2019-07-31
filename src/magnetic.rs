@@ -170,7 +170,7 @@ pub fn register_resources_magnetic(world: &mut World) {
 		world.register::<UniformMagneticField>();
 		world.register::<QuadrupoleField3D>();
 		world.register::<MagneticFieldSampler>();
-		world.register::<NewlyCreated>();
+		
 }
 
 #[cfg(test)]
@@ -227,7 +227,7 @@ pub mod tests {
 	{
 		let mut test_world = World::new();
 		register_resources_magnetic(&mut test_world);
-
+		test_world.register::<NewlyCreated>();
 		let builder=DispatcherBuilder::new();
 		let configured_builder = add_systems_to_dispatch_magnetic(builder, &[]);
 		let mut dispatcher = configured_builder.build();
