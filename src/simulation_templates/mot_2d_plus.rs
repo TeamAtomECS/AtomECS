@@ -15,7 +15,6 @@ use crate::initiate::ecs;
 pub fn create(){
    // create the world
    let mut exp_mot = World::new();
-   
 	// create the resources and component, and entities for experimental setup
 	ecs::register_lazy(&mut exp_mot);
 	//component for the experiment
