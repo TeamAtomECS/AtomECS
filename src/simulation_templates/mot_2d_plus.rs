@@ -10,28 +10,14 @@ use crate::initiate::atom_create::{OvenCreateAtomsSystem,Oven};
 use crate::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder,RunNow};
 use crate::output::{PrintOutputSytem,Detector,DetectingAtomSystem,PrintDetectSystem,AtomOuput};
-
+use crate::initiate::ecs;
 #[allow(dead_code)]
 pub fn create(){
    // create the world
    let mut exp_mot = World::new();
    
 	// create the resources and component, and entities for experimental setup
-	exp_mot.register::<Velocity>();
-	exp_mot.register::<Position>();
-	exp_mot.register::<Oven>();
-	exp_mot.register::<Force>();
-	exp_mot.register::<AtomInfo>();
-	exp_mot.register::<Mass>();
-	exp_mot.register::<Laser>();
-	exp_mot.register::<MagneticFieldSampler>();
-	exp_mot.register::<InteractionLaserALL>();
-	exp_mot.register::<QuadrupoleField3D>();
-	exp_mot.register::<RandKick>();
-	exp_mot.register::<Detector>();
-	exp_mot.register::<NewlyCreated>();
-	exp_mot.register::<Atom>();
-	
+	ecs::register_lazy(&mut exp_mot);
 	//component for the experiment
 	let rb_atom = AtomInfo{
 	mass:87,
