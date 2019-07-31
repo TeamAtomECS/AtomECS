@@ -7,7 +7,6 @@ pub mod constant;
 pub mod integrator;
 pub mod initiate;
 pub mod laser;
-pub mod update;
 pub mod output;
 pub mod simulation_templates;
 //pub mod worldtests;

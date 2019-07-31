@@ -3,7 +3,7 @@ use specs::{
 	DispatcherBuilder, World, Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage, WriteStorage,
 };
 
-use crate::atom::*;
+use crate::atom::{Force,Position,Velocity};
 use crate::constant;
 use crate::constant::HBAR;
 use crate::initiate::{AtomInfo, NewlyCreated};
@@ -42,13 +42,20 @@ impl Component for Laser {
 
 /// Cooling force exerted on an entity by the cooling laser beams
 pub struct CoolingForce {
-	pub force: [f64;3]
+	/// The force exerted on an entity
+	pub force: [f64;3],
+
+	/// The number of photons scattered in total.
+	pub scattered_photons: f64,
+
+	/// The random kick exerted on an entity
+	pub rand_force: [f64;3]
 }
 impl Component for CoolingForce {
 	type Storage = VecStorage<Self>;
 }
 impl Default for CoolingForce {
-	fn default() -> Self { CoolingForce { force: [0.0,0.0,0.0]}}
+	fn default() -> Self { CoolingForce { force: [0.0,0.0,0.0], scattered_photons: 0.0, rand_force: [0.0,0.0,0.0] } }
 }
 
 /// System that clears the cooling forces.
@@ -58,6 +65,19 @@ impl <'a> System<'a> for ClearCoolingForcesSystem {
 	fn run (&mut self,mut cooling_forces:Self::SystemData){
 		for cooling_forces in (&mut cooling_forces).join(){
 			cooling_forces.force = [ 0.0, 0.0, 0.0];
+			cooling_forces.scattered_photons = 0.0;
+			cooling_forces.rand_force = [0.0,0.0,0.0];
+		}
+	}
+}
+
+/// System that adds the calculated cooling forces to the entity force
+pub struct AddCoolingForcesSystem;
+impl <'a> System<'a> for AddCoolingForcesSystem {
+	type SystemData = (ReadStorage<'a,CoolingForce>, WriteStorage<'a,Force>);
+	fn run (&mut self,(cooling_force, mut force):Self::SystemData){
+		for (cooling_force, force) in (&cooling_force, &mut force).join(){
+			force.force = maths::array_addition(&force.force, &cooling_force.force);
 		}
 	}
 }
@@ -128,10 +148,9 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 		Entities<'a>,
 		ReadStorage<'a, NewlyCreated>,
 		Read<'a, LazyUpdate>,
-		ReadStorage<'a, Laser>,
 	);
 
-	fn run(&mut self, (ent, newly_created, updater, laser): Self::SystemData) {
+	fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
 		for (ent, _) in (&ent, &newly_created).join() {
 			updater.insert(ent, CoolingForce::default());
 		}
@@ -139,7 +158,7 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 }
 
 /// Add all systems required by the laser module to the dispatch builder.
-pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static> {
+pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static>  {
 	builder.
 	with(ClearCoolingForcesSystem,"clear_cooling_forces", deps).
 	with(CalculateCoolingForcesSystem,"calculate_cooling_forces",&["clear_cooling_forces"]).
@@ -148,7 +167,7 @@ pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps
 
 /// Registers all resources required by the laser module.
 pub fn register_resources(world: &mut World) {
-		world.register::<InteractionLaserALL>();
+		world.register::<Laser>();
 		world.register::<CoolingForce>();
 }
 
@@ -167,21 +186,12 @@ pub mod tests {
 	extern crate specs;
 	use specs::{Builder, DispatcherBuilder, World};
 
-	#[test]
-	fn test_gaussian_beam() {
-		let pos = [1., 1., 1.];
-		let centre = [0., 1., 1.];
-		let dir = [1., 2., 2.];
-		let distance = get_minimum_distance_line_point(&pos, &centre, &dir);
-		assert!(distance > 0.942, distance < 0.943);
-	}
-
 	/// Tests that components required for optical force calculation are added to NewlyCreated atoms
 	#[test]
 	fn test_laser_components_are_added_to_new_atoms() {
 		let mut test_world = World::new();
 		test_world.register::<NewlyCreated>();
-		register_resources(&test_world);
+		register_resources(&mut test_world);
 
 		let mut dispatcher = DispatcherBuilder::new()
 			.with(

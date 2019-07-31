@@ -1,8 +1,8 @@
 extern crate specs;
 use crate::atom::*;
 use crate::constant;
+use crate::laser::CoolingForce;
 use crate::integrator::{Step, Timestep};
-use crate::laser::InteractionLaserALL;
 use crate::maths;
 
 use specs::{
@@ -15,7 +15,7 @@ pub struct PrintOutputSytem;
 impl<'a> System<'a> for PrintOutputSytem {
 	// print the output (whatever you want) to the console
 	type SystemData = (
-		ReadStorage<'a, InteractionLaserALL>,
+		ReadStorage<'a, CoolingForce>,
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, Velocity>,
 		ReadStorage<'a, Atom>,
@@ -29,9 +29,6 @@ impl<'a> System<'a> for PrintOutputSytem {
 		for (lasers, vel, pos, force, kick) in (&lasers, &vel, &pos, &force, &kick).join()
 		{
 			if step.n % 100 == 0 {
-				for _inter in &lasers.content {
-					//println!("index{},detuning{},force{:?}",inter.index,inter.detuning_doppler,inter.force);
-				}
 				println!(
 					"time{}position{:?},velocity{:?},acc{:?},kick{:?}",
 					_time,
@@ -182,7 +179,7 @@ pub struct FileOutputSystem;
 impl<'a> System<'a> for FileOutputSystem {
 	// print the output (whatever you want) to the console
 	type SystemData = (
-		ReadStorage<'a, InteractionLaserALL>,
+		ReadStorage<'a, CoolingForce>,
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, Velocity>,
 		ReadStorage<'a, Atom>,
@@ -196,10 +193,8 @@ impl<'a> System<'a> for FileOutputSystem {
 		for (lasers, vel, pos, force, kick) in (&lasers, &vel, &pos, &force, &kick).join()
 		{
 			if step.n % 100 == 0 {
-				for _inter in &lasers.content {
 					// TODO print the necessary information to a file, maybe a CSV?
 					// complete after finding out what to print and what file format is prefered
-				}
 			}
 		}
 	}

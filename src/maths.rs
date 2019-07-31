@@ -23,8 +23,8 @@ pub fn array_addition(a: &[f64; 3], b: &[f64; 3]) -> [f64; 3] {
 /// 
 /// `dir`: vector pointing along the line.
 pub fn get_minimum_distance_line_point(pos: &[f64; 3], line_point: &[f64; 3], dir: &[f64; 3]) -> f64 {
-	let rela_cood = maths::array_addition(&pos, &maths::array_multiply(&line_point, -1.));
-	let distance = maths::modulus(&maths::cross_product(&dir, &rela_cood)) / maths::modulus(&dir);
+	let rela_cood = array_addition(&pos, &array_multiply(&line_point, -1.));
+	let distance = modulus(&cross_product(&dir, &rela_cood)) / modulus(&dir);
 	distance
 }
 
@@ -183,5 +183,14 @@ mod tests {
 		assert!(
 			maxwell_dis(300., 1e-25, 100.) > 0.000839 && maxwell_dis(300., 1e-25, 100.) < 0.000840
 		);
+	}
+
+	#[test]
+	fn test_minimum_distance_line_point() {
+		let pos = [1., 1., 1.];
+		let centre = [0., 1., 1.];
+		let dir = [1., 2., 2.];
+		let distance = get_minimum_distance_line_point(&pos, &centre, &dir);
+		assert!(distance > 0.942, distance < 0.943);
 	}
 }

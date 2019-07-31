@@ -3,7 +3,6 @@ use crate::constant::PI as PI;
 use crate::integrator::{Timestep,Step};
 use crate::atom::{Atom,Mass,Position,Velocity,Force,RandKick};
 use crate::initiate::{AtomInfo,NewlyCreated};
-use crate::update::*;
 use crate::laser::*;
 use crate::magnetic::*;
 use crate::initiate::atom_create::{OvenCreateAtomsSystem,Oven};
@@ -111,24 +110,13 @@ pub fn create(){
 	//two initiators cannot be dispatched at the same time apparently for some unknown reason
 	let mut init_dispatcher2=DispatcherBuilder::new().with(AttachLaserComponentsToNewlyCreatedAtomsSystem, "initiate", &[]).build();
 	init_dispatcher2.dispatch(&mut exp_mot.res);
-	// run loop
-	let mut runner = ecs::create_dispatcher_running();
-	//let mut runner=DispatcherBuilder::new().
-	//with(UpdateLaserSystem,"updatelaser",&[]).
-	//with(ClearMagneticFieldSamplerSystem,"clear",&[]).
-	//with(Sample3DQuadrupoleFieldSystem,"updatesampler",&[]).
-	//with(CalculateMagneticFieldMagnitudeSystem,"magnitudecal",&["updatesampler"]).
-	//with(UpdateInteractionLaserSystem,"updateinter",&["updatelaser","updatesampler","magnitudecal"]).
-	//with(UpdateRandKick,"update_kick",&["updateinter"]).
-	//with(UpdateForce,"updateforce",&["update_kick","updateinter"]).
-	//with(EulerIntegrationSystem,"updatepos",&["update_kick"]).
-	//with(PrintOutputSytem,"print",&["updatepos"]).
-	//with(DetectingAtomSystem,"detect",&["updatepos"]).build();
+
+	let mut runner = ecs::create_simulation_dispatcher();
+
 	runner.setup(&mut exp_mot.res);
 	for _i in 0..10000{
 		runner.dispatch(&mut exp_mot.res);
 		exp_mot.maintain();
-		//println!("t{}",time);
 	}
 	let mut print_detect = PrintDetectSystem;
 	print_detect.run_now(&exp_mot.res);	
