@@ -120,6 +120,33 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 	}
 }
 
+/// This system is responsible for removing the `NewlyCreated` marker component from atoms.
+/// 
+/// The marker is originally added to atoms when they are first added to the simulation, which allows other Systems
+/// to add any required components to atoms.
+/// 
+/// ## When should this system run?
+/// 
+/// This system runs *before* new atoms are added to the world.
+/// Thus, any atoms flagged as `NewlyCreated` from the previous frame are deflagged before the new flagged atoms are created.
+/// Be careful of properly maintaining the world at the correct time;
+/// LazyUpdate is used, so changes to remove the `NewlyCreated` components will only be enacted after the call to `world.maintain()`.
+pub struct DeflagNewAtomsSystem;
+
+impl<'a> System<'a> for DeflagNewAtomsSystem {
+	type SystemData = (
+		Entities<'a>,
+		ReadStorage<'a,NewlyCreated>,
+		Read<'a, LazyUpdate>,
+	);
+
+	fn run(&mut self, (ent,newly_created, updater): Self::SystemData) {
+		for (ent,_newly_created) in (&ent, &newly_created).join() {
+			updater.remove::<NewlyCreated>(ent);
+		}
+	}
+}
+
 pub struct AtomInitiateMotSystem;
 
 impl<'a> System<'a> for AtomInitiateMotSystem {

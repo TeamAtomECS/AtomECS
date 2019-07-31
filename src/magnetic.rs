@@ -1,6 +1,7 @@
 extern crate specs;
-use specs::{System,ReadStorage,WriteStorage,Join,Component,VecStorage,HashMapStorage,DispatcherBuilder,World};
+use specs::{System,ReadStorage,WriteStorage,Join,Component,VecStorage,HashMapStorage,DispatcherBuilder,World,Read,Entities,LazyUpdate};
 use crate::atom::Position;
+use crate::initiate::NewlyCreated;
 use crate::maths;
 
 /// A component that measures the magnetic field at a point in space.
@@ -135,6 +136,19 @@ impl <'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
 	}
 }
 
+/// Attachs the MagneticFieldSampler component to newly created atoms. 
+/// This allows other magnetic Systems to interact with the atom, eg to calculate fields at their location.
+pub struct AttachFieldSamplersToNewlyCreatedAtomsSystem;
+
+impl<'a> System<'a> for AttachFieldSamplersToNewlyCreatedAtomsSystem {
+	type SystemData = (Entities<'a>,ReadStorage<'a,NewlyCreated>, Read<'a,LazyUpdate>);
+	fn run (&mut self, (ent, newly_created, updater):Self::SystemData) {
+		for (ent, _nc) in (&ent, &newly_created).join() {
+			updater.insert(ent, MagneticFieldSampler::default());
+		}
+	}
+}
+
 /// Adds the systems required by magnetics to the dispatcher.
 /// 
 /// #Arguments
@@ -147,7 +161,8 @@ pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps
 	with(ClearMagneticFieldSamplerSystem,"magnetics_clear", deps).
 	with(Sample3DQuadrupoleFieldSystem,"magnetics_quadrupole",&["magnetics_clear"]).
 	with(UniformMagneticFieldSystem,"magnetics_uniform",&["magnetics_quadrupole"]).
-	with(CalculateMagneticFieldMagnitudeSystem,"magnetics_magnitude",&["magnetics_uniform"])
+	with(CalculateMagneticFieldMagnitudeSystem,"magnetics_magnitude",&["magnetics_uniform"]).
+	with(AttachFieldSamplersToNewlyCreatedAtomsSystem, "add_magnetic_field_samplers", &[])
 }
 
 /// Registers resources required by magnetics to the ecs world.
@@ -156,6 +171,7 @@ pub fn register_resources(world: &mut World) {
 		world.register::<UniformMagneticField>();
 		world.register::<QuadrupoleField3D>();
 		world.register::<MagneticFieldSampler>();
+		world.register::<NewlyCreated>();
 }
 
 #[cfg(test)]
@@ -204,5 +220,28 @@ pub mod tests {
 		let samplers = test_world.read_storage::<MagneticFieldSampler>();
 		let sampler = samplers.get(sampler_entity);
 		assert_eq!(sampler.expect("entity not found").field,[2.0+1.0,1.0,-2.0]);
+	}
+
+	/// Tests that magnetic field samplers are added to newly created atoms.
+	#[test]
+	fn test_field_samplers_are_added()
+	{
+		let mut test_world = World::new();
+		register_resources(&mut test_world);
+
+		let builder=DispatcherBuilder::new();
+		let configured_builder = add_systems_to_dispatch(builder, &[]);
+		let mut dispatcher = configured_builder.build();
+		dispatcher.setup(&mut test_world.res);
+
+		let sampler_entity = test_world.create_entity()
+		.with(NewlyCreated)
+		.build();
+
+		dispatcher.dispatch(&mut test_world.res);
+		test_world.maintain();
+
+		let samplers = test_world.read_storage::<MagneticFieldSampler>();
+		assert_eq!(samplers.contains(sampler_entity), true);
 	}
 }	
