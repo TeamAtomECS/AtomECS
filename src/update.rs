@@ -53,7 +53,7 @@ impl <'a>System<'a> for UpdateRandKick{
 			let mut total_impulse = 0.0 ; 
 			_kick.force =[0.,0.,0.];
 			for interaction in &_inter.content{
-				total_impulse = total_impulse + maths::modulus(&interaction.force)*_t.t;
+				total_impulse = total_impulse + maths::modulus(&interaction.force)*_t.delta;
 			}
 			let momentum_photon = constant::HBAR * 2.*constant::PI*_atom.frequency/constant::C;
 			let mut num_kick = total_impulse/ momentum_photon;
@@ -62,14 +62,14 @@ impl <'a>System<'a> for UpdateRandKick{
 				if num_kick >1.{
 					// if the number is bigger than 1, a random kick will be added with direction random
 					num_kick = num_kick - 1.;
-					_kick.force = maths::array_addition(&_kick.force,&maths::array_multiply(&maths::random_direction(),momentum_photon/_t.t));
+					_kick.force = maths::array_addition(&_kick.force,&maths::array_multiply(&maths::random_direction(),momentum_photon/_t.delta));
 				}
 				else{
 					// if the remaining kick is smaller than 0, there is a chance that the kick is random
 					let mut rng = rand::thread_rng();
 					let result = rng.gen_range(0.0, 1.0);
 					if result < num_kick{
-						_kick.force = maths::array_addition(&_kick.force,&maths::array_multiply(&maths::random_direction(),momentum_photon/_t.t));
+						_kick.force = maths::array_addition(&_kick.force,&maths::array_multiply(&maths::random_direction(),momentum_photon/_t.delta));
 					}
 					break;
 				}
@@ -98,6 +98,7 @@ pub mod tests {
 		test_world.register::<RandKick>();
 		test_world.register::<Force>();
 		test_world.register::<InteractionLaserALL>();
+		test_world.register::<Gravity>();
 
 		let mut content = Vec::new();
 		content.push(InteractionLaser{wavenumber:[1.,1.,2.],index:1,intensity:1.,polarization:1.,detuning_doppler:1.,force:[1.,0.,0.]});

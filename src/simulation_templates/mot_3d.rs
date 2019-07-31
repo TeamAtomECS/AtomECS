@@ -108,7 +108,7 @@ pub fn create(){
 	exp_mot.create_entity().with(laser_6).build();
 	
 	
-	exp_mot.add_resource(Timestep{t:1e-6});
+	exp_mot.add_resource(Timestep{delta:1e-6});
 	// initiate
 		// build a oven
 	exp_mot.create_entity()

@@ -105,7 +105,7 @@ pub fn create(){
 	
 	exp_mot.create_entity().with(Detector{centre:[0.2,0.,0.],range:[0.05,0.1,0.1]}).build();
 	
-	exp_mot.add_resource(Timestep{t:1e-6});
+	exp_mot.add_resource(Timestep{delta:1e-6});
 	// initiate
 		// build a oven
 	exp_mot.create_entity()

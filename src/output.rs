@@ -25,7 +25,7 @@ impl<'a> System<'a> for PrintOutputSytem {
 		ReadExpect<'a, Timestep>,
 	);
 	fn run(&mut self, (_lasers, _pos, _vel, _, _force, _kick, _step, _t): Self::SystemData) {
-		let _time = _t.t * _step.n as f64;
+		let _time = _t.delta * _step.n as f64;
 		for (_lasers, _vel, _pos, _force, _kick) in (&_lasers, &_vel, &_pos, &_force, &_kick).join()
 		{
 			if _step.n % 100 == 0 {
@@ -151,7 +151,7 @@ pub struct RingDetector {
 
 	/// width is how long the ring is in radial direction
 	pub width: f64,
-	
+
 	/// thickness of ring on axial direction
 	pub thickness: f64,
 }
@@ -192,7 +192,7 @@ impl<'a> System<'a> for FileOutputSystem {
 		ReadExpect<'a, Timestep>,
 	);
 	fn run(&mut self, (_lasers, _pos, _vel, _, _force, _kick, _step, _t): Self::SystemData) {
-		let _time = _t.t * _step.n as f64;
+		let _time = _t.delta * _step.n as f64;
 		for (_lasers, _vel, _pos, _force, _kick) in (&_lasers, &_vel, &_pos, &_force, &_kick).join()
 		{
 			if _step.n % 100 == 0 {
