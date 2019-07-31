@@ -44,11 +44,12 @@ impl Component for Laser {
 pub struct CoolingForce {
 	pub force: [f64;3]
 }
-
 impl Component for CoolingForce {
 	type Storage = VecStorage<Self>;
 }
-
+impl Default for CoolingForce {
+	fn default() -> Self { CoolingForce { force: [0.0,0.0,0.0]}}
+}
 
 /// System that clears the cooling forces.
 pub struct ClearCoolingForcesSystem;
@@ -106,156 +107,11 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
 				let scatter3 =
 					0.5 * (1. - costheta.powf(2.)) * atom.gamma
 						/ 2. / (1. + s0 + 4. * (detuning - atom.muz / HBAR * br).powf(2.) / atom.gamma.powf(2.));
-				let force_new = maths::array_multiply(
+				let scattering_force = maths::array_multiply(
 					&laser.wavenumber,
 					s0 * HBAR * (scatter1 + scatter2 + scatter3),
 				);
-			}
-		}
-	}
-}
-
-fn get_perpen_distance(pos: &[f64; 3], centre: &[f64; 3], dir: &[f64; 3]) -> f64 {
-	let rela_cood = maths::array_addition(&pos, &maths::array_multiply(&centre, -1.));
-	let distance = maths::modulus(&maths::cross_product(&dir, &rela_cood)) / maths::modulus(&dir);
-	distance
-}
-
-/// Gets the intensity of a gaussian laser beam at the specified position.
-fn get_gaussian_beam_intensity(laser: &Laser, pos: &Position) -> f64 {
-	laser.power * maths::gaussian_dis(
-		laser.std,
-		get_perpen_distance(&pos.pos, &laser.centre, &laser.wavenumber),
-	)
-}
-
-
-pub struct InteractionLaser {
-	/// which laser is involved
-	pub index: u64,
-	/// intensity of the this laser light at this position
-	pub intensity: f64,
-	pub polarization: f64,
-	pub wavenumber: [f64; 3],
-	/// the detuning between the laser light and the atom
-	pub detuning_doppler: f64,
-	pub force: [f64; 3],
-}
-
-impl InteractionLaser {
-	pub fn clone(&self) -> InteractionLaser {
-		InteractionLaser {
-			index: self.index,
-			intensity: self.intensity,
-			polarization: self.polarization,
-			wavenumber: self.wavenumber.clone(),
-			detuning_doppler: self.detuning_doppler,
-			force: self.force.clone(),
-		}
-	}
-}
-
-pub struct InteractionLaserALL {
-	// just a collection of laser interactions
-	pub content: Vec<InteractionLaser>,
-}
-
-impl Component for InteractionLaserALL {
-	type Storage = VecStorage<Self>;
-}
-
-impl InteractionLaserALL {
-	pub fn clone(&self) -> InteractionLaserALL {
-		let mut new = Vec::new();
-		for i in self.content.iter() {
-			new.push(i.clone());
-		}
-		InteractionLaserALL { content: new }
-	}
-}
-
-pub struct UpdateInteractionLaserSystem;
-impl<'a> System<'a> for UpdateInteractionLaserSystem {
-	// this system will update the information regarding interaction between the lasers and the atoms
-	type SystemData = (
-		ReadStorage<'a, Position>,
-		ReadStorage<'a, Velocity>,
-		ReadStorage<'a, MagneticFieldSampler>,
-		WriteStorage<'a, InteractionLaserALL>,
-		ReadStorage<'a, AtomInfo>,
-	);
-
-	fn run(&mut self, (_pos, vel, mag, mut interall, atom): Self::SystemData) {
-		for (vel, _pos, mag, mut interall, atom) in
-			(&vel, &_pos, &mag, &mut interall, &atom).join()
-		{
-			//println!("laser interaction updated");
-			let mag_field = mag.field;
-			let br = mag.magnitude;
-			for inter in &mut interall.content {
-				let _mup = atom.mup;
-				let _mum = atom.mum;
-				let _muz = atom.muz;
-				let s0 = inter.intensity / constant::SATINTEN;
-				let omega = maths::modulus(&inter.wavenumber) * constant::C;
-				let wave_vector = inter.wavenumber;
-				let p = inter.polarization;
-				let gamma = atom.gamma;
-				let atom_frequency = atom.frequency;
-				let costheta = maths::dot_product(&wave_vector, &mag_field)
-					/ maths::modulus(&wave_vector)
-					/ maths::modulus(&mag_field);
-				let detuning = omega
-					- atom_frequency * 2.0 * constant::PI
-					- maths::dot_product(&wave_vector, &vel.vel);
-
-				let scatter1 =
-					0.25 * (p * costheta + 1.).powf(2.) * gamma
-						/ 2. / (1. + s0 + 4. * (detuning - _mup / HBAR * br).powf(2.) / gamma.powf(2.));
-				let scatter2 =
-					0.25 * (p * costheta - 1.).powf(2.) * gamma
-						/ 2. / (1. + s0 + 4. * (detuning - _mum / HBAR * br).powf(2.) / gamma.powf(2.));
-				let scatter3 =
-					0.5 * (1. - costheta.powf(2.)) * gamma
-						/ 2. / (1. + s0 + 4. * (detuning - _muz / HBAR * br).powf(2.) / gamma.powf(2.));
-				let force_new = maths::array_multiply(
-					&wave_vector,
-					s0 * HBAR * (scatter1 + scatter2 + scatter3),
-				);
-
-				inter.force = force_new;
-				inter.detuning_doppler = detuning;
-			}
-		}
-	}
-}
-
-pub struct UpdateLaserSystem;
-
-impl<'a> System<'a> for UpdateLaserSystem {
-	type SystemData = (
-		ReadStorage<'a, Position>,
-		ReadStorage<'a, Laser>,
-		WriteStorage<'a, InteractionLaserALL>,
-	);
-
-	fn run(&mut self, (pos, _laser, mut interall): Self::SystemData) {
-		//update the sampler for laser, namely intensity, wavenumber? , polarization
-		for (mut interall, pos) in (&mut interall, &pos).join() {
-			//println!("laser updated");
-			for inter in &mut interall.content {
-				for _laser in (&_laser).join() {
-					if _laser.index == inter.index {
-						let laser_inten = _laser.power
-							* maths::gaussian_dis(
-								_laser.std,
-								get_perpen_distance(&pos.pos, &_laser.centre, &_laser.wavenumber),
-							);
-						inter.intensity = laser_inten;
-						inter.wavenumber = _laser.wavenumber;
-						inter.polarization = _laser.polarization;
-					}
-				}
+			cooling_force.force = maths::array_addition(&cooling_force.force, &scattering_force);
 			}
 		}
 	}
@@ -276,42 +132,32 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 	);
 
 	fn run(&mut self, (ent, newly_created, updater, laser): Self::SystemData) {
-		let mut content = Vec::new();
-		for laser in (&laser).join() {
-			content.push(InteractionLaser {
-				index: laser.index,
-				intensity: 0.,
-				polarization: 0.,
-				wavenumber: [0., 0., 0.],
-				detuning_doppler: 0.,
-				force: [0., 0., 0.],
-			})
-		}
-
-		let laser_interaction = InteractionLaserALL { content };
 		for (ent, _) in (&ent, &newly_created).join() {
-			updater.insert(
-				ent,
-				RandKick {
-					force: [0., 0., 0.],
-				},
-			);
-			updater.insert(ent, laser_interaction.clone());
+			updater.insert(ent, CoolingForce::default());
 		}
 	}
 }
 
-/// add all Systems that are necessary to run the laser part of the simulation
-pub fn add_systems_to_dispatch_laser(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static> {
+/// Add all systems required by the laser module to the dispatch builder.
+pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static> {
 	builder.
-	with(UpdateLaserSystem,"updatelaser", deps).
-	with(UpdateInteractionLaserSystem,"updatelaserinter",&["updatelaser"]).
-	with(AttachLaserComponentsToNewlyCreatedAtomsSystem, "add_laser", &[])
+	with(ClearCoolingForcesSystem,"clear_cooling_forces", deps).
+	with(CalculateCoolingForcesSystem,"calculate_cooling_forces",&["clear_cooling_forces"]).
+	with(AttachLaserComponentsToNewlyCreatedAtomsSystem, "", &[])
 }
 
-pub fn register_resources_laser(world: &mut World) {
+/// Registers all resources required by the laser module.
+pub fn register_resources(world: &mut World) {
 		world.register::<InteractionLaserALL>();
-		world.register::<Laser>();
+		world.register::<CoolingForce>();
+}
+
+/// Gets the intensity of a gaussian laser beam at the specified position.
+fn get_gaussian_beam_intensity(laser: &Laser, pos: &Position) -> f64 {
+	laser.power * maths::gaussian_dis(
+		laser.std,
+		maths::get_minimum_distance_line_point(&pos.pos, &laser.centre, &laser.wavenumber),
+	)
 }
 
 #[cfg(test)]
@@ -326,8 +172,8 @@ pub mod tests {
 		let pos = [1., 1., 1.];
 		let centre = [0., 1., 1.];
 		let dir = [1., 2., 2.];
-		let distance = get_perpen_distance(&pos, &centre, &dir);
-		assert_eq!(distance > 0.942, distance < 0.943);
+		let distance = get_minimum_distance_line_point(&pos, &centre, &dir);
+		assert!(distance > 0.942, distance < 0.943);
 	}
 
 	/// Tests that components required for optical force calculation are added to NewlyCreated atoms
@@ -335,9 +181,7 @@ pub mod tests {
 	fn test_laser_components_are_added_to_new_atoms() {
 		let mut test_world = World::new();
 		test_world.register::<NewlyCreated>();
-		test_world.register::<RandKick>();
-		test_world.register::<InteractionLaserALL>();
-		test_world.register::<Laser>();
+		register_resources(&test_world);
 
 		let mut dispatcher = DispatcherBuilder::new()
 			.with(
@@ -350,7 +194,7 @@ pub mod tests {
 
 		let laser = Laser {
 			centre: [0., 0., 0.],
-			wavenumber: [-2.0 * PI / (461e-9), 0., 0.],
+			wavenumber: [-2.0 * constant::PI / (461e-9), 0., 0.],
 			polarization: -1.,
 			power: 10.,
 			std: 0.1,
@@ -364,92 +208,7 @@ pub mod tests {
 		dispatcher.dispatch(&mut test_world.res);
 		test_world.maintain();
 
-		assert_eq!(test_world.read_storage::<RandKick>().contains(test_entity), true);
-		assert_eq!(test_world.read_storage::<InteractionLaserALL>().contains(test_entity), true);
-	}
-
-	#[test]
-	fn test_laser_interaction() {
-		use specs::{Builder, RunNow, World};
-		let mut test_world = World::new();
-		test_world.register::<InteractionLaserALL>();
-		test_world.register::<Force>();
-		test_world.register::<Laser>();
-		test_world.register::<MagneticFieldSampler>();
-		test_world.register::<Position>();
-		test_world.register::<Velocity>();
-		test_world.register::<AtomInfo>();
-		let rb_atom = AtomInfo {
-			mass: 87,
-			mup: constant::MUP,
-			mum: constant::MUM,
-			muz: constant::MUZ,
-			frequency: constant::ATOMFREQUENCY,
-			gamma: constant::TRANSWIDTH,
-		};
-		let mut content = Vec::new();
-		content.push(InteractionLaser {
-			wavenumber: [1., 1., 2.],
-			index: 1,
-			intensity: 1.,
-			polarization: 1.,
-			detuning_doppler: 1.,
-			force: [1., 0., 0.],
-		});
-		content.push(InteractionLaser {
-			wavenumber: [1., 1., 2.],
-			index: 2,
-			intensity: 1.,
-			polarization: 1.,
-			detuning_doppler: 1.,
-			force: [2., 0., 0.],
-		});
-		let test_interaction = InteractionLaserALL { content };
-		let sample_entity = test_world
-			.create_entity()
-			.with(test_interaction)
-			.with(MagneticFieldSampler {
-				magnitude: 5.,
-				field: [3., 4., 0.],
-			})
-			.with(rb_atom)
-			.with(Position { pos: [0., 0., 0.] })
-			.with(Velocity { vel: [0., 0., 0.] })
-			.build();
-
-		let _laser_1 = Laser {
-			centre: [0., 0., 0.],
-			wavenumber: [0.0, 0.0, 2.0 * PI / (461e-9)],
-			polarization: 1.,
-			power: 10.,
-			std: 0.1,
-			frequency: constant::C / 461e-9,
-			index: 1,
-		};
-		let _laser_2 = Laser {
-			centre: [0., 0., 0.],
-			wavenumber: [0.0, 0.0, -2.0 * PI / (461e-9)],
-			polarization: 1.,
-			power: 10.,
-			std: 0.1,
-			frequency: constant::C / 461e-9,
-
-			index: 2,
-		};
-		test_world.create_entity().with(_laser_1).build();
-		test_world.create_entity().with(_laser_2).build();
-
-		let mut update_test = UpdateLaserSystem;
-		let mut update_test_two = UpdateInteractionLaserSystem;
-		update_test.run_now(&test_world.res);
-		update_test_two.run_now(&test_world.res);
-
-		let samplers = test_world.read_storage::<InteractionLaserALL>();
-		let sampler = samplers.get(sample_entity);
-		assert_eq!(
-			(sampler.expect("entity not found").content[0].force[2] * 1e22) as u64,
-			46
-		);
+		assert_eq!(test_world.read_storage::<CoolingForce>().contains(test_entity), true);
 	}
 
 }

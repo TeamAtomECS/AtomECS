@@ -24,7 +24,8 @@ pub fn create(){
 	mum:constant::MUM,
 	muz:constant::MUZ,
 	frequency:constant::ATOMFREQUENCY,
-	gamma:constant::TRANSWIDTH
+	gamma:constant::TRANSWIDTH,
+	saturation_intensity: constant::SATINTEN
 	};
 	exp_mot.add_resource(Step{n:0});
 	exp_mot.add_resource(AtomOuput{number_of_atom:0,total_velocity:[0.,0.,0.]});

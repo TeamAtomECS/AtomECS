@@ -3,7 +3,7 @@
 use crate::constant as constant;
 use crate::constant::PI as PI;
 use crate::integrator::{Timestep,Step};
-use crate::atom::{Mass,Position,Velocity,Force,RandKick};
+use crate::atom::{Mass,Position,Velocity,Force};
 use crate::initiate::AtomInfo;
 use crate::update::*;
 use crate::laser::*;
@@ -26,10 +26,7 @@ pub fn create(){
 	exp_mot.register::<AtomInfo>();
 	exp_mot.register::<Mass>();
 	exp_mot.register::<Laser>();
-	exp_mot.register::<MagneticFieldSampler>();
-	exp_mot.register::<InteractionLaserALL>();
 	exp_mot.register::<QuadrupoleField3D>();
-	exp_mot.register::<RandKick>();
 	
 	//component for the experiment
 	let rb_atom = AtomInfo{
@@ -38,7 +35,8 @@ pub fn create(){
 	mum:constant::MUM,
 	muz:constant::MUZ,
 	frequency:constant::ATOMFREQUENCY,
-	gamma:constant::TRANSWIDTH
+	gamma:constant::TRANSWIDTH,
+	saturation_intensity: constant::SATINTEN
 	};
 	exp_mot.add_resource(Step{n:0});
 	let mag= QuadrupoleField3D{gradient:0.002};

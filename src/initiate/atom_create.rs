@@ -108,6 +108,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 						mum: atom.mum,
 						frequency: atom.frequency,
 						gamma: atom.gamma,
+						saturation_intensity: atom.saturation_intensity
 					},
 				);
 				updater.insert(new_atom,Atom);

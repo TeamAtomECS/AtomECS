@@ -13,6 +13,21 @@ pub fn array_addition(a: &[f64; 3], b: &[f64; 3]) -> [f64; 3] {
 	result
 }
 
+/// Get miniminum distance between a point and a line.
+/// 
+/// # Arguments
+/// 
+/// `pos`: position of the point
+/// 
+/// `line_point`: a point on the line
+/// 
+/// `dir`: vector pointing along the line.
+pub fn get_minimum_distance_line_point(pos: &[f64; 3], line_point: &[f64; 3], dir: &[f64; 3]) -> f64 {
+	let rela_cood = maths::array_addition(&pos, &maths::array_multiply(&line_point, -1.));
+	let distance = maths::modulus(&maths::cross_product(&dir, &rela_cood)) / maths::modulus(&dir);
+	distance
+}
+
 /// Calculates a - b
 pub fn array_subtraction(a: &[f64; 3], b: &[f64; 3]) -> [f64; 3] {
 	let mut result = [0.0, 0.0, 0.0];
