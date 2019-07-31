@@ -168,7 +168,7 @@ fn get_perpen_distance(pos: &[f64; 3], centre: &[f64; 3], dir: &[f64; 3]) -> f64
 }
 
 /// Attachs components used for optical force calculation to newly created atoms.
-/// 
+///
 /// This system attaches the `RandKick` and `InteractionLaserALL` components to `NewlyCreated` entities.
 /// Both components are required by other laser `System`s to perform calculations of optical scattering forces.
 pub struct AttachLaserForceComponentsToNewlyCreatedAtomsSystem;
@@ -211,6 +211,8 @@ impl<'a> System<'a> for AttachLaserForceComponentsToNewlyCreatedAtomsSystem {
 pub mod tests {
 
 	use super::*;
+	extern crate specs;
+	use specs::{Builder, DispatcherBuilder, World};
 
 	/// Tests the correct implementation of the quadrupole 3D field
 	#[test]
@@ -220,6 +222,44 @@ pub mod tests {
 		let dir = [1., 2., 2.];
 		let distance = get_perpen_distance(&pos, &centre, &dir);
 		assert_eq!(distance > 0.942, distance < 0.943);
+	}
+
+	/// Tests that components required for optical force calculation are added to NewlyCreated atoms
+	#[test]
+	fn test_laser_components_are_added_to_new_atoms() {
+		let mut test_world = World::new();
+		test_world.register::<NewlyCreated>();
+		test_world.register::<RandKick>();
+		test_world.register::<InteractionLaserALL>();
+		test_world.register::<Laser>();
+
+		let mut dispatcher = DispatcherBuilder::new()
+			.with(
+				AttachLaserForceComponentsToNewlyCreatedAtomsSystem,
+				"attach_comps",
+				&[],
+			)
+			.build();
+		dispatcher.setup(&mut test_world.res);
+
+		let laser = Laser {
+			centre: [0., 0., 0.],
+			wavenumber: [-2.0 * PI / (461e-9), 0., 0.],
+			polarization: -1.,
+			power: 10.,
+			std: 0.1,
+			frequency: constant::C / 461e-9,
+			index: 6,
+		};
+		test_world.create_entity().with(laser).build();
+		
+		let test_entity = test_world.create_entity().with(NewlyCreated).build();
+
+		dispatcher.dispatch(&mut test_world.res);
+		test_world.maintain();
+
+		assert_eq!(test_world.read_storage::<RandKick>().contains(test_entity), true);
+		assert_eq!(test_world.read_storage::<InteractionLaserALL>().contains(test_entity), true);
 	}
 
 	#[test]
