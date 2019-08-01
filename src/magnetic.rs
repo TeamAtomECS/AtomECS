@@ -29,6 +29,12 @@ pub struct QuadrupoleField3D{
 	/// Gradient of the quadrupole field, in units of Gauss/cm
 	pub gradient:f64
 }
+impl QuadrupoleField3D {
+	/// Creates a `QuadrupoleField3D` component with gradient specified in Gauss per cm.
+	pub fn gauss_per_cm(gradient: f64) -> Self {
+		Self { gradient: gradient }
+	}
+}
 
 impl Component for QuadrupoleField3D{
 	type Storage = HashMapStorage<Self>;
