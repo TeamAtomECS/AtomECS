@@ -280,8 +280,7 @@ pub mod tests {
 			polarization: -1.,
 			power: 10.,
 			std: 0.1,
-			frequency: constant::C / 461e-9,
-			index: 6,
+			frequency: constant::C / 461e-9
 		};
 		test_world.create_entity().with(laser).build();
 
@@ -320,5 +319,10 @@ pub mod tests {
 		test_world.maintain();
 
 		assert_eq!(test_world.read_storage::<Force>().get(test_entity).expect("entity not found").force, maths::array_addition(&cool_force,&force));
+	}
+
+	#[test]
+	fn test_laser_create() {
+
 	}
 }
