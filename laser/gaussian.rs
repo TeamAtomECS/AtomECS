@@ -40,6 +40,7 @@ impl <'a> System<'a> for CalculateGaussianBeamIntensitySystem {
         );
 	fn run (&mut self,(entities, cooling, gaussian, intensities):Self::SystemData){
 		
+        let mut iter=0;
         for (laser,cooling) in (&entities, &cooling).join() {
 
             // Perform only for Gaussian lasers
@@ -50,7 +51,7 @@ impl <'a> System<'a> for CalculateGaussianBeamIntensitySystem {
 
             for (pos, mut samplers) in (&pos, &samplers)
             {
-                
+                samplers.content[iter] = 
             }
         }
 	}

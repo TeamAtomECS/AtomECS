@@ -22,4 +22,26 @@ impl Component for LaserIntensitySamplers {
     type Storage = VecStorage<Self>;
 }
 
-// TODO: System which initialises array of LaserIntensitySamplers.
+/// This system initialises all LaserIntensitySamplers to a zero value.
+/// 
+/// It also ensures that the size of the LaserIntensitySamplers components match the number of CoolingLight entities in the world.
+pub struct InitialiseLaserIntensitySamplersSystem;
+impl <'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
+	type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a,CoolingLight>,
+        WriteStorage<'a,LaserIntensitySamplers>,
+        );
+	fn run (&mut self,(entities, cooling, mut intensity_samplers):Self::SystemData){
+        let mut content = Vec::new();
+        for (laser,cooling) in (&entities, &cooling).join() {
+            content.push(
+                LaserIntensitySampler { laser: laser, intensity: 0 }
+            );
+        }
+
+        for mut intensity_sampler in (&mut intensity_samplers).join() {
+            intensity_sampler.contents = content;
+        }
+	}
+}
