@@ -159,10 +159,11 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 
 /// Add all systems required by the laser module to the dispatch builder.
 pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static>  {
-	builder.
-	with(ClearCoolingForcesSystem,"clear_cooling_forces", deps).
-	with(CalculateCoolingForcesSystem,"calculate_cooling_forces",&["clear_cooling_forces"]).
-	with(AttachLaserComponentsToNewlyCreatedAtomsSystem, "", &[])
+	builder
+	.with(ClearCoolingForcesSystem,"clear_cooling_forces", deps)
+	.with(CalculateCoolingForcesSystem,"calculate_cooling_forces",&["clear_cooling_forces"])
+	.with(AttachLaserComponentsToNewlyCreatedAtomsSystem, "", &[])
+	.with(AddCoolingForcesSystem, "add_cooling_forces", &["calculate_cooling_forces"]);
 }
 
 /// Registers all resources required by the laser module.
