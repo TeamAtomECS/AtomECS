@@ -1,4 +1,4 @@
-use crate::atom::{Atom,Mass,Position,Velocity,Force,RandKick,Gravity};
+use crate::atom::{Atom,Mass,Position,Velocity,Force,Gravity};
 use crate::laser;
 use crate::magnetic;
 use crate::initiate::{AtomInfo,NewlyCreated,DeflagNewAtomsSystem};
@@ -28,7 +28,6 @@ pub fn register_component_atomcreation(world: &mut World) {
 /// register component related to forces other than laser force
 pub fn register_component_otherforce(world: &mut World) {
 		world.register::<Gravity>();
-		world.register::<RandKick>();
 }
 
 /// register component for output system

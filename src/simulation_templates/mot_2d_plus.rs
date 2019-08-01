@@ -1,7 +1,7 @@
 use crate::constant as constant;
 use crate::constant::PI as PI;
 use crate::integrator::{Timestep,Step};
-use crate::atom::{Atom,Mass,Position,Velocity,Force,RandKick};
+use crate::atom::{Atom,Mass,Position,Velocity,Force};
 use crate::initiate::{AtomInfo,NewlyCreated};
 use crate::laser::*;
 use crate::magnetic::*;

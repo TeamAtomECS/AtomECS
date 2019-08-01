@@ -20,22 +20,20 @@ impl<'a> System<'a> for PrintOutputSytem {
 		ReadStorage<'a, Velocity>,
 		ReadStorage<'a, Atom>,
 		ReadStorage<'a, Force>,
-		ReadStorage<'a, RandKick>,
 		ReadExpect<'a, Step>,
 		ReadExpect<'a, Timestep>,
 	);
-	fn run(&mut self, (lasers, pos, vel, _, force, kick, step, t): Self::SystemData) {
+	fn run(&mut self, (lasers, pos, vel, _, force, step, t): Self::SystemData) {
 		let _time = t.delta * step.n as f64;
-		for (lasers, vel, pos, force, kick) in (&lasers, &vel, &pos, &force, &kick).join()
+		for (lasers, vel, pos, force) in (&lasers, &vel, &pos, &force).join()
 		{
 			if step.n % 100 == 0 {
 				println!(
-					"time{}position{:?},velocity{:?},acc{:?},kick{:?}",
+					"time{}position{:?},velocity{:?},acc{:?}",
 					_time,
 					pos.pos,
 					vel.vel,
-					maths::array_multiply(&force.force, 1. / constant::AMU / 87.),
-					maths::array_multiply(&kick.force, 1. / constant::AMU / 87.)
+					maths::array_multiply(&force.force, 1. / constant::AMU / 87.)
 				);
 			}
 			//println!("position{:?},velocity{:?}",pos.pos,vel.vel);
@@ -184,13 +182,12 @@ impl<'a> System<'a> for FileOutputSystem {
 		ReadStorage<'a, Velocity>,
 		ReadStorage<'a, Atom>,
 		ReadStorage<'a, Force>,
-		ReadStorage<'a, RandKick>,
 		ReadExpect<'a, Step>,
 		ReadExpect<'a, Timestep>,
 	);
-	fn run(&mut self, (lasers, pos, vel, _, force, kick, step, t): Self::SystemData) {
+	fn run(&mut self, (lasers, pos, vel, _, force, step, t): Self::SystemData) {
 		let _time = t.delta * step.n as f64;
-		for (lasers, vel, pos, force, kick) in (&lasers, &vel, &pos, &force, &kick).join()
+		for (lasers, vel, pos, force) in (&lasers, &vel, &pos, &force).join()
 		{
 			if step.n % 100 == 0 {
 					// TODO print the necessary information to a file, maybe a CSV?
