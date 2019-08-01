@@ -42,7 +42,7 @@ impl <'a> System<'a> for CalculateGaussianBeamIntensitySystem {
 		
         let mut iter=0;
         for (laser,cooling) in (&entities, &cooling).join() {
-
+                
             // Perform only for Gaussian lasers
             let g = gaussian.get(laser);
             if (g.is_none) {

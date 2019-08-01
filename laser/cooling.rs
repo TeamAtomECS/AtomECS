@@ -1,6 +1,6 @@
 extern crate specs;
 use specs::{
-	DispatcherBuilder, World, Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage, WriteStorage, ReadExpect, HashMapStorage, Entity
+	DispatcherBuilder, World, Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage, WriteStorage, ReadExpect, HashMapStorage, Entity, RunNow
 };
 
 use crate::atom::{Force,Position,Velocity};
@@ -41,4 +41,57 @@ pub struct CoolingLaserInteractions {
 }
 impl Component for CoolingLaserInteractions {
 	type Storage = VecStorage<Self>;
+}
+
+/// An index that uniquely identifies this cooling light in the interaction list for each atom.
+/// The index value corresponds to the position of each cooling light in the per-atom interaction list array.
+pub struct CoolingLightIndex(u64);
+impl Component for CoolingLightIndex {
+    type Storage = VecStorage<Self>;
+}
+impl Default for CoolingLightIndex { 
+    fn default() -> Self { CoolingLightIndex{u0=0} }
+}
+
+/// Assigns unique indices to cooling light entities.
+/// 
+/// The indices are used to uniquely identify each cooling light when populating the interaction list.
+pub struct IndexCoolingLightsSystem;
+impl <'a> System<'a> for IndexCoolingLightsSystem {
+	type SystemData = (
+        ReadStorage<'a,CoolingLight>,
+        WriteStorage<'a,CoolingLightIndex>,
+        );
+
+    fn run (&mut self, (cooling_light, mut indices):Self::SystemData) {
+
+        let mut iter = 0;
+        for (_, index) in (&cooling_light, &indices).join() {
+            index.u0 = iter;
+            iter++;
+        }
+    }
+}   
+
+#[cfg(test)]
+pub mod tests {
+
+	#[test]
+	fn test_index_cooling_lights() {
+		let mut test_world = World::new();
+        test_world.register::<CoolingLightIndex>();
+        test_world.register::<CoolingLight>();
+
+        let test_entity_1 = test_world.create_entity().with(CoolingLightIndex::default()).with(CoolingLight { polarization:1, wavelength:780e-9});
+        let test_entity_2 = test_world.create_entity().with(CoolingLightIndex::default()).with(CoolingLight { polarization:1, wavelength:780e-9});
+
+        let system = IndexCoolingLightsSystem;
+        IndexCoolingLightsSystem.run_now(test_world);
+		test_world.maintain();
+
+		let index_1 = test_world.read_storage::<CoolingLightIndex>().get(test_entity_1).expect("entity not found");
+        let index_2 = test_world.read_storage::<CoolingLightIndex>().get(test_entity_2).expect("entity not found");
+
+        assert_ne!(index_1, index_2);
+	}
 }

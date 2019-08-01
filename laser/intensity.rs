@@ -1,5 +1,5 @@
 extern crate specs;
-use specs::{Entity,VecStorage,Component};
+use specs::{Entity,VecStorage,Component,RunNow};
 
 use crate::maths;
 use rand::Rng;
@@ -32,6 +32,41 @@ impl <'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
         ReadStorage<'a,CoolingLight>,
         WriteStorage<'a,LaserIntensitySamplers>,
         );
+	fn run (&mut self,(entities, cooling, mut intensity_samplers):Self::SystemData){
+        let mut content = Vec::new();
+        for (laser,cooling) in (&entities, &cooling).join() {
+            content.push(
+                LaserIntensitySampler { laser: laser, intensity: 0 }
+            );
+        }
+
+        for mut intensity_sampler in (&mut intensity_samplers).join() {
+            intensity_sampler.contents = content;
+        }
+	}
+}
+
+//Pattern idea: detect when a new cooling laser is added, build a table of laser v index that can be iterated over. 
+// First impl - create the laser list every frame. 
+// Second impl - update the laser list only when new entity is added to storage.
+
+
+
+
+pub struct InitialiseLaserSamplers {
+    /// A list of CoolingLight components and associated entities known to the system.
+    known_lasers: Vec<(Entity, CoolingLight)>;
+}
+
+impl <'a> System<'a> for InitialiseLaserSamplers {
+	type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a,CoolingLight>,
+        WriteStorage<'a,LaserIntensitySamplers>,
+        );
+
+
+    
 	fn run (&mut self,(entities, cooling, mut intensity_samplers):Self::SystemData){
         let mut content = Vec::new();
         for (laser,cooling) in (&entities, &cooling).join() {
