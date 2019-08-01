@@ -93,10 +93,7 @@ pub mod tests {
 	use super::*;
 
 	extern crate specs;
-	use specs::{
-		Builder, Entity, HashMapStorage, Join, LazyUpdate, Read, ReadExpect, ReadStorage, RunNow,
-		System, VecStorage, World, WriteStorage,
-	};
+	use specs::{Builder, RunNow, World};
 
 	#[test]
 	fn test_index_cooling_lights() {

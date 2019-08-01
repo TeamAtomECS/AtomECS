@@ -14,15 +14,19 @@ pub fn array_addition(a: &[f64; 3], b: &[f64; 3]) -> [f64; 3] {
 }
 
 /// Get miniminum distance between a point and a line.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// `pos`: position of the point
-/// 
+///
 /// `line_point`: a point on the line
-/// 
+///
 /// `dir`: vector pointing along the line.
-pub fn get_minimum_distance_line_point(pos: &[f64; 3], line_point: &[f64; 3], dir: &[f64; 3]) -> f64 {
+pub fn get_minimum_distance_line_point(
+	pos: &[f64; 3],
+	line_point: &[f64; 3],
+	dir: &[f64; 3],
+) -> f64 {
 	let rela_cood = array_addition(&pos, &array_multiply(&line_point, -1.));
 	let distance = modulus(&cross_product(&dir, &rela_cood)) / modulus(&dir);
 	distance
@@ -168,14 +172,6 @@ mod tests {
 			array_addition(&[1.0, 1.5, 0.4], &[0.2, 0.3, -0.2]),
 			[1.2, 1.8, 0.2]
 		);
-	}
-
-	#[test]
-	fn does_maths_change_values() {
-		let a = [1.0,1.0,1.0];
-		let b = [0.5,0.5,0.5];
-		let c = array_addition(&a,&b);
-		assert_eq!(a, [1.0,1.0,1.0]);
 	}
 
 	#[test]

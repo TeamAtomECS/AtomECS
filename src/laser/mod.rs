@@ -5,11 +5,8 @@ pub mod gaussian;
 pub mod intensity;
 
 extern crate specs;
-use specs::{
-	Component, DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadExpect, ReadStorage,
-	System, VecStorage, World, WriteStorage,
-};
 use crate::initiate::NewlyCreated;
+use specs::{Entities, Join, LazyUpdate, Read, ReadStorage, System};
 
 /// Attachs components used for optical force calculation to newly created atoms.
 ///
@@ -24,8 +21,8 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 		Read<'a, LazyUpdate>,
 	);
 
-	fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
-		for (ent, _) in (&ent, &newly_created).join() {
+	fn run(&mut self, (ent, newly_created, _updater): Self::SystemData) {
+		for (_, _) in (&ent, &newly_created).join() {
 			//updater.insert(ent, CoolingForce::default());
 		}
 	}
