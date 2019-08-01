@@ -25,8 +25,8 @@ impl Component for GaussianBeam {
 }
 
 /// System that calculates that samples the intensity of `GaussianBeam` entities.
-pub struct CalculateGaussianBeamIntensitySystem;
-impl<'a> System<'a> for CalculateGaussianBeamIntensitySystem {
+pub struct SampleGaussianBeamIntensitySystem;
+impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 	type SystemData = (
 		ReadStorage<'a, CoolingLight>,
 		ReadStorage<'a, CoolingLightIndex>,

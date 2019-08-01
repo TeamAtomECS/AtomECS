@@ -6,12 +6,9 @@ pub mod intensity;
 
 extern crate specs;
 use crate::initiate::NewlyCreated;
-use specs::{Entities, Join, LazyUpdate, Read, ReadStorage, System};
+use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System, World};
 
 /// Attachs components used for optical force calculation to newly created atoms.
-///
-/// This system attaches the `RandKick` and `InteractionLaserALL` components to `NewlyCreated` entities.
-/// Both components are required by other laser `System`s to perform calculations of optical scattering forces.
 pub struct AttachLaserComponentsToNewlyCreatedAtomsSystem;
 
 impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
@@ -26,4 +23,51 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 			//updater.insert(ent, CoolingForce::default());
 		}
 	}
+}
+
+/// Adds the systems required by the module to the dispatcher.
+///
+/// #Arguments
+///
+/// `builder`: the dispatch builder to modify
+///
+/// `deps`: any dependencies that must be completed before the systems run.
+pub fn add_systems_to_dispatch(
+	builder: DispatcherBuilder<'static, 'static>,
+	deps: &[&str],
+) -> DispatcherBuilder<'static, 'static> {
+	builder
+		.with(
+			AttachLaserComponentsToNewlyCreatedAtomsSystem,
+			"attach_atom_laser_components",
+			deps,
+		)
+		.with(
+			cooling::AttachIndexToCoolingLightSystem,
+			"attach_cooling_index",
+			deps,
+		)
+		.with(
+			cooling::IndexCoolingLightsSystem,
+			"index_cooling_lights",
+			deps,
+		)
+		.with(
+			intensity::InitialiseLaserIntensitySamplersSystem,
+			"initialise_laser_intensity",
+			deps,
+		)
+		.with(
+			gaussian::SampleGaussianBeamIntensitySystem,
+			"sample_gaussian_beam_intensity",
+			&["initialise_laser_intensity"],
+		)
+}
+
+/// Registers resources required by magnetics to the ecs world.
+pub fn register_components(world: &mut World) {
+	world.register::<cooling::CoolingLight>();
+	world.register::<cooling::CoolingLightIndex>();
+	world.register::<intensity::LaserIntensitySamplers>();
+	world.register::<gaussian::GaussianBeam>();
 }

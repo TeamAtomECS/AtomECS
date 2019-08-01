@@ -46,10 +46,6 @@ impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
     }
 }
 
-//Pattern idea: detect when a new cooling laser is added, build a table of laser v index that can be iterated over.
-// First impl - create the laser list every frame.
-// Second impl - update the laser list only when new entity is added to storage.
-
 #[cfg(test)]
 pub mod tests {
 
