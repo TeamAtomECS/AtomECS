@@ -1,6 +1,6 @@
 extern crate specs;
 use specs::{
-	DispatcherBuilder, World, Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage, WriteStorage, ReadExpect
+	DispatcherBuilder, World, Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage, WriteStorage, ReadExpect, HashMapStorage, Entity
 };
 
 use crate::atom::{Force,Position,Velocity};
