@@ -64,8 +64,7 @@ fn mot2d_entity_create(world:&mut World){
 		polarization:1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::C/461e-9,
-		index:1,
+		frequency:constant::C/461e-9
 	};
 		let laser_2 = Laser{
 		centre:[0.,0.,0.],
@@ -73,9 +72,7 @@ fn mot2d_entity_create(world:&mut World){
 		polarization:1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::C/461e-9,
-		
-		index:2,
+		frequency:constant::C/461e-9
 	};
 		let laser_3 = Laser{
 		centre:[0.,0.,0.],
@@ -83,8 +80,7 @@ fn mot2d_entity_create(world:&mut World){
 		polarization:-1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::C/461e-9,
-		index:3,
+		frequency:constant::C/461e-9
 	};
 		let laser_4 = Laser{
 		centre:[0.,0.,0.],
@@ -92,8 +88,7 @@ fn mot2d_entity_create(world:&mut World){
 		polarization:-1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::C/461e-9,
-		index:4,
+		frequency:constant::C/461e-9
 	};
 		let laser_5 = Laser{
 		centre:[0.,0.,0.],
@@ -101,8 +96,7 @@ fn mot2d_entity_create(world:&mut World){
 		polarization:-1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::C/461e-9,
-		index:5,
+		frequency:constant::C/461e-9
 	};
 
 	//six laser introduced

@@ -33,9 +33,35 @@ pub struct Laser {
 	
 	/// frequency of the laser light
 	pub frequency: f64,
-	
-	/// index of the laser light, it is used to record the interaction between any laser and any atom
-	pub index: u64,
+}
+
+impl Laser {
+
+	/// Creates a new cooling laser beam. 
+	/// 
+	/// #Arguments
+	/// 
+	/// `wavelength`: The wavelength of the laser, specified in units of nm.
+	/// 
+	/// `direction`: The direction the laser points in.
+	/// 
+	/// `intersection`: A point that lies on the centre of the beam.
+	/// 
+	/// `power`: Total power in the laser beam, measured in W. 
+	/// 
+	/// `e_radius`: Radius of the beam at which the intensity is 1/e of the peak value, measured in mm. 
+	/// 
+	/// `polarization`: Polarization of the cooling beam.
+	pub fn create(wavelength: f64, direction: [f64;3], intersection: [f64;3], power: f64, e_radius: f64, polarization: f64) -> Laser {
+		Laser{
+			frequency: constant::C / (wavelength*1e-9),
+			centre: intersection,
+			wavenumber: maths::array_multiply(&maths::norm(&direction), 2.0*constant::PI/(wavelength*1e-9)),
+			polarization: polarization,
+			power: power,
+			std: e_radius // need to check this one, haven't written unit test yet.
+		}
+	}
 }
 
 impl Component for Laser {
