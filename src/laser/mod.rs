@@ -19,9 +19,9 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 		Read<'a, LazyUpdate>,
 	);
 
-	fn run(&mut self, (ent, newly_created, _updater): Self::SystemData) {
-		for (_, _) in (&ent, &newly_created).join() {
-			//updater.insert(ent, CoolingForce::default());
+	fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
+		for (ent, _) in (&ent, &newly_created).join() {
+			updater.insert(ent, intensity::LaserSamplers { contents: Vec::new()});
 		}
 	}
 }
