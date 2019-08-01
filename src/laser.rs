@@ -174,8 +174,8 @@ impl<'a> System<'a> for CalculateRandomScatteringForceSystem {
 					}
 					break;
 				}
-				cooling_force.force = maths::array_addition(&cooling_force.force, &force);
 			}
+			cooling_force.force = maths::array_addition(&cooling_force.force, &force);
 		}
 	}
 }
