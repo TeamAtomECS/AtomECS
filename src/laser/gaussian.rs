@@ -2,9 +2,9 @@ extern crate specs;
 use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 
 use super::cooling::{CoolingLight, CoolingLightIndex};
-use super::intensity::{LaserIntensitySampler, LaserIntensitySamplers};
 use crate::atom::Position;
 use crate::maths;
+use super::intensity::LaserSamplers;
 
 /// A component representing a beam with a gaussian intensity profile.
 pub struct GaussianBeam {
@@ -31,15 +31,14 @@ impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 		ReadStorage<'a, CoolingLight>,
 		ReadStorage<'a, CoolingLightIndex>,
 		ReadStorage<'a, GaussianBeam>,
-		WriteStorage<'a, LaserIntensitySamplers>,
+		WriteStorage<'a, LaserSamplers>,
 		ReadStorage<'a, Position>,
 	);
 	fn run(&mut self, (cooling, indices, gaussian, mut samplers, positions): Self::SystemData) {
 		for (_, index, gaussian) in (&cooling, &indices, &gaussian).join() {
 			for (sampler, pos) in (&mut samplers, &positions).join() {
-				sampler.contents[index.index] = LaserIntensitySampler {
-					intensity: get_gaussian_beam_intensity(&gaussian, &pos),
-				};
+				sampler.contents[index.index].intensity =
+					get_gaussian_beam_intensity(&gaussian, &pos);
 			}
 		}
 	}

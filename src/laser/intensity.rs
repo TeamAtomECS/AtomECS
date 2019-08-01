@@ -1,43 +1,51 @@
 extern crate specs;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
+use std::f64;
 
-/// Represents a sample of laser beam intensity
-pub struct LaserIntensitySampler {
+/// Represents a sample of a laser beam
+pub struct LaserSampler {
     /// Intensity of the laser beam, in SI units of Watts per metre
     pub intensity: f64,
+
+    /// Doppler shift with respect to laser beam, in SI units of Hz.
+    pub doppler_shift: f64,
 }
-impl Clone for LaserIntensitySampler {
+impl Clone for LaserSampler {
     fn clone(&self) -> Self {
-        LaserIntensitySampler {
+        LaserSampler {
             intensity: self.intensity,
+            doppler_shift: self.doppler_shift,
         }
     }
 }
 
-/// Component that holds a list of laser intensity samplers
-pub struct LaserIntensitySamplers {
-    /// List of laser intensity samplers
-    pub contents: Vec<LaserIntensitySampler>,
+/// Component that holds a list of laser samplers
+pub struct LaserSamplers {
+    /// List of laser samplers
+    pub contents: Vec<LaserSampler>,
 }
-impl Component for LaserIntensitySamplers {
+impl Component for LaserSamplers {
     type Storage = VecStorage<Self>;
 }
 
-/// This system initialises all LaserIntensitySamplers to a zero value.
+/// This system initialises all samplers to a zero value.
 ///
 /// It also ensures that the size of the LaserIntensitySamplers components match the number of CoolingLight entities in the world.
-pub struct InitialiseLaserIntensitySamplersSystem;
-impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
+pub struct InitialiseLaserSamplersSystem;
+impl<'a> System<'a> for InitialiseLaserSamplersSystem {
     type SystemData = (
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, CoolingLightIndex>,
-        WriteStorage<'a, LaserIntensitySamplers>,
+        WriteStorage<'a, LaserSamplers>,
     );
     fn run(&mut self, (cooling, cooling_index, mut intensity_samplers): Self::SystemData) {
         let mut content = Vec::new();
         for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(LaserIntensitySampler { intensity: 0.0 });
+            content.push(LaserSampler {
+                intensity: f64::NAN,
+                doppler_shift: f64::NAN,
+            });
         }
 
         for mut intensity_sampler in (&mut intensity_samplers).join() {
@@ -60,7 +68,7 @@ pub mod tests {
         let mut test_world = World::new();
         test_world.register::<CoolingLightIndex>();
         test_world.register::<CoolingLight>();
-        test_world.register::<LaserIntensitySamplers>();
+        test_world.register::<LaserSamplers>();
 
         test_world
             .create_entity()
@@ -81,18 +89,20 @@ pub mod tests {
 
         let test_sampler = test_world
             .create_entity()
-            .with(LaserIntensitySamplers {
+            .with(LaserSamplers {
                 contents: Vec::new(),
             })
             .build();
 
-        let mut system = InitialiseLaserIntensitySamplersSystem;
+        let mut system = InitialiseLaserSamplersSystem;
         system.run_now(&test_world.res);
         test_world.maintain();
-        let sampler_storage = test_world.read_storage::<LaserIntensitySamplers>();
+        let sampler_storage = test_world.read_storage::<LaserSamplers>();
         let samplers = sampler_storage.get(test_sampler).expect("entity not found");
         assert_eq!(samplers.contents.len(), 2);
-        assert_eq!(samplers.contents[0].intensity, 0.0);
-        assert_eq!(samplers.contents[1].intensity, 0.0);
+        assert_eq!(samplers.contents[0].intensity.is_nan(), true);
+        assert_eq!(samplers.contents[1].intensity.is_nan(), true);
+        assert_eq!(samplers.contents[0].doppler_shift.is_nan(), true);
+        assert_eq!(samplers.contents[1].doppler_shift.is_nan(), true);
     }
 }

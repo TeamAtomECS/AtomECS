@@ -1,5 +1,6 @@
 /// The laser module relates to optical scattering forces.
 pub mod cooling;
+pub mod doppler;
 pub mod force;
 pub mod gaussian;
 pub mod intensity;
@@ -53,7 +54,7 @@ pub fn add_systems_to_dispatch(
 			deps,
 		)
 		.with(
-			intensity::InitialiseLaserIntensitySamplersSystem,
+			intensity::InitialiseLaserSamplersSystem,
 			"initialise_laser_intensity",
 			deps,
 		)
@@ -62,12 +63,17 @@ pub fn add_systems_to_dispatch(
 			"sample_gaussian_beam_intensity",
 			&["initialise_laser_intensity"],
 		)
+		.with(
+			doppler::CalculateDopplerShiftSystem,
+			"calculate_doppler_shift",
+			&["sample_gaussian_beam_intensity"],
+		)
 }
 
 /// Registers resources required by magnetics to the ecs world.
 pub fn register_components(world: &mut World) {
 	world.register::<cooling::CoolingLight>();
 	world.register::<cooling::CoolingLightIndex>();
-	world.register::<intensity::LaserIntensitySamplers>();
+	world.register::<intensity::LaserSamplers>();
 	world.register::<gaussian::GaussianBeam>();
 }
