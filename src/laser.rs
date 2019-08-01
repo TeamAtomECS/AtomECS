@@ -1,6 +1,6 @@
 extern crate specs;
 use specs::{
-	DispatcherBuilder, World, Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage, WriteStorage,
+	DispatcherBuilder, World, Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage, WriteStorage, ReadExpect
 };
 
 use crate::atom::{Force,Position,Velocity};
@@ -9,6 +9,8 @@ use crate::constant::HBAR;
 use crate::initiate::{AtomInfo, NewlyCreated};
 use crate::magnetic::*;
 use crate::maths;
+use crate::integrator::Timestep;
+use rand::Rng;
 
 /// Represents a laser beam that is used to provide cooling forces to atoms in the simulation.
 pub struct Laser {
@@ -45,17 +47,14 @@ pub struct CoolingForce {
 	/// The force exerted on an entity
 	pub force: [f64;3],
 
-	/// The number of photons scattered in total.
-	pub scattered_photons: f64,
-
-	/// The random kick exerted on an entity
-	pub rand_force: [f64;3]
+	/// The total impulse exerted on the entity this timestep.
+	pub total_impulse: f64
 }
 impl Component for CoolingForce {
 	type Storage = VecStorage<Self>;
 }
 impl Default for CoolingForce {
-	fn default() -> Self { CoolingForce { force: [0.0,0.0,0.0], scattered_photons: 0.0, rand_force: [0.0,0.0,0.0] } }
+	fn default() -> Self { CoolingForce { force: [0.0,0.0,0.0], total_impulse: 0.0 } }
 }
 
 /// System that clears the cooling forces.
@@ -65,8 +64,7 @@ impl <'a> System<'a> for ClearCoolingForcesSystem {
 	fn run (&mut self,mut cooling_forces:Self::SystemData){
 		for cooling_forces in (&mut cooling_forces).join(){
 			cooling_forces.force = [ 0.0, 0.0, 0.0];
-			cooling_forces.scattered_photons = 0.0;
-			cooling_forces.rand_force = [0.0,0.0,0.0];
+			cooling_forces.total_impulse = 0.0;
 		}
 	}
 }
@@ -93,9 +91,10 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
 		ReadStorage<'a, MagneticFieldSampler>,
 		WriteStorage<'a, CoolingForce>,
 		ReadStorage<'a, AtomInfo>,
+		ReadExpect<'a,Timestep>
 	);
 
-	fn run(&mut self, (pos, laser, vel, mag, mut cooling_force, atom): Self::SystemData) {
+	fn run(&mut self, (pos, laser, vel, mag, mut cooling_force, atom, timestep): Self::SystemData) {
 
 		// Outer loop over laser beams
 		for laser in (&laser).join()
@@ -132,10 +131,55 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
 					s0 * HBAR * (scatter1 + scatter2 + scatter3),
 				);
 			cooling_force.force = maths::array_addition(&cooling_force.force, &scattering_force);
+			cooling_force.total_impulse = cooling_force.total_impulse + maths::modulus(&scattering_force)*timestep.delta;
 			}
 		}
 	}
 }
+
+/// Calculates the random scattering forces exerted on the atoms due to
+/// the reemission of photons after interacting with the cooling beams.
+pub struct CalculateRandomScatteringForceSystem;
+impl<'a> System<'a> for CalculateRandomScatteringForceSystem {
+	
+	type SystemData = (
+		WriteStorage<'a, CoolingForce>,
+		ReadStorage<'a, AtomInfo>,
+		ReadExpect<'a, Timestep>
+	);
+
+	// TODO: There is an optimisation we can do here. If scattering many photons per frame,
+	// We can instead draw one random number and scale the length accordingly (add N random walks)
+
+	fn run(&mut self, (mut cooling_force, atom, timestep): Self::SystemData) {
+		
+		for (mut cooling_force, atom) in
+			(&mut cooling_force, &atom).join()
+		{
+			let momentum_photon = constant::HBAR * 2.*constant::PI*atom.frequency/constant::C;
+			let mut num_kick = cooling_force.total_impulse / momentum_photon;
+			let mut force = [ 0.0, 0.0, 0.0 ];
+			loop{
+				if num_kick >1.{
+					// if the number is bigger than 1, a random kick will be added with direction random
+					num_kick = num_kick - 1.;
+					force = maths::array_addition(&force,&maths::array_multiply(&maths::random_direction(),momentum_photon/timestep.delta));
+				}
+				else{
+					// if the remaining kick is smaller than 0, there is a chance that the kick is random
+					let mut rng = rand::thread_rng();
+					let result = rng.gen_range(0.0, 1.0);
+					if result < num_kick{
+						force = maths::array_addition(&force,&maths::array_multiply(&maths::random_direction(),momentum_photon/timestep.delta));
+					}
+					break;
+				}
+				cooling_force.force = maths::array_addition(&cooling_force.force, &force);
+			}
+		}
+	}
+}
+
 
 /// Attachs components used for optical force calculation to newly created atoms.
 ///
@@ -162,8 +206,9 @@ pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps
 	builder
 	.with(ClearCoolingForcesSystem,"clear_cooling_forces", deps)
 	.with(CalculateCoolingForcesSystem,"calculate_cooling_forces",&["clear_cooling_forces"])
+	.with(CalculateRandomScatteringForceSystem, "calculate_random_scattering_forces_cooling", &["calculate_cooling_forces"])
 	.with(AttachLaserComponentsToNewlyCreatedAtomsSystem, "", &[])
-	.with(AddCoolingForcesSystem, "add_cooling_forces", &["calculate_cooling_forces"])
+	.with(AddCoolingForcesSystem, "add_cooling_forces", &["calculate_random_scattering_forces_cooling"])
 }
 
 /// Registers all resources required by the laser module.
