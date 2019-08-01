@@ -43,7 +43,7 @@ pub fn register_lazy(mut world: &mut World){
     register_component_atomcreation(&mut world);
     register_component_general(&mut world);
     magnetic::register_components(&mut world);
-    laser::register_components(&mut world);
+    //laser::register_components(&mut world);
 }
 
 ///  add general update system to dispatcher 
@@ -60,7 +60,7 @@ pub fn create_simulation_dispatcher()->Dispatcher<'static,'static>{
     let mut builder = DispatcherBuilder::new();
     builder = magnetic::add_systems_to_dispatch(builder, &[]);
 	builder.add_barrier();
-    builder = laser::add_systems_to_dispatch(builder, &[]);
+    //builder = laser::add_systems_to_dispatch(builder, &[]);
 	builder.add_barrier();
     builder = add_systems_to_dispatch_general_update(builder, &[]);
     builder.build()

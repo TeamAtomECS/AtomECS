@@ -2,7 +2,7 @@ extern crate specs;
 use specs::{Component,VecStorage,NullStorage,Entities,Join,LazyUpdate,Read,ReadStorage,System};
 
 pub mod atom_create;
-pub mod ecs;
+//pub mod ecs;
 
 pub struct AtomInfo{
 	pub mup:f64,

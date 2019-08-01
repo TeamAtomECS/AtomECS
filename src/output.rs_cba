@@ -1,7 +1,6 @@
 extern crate specs;
 use crate::atom::*;
 use crate::constant;
-use crate::laser::CoolingForce;
 use crate::integrator::{Step, Timestep};
 use crate::maths;
 

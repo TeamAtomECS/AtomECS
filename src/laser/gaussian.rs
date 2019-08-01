@@ -5,8 +5,8 @@ use specs::{
 
 use crate::atom::{Position};
 use crate::maths;
-use rand::Rng;
 use super::cooling::{CoolingLight,CoolingLightIndex};
+use super::intensity::{LaserIntensitySamplers};
 
 /// A component representing a beam with a gaussian intensity profile.
 pub struct GaussianBeam {
@@ -41,8 +41,8 @@ impl <'a> System<'a> for CalculateGaussianBeamIntensitySystem {
 	fn run (&mut self,(cooling, indices, gaussian, mut samplers, positions):Self::SystemData){
         for (cooling, index, gaussian) in (&cooling, &indices, &gaussian).join() {
 
-            for (mut sampler, pos) in (&mut samplers,&positions) {
-                sampler.contents[index.u0] = get_gaussian_beam_intensity(&gaussian, &pos);
+            for (mut sampler, pos) in (&mut samplers,&positions).join() {
+                sampler.contents[index.index].intensity = get_gaussian_beam_intensity(&gaussian, &pos);
             }
         }
 	}
@@ -51,7 +51,7 @@ impl <'a> System<'a> for CalculateGaussianBeamIntensitySystem {
 /// Gets the intensity of a gaussian laser beam at the specified position.
 fn get_gaussian_beam_intensity(beam: &GaussianBeam, pos: &Position) -> f64 {
 	beam.power * maths::gaussian_dis(
-		beam.e_radius * 2.0.powf(0.5),
+		beam.e_radius * 2.0_f64.powf(0.5),
 		maths::get_minimum_distance_line_point(&pos.pos, &beam.intersection, &beam.direction),
 	)
 }
