@@ -4,7 +4,7 @@ use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use crate::atom::Position;
 use crate::maths;
-use super::intensity::LaserSamplers;
+use super::sampler::LaserSamplers;
 
 /// A component representing a beam with a gaussian intensity profile.
 pub struct GaussianBeam {

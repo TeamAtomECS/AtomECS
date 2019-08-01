@@ -2,7 +2,7 @@
 extern crate specs;
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::gaussian::GaussianBeam;
-use super::intensity::LaserSamplers;
+use super::sampler::LaserSamplers;
 use crate::atom::Velocity;
 use crate::maths;
 use specs::{Join, ReadStorage, System, WriteStorage}; //todo - change for a Direction component

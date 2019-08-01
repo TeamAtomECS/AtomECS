@@ -64,7 +64,7 @@ pub mod tests {
     use specs::{Builder, RunNow, World};
 
     #[test]
-    fn test_initialise_laser_intensity_sampler_system() {
+    fn test_initialise_laser_sampler_system() {
         let mut test_world = World::new();
         test_world.register::<CoolingLightIndex>();
         test_world.register::<CoolingLight>();

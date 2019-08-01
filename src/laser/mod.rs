@@ -3,7 +3,7 @@ pub mod cooling;
 pub mod doppler;
 pub mod force;
 pub mod gaussian;
-pub mod intensity;
+pub mod sampler;
 
 extern crate specs;
 use crate::initiate::NewlyCreated;
@@ -21,7 +21,12 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 
 	fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
 		for (ent, _) in (&ent, &newly_created).join() {
-			updater.insert(ent, intensity::LaserSamplers { contents: Vec::new()});
+			updater.insert(
+				ent,
+				sampler::LaserSamplers {
+					contents: Vec::new(),
+				},
+			);
 		}
 	}
 }
@@ -54,7 +59,7 @@ pub fn add_systems_to_dispatch(
 			deps,
 		)
 		.with(
-			intensity::InitialiseLaserSamplersSystem,
+			sampler::InitialiseLaserSamplersSystem,
 			"initialise_laser_intensity",
 			deps,
 		)
@@ -74,6 +79,6 @@ pub fn add_systems_to_dispatch(
 pub fn register_components(world: &mut World) {
 	world.register::<cooling::CoolingLight>();
 	world.register::<cooling::CoolingLightIndex>();
-	world.register::<intensity::LaserSamplers>();
+	world.register::<sampler::LaserSamplers>();
 	world.register::<gaussian::GaussianBeam>();
 }
