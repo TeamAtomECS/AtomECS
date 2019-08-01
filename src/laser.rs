@@ -163,7 +163,7 @@ pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps
 	.with(ClearCoolingForcesSystem,"clear_cooling_forces", deps)
 	.with(CalculateCoolingForcesSystem,"calculate_cooling_forces",&["clear_cooling_forces"])
 	.with(AttachLaserComponentsToNewlyCreatedAtomsSystem, "", &[])
-	.with(AddCoolingForcesSystem, "add_cooling_forces", &["calculate_cooling_forces"]);
+	.with(AddCoolingForcesSystem, "add_cooling_forces", &["calculate_cooling_forces"])
 }
 
 /// Registers all resources required by the laser module.
@@ -222,4 +222,32 @@ pub mod tests {
 		assert_eq!(test_world.read_storage::<CoolingForce>().contains(test_entity), true);
 	}
 
+	#[test]
+	fn test_add_cooling_forces() {
+		let mut test_world = World::new();
+		register_components(&mut test_world);
+
+		let mut dispatcher = DispatcherBuilder::new()
+			.with(
+				AddCoolingForcesSystem,
+				"add_cooling_forces",
+				&[],
+			)
+			.build();
+		dispatcher.setup(&mut test_world.res);
+
+		let cool_force = [ 1.0, 1.0, 1.0 ];
+		let mut cool_force_comp = CoolingForce::default();
+		cool_force_comp.force = cool_force;
+
+		let force = [ 1.0, 1.0, 1.0 ];
+		let mut force_comp = Force{ force: force};
+
+		let test_entity = test_world.create_entity().with(cool_force_comp).with(force_comp).build();
+
+		dispatcher.dispatch(&mut test_world.res);
+		test_world.maintain();
+
+		assert_eq!(test_world.read_storage::<Force>().get(test_entity).expect("entity not found").force, maths::array_addition(&cool_force,&force));
+	}
 }
