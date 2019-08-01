@@ -6,7 +6,7 @@ use specs::{
 use crate::atom::{Position};
 use crate::maths;
 use rand::Rng;
-use super::cooling::{CoolingLight};
+use super::cooling::{CoolingLight,CoolingLightIndex};
 
 /// A component representing a beam with a gaussian intensity profile.
 pub struct GaussianBeam {
@@ -28,33 +28,30 @@ impl Component for GaussianBeam {
 	type Storage = HashMapStorage<Self>;
 }
 
-/// System that calculates the samples the intensity of `GaussianBeam` entities.
+/// System that calculates that samples the intensity of `GaussianBeam` entities.
 pub struct CalculateGaussianBeamIntensitySystem;
 impl <'a> System<'a> for CalculateGaussianBeamIntensitySystem {
 	type SystemData = (
-        Entities<'a>,
         ReadStorage<'a,CoolingLight>,
+        ReadStorage<'a,CoolingLightIndex>,
         ReadStorage<'a,GaussianBeam>,
         WriteStorage<'a,LaserIntensitySamplers>,
         ReadStorage<'a,Position>
         );
-	fn run (&mut self,(entities, cooling, gaussian, intensities):Self::SystemData){
-		
-        let mut iter=0;
-        for (laser,cooling) in (&entities, &cooling).join() {
-                
-            // Perform only for Gaussian lasers
-            let g = gaussian.get(laser);
-            if (g.is_none) {
-                continue;
-            }
+	fn run (&mut self,(cooling, indices, gaussian, mut samplers, positions):Self::SystemData){
+        for (cooling, index, gaussian) in (&cooling, &indices, &gaussian).join() {
 
-            for (pos, mut samplers) in (&pos, &samplers)
-            {
-                samplers.content[iter] = 
+            for (mut sampler, pos) in (&mut samplers,&positions) {
+                sampler.contents[index.u0] = get_gaussian_beam_intensity(&gaussian, &pos);
             }
         }
 	}
 }
 
+/// Gets the intensity of a gaussian laser beam at the specified position.
+fn get_gaussian_beam_intensity(beam: &GaussianBeam, pos: &Position) -> f64 {
+	beam.power * maths::gaussian_dis(
+		beam.e_radius * 2.0.powf(0.5),
+		maths::get_minimum_distance_line_point(&pos.pos, &beam.intersection, &beam.direction),
+	)
 }

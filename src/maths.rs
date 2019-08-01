@@ -63,10 +63,12 @@ pub fn modulus(a: &[f64; 3]) -> f64 {
 pub fn norm(a: &[f64; 3]) -> [f64; 3] {
 	array_multiply(&a, 1.0 / modulus(&a))
 }
+
 pub fn gaussian_dis(std: f64, distance: f64) -> f64 {
 	//checked
 	1.0 / (2.0 * PI * std.powf(2.0)) * EXP.powf(-distance.powf(2.0) / 2.0 / (std).powf(2.0))
 }
+
 pub fn maxwell_dis(_t: f64, _mass: f64, _velocity: f64) -> f64 {
 	(_mass / 2.0 / PI / BOLTZCONST / _t).powf(1.5)
 		* EXP.powf(-_mass * _velocity.powf(2.0) / 2.0 / BOLTZCONST / _t)
