@@ -1,15 +1,18 @@
 extern crate specs;
 use specs::{Component,VecStorage,NullStorage,Entities,Join,LazyUpdate,Read,ReadStorage,System};
+use crate::constant::{C,BOHRMAG};
 
 pub mod atom_create;
 //pub mod ecs;
 
 pub struct AtomInfo{
+	/// 
 	pub mup:f64,
 	pub mum:f64,
 	pub muz:f64,
-	pub mass:u64,
+	/// Frequency of the laser cooling transition, Hz.
 	pub frequency:f64,
+	/// Linewidth of the laser cooling transition, Hz
 	pub gamma:f64,
 	
 	/// Saturation intensity, in units of W/m^2.
@@ -19,6 +22,20 @@ pub struct AtomInfo{
 impl Component for AtomInfo{
 	type Storage = VecStorage<Self>;	
 }
+impl AtomInfo {
+	/// Creates an `AtomInfo` component populated with parameters for Rubidium. 
+	/// The parameters are taken from Daniel Steck's Data sheet on Rubidium-87.
+	pub fn rubidium() -> Self { 
+		AtomInfo { mup: BOHRMAG,
+		mum: -BOHRMAG,
+		muz: 0.0,
+		frequency: C / 780.0e-9,
+		gamma: 6.065e6, // [Steck, Rubidium87]
+		saturation_intensity: 16.69 // [Steck, Rubidium 87, D2 cycling transition]
+		}
+	}
+}
+
 
 /// A marker component that indicates an entity has been `NewlyCreated`. 
 /// The main use of this component is to allow different modules to identify when an atom has been created and to attach any appropriate components required.

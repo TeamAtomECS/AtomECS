@@ -66,17 +66,19 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 	);
 
 	fn run(&mut self, (entities, oven, atom, pos, updater): Self::SystemData) {
-		//TODO: Temporary, needs to be fixed properly, eg drawn randomly from distribution. Discuss tomorrow.
-		
 		let mut rng = rand::thread_rng();
 
 		for (oven, atom, oven_position) in (&oven, &atom, &pos).join() {
-			let mass = atom.mass as f64;
+			// This is only temporary. In future the atom source will have a MassDistribution component,
+			// which will allow us to specify the mass distribution of created atoms. For example,
+			// the natural abundancies of Sr or Rb, or an enriched source of Potassium. Leave as
+			// 87 for now.
+			let mass = 87.0;
 			let dir = oven.direction.clone();
 			let size = oven.size.clone();
 			for _i in 0..oven.number {
 				let new_atom = entities.create();
-				let new_vel = velocity_generate(oven.temperature, mass*constant::AMU, &dir);
+				let new_vel = velocity_generate(oven.temperature, mass * constant::AMU, &dir);
 				let pos1 = rng.gen_range(-0.5 * size[0], 0.5 * size[0]);
 				let pos2 = rng.gen_range(-0.5 * size[1], 0.5 * size[1]);
 				let pos3 = rng.gen_range(-0.5 * size[2], 0.5 * size[2]);
@@ -102,17 +104,16 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				updater.insert(
 					new_atom,
 					AtomInfo {
-						mass:atom.mass,
 						mup: atom.mup,
 						muz: atom.muz,
 						mum: atom.mum,
 						frequency: atom.frequency,
 						gamma: atom.gamma,
-						saturation_intensity: atom.saturation_intensity
+						saturation_intensity: atom.saturation_intensity,
 					},
 				);
-				updater.insert(new_atom,Atom);
-				updater.insert(new_atom,NewlyCreated);
+				updater.insert(new_atom, Atom);
+				updater.insert(new_atom, NewlyCreated);
 
 				println!("atom created");
 			}
@@ -123,10 +124,20 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 pub struct AttachGravityToNewlyCreatedAtomsSystem;
 
 impl<'a> System<'a> for AttachGravityToNewlyCreatedAtomsSystem {
-	type SystemData = (Entities<'a>,ReadStorage<'a,Mass>,ReadStorage<'a,NewlyCreated>, Read<'a,LazyUpdate>);
-	fn run (&mut self, (ent, newly_created, mass,updater):Self::SystemData) {
-		for (ent, _nc,mass) in (&ent,&mass, &newly_created).join() {
-			updater.insert(ent, Gravity{force:[0.,0.,-mass.value*constant::AMU*constant::GC]});
+	type SystemData = (
+		Entities<'a>,
+		ReadStorage<'a, Mass>,
+		ReadStorage<'a, NewlyCreated>,
+		Read<'a, LazyUpdate>,
+	);
+	fn run(&mut self, (ent, newly_created, mass, updater): Self::SystemData) {
+		for (ent, _nc, mass) in (&ent, &mass, &newly_created).join() {
+			updater.insert(
+				ent,
+				Gravity {
+					force: [0., 0., -mass.value * constant::AMU * constant::GC],
+				},
+			);
 		}
 	}
 }
