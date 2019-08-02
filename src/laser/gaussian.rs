@@ -104,7 +104,7 @@ pub mod tests {
 
 		let e_radius = 2.0;
 		let power = 1.0;
-		let cooling_laser = test_world
+		test_world
 			.create_entity()
 			.with(CoolingLight {
 				polarization: 1.0,
@@ -132,10 +132,10 @@ pub mod tests {
 		let mut system = SampleGaussianBeamIntensitySystem;
 		system.run_now(&test_world.res);
 		test_world.maintain();
-		let samplerStorage = test_world.read_storage::<LaserSamplers>();
+		let sampler_storage = test_world.read_storage::<LaserSamplers>();
 
 		assert_approx_eq!(
-			samplerStorage
+			sampler_storage
 				.get(sampler1)
 				.expect("entity not found")
 				.contents[0]
