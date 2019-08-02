@@ -22,8 +22,74 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
             for (sampler, vel) in (&mut samplers, &velocities).join() {
                 sampler.contents[index.index].doppler_shift = maths::dot_product(
                     &maths::array_multiply(&gaussian.direction, cooling.wavenumber()),
-                    &vel.vel);
+                    &vel.vel,
+                );
             }
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+
+    extern crate specs;
+    use crate::constant::PI;
+    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser::sampler::{LaserSampler, LaserSamplers};
+    use assert_approx_eq::assert_approx_eq;
+    use specs::{Builder, RunNow, World};
+
+    #[test]
+    fn test_calculate_doppler_shift_system() {
+        let mut test_world = World::new();
+        test_world.register::<CoolingLightIndex>();
+        test_world.register::<CoolingLight>();
+        test_world.register::<GaussianBeam>();
+        test_world.register::<Velocity>();
+        test_world.register::<LaserSamplers>();
+
+        let wavelength = 780e-9;
+        test_world
+            .create_entity()
+            .with(CoolingLight {
+                polarization: 1.0,
+                wavelength: 780e-9,
+            })
+            .with(CoolingLightIndex { index: 0 })
+            .with(GaussianBeam {
+                direction: [1.0, 0.0, 0.0],
+                intersection: [0.0, 0.0, 0.0],
+                e_radius: 2.0,
+                power: 1.0,
+            })
+            .build();
+
+        let atom_velocity = 100.0;
+        let sampler1 = test_world
+            .create_entity()
+            .with(Velocity {
+                vel: [atom_velocity, 0.0, 0.0],
+            })
+            .with(LaserSamplers {
+                contents: vec![LaserSampler::default()],
+            })
+            .build();
+
+        let mut system = CalculateDopplerShiftSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<LaserSamplers>();
+
+        assert_approx_eq!(
+            sampler_storage
+                .get(sampler1)
+                .expect("entity not found")
+                .contents[0]
+                .doppler_shift,
+            2.0 * PI / wavelength * atom_velocity,
+            1e-5_f64
+        );
     }
 }
