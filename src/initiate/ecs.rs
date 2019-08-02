@@ -49,8 +49,8 @@ pub fn register_lazy(mut world: &mut World){
 ///  add general update system to dispatcher 
 fn add_systems_to_dispatch_general_update(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static> {
 	builder.
-    with(DeflagNewAtomsSystem,"deflag",&[]).
-	with(EulerIntegrationSystem,"updatepos",&["update_kick"]).
+	with(EulerIntegrationSystem,"updatepos",deps).
+	with(DeflagNewAtomsSystem,"deflag",&["updatepos"]).
 	with(PrintOutputSytem,"print",&["updatepos"]).
 	with(DetectingAtomSystem,"detect",&["updatepos"])
 }
@@ -60,9 +60,9 @@ pub fn create_simulation_dispatcher()->Dispatcher<'static,'static>{
     let mut builder = DispatcherBuilder::new();
     builder = magnetic::add_systems_to_dispatch(builder, &[]);
 	builder.add_barrier();
-    builder = laser::add_systems_to_dispatch(builder, &[]);
+    builder = laser::add_systems_to_dispatch(builder, &["add_magnetic_field_samplers"]);
 	builder.add_barrier();
-    builder = add_systems_to_dispatch_general_update(builder, &[]);
+    builder = add_systems_to_dispatch_general_update(builder, &["add_cooling_forces"]);
     builder.build()
 }
 

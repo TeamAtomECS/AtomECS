@@ -1,4 +1,5 @@
 extern crate specs;
+
 use crate::atom::*;
 use crate::constant;
 use crate::laser::CoolingForce;
@@ -25,7 +26,7 @@ impl<'a> System<'a> for PrintOutputSytem {
 	);
 	fn run(&mut self, (lasers, pos, vel, _, force, step, t): Self::SystemData) {
 		let _time = t.delta * step.n as f64;
-		for (lasers, vel, pos, force) in (&lasers, &vel, &pos, &force).join()
+		for (vel, pos, force) in (&vel, &pos, &force).join()
 		{
 			if step.n % 100 == 0 {
 				println!(
@@ -156,19 +157,22 @@ impl Component for RingDetector {
 }
 
 pub struct PrintDetectSystem;
-
+use std::io;
 impl<'a> System<'a> for PrintDetectSystem {
 	//print the final output of a detector
 	type SystemData = (WriteExpect<'a, AtomOuput>);
-	fn run(&mut self, atom_output: Self::SystemData) {
+	fn run(&mut self, atom_output: Self::SystemData){
 		let average_vel = maths::array_multiply(
 			&atom_output.total_velocity,
 			1. / atom_output.number_of_atom as f64,
 		);
+		
+		
 		println!(
 			"atom captured{},average velocity{:?}",
 			atom_output.number_of_atom, average_vel
 		);
+
 	}
 }
 
