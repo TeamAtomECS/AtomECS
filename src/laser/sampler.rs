@@ -19,6 +19,9 @@ impl Clone for LaserSampler {
         }
     }
 }
+impl Default for LaserSampler {
+    fn default() -> Self { LaserSampler{intensity:f64::NAN, doppler_shift: f64::NAN}}
+}
 
 /// Component that holds a list of laser samplers
 pub struct LaserSamplers {
