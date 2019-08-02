@@ -1,7 +1,6 @@
 extern crate specs;
 use specs::{
-	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System, VecStorage,
-	WriteStorage,
+	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System, WriteStorage,
 };
 
 use crate::constant;
@@ -43,7 +42,7 @@ pub struct CoolingLightIndex {
 	pub index: usize,
 }
 impl Component for CoolingLightIndex {
-	type Storage = VecStorage<Self>;
+	type Storage = HashMapStorage<Self>;
 }
 impl Default for CoolingLightIndex {
 	fn default() -> Self {
