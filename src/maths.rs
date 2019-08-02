@@ -70,7 +70,7 @@ pub fn norm(a: &[f64; 3]) -> [f64; 3] {
 
 pub fn gaussian_dis(std: f64, distance: f64) -> f64 {
 	//checked
-	1.0 / (2.0 * PI * std.powf(2.0)) * EXP.powf(-distance.powf(2.0) / 2.0 / (std).powf(2.0))
+	1.0 / ((2.0 * PI).powf(0.5) * std) * EXP.powf(-distance.powf(2.0) / 2.0 / (std).powf(2.0))
 }
 
 pub fn maxwell_dis(_t: f64, _mass: f64, _velocity: f64) -> f64 {
