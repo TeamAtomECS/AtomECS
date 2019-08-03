@@ -35,7 +35,7 @@ pub fn create(){
 	let mut runner = ecs::create_simulation_dispatcher();
 
 	runner.setup(&mut exp_mot.res);
-	for _i in 0..2{
+	for _i in 0..20{
 		runner.dispatch(&mut exp_mot.res);
 		exp_mot.maintain();
 	}

@@ -89,6 +89,7 @@ impl <'a> System<'a> for ClearCoolingForcesSystem {
 	type SystemData = (WriteStorage<'a,CoolingForce>);
 	fn run (&mut self,mut cooling_forces:Self::SystemData){
 		for cooling_forces in (&mut cooling_forces).join(){
+			println!("force clear");
 			cooling_forces.force = [ 0.0, 0.0, 0.0];
 			cooling_forces.total_impulse = 0.0;
 		}
@@ -142,25 +143,27 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
 				let detuning = laser_omega
 					- atom.frequency * 2.0 * constant::PI
 					- maths::dot_product(&laser.wavenumber, &vel.vel);
-				println!("{}",detuning/atom.gamma);
+				println!("detuning{}",detuning/atom.gamma);
 				let muz = 0.;
 				let mum = 0.;
 				let mup = 0.;
 				let scatter1 =
 					0.25 * (laser.polarization * costheta + 1.).powf(2.) * atom.gamma
-						/ 2. / (1. + s0 + 4. * (detuning - atom.mup / HBAR * br).powf(2.) / atom.gamma.powf(2.));
+						/ 2. / (1. + s0 + 4. * (detuning - mup / HBAR * br).powf(2.) / atom.gamma.powf(2.));
 				let scatter2 =
 					0.25 * (laser.polarization * costheta - 1.).powf(2.) * atom.gamma
-						/ 2. / (1. + s0 + 4. * (detuning - atom.mum / HBAR * br).powf(2.) / atom.gamma.powf(2.));
+						/ 2. / (1. + s0 + 4. * (detuning - mum / HBAR * br).powf(2.) / atom.gamma.powf(2.));
 				let scatter3 =
 					0.5 * (1. - costheta.powf(2.)) * atom.gamma
-						/ 2. / (1. + s0 + 4. * (detuning - atom.muz / HBAR * br).powf(2.) / atom.gamma.powf(2.));
+						/ 2. / (1. + s0 + 4. * (detuning - muz / HBAR * br).powf(2.) / atom.gamma.powf(2.));
 				let scattering_force = maths::array_multiply(
 					&laser.wavenumber,
 					s0 * HBAR * (scatter1 + scatter2 + scatter3),
 				);
+				println!("force{:?}",maths::array_multiply(&scattering_force,1./constant::AMU));
 			cooling_force.force = maths::array_addition(&cooling_force.force, &scattering_force);
 			cooling_force.total_impulse = cooling_force.total_impulse + maths::modulus(&scattering_force)*timestep.delta;
+			println!("total{:?}",maths::array_multiply(&cooling_force.force,1./constant::AMU));
 			}
 		}
 	}
