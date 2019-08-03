@@ -142,7 +142,10 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
 				let detuning = laser_omega
 					- atom.frequency * 2.0 * constant::PI
 					- maths::dot_product(&laser.wavenumber, &vel.vel);
-
+				println!("{}",detuning/atom.gamma);
+				let muz = 0.;
+				let mum = 0.;
+				let mup = 0.;
 				let scatter1 =
 					0.25 * (laser.polarization * costheta + 1.).powf(2.) * atom.gamma
 						/ 2. / (1. + s0 + 4. * (detuning - atom.mup / HBAR * br).powf(2.) / atom.gamma.powf(2.));

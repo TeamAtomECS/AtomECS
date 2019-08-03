@@ -35,7 +35,7 @@ pub fn create(){
 	let mut runner = ecs::create_simulation_dispatcher();
 
 	runner.setup(&mut exp_mot.res);
-	for _i in 0..10000{
+	for _i in 0..2{
 		runner.dispatch(&mut exp_mot.res);
 		exp_mot.maintain();
 	}
@@ -107,7 +107,7 @@ fn mot2d_entity_create(world:&mut World){
 	world.create_entity().with(laser_5).build();
 	//detector introduced
 	
-	world.create_entity().with(Detector{centre:[0.2,0.,0.],range:[0.05,0.1,0.1]}).build();
+	//world.create_entity().with(Detector{centre:[0.2,0.,0.],range:[0.05,0.1,0.1]}).build();
 	
 	// initiate
 	// build a oven
