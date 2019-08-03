@@ -84,14 +84,19 @@ impl Default for CoolingForce {
 }
 
 /// System that clears the cooling forces.
-pub struct ClearCoolingForcesSystem;
-impl <'a> System<'a> for ClearCoolingForcesSystem {
-	type SystemData = (WriteStorage<'a,CoolingForce>);
-	fn run (&mut self,mut cooling_forces:Self::SystemData){
+pub struct ClearForcesSystem;
+impl <'a> System<'a> for ClearForcesSystem {
+	type SystemData = (WriteStorage<'a,CoolingForce>,WriteStorage<'a,Force>);
+	fn run (&mut self,(mut cooling_forces,mut force):Self::SystemData){
 		for cooling_forces in (&mut cooling_forces).join(){
 			println!("force clear");
 			cooling_forces.force = [ 0.0, 0.0, 0.0];
 			cooling_forces.total_impulse = 0.0;
+		}
+		for force in (&mut force).join(){
+			println!("force clear");
+			force.force = [ 0.0, 0.0, 0.0];
+
 		}
 	}
 }
@@ -236,7 +241,7 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 /// Add all systems required by the laser module to the dispatch builder.
 pub fn add_systems_to_dispatch(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static>  {
 	builder
-	.with(ClearCoolingForcesSystem,"clear_cooling_forces", deps)
+	.with(ClearForcesSystem,"clear_cooling_forces", deps)
 	.with(CalculateCoolingForcesSystem,"calculate_cooling_forces",&["clear_cooling_forces"])
 	.with(CalculateRandomScatteringForceSystem, "calculate_random_scattering_forces_cooling", &["calculate_cooling_forces"])
 	.with(AttachLaserComponentsToNewlyCreatedAtomsSystem, "", &[])
