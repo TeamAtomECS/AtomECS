@@ -28,7 +28,7 @@ impl<'a> System<'a> for PrintOutputSytem {
 		let _time = t.delta * step.n as f64;
 		for (vel, pos, force) in (&vel, &pos, &force).join()
 		{
-			if step.n % 1 == 0 {
+			if step.n % 100 == 0 {
 				println!(
 					"time{}position{:?},velocity{:?},acc{:?}",
 					_time,

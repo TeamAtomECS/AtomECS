@@ -7,6 +7,7 @@ use crate::initiate::atom_create::{Oven};
 use crate::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder,Dispatcher};
 use crate::output::*;
+use crate::visual::{RecordPositionSystem,PlotSystem,PositionRecord};
 /// register some general component
 pub fn register_component_general(world: &mut World) {
 
@@ -34,6 +35,7 @@ pub fn register_component_otherforce(world: &mut World) {
 pub fn register_component_output(world: &mut World) {
 		world.register::<Detector>();
 		world.register::<RingDetector>();
+		world.register::<PositionRecord>();
 }
 
 /// if you are lazy and have no idea what you want, use this function to register everything
@@ -50,6 +52,7 @@ pub fn register_lazy(mut world: &mut World){
 fn add_systems_to_dispatch_general_update(builder: DispatcherBuilder<'static,'static>, deps: &[&str]) -> DispatcherBuilder<'static,'static> {
 	builder.
 	with(EulerIntegrationSystem,"updatepos",deps).
+	with(RecordPositionSystem,"recordpos",&["updatepos"]).
 	with(DeflagNewAtomsSystem,"deflag",&["updatepos"]).
 	with(PrintOutputSytem,"print",&["updatepos"]).
 	with(DetectingAtomSystem,"detect",&["updatepos"])

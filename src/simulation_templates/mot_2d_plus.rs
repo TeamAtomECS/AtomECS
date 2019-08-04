@@ -10,6 +10,7 @@ use crate::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder,RunNow};
 use crate::output::{PrintOutputSytem,Detector,DetectingAtomSystem,PrintDetectSystem,AtomOuput};
 use crate::initiate::ecs;
+use crate::visual::PlotSystem;
 
 use crate::fileinput::Parameters2D;
 #[allow(dead_code)]
@@ -37,12 +38,14 @@ pub fn create(){
 	let mut runner = ecs::create_simulation_dispatcher();
 
 	runner.setup(&mut exp_mot.res);
-	for _i in 0..20{
+	for _i in 0..2000{
 		runner.dispatch(&mut exp_mot.res);
 		exp_mot.maintain();
 	}
 	let mut print_detect = PrintDetectSystem;
 	print_detect.run_now(&exp_mot.res);	
+	let mut visual = PlotSystem;
+	visual.run_now(&exp_mot.res);
 }
 
 fn mot2d_entity_create(world:&mut World,para:Option<Parameters2D>){

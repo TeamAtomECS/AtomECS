@@ -6,6 +6,7 @@ use crate::initiate::*;
 use rand::Rng;
 extern crate specs;
 use crate::atom::*;
+use crate::visual::PositionRecord;
 
 use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
@@ -99,6 +100,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 					},
 				);
 				updater.insert(new_atom, Mass { value: mass });
+				updater.insert(new_atom,PositionRecord{x:Vec::new(),y:Vec::new(),z:Vec::new()});
 				updater.insert(
 					new_atom,
 					AtomInfo {
