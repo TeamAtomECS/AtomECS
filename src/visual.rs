@@ -35,7 +35,7 @@ impl <'a> System <'a> for PlotSystem{
     fn run (&mut self, (record,atom): Self::SystemData){
         for (record,atom) in (&record,&atom).join(){
             let mut fg = Figure::new();
-            println!("what{:?}",record.x);
+            //println!("what{:?}",record.x);
             fg.axes3d()
 	            .set_title("A plot", &[])
 	            .set_x_label("x", &[])
