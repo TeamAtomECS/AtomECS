@@ -33,22 +33,26 @@ pub struct PlotSystem;
 impl <'a> System <'a> for PlotSystem{
     type SystemData = (ReadStorage<'a,PositionRecord>,ReadStorage<'a,Atom>);
     fn run (&mut self, (record,atom): Self::SystemData){
-        for (record,atom) in (&record,&atom).join(){
-            let mut fg = Figure::new();
-            //println!("what{:?}",record.x);
-            fg.axes3d()
+        let mut fg = Figure::new();
+        fg.axes3d()
 	            .set_title("A plot", &[])
 	            .set_x_label("x", &[])
 	            .set_y_label("y", &[])
-                .set_z_label("z", &[])
+                .set_z_label("z", &[]);
+        for (record,atom) in (&record,&atom).join(){
+            
+            //println!("what{:?}",record.x);
+            fg.axes3d()
+	            .set_title("A plot", &[])
 	            .lines(
 		            &record.x,
 		            &record.y,
                     &record.z,
 	            	&[Caption("path")],
 	        );
-            fg.show();
+            
         }
+        fg.show();
     }
 }
 

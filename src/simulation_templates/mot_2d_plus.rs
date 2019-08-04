@@ -117,7 +117,7 @@ fn mot2d_entity_create(world:&mut World,para:Option<Parameters2D>){
 	// initiate
 	// build a oven
 	world.create_entity()
-	.with(Oven{temperature:200.,direction:[1e-6,1e-6,1.],number:1,size:[1e-2,1e-2,1e-2]})
+	.with(Oven{temperature:200.,direction:[1e-6,1e-6,1.],number:10,size:[1e-2,1e-2,1e-2]})
 	.with(rb_atom)
 	.with(Mass{value:87.})
 	.with(Position{pos:[0.0,0.0,0.0]})
