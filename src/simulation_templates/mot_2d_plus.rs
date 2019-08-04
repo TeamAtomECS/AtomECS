@@ -10,6 +10,8 @@ use crate::integrator::EulerIntegrationSystem;
 use specs::{World,Builder,DispatcherBuilder,RunNow};
 use crate::output::{PrintOutputSytem,Detector,DetectingAtomSystem,PrintDetectSystem,AtomOuput};
 use crate::initiate::ecs;
+
+use crate::fileinput::Parameters2D;
 #[allow(dead_code)]
 pub fn create(){
    // create the world
@@ -18,7 +20,7 @@ pub fn create(){
 	ecs::register_lazy(&mut exp_mot);
 	ecs::register_resources_lazy(&mut exp_mot);
 	//component for the experiment
-	mot2d_entity_create(&mut exp_mot);
+	mot2d_entity_create(&mut exp_mot,None);
 
 	// initiator dispatched
 	let mut init_dispatcher=DispatcherBuilder::new()
@@ -43,7 +45,7 @@ pub fn create(){
 	print_detect.run_now(&exp_mot.res);	
 }
 
-fn mot2d_entity_create(world:&mut World){
+fn mot2d_entity_create(world:&mut World,para:Option<Parameters2D>){
 	let rb_atom = AtomInfo{
 	mass:87,
 	mup:constant::MUP,

@@ -16,14 +16,14 @@ fn load_file(file: &str) {
     // TO DO
 	// will complete after the ecs.rs is checked
 }
-struct parameters{
-	laser1:Laserparameter,
-	laser2:Laserparameter,
-	laser3:Laserparameter,
-	laser4:Laserparameter,
-	pushinglaser:Laserparameter,
-	oven:Ovenparameter,
-	magnetic:Magneticparameter,
+pub struct Parameters2D{
+	pub laser1:Laserparameter,
+	pub laser2:Laserparameter,
+	pub laser3:Laserparameter,
+	pub laser4:Laserparameter,
+	pub pushinglaser:Laserparameter,
+	pub oven:Ovenparameter,
+	pub magnetic:Magneticparameter,
 }
 
 pub enum Magneticparameter{
