@@ -27,7 +27,7 @@ pub fn create() -> (World, Dispatcher<'static, 'static>) {
 
 fn mot2d_entity_create(world: &mut World) {
 	// Add quadrupole gradient
-	let quadrupole = QuadrupoleField3D::gauss_per_cm(20.0);
+	let quadrupole = QuadrupoleField3D::gauss_per_cm(25.0);
 	world
 		.create_entity()
 		.with(quadrupole)
@@ -35,65 +35,90 @@ fn mot2d_entity_create(world: &mut World) {
 		.build();
 
 	// Add lasers
+	let detuning = 6.0;
 	world
 		.create_entity()
 		.with(GaussianBeam {
 			intersection: Vector3::new(0.0, 0.0, 0.0),
 			e_radius: 0.01,
-			power: 0.1,
+			power: 1.0,
 			direction: Vector3::x(),
 		})
-		.with(CoolingLight::for_species(AtomInfo::rubidium(), -12.0, 1.0))
+		.with(CoolingLight::for_species(
+			AtomInfo::rubidium(),
+			-detuning,
+			1.0,
+		))
 		.build();
 	world
 		.create_entity()
 		.with(GaussianBeam {
 			intersection: Vector3::new(0.0, 0.0, 0.0),
 			e_radius: 0.01,
-			power: 0.1,
+			power: 1.0,
 			direction: -Vector3::x(),
 		})
-		.with(CoolingLight::for_species(AtomInfo::rubidium(), -12.0, 1.0))
+		.with(CoolingLight::for_species(
+			AtomInfo::rubidium(),
+			-detuning,
+			1.0,
+		))
 		.build();
 	world
 		.create_entity()
 		.with(GaussianBeam {
 			intersection: Vector3::new(0.0, 0.0, 0.0),
 			e_radius: 0.01,
-			power: 0.1,
+			power: 1.0,
 			direction: Vector3::y(),
 		})
-		.with(CoolingLight::for_species(AtomInfo::rubidium(), -12.0, 1.0))
+		.with(CoolingLight::for_species(
+			AtomInfo::rubidium(),
+			-detuning,
+			1.0,
+		))
 		.build();
 	world
 		.create_entity()
 		.with(GaussianBeam {
 			intersection: Vector3::new(0.0, 0.0, 0.0),
 			e_radius: 0.01,
-			power: 0.1,
+			power: 1.0,
 			direction: -Vector3::y(),
 		})
-		.with(CoolingLight::for_species(AtomInfo::rubidium(), -12.0, 1.0))
+		.with(CoolingLight::for_species(
+			AtomInfo::rubidium(),
+			-detuning,
+			1.0,
+		))
 		.build();
 	world
 		.create_entity()
 		.with(GaussianBeam {
 			intersection: Vector3::new(0.0, 0.0, 0.0),
 			e_radius: 0.01,
-			power: 0.1,
+			power: 1.0,
 			direction: Vector3::z(),
 		})
-		.with(CoolingLight::for_species(AtomInfo::rubidium(), -12.0, -1.0))
+		.with(CoolingLight::for_species(
+			AtomInfo::rubidium(),
+			-detuning,
+			-1.0,
+		))
 		.build();
 	world
 		.create_entity()
 		.with(GaussianBeam {
 			intersection: Vector3::new(0.0, 0.0, 0.0),
 			e_radius: 0.01,
-			power: 0.1,
+			power: 1.0,
 			direction: -Vector3::z(),
 		})
-		.with(CoolingLight::for_species(AtomInfo::rubidium(), -12.0, -1.0))
+		.with(CoolingLight::for_species(
+			AtomInfo::rubidium(),
+			-detuning,
+			-1.0,
+		))
 		.build();
 
 	// Add oven
@@ -115,9 +140,11 @@ fn mot2d_entity_create(world: &mut World) {
 	// Add single atom
 	world
 		.create_entity()
-		.with(Position::new())
+		.with(Position {
+			pos: Vector3::new(0.001, 0.0, 0.0),
+		})
 		.with(Velocity {
-			vel: Vector3::new(1.0, 0.0, 0.0),
+			vel: Vector3::new(-1.0, 0.0, 0.0),
 		})
 		.with(NewlyCreated {})
 		.with(Force::new())

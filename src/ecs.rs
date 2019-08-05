@@ -5,7 +5,9 @@ use crate::integrator::{Step, Timestep};
 use crate::laser;
 use crate::magnetic;
 use crate::output::console_output::ConsoleOutputSystem;
+use crate::output::file_output::FileOutputSystem;
 use crate::oven;
+use crate::atom::ClearForceSystem;
 use specs::{Dispatcher, DispatcherBuilder, World};
 
 /// Registers all components used by the modules of the program.
@@ -18,6 +20,7 @@ pub fn register_components(world: &mut World) {
 /// Creates a `Dispatcher` that can be used to calculate each simulation frame.
 pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 	let mut builder = DispatcherBuilder::new();
+	builder = builder.with(ClearForceSystem, "", &[]);
 	builder = builder.with(DeflagNewAtomsSystem, "deflag", &[]);
 	builder.add_barrier();
 	builder = magnetic::add_systems_to_dispatch(builder, &[]);
@@ -28,6 +31,7 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 	builder.add_barrier();
 	builder = builder.with(EulerIntegrationSystem, "euler_integrator", &[]);
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
+	builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
 	builder = builder.with(DestroyAtomsSystem, "", &[]);
 	builder.build()
 }

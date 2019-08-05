@@ -1,10 +1,9 @@
 extern crate nalgebra;
 extern crate specs;
 extern crate specs_derive;
+use crate::constant::{BOHRMAG, C};
 use nalgebra::Vector3;
-use specs::{Component, NullStorage, VecStorage};
-use std::ops::Add;
-use crate::constant::{C,BOHRMAG};
+use specs::{Component, NullStorage, System, VecStorage, WriteStorage, Join};
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
 ///
@@ -13,7 +12,11 @@ pub struct Position {
 	pub pos: Vector3<f64>,
 }
 impl Position {
-	pub fn new() -> Self{ Position { pos: Vector3::new(0.0,0.0,0.0)}}
+	pub fn new() -> Self {
+		Position {
+			pos: Vector3::new(0.0, 0.0, 0.0),
+		}
+	}
 }
 
 impl Component for Position {
@@ -39,14 +42,6 @@ pub struct Force {
 }
 impl Component for Force {
 	type Storage = VecStorage<Self>;
-}
-impl Add<Force> for Force {
-	type Output = Self;
-	fn add(self, other: Self) -> Self {
-		Force {
-			force: self.force + other.force,
-		}
-	}
 }
 impl Force {
 	pub fn new() -> Self {
@@ -119,5 +114,17 @@ impl AtomInfo {
 
 	pub fn gamma(&self) -> f64 {
 		self.linewidth * 2.0 * std::f64::consts::PI
+	}
+}
+
+/// System that sets force to zero at the start of each iteration.
+pub struct ClearForceSystem;
+
+impl<'a> System<'a> for ClearForceSystem {
+	type SystemData = (WriteStorage<'a, Force>);
+	fn run(&mut self, mut force: Self::SystemData) {
+		for force in (&mut force).join() {
+			force.force = Vector3::new(0.0,0.0,0.0);
+		}
 	}
 }
