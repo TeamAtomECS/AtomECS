@@ -9,41 +9,6 @@ use specs::{
 	WriteExpect, WriteStorage,
 };
 
-pub struct PrintOutputSytem;
-
-impl<'a> System<'a> for PrintOutputSytem {
-	// print the output (whatever you want) to the console
-	type SystemData = (
-		ReadStorage<'a, CoolingForce>,
-		ReadStorage<'a, Position>,
-		ReadStorage<'a, Velocity>,
-		ReadStorage<'a, Atom>,
-		ReadStorage<'a, Force>,
-		ReadExpect<'a, Step>,
-		ReadExpect<'a, Timestep>,
-	);
-	fn run(&mut self, (lasers, pos, vel, _, force, step, t): Self::SystemData) {
-		let _time = t.delta * step.n as f64;
-		for (lasers, vel, pos, force) in (&lasers, &vel, &pos, &force).join()
-		{
-			if step.n % 100 == 0 {
-				println!(
-					"time{}position{:?},velocity{:?},acc{:?}",
-					_time,
-					pos.pos,
-					vel.vel,
-					maths::array_multiply(&force.force, 1. / constant::AMU / 87.)
-				);
-			}
-			//println!("position{:?},velocity{:?}",pos.pos,vel.vel);
-		}
-	}
-}
-pub struct AtomOuput {
-	pub number_of_atom: u64,
-	pub total_velocity: [f64; 3],
-}
-
 pub struct Detector {
 	// a detector with centre at centre and have a dimension of 2*range
 	pub centre: [f64; 3],
