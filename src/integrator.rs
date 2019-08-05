@@ -21,7 +21,7 @@ use crate::constant;
 /// `x' = x + v * dt`.
 /// This integrator is simple to implement but prone to integration error.
 ///
-/// The timestep duration is specified by the ```Timestep``` system resource.
+/// The timestep duration is specified by the `Timestep` system resource.
 pub struct EulerIntegrationSystem;
 
 impl<'a> System<'a> for EulerIntegrationSystem {
@@ -119,6 +119,6 @@ pub mod tests {
 		assert_eq!(velocity.vel, initial_velocity + initial_acceleration * dt);
 		let positions = test_world.read_storage::<Position>();
 		let position = positions.get(test_entity).expect("entity not found");
-		assert_eq!(position.pos, &initial_position + &initial_velocity * dt);
+		assert_eq!(position.pos, initial_position + initial_velocity * dt);
 	}
 }
