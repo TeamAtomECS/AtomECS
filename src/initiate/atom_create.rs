@@ -117,24 +117,3 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		}
 	}
 }
-
-// pub struct AttachGravityToNewlyCreatedAtomsSystem;
-
-// impl<'a> System<'a> for AttachGravityToNewlyCreatedAtomsSystem {
-// 	type SystemData = (
-// 		Entities<'a>,
-// 		ReadStorage<'a, Mass>,
-// 		ReadStorage<'a, NewlyCreated>,
-// 		Read<'a, LazyUpdate>,
-// 	);
-// 	fn run(&mut self, (ent, newly_created, mass, updater): Self::SystemData) {
-// 		for (ent, _nc, mass) in (&ent, &mass, &newly_created).join() {
-// 			updater.insert(
-// 				ent,
-// 				Gravity {
-// 					force: [0., 0., -mass.value * constant::AMU * constant::GC],
-// 				},
-// 			);
-// 		}
-// 	}
-// }
