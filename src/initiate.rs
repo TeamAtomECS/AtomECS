@@ -1,54 +1,5 @@
 extern crate specs;
-use crate::constant::{BOHRMAG, C};
-use specs::{
-	Component, Entities, Join, LazyUpdate, NullStorage, Read, ReadStorage, System, VecStorage,
-};
-
-pub mod atom_create;
-//pub mod ecs;
-
-pub struct AtomInfo {
-	/// The dependence of the sigma_+ transition on magnetic fields.
-	/// The sigma_+ transition is shifted by `mup * field.magnitude / h` Hz.
-	/// The units of mup are of Energy per magnetic field, ie Joules/Tesla.
-	pub mup: f64,
-	/// The dependence of the sigma_- transition on magnetic fields.
-	/// The sigma_- transition is shifted by `mum * field.magnitude / h` Hz.
-	/// The units of mup are of Energy per magnetic field, ie Joules/Tesla.
-	pub mum: f64,
-	/// The dependence of the sigma_pi transition on magnetic fields.
-	/// The sigma_pi transition is shifted by `muz * field.magnitude / h` Hz.
-	/// The units of mup are of Energy per magnetic field, ie Joules/Tesla.
-	pub muz: f64,
-	/// Frequency of the laser cooling transition, Hz.
-	pub frequency: f64,
-	/// Linewidth of the laser cooling transition, Hz
-	pub linewidth: f64,
-	/// Saturation intensity, in units of W/m^2.
-	pub saturation_intensity: f64,
-}
-
-impl Component for AtomInfo {
-	type Storage = VecStorage<Self>;
-}
-impl AtomInfo {
-	/// Creates an `AtomInfo` component populated with parameters for Rubidium.
-	/// The parameters are taken from Daniel Steck's Data sheet on Rubidium-87.
-	pub fn rubidium() -> Self {
-		AtomInfo {
-			mup: BOHRMAG,
-			mum: -BOHRMAG,
-			muz: 0.0,
-			frequency: C / 780.0e-9,
-			linewidth: 6.065e6,          // [Steck, Rubidium87]
-			saturation_intensity: 16.69, // [Steck, Rubidium 87, D2 cycling transition]
-		}
-	}
-
-	pub fn gamma(&self) -> f64 {
-		self.linewidth * 2.0 * std::f64::consts::PI
-	}
-}
+use specs::{Component, Entities, Join, LazyUpdate, NullStorage, Read, ReadStorage, System};
 
 /// A marker component that indicates an entity has been `NewlyCreated`.
 /// The main use of this component is to allow different modules to identify when an atom has been created and to attach any appropriate components required.

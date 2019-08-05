@@ -6,7 +6,7 @@ use super::gaussian::GaussianBeam;
 use super::sampler::LaserSamplers;
 use crate::atom::Force;
 use crate::constant::{HBAR, PI};
-use crate::initiate::AtomInfo;
+use crate::atom::AtomInfo;
 use crate::magnetic::MagneticFieldSampler;
 
 /// This sytem calculates the forces exerted by `CoolingLight` on entities.

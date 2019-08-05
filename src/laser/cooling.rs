@@ -1,5 +1,5 @@
 extern crate specs;
-use crate::initiate::AtomInfo;
+use crate::atom::AtomInfo;
 use specs::{
 	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System, WriteStorage,
 };
