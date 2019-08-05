@@ -1,43 +1,56 @@
 extern crate specs;
-use specs::{Component,VecStorage,NullStorage,Entities,Join,LazyUpdate,Read,ReadStorage,System};
-use crate::constant::{C,BOHRMAG};
+use crate::constant::{BOHRMAG, C};
+use specs::{
+	Component, Entities, Join, LazyUpdate, NullStorage, Read, ReadStorage, System, VecStorage,
+};
 
 pub mod atom_create;
 //pub mod ecs;
 
-pub struct AtomInfo{
-	/// 
-	pub mup:f64,
-	pub mum:f64,
-	pub muz:f64,
+pub struct AtomInfo {
+	/// The dependence of the sigma_+ transition on magnetic fields.
+	/// The sigma_+ transition is shifted by `mup * field.magnitude / h` Hz.
+	/// The units of mup are of Energy per magnetic field, ie Joules/Tesla.
+	pub mup: f64,
+	/// The dependence of the sigma_- transition on magnetic fields.
+	/// The sigma_- transition is shifted by `mum * field.magnitude / h` Hz.
+	/// The units of mup are of Energy per magnetic field, ie Joules/Tesla.
+	pub mum: f64,
+	/// The dependence of the sigma_pi transition on magnetic fields.
+	/// The sigma_pi transition is shifted by `muz * field.magnitude / h` Hz.
+	/// The units of mup are of Energy per magnetic field, ie Joules/Tesla.
+	pub muz: f64,
 	/// Frequency of the laser cooling transition, Hz.
-	pub frequency:f64,
+	pub frequency: f64,
 	/// Linewidth of the laser cooling transition, Hz
-	pub gamma:f64,
-	
+	pub linewidth: f64,
 	/// Saturation intensity, in units of W/m^2.
-	pub saturation_intensity:f64
+	pub saturation_intensity: f64,
 }
 
-impl Component for AtomInfo{
-	type Storage = VecStorage<Self>;	
+impl Component for AtomInfo {
+	type Storage = VecStorage<Self>;
 }
 impl AtomInfo {
-	/// Creates an `AtomInfo` component populated with parameters for Rubidium. 
+	/// Creates an `AtomInfo` component populated with parameters for Rubidium.
 	/// The parameters are taken from Daniel Steck's Data sheet on Rubidium-87.
-	pub fn rubidium() -> Self { 
-		AtomInfo { mup: BOHRMAG,
-		mum: -BOHRMAG,
-		muz: 0.0,
-		frequency: C / 780.0e-9,
-		gamma: 6.065e6, // [Steck, Rubidium87]
-		saturation_intensity: 16.69 // [Steck, Rubidium 87, D2 cycling transition]
+	pub fn rubidium() -> Self {
+		AtomInfo {
+			mup: BOHRMAG,
+			mum: -BOHRMAG,
+			muz: 0.0,
+			frequency: C / 780.0e-9,
+			linewidth: 6.065e6,          // [Steck, Rubidium87]
+			saturation_intensity: 16.69, // [Steck, Rubidium 87, D2 cycling transition]
 		}
+	}
+
+	pub fn gamma(&self) -> f64 {
+		self.linewidth * 2.0 * std::f64::consts::PI
 	}
 }
 
-
-/// A marker component that indicates an entity has been `NewlyCreated`. 
+/// A marker component that indicates an entity has been `NewlyCreated`.
 /// The main use of this component is to allow different modules to identify when an atom has been created and to attach any appropriate components required.
 /// For instance, a NewlyCreated atom could have a field sampler added to it so that magnetic systems will be able to calculate fields at the atom's position.
 #[derive(Component)]
@@ -45,16 +58,18 @@ impl AtomInfo {
 pub struct NewlyCreated;
 
 impl Default for NewlyCreated {
-	fn default() -> Self { NewlyCreated{} }
+	fn default() -> Self {
+		NewlyCreated {}
+	}
 }
 
 /// This system is responsible for removing the `NewlyCreated` marker component from atoms.
-/// 
+///
 /// The marker is originally added to atoms when they are first added to the simulation, which allows other Systems
 /// to add any required components to atoms.
-/// 
+///
 /// ## When should this system run?
-/// 
+///
 /// This system runs *before* new atoms are added to the world.
 /// Thus, any atoms flagged as `NewlyCreated` from the previous frame are deflagged before the new flagged atoms are created.
 /// Be careful of properly maintaining the world at the correct time;
@@ -64,12 +79,12 @@ pub struct DeflagNewAtomsSystem;
 impl<'a> System<'a> for DeflagNewAtomsSystem {
 	type SystemData = (
 		Entities<'a>,
-		ReadStorage<'a,NewlyCreated>,
+		ReadStorage<'a, NewlyCreated>,
 		Read<'a, LazyUpdate>,
 	);
 
-	fn run(&mut self, (ent,newly_created, updater): Self::SystemData) {
-		for (ent,_newly_created) in (&ent, &newly_created).join() {
+	fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
+		for (ent, _newly_created) in (&ent, &newly_created).join() {
 			updater.remove::<NewlyCreated>(ent);
 		}
 	}
@@ -93,10 +108,7 @@ pub mod tests {
 			.build();
 		dispatcher.setup(&mut test_world.res);
 
-		let test_entity = test_world
-			.create_entity()
-			.with(NewlyCreated)
-			.build();
+		let test_entity = test_world.create_entity().with(NewlyCreated).build();
 
 		dispatcher.dispatch(&mut test_world.res);
 		test_world.maintain();

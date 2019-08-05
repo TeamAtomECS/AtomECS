@@ -1,4 +1,5 @@
 extern crate specs;
+use crate::initiate::AtomInfo;
 use specs::{
 	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System, WriteStorage,
 };
@@ -19,22 +20,31 @@ impl CoolingLight {
 		constant::C / self.wavelength
 	}
 
-	/// Wavenumber of the cooling light, in units of inverse metres.
+	/// Wavenumber of the cooling light, in units of 2pi inverse metres.
 	pub fn wavenumber(&self) -> f64 {
 		2.0 * constant::PI / self.wavelength
+	}
+
+	/// Creates a `CoolingLight` component with the specified detuning from the desired atomic species.
+	///
+	/// # Arguments
+	///
+	/// `species`: The atomic species to detune from.
+	///
+	/// `detuning`: Detuning from the transition, specified in MHz. Red-detuned is negative.
+	///
+	/// `polarization`: Polarization of the cooling beam.
+	pub fn for_species(species: AtomInfo, detuning: f64, polarization: f64) -> Self {
+		let freq = species.frequency + detuning * 1.0e6;
+		CoolingLight {
+			wavelength: constant::C / freq,
+			polarization: polarization,
+		}
 	}
 }
 impl Component for CoolingLight {
 	type Storage = HashMapStorage<Self>;
 }
-
-/// This component holds a vector list of all interactions of the entity with each laser beam in the simulation.
-//pub struct CoolingLaserInteractions {
-//pub list: Vec<CoolingForce>
-//}
-//impl Component for CoolingLaserInteractions {
-//type Storage = VecStorage<Self>;
-//}
 
 /// An index that uniquely identifies this cooling light in the interaction list for each atom.
 /// The index value corresponds to the position of each cooling light in the per-atom interaction list array.

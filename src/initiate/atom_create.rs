@@ -108,7 +108,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 						muz: atom.muz,
 						mum: atom.mum,
 						frequency: atom.frequency,
-						gamma: atom.gamma,
+						linewidth: atom.linewidth,
 						saturation_intensity: atom.saturation_intensity,
 					},
 				);
