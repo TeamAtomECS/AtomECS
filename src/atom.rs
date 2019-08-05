@@ -2,7 +2,7 @@ extern crate specs;
 extern crate specs_derive;
 
 use specs::{Component, VecStorage, NullStorage};
-
+use crate::maths;
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes. 
 /// 
@@ -32,9 +32,15 @@ impl Component for Velocity{
 pub struct Force{
 	pub force:[f64;3]
 }
-
 impl Component for Force{
 	type Storage = VecStorage<Self>;
+}
+use std::ops::Add;
+impl Add<Force> for Force {
+	type Output = Self;
+	fn add(self, other: Self) -> Self {
+		Force { force: maths::array_addition(&self.force, &other.force) }
+	}
 }
 
 /// Inertial and Gravitational mass of an entity
