@@ -8,7 +8,6 @@ use crate::atom::Force;
 use crate::constant::{HBAR, PI};
 use crate::initiate::AtomInfo;
 use crate::magnetic::MagneticFieldSampler;
-use crate::maths;
 
 /// This sytem calculates the forces exerted by `CoolingLight` on entities.
 ///
@@ -45,11 +44,8 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                     - laser_sampler.contents[laser_index.index].doppler_shift)
                     * 2.0
                     * PI;
-                let wavevector = maths::array_multiply(&beam.direction, laser.wavenumber());
-                let costheta = maths::dot_product(
-                    &maths::array_multiply(&wavevector, 1.0 / maths::modulus(&wavevector)),
-                    &maths::array_multiply(&bfield.field, 1.0 / maths::modulus(&bfield.field)),
-                );
+                let wavevector = beam.direction * laser.wavenumber();
+                let costheta = wavevector.normalize().dot(&bfield.field.normalize());
                 let gamma = atom_info.gamma();
                 let scatter1 = 0.25 * (laser.polarization * costheta + 1.).powf(2.) * gamma
                     / 2.
@@ -72,11 +68,8 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                         + 4. * (detuning - atom_info.muz / (2.0 * PI * HBAR) * bfield.magnitude)
                             .powf(2.)
                             / gamma.powf(2.));
-                let cooling_force = maths::array_multiply(
-                    &wavevector,
-                    s0 * HBAR * (scatter1 + scatter2 + scatter3),
-                );
-                force.force = maths::array_addition(&force.force, &cooling_force);
+                let cooling_force = wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);
+                force.force = force.force + cooling_force;
             }
         }
     }
@@ -94,6 +87,8 @@ pub mod tests {
     use crate::magnetic::MagneticFieldSampler;
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, Entity, RunNow, World};
+    extern crate nalgebra;
+    use nalgebra::Vector3;
 
     fn create_world_for_tests(cool_light_detuning: f64) -> (World, Entity) {
         let mut test_world = World::new();
@@ -116,8 +111,8 @@ pub mod tests {
             ))
             .with(CoolingLightIndex { index: 0 })
             .with(GaussianBeam {
-                direction: [1.0, 0.0, 0.0],
-                intersection: [0.0, 0.0, 0.0],
+                direction: Vector3::new(1.0, 0.0, 0.0),
+                intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: e_radius,
                 power: power,
             })
@@ -133,9 +128,7 @@ pub mod tests {
         let intensity = 1.0;
         let atom1 = test_world
             .create_entity()
-            .with(Force {
-                force: [0.0, 0.0, 0.0],
-            })
+            .with(Force::new())
             .with(LaserSamplers {
                 contents: vec![LaserSampler {
                     intensity: intensity,
@@ -143,7 +136,7 @@ pub mod tests {
                 }],
             })
             .with(MagneticFieldSampler {
-                field: [1e-8, 0.0, 0.0],
+                field: Vector3::new(1e-8, 0.0, 0.0),
                 magnitude: 1e-8,
             })
             .with(AtomInfo::rubidium())

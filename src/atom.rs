@@ -1,14 +1,15 @@
+extern crate nalgebra;
 extern crate specs;
 extern crate specs_derive;
-use crate::maths;
 use specs::{Component, NullStorage, VecStorage};
 use std::ops::Add;
+use nalgebra::Vector3;
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
 ///
 /// SI units (metres)
 pub struct Position {
-	pub pos: [f64; 3],
+	pub pos: Vector3<f64>,
 }
 
 impl Component for Position {
@@ -19,7 +20,7 @@ impl Component for Position {
 ///
 /// SI units (metres/second)
 pub struct Velocity {
-	pub vel: [f64; 3],
+	pub vel: Vector3<f64>,
 }
 
 impl Component for Velocity {
@@ -30,7 +31,7 @@ impl Component for Velocity {
 ///
 /// SI units (Newtons)
 pub struct Force {
-	pub force: [f64; 3],
+	pub force: Vector3<f64>,
 }
 impl Component for Force {
 	type Storage = VecStorage<Self>;
@@ -39,9 +40,12 @@ impl Add<Force> for Force {
 	type Output = Self;
 	fn add(self, other: Self) -> Self {
 		Force {
-			force: maths::array_addition(&self.force, &other.force),
+			force: self.force + other.force
 		}
 	}
+}
+impl Force {
+	pub fn new() -> Self { Force { force: Vector3::new(0.0,0.0,0.0)}}
 }
 
 /// Inertial and Gravitational mass of an entity
@@ -52,14 +56,6 @@ pub struct Mass {
 }
 
 impl Component for Mass {
-	type Storage = VecStorage<Self>;
-}
-
-pub struct Gravity {
-	pub force: [f64; 3],
-}
-
-impl Component for Gravity {
 	type Storage = VecStorage<Self>;
 }
 

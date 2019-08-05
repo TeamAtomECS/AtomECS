@@ -1,6 +1,7 @@
+extern crate nalgebra;
 extern crate specs;
 use crate::initiate::NewlyCreated;
-use crate::maths;
+use nalgebra::Vector3;
 use specs::{
 	Component, DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System,
 	VecStorage, World, WriteStorage,
@@ -12,7 +13,7 @@ pub mod uniform;
 /// A component that stores the magnetic field at an entity's location.
 pub struct MagneticFieldSampler {
 	/// Vector representing the magnetic field components along x,y,z in units of Tesla.
-	pub field: [f64; 3],
+	pub field: Vector3<f64>,
 
 	/// Magnitude of the magnetic field in units of Tesla
 	pub magnitude: f64,
@@ -25,7 +26,7 @@ impl Component for MagneticFieldSampler {
 impl Default for MagneticFieldSampler {
 	fn default() -> Self {
 		MagneticFieldSampler {
-			field: [0.0, 0.0, 0.0],
+			field: Vector3::new(0.0, 0.0, 0.0),
 			magnitude: 0.0,
 		}
 	}
@@ -39,7 +40,7 @@ impl<'a> System<'a> for ClearMagneticFieldSamplerSystem {
 	fn run(&mut self, mut sampler: Self::SystemData) {
 		for sampler in (&mut sampler).join() {
 			sampler.magnitude = 0.;
-			sampler.field = [0., 0., 0.]
+			sampler.field = Vector3::new(0.0, 0.0, 0.0)
 		}
 	}
 }
@@ -54,7 +55,7 @@ impl<'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
 	type SystemData = (WriteStorage<'a, MagneticFieldSampler>);
 	fn run(&mut self, mut sampler: Self::SystemData) {
 		for sampler in (&mut sampler).join() {
-			sampler.magnitude = maths::modulus(&sampler.field);
+			sampler.magnitude = sampler.field.norm();
 		}
 	}
 }
@@ -141,18 +142,18 @@ pub mod tests {
 		test_world
 			.create_entity()
 			.with(uniform::UniformMagneticField {
-				field: [2.0, 0.0, 0.0],
+				field: Vector3::new(2.0, 0.0, 0.0),
 			})
 			.with(quadrupole::QuadrupoleField3D { gradient: 1.0 })
 			.with(Position {
-				pos: [0.0, 0.0, 0.0],
+				pos: Vector3::new(0.0, 0.0, 0.0),
 			})
 			.build();
 
 		let sampler_entity = test_world
 			.create_entity()
 			.with(Position {
-				pos: [1.0, 1.0, 1.0],
+				pos: Vector3::new(1.0, 1.0, 1.0),
 			})
 			.with(MagneticFieldSampler::default())
 			.build();
@@ -163,7 +164,7 @@ pub mod tests {
 		let sampler = samplers.get(sampler_entity);
 		assert_eq!(
 			sampler.expect("entity not found").field,
-			[2.0 + 1.0, 1.0, -2.0]
+			Vector3::new(2.0 + 1.0, 1.0, -2.0)
 		);
 	}
 

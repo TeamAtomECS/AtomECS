@@ -1,3 +1,4 @@
+extern crate nalgebra;
 extern crate rand;
 extern crate specs;
 
@@ -13,7 +14,6 @@ pub struct Timestep {
 
 use crate::atom::*;
 use crate::constant;
-use crate::maths;
 
 /// # Euler Integration
 ///
@@ -43,11 +43,8 @@ impl<'a> System<'a> for EulerIntegrationSystem {
 }
 
 fn euler_update(vel: &mut Velocity, pos: &mut Position, force: &Force, mass: &Mass, dt: f64) {
-	pos.pos = maths::array_addition(&pos.pos, &maths::array_multiply(&vel.vel, dt));
-	vel.vel = maths::array_addition(
-		&vel.vel,
-		&maths::array_multiply(&force.force, 1.0 * dt / (constant::AMU * mass.value)),
-	);
+	pos.pos = pos.pos + vel.vel * dt;
+	vel.vel = vel.vel + force.force * dt / (constant::AMU * mass.value);
 }
 
 pub mod tests {
@@ -58,20 +55,28 @@ pub mod tests {
 	#[allow(unused_imports)]
 	use specs::{Builder, DispatcherBuilder, World};
 
+	extern crate nalgebra;
+	#[allow(unused_imports)]
+	use nalgebra::Vector3;
+
 	#[test]
 	fn test_euler() {
-		let mut pos = Position { pos: [1., 1., 1.] };
-		let mut vel = Velocity { vel: [0., 1., 0.] };
+		let mut pos = Position {
+			pos: Vector3::new(1., 1., 1.),
+		};
+		let mut vel = Velocity {
+			vel: Vector3::new(0., 1., 0.),
+		};
 		let time = 1.;
 		let mass = Mass {
 			value: 1. / constant::AMU,
 		};
 		let force = Force {
-			force: [1., 1., 1.],
+			force: Vector3::new(1., 1., 1.),
 		};
 		euler_update(&mut vel, &mut pos, &force, &mass, time);
-		assert_eq!(vel.vel, [1., 2., 1.]);
-		assert_eq!(pos.pos, [1., 2., 1.]);
+		assert_eq!(vel.vel, Vector3::new(1., 2., 1.));
+		assert_eq!(pos.pos, Vector3::new(1., 2., 1.));
 	}
 
 	/// Tests the [EulerIntegrationSystem] by creating a mock world and integrating the trajectory of one entity.
@@ -84,9 +89,9 @@ pub mod tests {
 			.build();
 		dispatcher.setup(&mut test_world.res);
 
-		let initial_position = [0.0, 0.1, 0.0];
-		let initial_velocity = [1.0, 1.5, 0.4];
-		let initial_force = [0.4, 0.6, -0.4];
+		let initial_position = Vector3::new(0.0, 0.1, 0.0);
+		let initial_velocity = Vector3::new(1.0, 1.5, 0.4);
+		let initial_force = Vector3::new(0.4, 0.6, -0.4);
 		let mass = 2.0 / constant::AMU;
 		let test_entity = test_world
 			.create_entity()
@@ -110,24 +115,10 @@ pub mod tests {
 
 		let velocities = test_world.read_storage::<Velocity>();
 		let velocity = velocities.get(test_entity).expect("entity not found");
-		let initial_acceleration =
-			maths::array_multiply(&initial_force, 1.0 / (&mass * constant::AMU));
-		assert_eq!(
-			velocity.vel,
-			maths::array_addition(
-				&initial_velocity,
-				&maths::array_multiply(&initial_acceleration, dt)
-			)
-		);
+		let initial_acceleration = &initial_force / (&mass * constant::AMU);
+		assert_eq!(velocity.vel, initial_velocity + initial_acceleration * dt);
 		let positions = test_world.read_storage::<Position>();
 		let position = positions.get(test_entity).expect("entity not found");
-		assert_eq!(
-			position.pos,
-			maths::array_addition(
-				&initial_position,
-				&maths::array_multiply(&initial_velocity, dt)
-			)
-		);
+		assert_eq!(position.pos, &initial_position + &initial_velocity * dt);
 	}
-
 }

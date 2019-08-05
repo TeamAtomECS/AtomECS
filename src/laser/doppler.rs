@@ -4,7 +4,6 @@ use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::gaussian::GaussianBeam;
 use super::sampler::LaserSamplers;
 use crate::atom::Velocity;
-use crate::maths;
 use specs::{Join, ReadStorage, System, WriteStorage}; //todo - change for a Direction component
 
 /// This system calculates the doppler shift for each atom in each cooling beam.
@@ -20,10 +19,8 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
     fn run(&mut self, (cooling, indices, gaussian, mut samplers, velocities): Self::SystemData) {
         for (cooling, index, gaussian) in (&cooling, &indices, &gaussian).join() {
             for (sampler, vel) in (&mut samplers, &velocities).join() {
-                sampler.contents[index.index].doppler_shift = maths::dot_product(
-                    &maths::array_multiply(&gaussian.direction, cooling.wavenumber()),
-                    &vel.vel,
-                );
+                sampler.contents[index.index].doppler_shift = 
+                vel.vel.dot(&(gaussian.direction * cooling.wavenumber()));
             }
         }
     }
@@ -40,6 +37,8 @@ pub mod tests {
     use crate::laser::sampler::{LaserSampler, LaserSamplers};
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
+    extern crate nalgebra;
+    use nalgebra::Vector3;
 
     #[test]
     fn test_calculate_doppler_shift_system() {
@@ -59,8 +58,8 @@ pub mod tests {
             })
             .with(CoolingLightIndex { index: 0 })
             .with(GaussianBeam {
-                direction: [1.0, 0.0, 0.0],
-                intersection: [0.0, 0.0, 0.0],
+                direction: Vector3::new(1.0, 0.0, 0.0),
+                intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
             })
@@ -70,7 +69,7 @@ pub mod tests {
         let sampler1 = test_world
             .create_entity()
             .with(Velocity {
-                vel: [atom_velocity, 0.0, 0.0],
+                vel: Vector3::new(atom_velocity, 0.0, 0.0),
             })
             .with(LaserSamplers {
                 contents: vec![LaserSampler::default()],

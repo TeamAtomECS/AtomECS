@@ -1,8 +1,9 @@
 extern crate specs;
+extern crate nalgebra;
 use super::MagneticFieldSampler;
 use crate::atom::Position;
-use crate::maths;
 use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
+use nalgebra::Vector3;
 
 /// A component representing a 3D quadrupole field.
 pub struct QuadrupoleField3D {
@@ -36,13 +37,9 @@ impl Sample3DQuadrupoleFieldSystem {
     /// `centre`: position of the quadrupole node, m
     ///
     /// `gradient`: quadrupole gradient, in Tesla/m
-    pub fn calculate_field(pos: &[f64; 3], centre: &[f64; 3], gradient: f64) -> [f64; 3] {
-        let rel_pos = maths::array_subtraction(&pos, &centre);
-        [
-            rel_pos[0] * gradient,
-            rel_pos[1] * gradient,
-            rel_pos[2] * -2. * gradient,
-        ]
+    pub fn calculate_field(pos: &Vector3<f64>, centre: &Vector3<f64>, gradient: f64) -> Vector3<f64> {
+        let rel_pos = pos-centre;
+        rel_pos.component_mul(&Vector3::new(gradient, gradient, -2.0*gradient))
     }
 }
 
@@ -60,7 +57,7 @@ impl<'a> System<'a> for Sample3DQuadrupoleFieldSystem {
                     &centre.pos,
                     quadrupole.gradient,
                 );
-                sampler.field = maths::array_addition(&quad_field, &sampler.field);
+                sampler.field = sampler.field + quad_field;
             }
         }
     }
@@ -70,14 +67,16 @@ impl<'a> System<'a> for Sample3DQuadrupoleFieldSystem {
 pub mod tests {
 
     use super::*;
+    extern crate nalgebra;
+    use nalgebra::Vector3;
 
     /// Tests the correct implementation of the quadrupole 3D field
     #[test]
     fn test_quadrupole3dfield() {
-        let pos = [1., 1., 1.];
-        let centre = [0., 1., 0.];
+        let pos = Vector3::new(1.0,1.0,1.0);
+        let centre = Vector3::new(0., 1., 0.);
         let gradient = 1.;
         let field = Sample3DQuadrupoleFieldSystem::calculate_field(&pos, &centre, gradient);
-        assert_eq!(field, [1., 0., -2.]);
+        assert_eq!(field, Vector3::new(1., 0., -2.));
     }
 }

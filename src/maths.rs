@@ -3,6 +3,8 @@ use crate::constant::EXP;
 use crate::constant::PI;
 extern crate rand;
 use rand::Rng;
+extern crate nalgebra;
+use nalgebra::Vector3;
 pub fn array_addition(a: &[f64; 3], b: &[f64; 3]) -> [f64; 3] {
 	//addition of 3D array
 	//checked
@@ -23,12 +25,12 @@ pub fn array_addition(a: &[f64; 3], b: &[f64; 3]) -> [f64; 3] {
 ///
 /// `dir`: vector pointing along the line.
 pub fn get_minimum_distance_line_point(
-	pos: &[f64; 3],
-	line_point: &[f64; 3],
-	dir: &[f64; 3],
+	pos: &Vector3<f64>,
+	line_point: &Vector3<f64>,
+	dir: &Vector3<f64>,
 ) -> f64 {
-	let rela_cood = array_addition(&pos, &array_multiply(&line_point, -1.));
-	let distance = modulus(&cross_product(&dir, &rela_cood)) / modulus(&dir);
+	let rela_cood = pos - line_point;
+	let distance = (dir.cross(&rela_cood) / dir.norm()).norm();
 	distance
 }
 
@@ -185,9 +187,9 @@ mod tests {
 
 	#[test]
 	fn test_minimum_distance_line_point() {
-		let pos = [1., 1., 1.];
-		let centre = [0., 1., 1.];
-		let dir = [1., 2., 2.];
+		let pos = Vector3::new(1., 1., 1.);
+		let centre = Vector3::new(0., 1., 1.);
+		let dir = Vector3::new(1., 2., 2.);
 		let distance = get_minimum_distance_line_point(&pos, &centre, &dir);
 		assert!(distance > 0.942, distance < 0.943);
 	}

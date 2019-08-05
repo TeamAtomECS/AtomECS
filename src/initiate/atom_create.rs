@@ -1,15 +1,17 @@
 use crate::maths;
 extern crate rand;
+extern crate nalgebra;
 use crate::constant;
 use crate::constant::PI;
 use crate::initiate::*;
 use rand::Rng;
 extern crate specs;
 use crate::atom::*;
+use nalgebra::Vector3;
 
 use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
-pub fn velocity_generate(t: f64, mass: f64, new_dir: &[f64; 3]) -> [f64; 3] {
+pub fn velocity_generate(t: f64, mass: f64, new_dir: &[f64; 3]) -> Vector3<f64> {
 	let v_mag = maths::maxwell_generate(t, mass);
 	let dir = maths::norm(&new_dir);
 	let dir_1 = maths::norm(&[1.0, 0.0, -dir[0] / dir[2]]);
@@ -29,7 +31,8 @@ pub fn velocity_generate(t: f64, mass: f64, new_dir: &[f64; 3]) -> [f64; 3] {
 	let dirf = maths::array_addition(&maths::array_multiply(&dir, theta.cos()), &dir_div);
 	println!("velocity{:?}", maths::array_multiply(&dirf, v_mag));
 	assert!(maths::modulus(&dirf) < 1.01 && maths::modulus(&dirf) > 0.99);
-	maths::array_multiply(&dirf, v_mag)
+	let v_out = maths::array_multiply(&dirf, v_mag);
+	Vector3::new(v_out[0], v_out[1], v_out[2])
 }
 
 /// Component representing an oven, which is a source of hot atoms.
@@ -82,11 +85,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				let pos1 = rng.gen_range(-0.5 * size[0], 0.5 * size[0]);
 				let pos2 = rng.gen_range(-0.5 * size[1], 0.5 * size[1]);
 				let pos3 = rng.gen_range(-0.5 * size[2], 0.5 * size[2]);
-				let start_position = [
-					oven_position.pos[0] + pos1,
-					oven_position.pos[1] + pos2,
-					oven_position.pos[2] + pos3,
-				];
+				let start_position = oven_position.pos + Vector3::new(pos1, pos2, pos3);
 				updater.insert(
 					new_atom,
 					Position {
@@ -96,9 +95,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				updater.insert(new_atom, Velocity { vel: new_vel });
 				updater.insert(
 					new_atom,
-					Force {
-						force: [0., 0., 0.],
-					},
+					Force::new()
 				);
 				updater.insert(new_atom, Mass { value: mass });
 				updater.insert(
@@ -121,23 +118,23 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 	}
 }
 
-pub struct AttachGravityToNewlyCreatedAtomsSystem;
+// pub struct AttachGravityToNewlyCreatedAtomsSystem;
 
-impl<'a> System<'a> for AttachGravityToNewlyCreatedAtomsSystem {
-	type SystemData = (
-		Entities<'a>,
-		ReadStorage<'a, Mass>,
-		ReadStorage<'a, NewlyCreated>,
-		Read<'a, LazyUpdate>,
-	);
-	fn run(&mut self, (ent, newly_created, mass, updater): Self::SystemData) {
-		for (ent, _nc, mass) in (&ent, &mass, &newly_created).join() {
-			updater.insert(
-				ent,
-				Gravity {
-					force: [0., 0., -mass.value * constant::AMU * constant::GC],
-				},
-			);
-		}
-	}
-}
+// impl<'a> System<'a> for AttachGravityToNewlyCreatedAtomsSystem {
+// 	type SystemData = (
+// 		Entities<'a>,
+// 		ReadStorage<'a, Mass>,
+// 		ReadStorage<'a, NewlyCreated>,
+// 		Read<'a, LazyUpdate>,
+// 	);
+// 	fn run(&mut self, (ent, newly_created, mass, updater): Self::SystemData) {
+// 		for (ent, _nc, mass) in (&ent, &mass, &newly_created).join() {
+// 			updater.insert(
+// 				ent,
+// 				Gravity {
+// 					force: [0., 0., -mass.value * constant::AMU * constant::GC],
+// 				},
+// 			);
+// 		}
+// 	}
+// }
