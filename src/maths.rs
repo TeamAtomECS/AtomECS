@@ -5,15 +5,6 @@ extern crate rand;
 use rand::Rng;
 extern crate nalgebra;
 use nalgebra::Vector3;
-pub fn array_addition(a: &[f64; 3], b: &[f64; 3]) -> [f64; 3] {
-	//addition of 3D array
-	//checked
-	let mut result = [0.0, 0.0, 0.0];
-	for i in 0..3 {
-		result[i] = a[i] + b[i];
-	}
-	result
-}
 
 /// Get miniminum distance between a point and a line.
 ///
@@ -32,42 +23,6 @@ pub fn get_minimum_distance_line_point(
 	let rela_cood = pos - line_point;
 	let distance = (dir.cross(&rela_cood) / dir.norm()).norm();
 	distance
-}
-
-/// Calculates a - b
-pub fn array_subtraction(a: &[f64; 3], b: &[f64; 3]) -> [f64; 3] {
-	let mut result = [0.0, 0.0, 0.0];
-	for i in 0..3 {
-		result[i] = a[i] - b[i];
-	}
-	result
-}
-
-pub fn array_multiply(a: &[f64; 3], b: f64) -> [f64; 3] {
-	//checked
-	[a[0] * b, a[1] * b, a[2] * b]
-}
-pub fn dot_product(a: &[f64; 3], b: &[f64; 3]) -> f64 {
-	//dot product
-	//checked
-	a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-pub fn cross_product(a: &[f64; 3], b: &[f64; 3]) -> [f64; 3] {
-	//cross product
-	//checked
-	[
-		a[1] * b[2] - a[2] * b[1],
-		a[2] * b[0] - a[0] * b[2],
-		a[0] * b[1] - a[1] * b[0],
-	]
-}
-pub fn modulus(a: &[f64; 3]) -> f64 {
-	//checked
-	(a[0].powf(2.0) + a[1].powf(2.0) + a[2].powf(2.0)).powf(0.5)
-}
-
-pub fn norm(a: &[f64; 3]) -> [f64; 3] {
-	array_multiply(&a, 1.0 / modulus(&a))
 }
 
 pub fn gaussian_dis(std: f64, distance: f64) -> f64 {
@@ -158,23 +113,6 @@ pub fn random_direction() -> [f64; 3] {
 #[cfg(test)]
 mod tests {
 	use super::*;
-
-	#[test]
-	fn array_algebra() {
-		assert_eq!(
-			array_addition(&[1., 1., 1.], &[10., 10., 10.]),
-			[11., 11., 11.]
-		);
-		assert_eq!(array_multiply(&[1., 2., 3.], 10.), [10., 20., 30.]);
-		assert_eq!(dot_product(&[1., 2., 3.], &[3., 2., 1.]), 10.);
-		assert_eq!(cross_product(&[1., 2., 3.], &[3., 2., 1.]), [-4., 8., -4.]);
-		assert_eq!(modulus(&[1., 2., 2.]), 3.);
-		assert_eq!(norm(&[1., 2., 2.]), [1. / 3., 2. / 3., 2. / 3.]);
-		assert_eq!(
-			array_addition(&[1.0, 1.5, 0.4], &[0.2, 0.3, -0.2]),
-			[1.2, 1.8, 0.2]
-		);
-	}
 
 	#[test]
 	fn distribution_test() {

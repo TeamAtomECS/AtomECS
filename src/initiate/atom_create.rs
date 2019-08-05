@@ -1,6 +1,6 @@
 use crate::maths;
-extern crate rand;
 extern crate nalgebra;
+extern crate rand;
 use crate::constant;
 use crate::constant::PI;
 use crate::initiate::*;
@@ -11,28 +11,26 @@ use nalgebra::Vector3;
 
 use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
-pub fn velocity_generate(t: f64, mass: f64, new_dir: &[f64; 3]) -> Vector3<f64> {
+pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>) -> Vector3<f64> {
 	let v_mag = maths::maxwell_generate(t, mass);
-	let dir = maths::norm(&new_dir);
-	let dir_1 = maths::norm(&[1.0, 0.0, -dir[0] / dir[2]]);
-	let dir_2 = maths::norm(&[
+	let dir = &new_dir.normalize();
+	let dir_1 = Vector3::new(1.0, 0.0, -dir[0] / dir[2]).normalize();
+	let dir_2 = Vector3::new(
 		1.0,
 		(dir[1].powf(2.0) - 1.0) / dir[0] / dir[1],
 		dir[2] / dir[0],
-	]);
+	)
+	.normalize();
 	let mut rng = rand::thread_rng();
 	let theta = maths::jtheta_gen();
 	let theta2 = rng.gen_range(0.0, 2.0 * PI);
 	println!("angle one {},angle two {}", theta, theta2);
-	let dir_div = maths::array_addition(
-		&maths::array_multiply(&dir_1, theta.sin() * theta2.cos()),
-		&maths::array_multiply(&dir_2, theta.sin() * theta2.sin()),
-	);
-	let dirf = maths::array_addition(&maths::array_multiply(&dir, theta.cos()), &dir_div);
-	println!("velocity{:?}", maths::array_multiply(&dirf, v_mag));
-	assert!(maths::modulus(&dirf) < 1.01 && maths::modulus(&dirf) > 0.99);
-	let v_out = maths::array_multiply(&dirf, v_mag);
-	Vector3::new(v_out[0], v_out[1], v_out[2])
+	let dir_div = dir_1 * theta.sin() * theta2.cos() + dir_2 * theta.sin() * theta2.sin();
+	let dirf = dir * theta.cos() + dir_div;
+	assert!(dirf.norm() < 1.01 && dirf.norm() > 0.99);
+	let v_out = dirf * v_mag;
+	println!("velocity{:?}", v_out);
+	v_out
 }
 
 /// Component representing an oven, which is a source of hot atoms.
@@ -44,7 +42,7 @@ pub struct Oven {
 	pub size: [f64; 3],
 
 	/// A vector denoting the direction of the oven.
-	pub direction: [f64; 3],
+	pub direction: Vector3<f64>,
 
 	/// Number of atoms output by the oven every time step
 	pub number: u64,
@@ -77,11 +75,11 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 			// the natural abundancies of Sr or Rb, or an enriched source of Potassium. Leave as
 			// 87 for now.
 			let mass = 87.0;
-			let dir = oven.direction.clone();
 			let size = oven.size.clone();
 			for _i in 0..oven.number {
 				let new_atom = entities.create();
-				let new_vel = velocity_generate(oven.temperature, mass * constant::AMU, &dir);
+				let new_vel =
+					velocity_generate(oven.temperature, mass * constant::AMU, &oven.direction);
 				let pos1 = rng.gen_range(-0.5 * size[0], 0.5 * size[0]);
 				let pos2 = rng.gen_range(-0.5 * size[1], 0.5 * size[1]);
 				let pos3 = rng.gen_range(-0.5 * size[2], 0.5 * size[2]);
@@ -93,10 +91,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 					},
 				);
 				updater.insert(new_atom, Velocity { vel: new_vel });
-				updater.insert(
-					new_atom,
-					Force::new()
-				);
+				updater.insert(new_atom, Force::new());
 				updater.insert(new_atom, Mass { value: mass });
 				updater.insert(
 					new_atom,
