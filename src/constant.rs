@@ -27,7 +27,7 @@ pub const TRANSWIDTH:f64 = PI* 64e6;
 pub const C:f64 = 2.998e8;
 
 
-pub const ATOMFREQUENCY:f64 = C / 461e-9+ 2./PI*TRANSWIDTH;
+pub const ATOMFREQUENCY:f64 = C / 461e-9;
 
 
 pub const MUP:f64 = -BOHRMAG;

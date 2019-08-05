@@ -71,7 +71,7 @@ pub fn create_simulation_dispatcher()->Dispatcher<'static,'static>{
 
 /// add resources that is necessary easily
 pub fn register_resources_lazy(mut world: &mut World){
-    world.add_resource(Timestep{delta:1e-6});
+    world.add_resource(Timestep{delta:5e-6});
     world.add_resource(Step{n:0});
 	world.add_resource(AtomOuput{number_of_atom:0,total_velocity:[0.,0.,0.]});
 }

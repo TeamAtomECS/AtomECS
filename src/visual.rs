@@ -2,7 +2,7 @@
 use specs::{
 	VecStorage,Component, Entities, Join, LazyUpdate, ReadStorage, System, WriteStorage,
 };
-
+use std::string::String;
 use crate::atom::{Position,Atom};
 extern crate gnuplot;
 use gnuplot::*;
@@ -36,11 +36,12 @@ impl <'a> System <'a> for PlotSystem{
         let mut fg = Figure::new();
         fg.axes3d()
 	            .set_title("A plot", &[])
-	            .set_x_label("x", &[])
-	            .set_y_label("y", &[])
-                .set_z_label("z", &[]);
+	            .set_x_label("x direction", &[])
+	            .set_y_label("y direction", &[])
+                .set_z_label("z direction", &[]);
+                let mut n = 1;
         for (record,atom) in (&record,&atom).join(){
-            
+            n = n + 1;
             //println!("what{:?}",record.x);
             fg.axes3d()
 	            .set_title("A plot", &[])
@@ -48,7 +49,7 @@ impl <'a> System <'a> for PlotSystem{
 		            &record.x,
 		            &record.y,
                     &record.z,
-	            	&[Caption("path")],
+	            	&[Caption(&n.to_string())],
 	        );
             
         }

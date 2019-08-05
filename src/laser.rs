@@ -138,8 +138,9 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
 			let br = mag.magnitude;
 
 			let laser_intensity = get_gaussian_beam_intensity(&laser, &pos);
-			let s0 = laser_intensity / atom.saturation_intensity;
-			let laser_omega = maths::modulus(&laser.wavenumber) * constant::C;
+			let s0 =12. ;
+			//let s0 = laser_intensity / atom.saturation_intensity;
+			let laser_omega = laser.frequency * constant::PI*2.;
 
 
 				let costheta = maths::dot_product(&laser.wavenumber, &mag.field)

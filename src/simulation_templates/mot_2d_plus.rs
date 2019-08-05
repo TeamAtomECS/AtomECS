@@ -12,6 +12,8 @@ use crate::output::{PrintOutputSytem,Detector,DetectingAtomSystem,PrintDetectSys
 use crate::initiate::ecs;
 use crate::visual::PlotSystem;
 
+use crate::constant::TRANSWIDTH as TRANSWIDTH;
+
 use crate::fileinput::Parameters2D;
 #[allow(dead_code)]
 pub fn create(){
@@ -59,7 +61,7 @@ fn mot2d_entity_create(world:&mut World,para:Option<Parameters2D>){
 	saturation_intensity: constant::SATINTEN
 	};
 	let mag= QuadrupoleField3D{
-		gradient:0.002
+		gradient:1100.
 	};
 	world.create_entity().with(mag).with(Position{pos:[0.,0.,0.]}).build();
 	// adding all six lasers
@@ -69,7 +71,7 @@ fn mot2d_entity_create(world:&mut World,para:Option<Parameters2D>){
 		polarization:1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::C/461e-9
+		frequency:constant::C/(461e-9)-1.5/2./PI*TRANSWIDTH
 	};
 		let laser_2 = Laser{
 		centre:[0.,0.,0.],
@@ -77,7 +79,7 @@ fn mot2d_entity_create(world:&mut World,para:Option<Parameters2D>){
 		polarization:1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::C/461e-9
+		frequency:constant::C/(461e-9)-1.5/2./PI*TRANSWIDTH
 	};
 		let laser_3 = Laser{
 		centre:[0.,0.,0.],
@@ -85,7 +87,7 @@ fn mot2d_entity_create(world:&mut World,para:Option<Parameters2D>){
 		polarization:-1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::C/461e-9
+		frequency:constant::C/(461e-9)-1.5/2./PI*TRANSWIDTH
 	};
 		let laser_4 = Laser{
 		centre:[0.,0.,0.],
@@ -93,7 +95,7 @@ fn mot2d_entity_create(world:&mut World,para:Option<Parameters2D>){
 		polarization:-1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::C/461e-9
+		frequency:constant::C/(461e-9)-1.5/2./PI*TRANSWIDTH
 	};
 		let laser_5 = Laser{
 		centre:[0.,0.,0.],
@@ -101,8 +103,17 @@ fn mot2d_entity_create(world:&mut World,para:Option<Parameters2D>){
 		polarization:-1.,
 		power:10.,
 		std:0.1,
-		frequency:constant::C/461e-9
+		frequency:constant::C/(461e-9)-1.5/2./PI*TRANSWIDTH
 	};
+		let laser_retard = Laser{
+		centre:[0.,0.,0.],
+		wavenumber:[-2.0*PI/(461e-9),0.,0.],
+		polarization:-1.,
+		power:10.,
+		std:0.1,
+		frequency:constant::C/(461e-9)-3.5/2./PI*TRANSWIDTH
+		};
+	
 
 	//six laser introduced
 	world.create_entity().with(laser_1).build();
@@ -110,14 +121,15 @@ fn mot2d_entity_create(world:&mut World,para:Option<Parameters2D>){
 	world.create_entity().with(laser_3).build();
 	world.create_entity().with(laser_4).build();
 	world.create_entity().with(laser_5).build();
+	world.create_entity().with(laser_retard).build();
 	//detector introduced
 	
-	//world.create_entity().with(Detector{centre:[0.2,0.,0.],range:[0.05,0.1,0.1]}).build();
+	world.create_entity().with(Detector{centre:[0.2,0.,0.],range:[0.05,0.1,0.1]}).build();
 	
 	// initiate
 	// build a oven
 	world.create_entity()
-	.with(Oven{temperature:200.,direction:[1e-6,1e-6,1.],number:10,size:[1e-2,1e-2,1e-2]})
+	.with(Oven{temperature:300.,direction:[1e-6,1e-6,1.],number:10,size:[1e-5,1e-5,1e-5]})
 	.with(rb_atom)
 	.with(Mass{value:87.})
 	.with(Position{pos:[0.0,0.0,0.0]})
