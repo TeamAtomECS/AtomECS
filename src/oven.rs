@@ -9,27 +9,23 @@ extern crate specs;
 use crate::atom::*;
 use nalgebra::Vector3;
 
-use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
+use specs::{
+	Component, DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System,
+	VecStorage, World,
+};
 
 pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>) -> Vector3<f64> {
 	let v_mag = maths::maxwell_generate(t, mass);
 	let dir = &new_dir.normalize();
-	let dir_1 = Vector3::new(1.0, 0.0, -dir[0] / dir[2]).normalize();
-	let dir_2 = Vector3::new(
-		1.0,
-		(dir[1].powf(2.0) - 1.0) / dir[0] / dir[1],
-		dir[2] / dir[0],
-	)
-	.normalize();
+	let dir_1 = new_dir.cross(&Vector3::new(2.0, 1.0, 0.5)).normalize();
+	let dir_2 = new_dir.cross(&dir_1).normalize();
+
 	let mut rng = rand::thread_rng();
 	let theta = maths::jtheta_gen();
 	let theta2 = rng.gen_range(0.0, 2.0 * PI);
-	println!("angle one {},angle two {}", theta, theta2);
 	let dir_div = dir_1 * theta.sin() * theta2.cos() + dir_2 * theta.sin() * theta2.sin();
 	let dirf = dir * theta.cos() + dir_div;
-	assert!(dirf.norm() < 1.01 && dirf.norm() > 0.99);
 	let v_out = dirf * v_mag;
-	println!("velocity{:?}", v_out);
 	v_out
 }
 
@@ -106,9 +102,20 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				);
 				updater.insert(new_atom, Atom);
 				updater.insert(new_atom, NewlyCreated);
-
-				println!("atom created");
 			}
 		}
 	}
+}
+
+/// Adds required systems to the dispatcher.
+pub fn add_systems_to_dispatch(
+	builder: DispatcherBuilder<'static, 'static>,
+	deps: &[&str],
+) -> DispatcherBuilder<'static, 'static> {
+	builder.with(OvenCreateAtomsSystem, "", deps)
+}
+
+/// Registers resources required by the module to the ecs world.
+pub fn register_components(world: &mut World) {
+	world.register::<Oven>();
 }

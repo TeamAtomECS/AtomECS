@@ -12,6 +12,9 @@ use crate::constant::{C,BOHRMAG};
 pub struct Position {
 	pub pos: Vector3<f64>,
 }
+impl Position {
+	pub fn new() -> Self{ Position { pos: Vector3::new(0.0,0.0,0.0)}}
+}
 
 impl Component for Position {
 	type Storage = VecStorage<Self>;

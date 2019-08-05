@@ -100,7 +100,7 @@ impl<'a> System<'a> for AttachIndexToCoolingLightSystem {
 pub mod tests {
 
 	use super::*;
-
+	use assert_approx_eq::assert_approx_eq;
 	extern crate specs;
 	use specs::{Builder, RunNow, World};
 
@@ -143,7 +143,7 @@ pub mod tests {
 	}
 
 	#[test]
-	fn text_add_index_component_to_cooling_lights() {
+	fn test_add_index_component_to_cooling_lights() {
 		let mut test_world = World::new();
 		test_world.register::<CoolingLightIndex>();
 		test_world.register::<CoolingLight>();
@@ -166,6 +166,16 @@ pub mod tests {
 				.get(test_entity)
 				.is_none(),
 			false
+		);
+	}
+
+	#[test]
+	fn test_for_species() {
+		let detuning = 12.0;
+		let light = CoolingLight::for_species(AtomInfo::rubidium(), detuning, 1.0);
+		assert_approx_eq!(
+			light.frequency(),
+			AtomInfo::rubidium().frequency + 1.0e6 * detuning
 		);
 	}
 }

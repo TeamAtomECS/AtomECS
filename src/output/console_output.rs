@@ -4,9 +4,9 @@ use crate::integrator::{Step, Timestep};
 
 use specs::{Join, ReadExpect, ReadStorage, System};
 
-pub struct PrintOutputSytem;
+pub struct ConsoleOutputSystem;
 
-impl<'a> System<'a> for PrintOutputSytem {
+impl<'a> System<'a> for ConsoleOutputSystem {
     // print the output (whatever you want) to the console
     type SystemData = (
         ReadStorage<'a, Position>,
@@ -17,13 +17,18 @@ impl<'a> System<'a> for PrintOutputSytem {
     );
     fn run(&mut self, (pos, vel, atom, step, timestep): Self::SystemData) {
         let _time = timestep.delta * step.n as f64;
-        for (vel, pos, _) in (&vel, &pos, &atom).join() {
-            if step.n % 100 == 0 {
-                println!(
-                    "step {}: position{:?},velocity{:?},",
-                    step.n, pos.pos, vel.vel
-                );
+        let mut atom_number = 0;
+        if step.n % 100 == 0 {
+            for (vel, pos, _) in (&vel, &pos, &atom).join() {
+                if atom_number == 0 {
+                    println!(
+                        "step {}: position{:?},velocity{:?},",
+                        step.n, pos.pos, vel.vel
+                    );
+                }
+                atom_number = atom_number + 1;
             }
+            println!("Simulating {} atoms", atom_number);
         }
     }
 }
