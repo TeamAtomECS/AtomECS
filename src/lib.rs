@@ -4,6 +4,7 @@ pub mod atom;
 pub mod constant;
 pub mod destructor;
 pub mod ecs;
+pub mod fileinput;
 pub mod initiate;
 pub mod integrator;
 pub mod laser;

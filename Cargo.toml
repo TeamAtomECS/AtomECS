@@ -8,6 +8,8 @@ edition = "2018"
 specs="0.14.0"
 specs-derive = "0.4.0"
 rand = "0.4.0"
+kiss3d = "0.8.0"
+yaml-rust = "0.4"
 assert_approx_eq = "1.1.0"
 nalgebra = "0.18"
 
