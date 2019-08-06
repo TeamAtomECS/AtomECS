@@ -125,7 +125,7 @@ fn mot2d_entity_create(world: &mut World) {
 	world
 		.create_entity()
 		.with(Oven {
-			temperature: 400.,
+			temperature: 100.,
 			direction: Vector3::z(),
 			number: 1,
 			size: [1e-2, 1e-2, 1e-2],

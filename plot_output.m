@@ -15,7 +15,7 @@ while ishandle(fh) && iter <= length(pos)
     zlim([-0.5 0.5]);
     
     
-    pause(0.1);
+    pause(0.01);
 end
 
 p = pos{end};
