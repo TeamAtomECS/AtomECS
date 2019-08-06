@@ -122,34 +122,34 @@ fn mot2d_entity_create(world: &mut World) {
 		.build();
 
 	// Add oven
-	// world
-	// 	.create_entity()
-	// 	.with(Oven {
-	// 		temperature: 20.,
-	// 		direction: Vector3::z(),
-	// 		number: 1,
-	// 		size: [1e-2, 1e-2, 1e-2],
-	// 	})
-	// 	.with(AtomInfo::rubidium())
-	// 	.with(Mass { value: 87. })
-	// 	.with(Position {
-	// 		pos: Vector3::new(0.0, 0.0, 0.0),
-	// 	})
-	// 	.build();
-
-	// Add single atom
 	world
 		.create_entity()
-		.with(Position {
-			pos: Vector3::new(0.001, 0.0, 0.0),
+		.with(Oven {
+			temperature: 400.,
+			direction: Vector3::z(),
+			number: 1,
+			size: [1e-2, 1e-2, 1e-2],
 		})
-		.with(Velocity {
-			vel: Vector3::new(-1.0, 0.0, 0.0),
-		})
-		.with(NewlyCreated {})
-		.with(Force::new())
-		.with(Atom {})
 		.with(AtomInfo::rubidium())
 		.with(Mass { value: 87. })
+		.with(Position {
+			pos: Vector3::new(0.0, 0.0, -0.1),
+		})
 		.build();
+
+	// Add single atom
+	// world
+	// 	.create_entity()
+	// 	.with(Position {
+	// 		pos: Vector3::new(0.001, 0.0, 0.0),
+	// 	})
+	// 	.with(Velocity {
+	// 		vel: Vector3::new(-1.0, 0.0, 0.0),
+	// 	})
+	// 	.with(NewlyCreated {})
+	// 	.with(Force::new())
+	// 	.with(Atom {})
+	// 	.with(AtomInfo::rubidium())
+	// 	.with(Mass { value: 87. })
+	// 	.build();
 }

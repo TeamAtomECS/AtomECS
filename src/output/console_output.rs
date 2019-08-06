@@ -19,13 +19,7 @@ impl<'a> System<'a> for ConsoleOutputSystem {
         let _time = timestep.delta * step.n as f64;
         let mut atom_number = 0;
         if step.n % 100 == 0 {
-            for (vel, pos, _) in (&vel, &pos, &atom).join() {
-                if atom_number == 0 {
-                    println!(
-                        "step {}: position{:?},velocity{:?},",
-                        step.n, pos.pos, vel.vel
-                    );
-                }
+            for (_vel, _pos, _) in (&vel, &pos, &atom).join() {
                 atom_number = atom_number + 1;
             }
             println!("Simulating {} atoms", atom_number);

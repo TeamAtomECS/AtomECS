@@ -10,7 +10,7 @@ impl<'a> System<'a> for DestroyAtomsSystem {
 
     fn run(&mut self, (ents, position): Self::SystemData) {
         for (entity, position) in (&ents, &position).join() {
-            if position.pos.norm_squared() > (0.1_f64).powf(2.0) {
+            if position.pos.norm_squared() > (0.5_f64).powf(2.0) {
                 ents.delete(entity);
             }
         }

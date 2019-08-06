@@ -10,13 +10,13 @@ use std::io::prelude::*;
 use std::path::Path;
 
 pub struct FileOutputSystem {
-    pub frequency: i32,
+    pub frequency: u64,
     pub file_name: String,
     output_file: File,
 }
 
 impl FileOutputSystem {
-    pub fn new(file_name: String, frequency: i32) -> FileOutputSystem {
+    pub fn new(file_name: String, frequency: u64) -> FileOutputSystem {
         // Create a path to the desired file
         let path = Path::new(&file_name);
         let display = path.display();
@@ -44,15 +44,16 @@ impl<'a> System<'a> for FileOutputSystem {
 
     fn run(&mut self, (positions, atoms, step): Self::SystemData) {
         // Write number of atoms
+        if step.n % self.frequency == 0 {
         let mut ctr = 0;
         for _pos in (&positions, &atoms).join() {
             ctr = ctr + 1;
         }
-        //write!(self.output_file, "{}\n", ctr);
+        write!(self.output_file, "{}\n", ctr);
 
         //Write (x,y,z) for each atom
         let precision = 10;
-        for (pos,_) in (&positions, &atoms).join() {
+        for (pos, _) in (&positions, &atoms).join() {
             write!(
                 self.output_file,
                 "{:.8},{:.8},{:.8}\n",
@@ -60,6 +61,7 @@ impl<'a> System<'a> for FileOutputSystem {
                 pos.pos.index(1),
                 pos.pos.index(2)
             );
+        }
         }
     }
 }
