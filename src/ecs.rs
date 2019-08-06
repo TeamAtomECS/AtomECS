@@ -6,6 +6,7 @@ use crate::integrator::{Step, Timestep};
 use crate::laser;
 use crate::magnetic;
 use crate::output::console_output::ConsoleOutputSystem;
+#[allow(unused_imports)]
 use crate::output::file_output::FileOutputSystem;
 use crate::oven;
 use specs::{Dispatcher, DispatcherBuilder, World};
@@ -31,7 +32,7 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 	builder.add_barrier();
 	builder = builder.with(EulerIntegrationSystem, "euler_integrator", &[]);
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
-	//builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
+	builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
 	builder = builder.with(DestroyAtomsSystem, "", &[]);
 	builder.build()
 }

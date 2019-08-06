@@ -22,7 +22,7 @@ impl<'a> System<'a> for ConsoleOutputSystem {
             for (_vel, _pos, _) in (&vel, &pos, &atom).join() {
                 atom_number = atom_number + 1;
             }
-            println!("Simulating {} atoms", atom_number);
+            println!("Step {}: atom_number={}", step.n, atom_number);
         }
     }
 }
