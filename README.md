@@ -2,12 +2,12 @@
 
 Simulate laser-cooled atoms using rust and `specs`.
 
-# Intro
+## Intro
 
 The program is structured using the Entity-Component-System (ECS) design pattern, implemented using the [specs](https://github.com/slide-rs/specs) crate.
 Functionality is stored throughout several modules, as detailed below.
 
-# Modules:
+## Modules:
 
 | Module      | Description |
 |-------------|-------------|
@@ -22,9 +22,8 @@ Functionality is stored throughout several modules, as detailed below.
 |`initiate`   | Components and systems used to initiate entities during the simulation. |
 |`ecs`        | Easy functions to setup the simulation dispatcher and world resources. |
 |`simulation_templates`| Well, simulation templates... |
-|-------------|-------------|
 
-# Components:
+## Components:
 
 We outline a few of the key components here.
 
@@ -36,14 +35,13 @@ We outline a few of the key components here.
 |`Position`, `Velocity`, `Mass` | No need for any explanation. |
 |`Detector`,`RingDetector` | These detectors count the number of atoms that enter a defined region. The detector systems delete the atoms and store the relevant data. |
 |`NewlyCreated`        | A marker that indicates an entity is newly created. This signals to other modules to initialize required components. The marker is removed by the `DeflagSystem`. |
-|----------------------|-------------|
 
 
-# Systems
+## Systems
 
 TODO
 
-## Execution Order
+### Execution Order
 
 * `laser` Systems execute after the `magnetic` ones.
 * `DeflagSystem` is used to remove the `NewlyCreated` component. The removal is done through a `specs::LazyUpdate`, so it is actually enacted at the end of the frame. As such, the order with respect to initialiser systems is not important.
