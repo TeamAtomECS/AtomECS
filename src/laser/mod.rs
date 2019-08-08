@@ -78,6 +78,10 @@ pub fn add_systems_to_dispatch(
 			"calculate_cooling_forces",
 			&["calculate_doppler_shift", "sample_gaussian_beam_intensity"],
 		)
+		.with(force::RandomWalkSystem,
+		"random_walk_system",
+		&["sample_gaussian_beam_intensity"]
+		)
 }
 
 /// Registers resources required by magnetics to the ecs world.

@@ -1,11 +1,17 @@
 extern crate specs;
-use specs::{Join, ReadStorage, System, WriteStorage};
+use rand::Rng;
+use specs::{Join, ReadStorage, System, WriteStorage,ReadExpect};
 use crate::constant;
+use crate::atom::{Atom,AtomInfo};
+extern crate nalgebra;
+use nalgebra::Vector3;
+use crate::maths;
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::gaussian::GaussianBeam;
 use super::sampler::LaserSamplers;
-use crate::atom::AtomInfo;
+
 use crate::atom::Force;
+use crate::integrator::Timestep;
 use crate::constant::{HBAR, PI};
 use crate::magnetic::MagneticFieldSampler;
 
@@ -78,6 +84,48 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
     }
 }
 
+pub struct RandomWalkSystem;
+
+impl<'a> System<'a> for RandomWalkSystem {
+    type SystemData = (
+        WriteStorage<'a, Force>,
+        ReadStorage<'a, LaserSamplers>,
+        ReadStorage<'a, Atom>,
+        ReadStorage<'a,AtomInfo>,
+        ReadExpect<'a,Timestep>,
+    );
+
+    fn run(&mut self,(mut force,samplers,_atom,atom_info,timestep):Self::SystemData){
+        for (mut force, samplers,_,atom_info) in (&mut force, &samplers,&_atom,&atom_info).join(){
+            let mut total_force = 0.;
+            let omega = 2.0 * constant::PI * atom_info.frequency;
+            for sampler in samplers.contents.iter(){
+                total_force = total_force + sampler.force.norm();
+            }
+            let force_one_atom = constant::HBAR * omega / timestep.delta;
+            let mut number_collision = total_force / force_one_atom;
+            let mut force_real = Vector3::new(0.,0.,0.);
+            let mut rng = rand::thread_rng();
+            loop{
+                if number_collision >1.{
+                    force_real = force_real + force_one_atom * maths::random_direction();
+                    number_collision = number_collision -1.;
+                }
+                else{
+                    	
+	                let luck = rng.gen_range(0.0, 1.0);
+                    if luck < number_collision{
+                        force_real = force_real + force_one_atom * maths::random_direction();
+                        break
+                    }
+                    else{
+                        break
+                    }
+                }
+            }
+        }
+    }
+}
 #[cfg(test)]
 pub mod tests {
 

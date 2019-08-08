@@ -98,15 +98,15 @@ pub fn jtheta_gen() -> f64 {
 		}
 	}
 }
-pub fn random_direction() -> [f64; 3] {
+pub fn random_direction() -> Vector3<f64> {
 	let mut rng = rand::thread_rng();
 	let angle1 = rng.gen_range(0.0, PI);
 	let angle2 = rng.gen_range(0., 2. * PI);
-	let result = [
+	let result = Vector3::new (
 		angle1.cos(),
 		angle1.sin() * angle2.sin(),
 		angle1.sin() * angle2.cos(),
-	];
+	);
 	//println!("{:?}",result);
 	result
 }
