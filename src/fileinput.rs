@@ -61,7 +61,7 @@ struct LaserArchetype {
 /// An atomic oven
 #[derive(Deserialize, Serialize)]
 struct OvenArchetype {
-	pub oven: Oven,
+	// pub oven: Oven,
 	pub pos: Position,
 	pub mass: Mass,
 	pub atoms: AtomInfo,

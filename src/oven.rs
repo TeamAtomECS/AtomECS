@@ -29,15 +29,18 @@ pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>) -> Vector3<f
 	let v_out = dirf * v_mag;
 	v_out
 }
-
+pub enum OvenAperture{
+	Cubic{size:[f64;3]},
+	Circular{radius:f64,thickness:f64}
+}
 /// Component representing an oven, which is a source of hot atoms.
-#[derive(Deserialize,Serialize)]
+
 pub struct Oven {
 	/// Temperature of the oven, in Kelvin
 	pub temperature: f64,
 
 	/// Size of the oven's aperture, SI units of metres.
-	pub size: [f64; 3],
+	pub aperture: OvenAperture,
 
 	/// A vector denoting the direction of the oven.
 	pub direction: Vector3<f64>,
@@ -49,7 +52,31 @@ pub struct Oven {
 impl Component for Oven {
 	type Storage = VecStorage<Self>;
 }
-
+impl Oven{
+	pub fn PositionRandom(&self) -> Vector3<f64>{
+		let mut rng = rand::thread_rng();
+		let mut start_position = Vector3::new(0.,0.,0.);
+		match self.aperture{
+			OvenAperture::Cubic{size}=>{
+				let size =size.clone();
+				let pos1 = rng.gen_range(-0.5 * size[0], 0.5 * size[0]);
+				let pos2 = rng.gen_range(-0.5 * size[1], 0.5 * size[1]);
+				let pos3 = rng.gen_range(-0.5 * size[2], 0.5 * size[2]);
+				start_position = Vector3::new(pos1, pos2, pos3);
+			}
+			OvenAperture::Circular{radius,thickness} =>{
+				let dir = self.direction.normalize();
+				let dir_1 = dir.cross(&Vector3::new(2.0, 1.0, 0.5)).normalize();
+				let dir_2 = dir.cross(&dir_1).normalize();
+				let theta = rng.gen_range(0.,2.*constant::PI);
+				let r = rng.gen_range(0.,radius);
+				let h = rng.gen_range(-0.5*thickness,0.5*thickness);
+				start_position = dir*h + dir_1 * theta.sin() + dir_2 * theta.cos();
+			}
+		}
+		start_position
+	}
+}
 /// This system creates atoms from an oven source.
 ///
 /// The oven points in the direction [Oven.direction].
@@ -73,15 +100,11 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 			// the natural abundancies of Sr or Rb, or an enriched source of Potassium. Leave as
 			// 87 for now.
 			let mass = 87.0;
-			let size = oven.size.clone();
 			for _i in 0..oven.number {
 				let new_atom = entities.create();
 				let new_vel =
 					velocity_generate(oven.temperature, mass * constant::AMU, &oven.direction);
-				let pos1 = rng.gen_range(-0.5 * size[0], 0.5 * size[0]);
-				let pos2 = rng.gen_range(-0.5 * size[1], 0.5 * size[1]);
-				let pos3 = rng.gen_range(-0.5 * size[2], 0.5 * size[2]);
-				let start_position = oven_position.pos + Vector3::new(pos1, pos2, pos3);
+				let start_position = oven_position.pos + oven.PositionRandom();
 				updater.insert(
 					new_atom,
 					Position {

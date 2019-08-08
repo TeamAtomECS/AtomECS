@@ -6,7 +6,7 @@ use crate::initiate::NewlyCreated;
 use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::magnetic::quadrupole::QuadrupoleField3D;
-use crate::oven::Oven;
+use crate::oven::{Oven,OvenAperture};
 use specs::{Builder, Dispatcher, World};
 extern crate nalgebra;
 use nalgebra::Vector3;
@@ -130,7 +130,7 @@ fn mot2d_entity_create(world: &mut World) {
 			temperature: 100.,
 			direction: Vector3::z(),
 			number: 1,
-			size: [1e-2, 1e-2, 1e-2],
+			aperture:OvenAperture::Cubic{size:[0.,0.,0.]}
 		})
 		.with(AtomInfo::rubidium())
 		.with(Mass { value: 87. })
