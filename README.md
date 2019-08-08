@@ -2,6 +2,9 @@
 
 Simulate laser-cooled atoms using rust and `specs`.
 
+_Written by Xuhui Chen and Elliot Bentine_
+____________________________________
+
 ## Intro
 
 The program is structured using the Entity-Component-System (ECS) design pattern, implemented using the [specs](https://github.com/slide-rs/specs) crate.
