@@ -39,10 +39,12 @@ impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 		ReadStorage<'a, Position>,
 	);
 	fn run(&mut self, (cooling, indices, gaussian, mut samplers, positions): Self::SystemData) {
-		for (_, index, gaussian) in (&cooling, &indices, &gaussian).join() {
+		for (cooling, index, gaussian) in (&cooling, &indices, &gaussian).join() {
 			for (sampler, pos) in (&mut samplers, &positions).join() {
 				sampler.contents[index.index].intensity =
 					get_gaussian_beam_intensity(&gaussian, &pos);
+				sampler.contents[index.index].polarization = cooling.polarization;
+				sampler.contents[index.index].wavevector = gaussian.direction*cooling.wavenumber();
 			}
 		}
 	}

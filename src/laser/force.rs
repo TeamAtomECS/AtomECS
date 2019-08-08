@@ -1,6 +1,6 @@
 extern crate specs;
 use specs::{Join, ReadStorage, System, WriteStorage};
-
+use crate::constant;
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::gaussian::GaussianBeam;
 use super::sampler::LaserSamplers;
@@ -18,43 +18,41 @@ use crate::magnetic::MagneticFieldSampler;
 pub struct CalculateCoolingForcesSystem;
 impl<'a> System<'a> for CalculateCoolingForcesSystem {
     type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
         ReadStorage<'a, GaussianBeam>,
         ReadStorage<'a, MagneticFieldSampler>,
-        ReadStorage<'a, LaserSamplers>,
+        WriteStorage<'a, LaserSamplers>,
         ReadStorage<'a, AtomInfo>,
         WriteStorage<'a, Force>,
     );
 
     fn run(
         &mut self,
-        (laser, laser_indices, beams, magnetic_samplers, laser_samplers, atom_info, mut forces): Self::SystemData,
+        (beams, magnetic_samplers, mut laser_samplers, atom_info, mut forces): Self::SystemData,
     ) {
         // Outer loop over atoms
-        for (atom_info, bfield, laser_sampler, mut force) in
-            (&atom_info, &magnetic_samplers, &laser_samplers, &mut forces).join()
+        for (atom_info, bfield, mut laser_samplers, mut force) in
+            (&atom_info, &magnetic_samplers, &mut laser_samplers, &mut forces).join()
         {
             // Inner loop over cooling lasers
-            for (laser, laser_index, beam) in (&laser, &laser_indices, &beams).join() {
-                let s0 = laser_sampler.contents[laser_index.index].intensity
+            for mut laser_sampler in &mut laser_samplers.contents {
+                let s0 = laser_sampler.intensity
                     / atom_info.saturation_intensity;
-                let angular_detuning = (laser.frequency()
+                let angular_detuning = (laser_sampler.wavevector.norm()*constant::C/2./PI
                     - atom_info.frequency
-                    - laser_sampler.contents[laser_index.index].doppler_shift)
+                    - laser_sampler.doppler_shift)
                     * 2.0
                     * PI;
-                let wavevector = beam.direction * laser.wavenumber();
+                let wavevector = laser_sampler.wavevector.clone();
                 let costheta = wavevector.normalize().dot(&bfield.field.normalize());
                 let gamma = atom_info.gamma();
-                let scatter1 = 0.25 * (laser.polarization * costheta + 1.).powf(2.) * gamma
+                let scatter1 = 0.25 * (laser_sampler.polarization * costheta + 1.).powf(2.) * gamma
                     / 2.
                     / (1.
                         + s0
                         + 4. * (angular_detuning - atom_info.mup / HBAR * bfield.magnitude)
                             .powf(2.)
                             / gamma.powf(2.));
-                let scatter2 = 0.25 * (laser.polarization * costheta - 1.).powf(2.) * gamma
+                let scatter2 = 0.25 * (laser_sampler.polarization * costheta - 1.).powf(2.) * gamma
                     / 2.
                     / (1.
                         + s0
@@ -69,6 +67,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                             .powf(2.)
                             / gamma.powf(2.));
                 let cooling_force = wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);
+                laser_sampler.force=cooling_force.clone();
                 force.force = force.force + cooling_force;
                 // println!(
                 //     "test={}",

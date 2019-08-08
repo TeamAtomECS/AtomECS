@@ -2,11 +2,18 @@ extern crate specs;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 use std::f64;
+extern crate nalgebra;
+use nalgebra::Vector3;
 
 /// Represents a sample of a laser beam
 pub struct LaserSampler {
+    pub force :Vector3<f64>,
     /// Intensity of the laser beam, in SI units of Watts per metre
     pub intensity: f64,
+    /// wavevector of the laser beam on the atom
+    pub wavevector : Vector3<f64>,
+
+    pub polarization: f64,
 
     /// Doppler shift with respect to laser beam, in SI units of Hz.
     pub doppler_shift: f64,
@@ -14,13 +21,16 @@ pub struct LaserSampler {
 impl Clone for LaserSampler {
     fn clone(&self) -> Self {
         LaserSampler {
+            force: self.force.clone(),
+            wavevector:self.wavevector.clone(),
+            polarization:self.polarization,
             intensity: self.intensity,
             doppler_shift: self.doppler_shift,
         }
     }
 }
 impl Default for LaserSampler {
-    fn default() -> Self { LaserSampler{intensity:f64::NAN, doppler_shift: f64::NAN}}
+    fn default() -> Self { LaserSampler{force:Vector3::new(0.,0.,0.),polarization:f64::NAN,wavevector:Vector3::new(0.,0.,0.),intensity:f64::NAN, doppler_shift: f64::NAN}}
 }
 
 /// Component that holds a list of laser samplers
@@ -46,6 +56,9 @@ impl<'a> System<'a> for InitialiseLaserSamplersSystem {
         let mut content = Vec::new();
         for (_, _) in (&cooling, &cooling_index).join() {
             content.push(LaserSampler {
+                force: Vector3::new(0.,0.,0.),
+                wavevector: Vector3::new(0.,0.,0.),
+                polarization:0.,
                 intensity: f64::NAN,
                 doppler_shift: f64::NAN,
             });

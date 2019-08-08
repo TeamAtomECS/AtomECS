@@ -56,7 +56,7 @@ pub fn add_systems_to_dispatch(
 		.with(
 			cooling::IndexCoolingLightsSystem,
 			"index_cooling_lights",
-			deps,
+			&["attach_cooling_index"],
 		)
 		.with(
 			sampler::InitialiseLaserSamplersSystem,
