@@ -1,20 +1,29 @@
 extern crate specs;
 use crate::atom::Position;
-use specs::{Entities, Join, ReadStorage, System};
+use specs::{Entities, Join, ReadStorage, System, Component, HashMapStorage};
 
 /// This system is responsible for delete atoms that have strayed out of the simulation region.
 pub struct DestroyAtomsSystem;
 
 impl<'a> System<'a> for DestroyAtomsSystem {
-    type SystemData = (Entities<'a>, ReadStorage<'a, Position>);
+    type SystemData = (Entities<'a>, ReadStorage<'a, Position>,ReadStorage<'a,ToBeDestroyed>);
 
-    fn run(&mut self, (ents, position): Self::SystemData) {
+    fn run(&mut self, (ents, position,_des): Self::SystemData) {
+        for (entity, position, _des) in (&ents, &position, &_des).join(){
+            ents.delete(entity).expect("Could not delete entity");
+        }
         for (entity, position) in (&ents, &position).join() {
             if position.pos.norm_squared() > (0.5_f64).powf(2.0) {
                 ents.delete(entity).expect("Could not delete entity");
             }
         }
     }
+}
+
+/// Component that marks an entity for deletion.
+pub struct ToBeDestroyed;
+impl Component for ToBeDestroyed{
+    type Storage = HashMapStorage<Self>;
 }
 
 pub mod tests {
