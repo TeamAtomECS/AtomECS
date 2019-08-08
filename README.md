@@ -50,4 +50,6 @@ TODO
 * `DeflagSystem` is used to remove the `NewlyCreated` component. The removal is done through a `specs::LazyUpdate`, so it is actually enacted at the end of the frame. As such, the order with respect to initialiser systems is not important.
 * The `output` modules should run at the end of the frame so that generated output reflects the state of the frame (and doesn't occur half-way through an update). This also includes the detectors.
 
+### Current Limitations
 
+* atom-atom interactions are ignored. This isn't a problem for the 2D MOT that we want to simulate, but it is going to be incorrect for 3D MOT simulations which achieve higher steady-state densities.
