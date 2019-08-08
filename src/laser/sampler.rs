@@ -64,7 +64,7 @@ impl<'a> System<'a> for InitialiseLaserSamplersSystem {
             });
         }
 
-        for mut intensity_sampler in (&mut intensity_samplers).join() {
+        for (mut intensity_sampler) in (&mut intensity_samplers).join() {
             intensity_sampler.contents = content.clone();
         }
     }

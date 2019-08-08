@@ -61,7 +61,7 @@ pub fn add_systems_to_dispatch(
 		.with(
 			sampler::InitialiseLaserSamplersSystem,
 			"initialise_laser_intensity",
-			deps,
+			&["index_cooling_lights"],
 		)
 		.with(
 			gaussian::SampleGaussianBeamIntensitySystem,

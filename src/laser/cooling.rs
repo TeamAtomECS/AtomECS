@@ -58,9 +58,12 @@ impl Component for CoolingLightIndex {
 }
 impl Default for CoolingLightIndex {
 	fn default() -> Self {
-		CoolingLightIndex { index: 0 }
+		// use of 99 indicate that the index have not been initiliazed yet
+		// this will console panic when a laser uninitiated is used
+		CoolingLightIndex { index: UNDEFINED_COOLING_LIGHT_INDEX }
 	}
 }
+const UNDEFINED_COOLING_LIGHT_INDEX: usize = 129873612312334;
 
 /// Assigns unique indices to cooling light entities.
 ///
@@ -74,9 +77,17 @@ impl<'a> System<'a> for IndexCoolingLightsSystem {
 
 	fn run(&mut self, (cooling_light, mut indices): Self::SystemData) {
 		let mut iter = 0;
+		let mut need_to_assign_indices = false;
 		for (_, mut index) in (&cooling_light, &mut indices).join() {
-			index.index = iter;
-			iter = iter + 1;
+			if index.index == UNDEFINED_COOLING_LIGHT_INDEX {
+				need_to_assign_indices = true;
+			}
+		}
+		if need_to_assign_indices {
+			for (_, mut index) in (&cooling_light, &mut indices).join() {
+				index.index = iter;
+				iter = iter + 1;
+			}
 		}
 	}
 }
