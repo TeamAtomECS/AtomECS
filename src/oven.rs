@@ -7,11 +7,12 @@ use crate::initiate::*;
 use rand::Rng;
 extern crate specs;
 use crate::atom::*;
+use crate::integrator::Timestep;
 use nalgebra::Vector3;
 use serde::{Deserialize,Serialize};
 
 use specs::{
-	Component, DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System,
+	Component, DispatcherBuilder, Entities, Join, LazyUpdate,ReadExpect, Read, ReadStorage, System,
 	VecStorage, World,
 };
 
@@ -45,8 +46,8 @@ pub struct Oven {
 	/// A vector denoting the direction of the oven.
 	pub direction: Vector3<f64>,
 
-	/// Number of atoms output by the oven every time step
-	pub number: u64,
+	/// Number of atoms output by the oven second
+	pub rate: f64,
 }
 
 impl Component for Oven {
@@ -88,10 +89,11 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		ReadStorage<'a, Oven>,
 		ReadStorage<'a, AtomInfo>,
 		ReadStorage<'a, Position>,
+		ReadExpect<'a,Timestep>,
 		Read<'a, LazyUpdate>,
 	);
 
-	fn run(&mut self, (entities, oven, atom, pos, updater): Self::SystemData) {
+	fn run(&mut self, (entities, oven, atom, pos, timestep, updater): Self::SystemData) {
 		let mut rng = rand::thread_rng();
 
 		for (oven, atom, oven_position) in (&oven, &atom, &pos).join() {
@@ -100,7 +102,8 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 			// the natural abundancies of Sr or Rb, or an enriched source of Potassium. Leave as
 			// 87 for now.
 			let mass = 87.0;
-			for _i in 0..oven.number {
+			let number = (timestep.delta * oven.rate) as u64;
+			for _i in 0..number {
 				let new_atom = entities.create();
 				let new_vel =
 					velocity_generate(oven.temperature, mass * constant::AMU, &oven.direction);

@@ -129,8 +129,8 @@ fn mot2d_entity_create(world: &mut World) {
 		.with(Oven {
 			temperature: 100.,
 			direction: Vector3::z(),
-			number: 1,
-			aperture:OvenAperture::Cubic{size:[0.,0.,0.]}
+			rate: 1e7,
+			aperture:OvenAperture::Cubic{size:[1e-6,1e-6,1e-6]},
 		})
 		.with(AtomInfo::rubidium())
 		.with(Mass { value: 87. })
