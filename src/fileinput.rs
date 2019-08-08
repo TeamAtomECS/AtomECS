@@ -60,12 +60,15 @@ struct LaserArchetype {
 
 /// An atomic oven
 #[derive(Deserialize, Serialize)]
-struct OvenArchetype {
-	// pub oven: Oven,
-	pub pos: Position,
-	pub mass: Mass,
-	pub atoms: AtomInfo,
+struct OvenParameter{
+	pub position:Vector3<f64>,
+	pub rate:f64,
+	pub direction:Vector3<f64>,
+	pub temperature:f64,
+	pub radius_aperture:f64,
 }
+
+
 
 #[derive(Deserialize, Serialize)]
 struct SimArchetype {
