@@ -8,6 +8,7 @@ use rand::Rng;
 extern crate specs;
 use crate::atom::*;
 use nalgebra::Vector3;
+use serde::{Deserialize,Serialize};
 
 use specs::{
 	Component, DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System,
@@ -30,6 +31,7 @@ pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>) -> Vector3<f
 }
 
 /// Component representing an oven, which is a source of hot atoms.
+#[derive(Deserialize,Serialize)]
 pub struct Oven {
 	/// Temperature of the oven, in Kelvin
 	pub temperature: f64,

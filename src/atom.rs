@@ -4,10 +4,12 @@ extern crate specs_derive;
 use crate::constant::{BOHRMAG, C};
 use nalgebra::Vector3;
 use specs::{Component, NullStorage, System, VecStorage, WriteStorage, Join};
+use serde::{Deserialize,Serialize};
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
 ///
 /// SI units (metres)
+#[derive(Deserialize,Serialize)]
 pub struct Position {
 	pub pos: Vector3<f64>,
 }
@@ -54,6 +56,7 @@ impl Force {
 /// Inertial and Gravitational mass of an entity
 ///
 /// Mass is specified in atom mass units (amu).
+#[derive(Deserialize,Serialize)]
 pub struct Mass {
 	pub value: f64,
 }
@@ -74,6 +77,7 @@ impl Default for Atom {
 	}
 }
 
+#[derive(Deserialize,Serialize)]
 pub struct AtomInfo {
 	/// The dependence of the sigma_+ transition on magnetic fields.
 	/// The sigma_+ transition is shifted by `mup * field.magnitude / h` Hz.

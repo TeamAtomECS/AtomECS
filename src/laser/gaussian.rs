@@ -7,8 +7,10 @@ use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::sampler::LaserSamplers;
 use crate::atom::Position;
 use crate::maths;
+use serde::{Deserialize,Serialize};
 
 /// A component representing a beam with a gaussian intensity profile.
+#[derive(Deserialize,Serialize)]
 pub struct GaussianBeam {
 	/// A point that the laser beam intersects
 	pub intersection: Vector3<f64>,

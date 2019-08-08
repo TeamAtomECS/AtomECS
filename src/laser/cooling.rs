@@ -3,10 +3,12 @@ use crate::atom::AtomInfo;
 use specs::{
 	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System, WriteStorage,
 };
+use serde::{Deserialize,Serialize};
 
 use crate::constant;
 
 /// A component representing light used for laser cooling.
+#[derive(Deserialize,Serialize)]
 pub struct CoolingLight {
 	/// Polarisation of the laser light, 1. for +, -1. for -,
 	pub polarization: f64,

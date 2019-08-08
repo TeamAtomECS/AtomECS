@@ -1,43 +1,74 @@
 use std::fs::File;
 use std::io::prelude::*;
-use yaml_rust::yaml::{Hash, Yaml};
-use yaml_rust::YamlLoader;
+extern crate serde;
+extern crate serde_json;
+extern crate serde_yaml;
+use crate::atom::{AtomInfo, Mass, Position};
+use crate::laser::cooling::CoolingLight;
+use crate::laser::gaussian::GaussianBeam;
+use crate::oven::Oven;
+use nalgebra::Vector3;
+use serde::{Deserialize, Serialize};
+use std::io::{BufWriter, Read};
 
-
-fn load_file(file: &str) {
-    let mut file = File::open(file).expect("Unable to open file");
-    let mut contents = String::new();
-
-    file.read_to_string(&mut contents)
-        .expect("Unable to read file");
-
-    let docs = YamlLoader::load_from_str(&contents).unwrap();
-
-    // TO DO
-	// will complete after the ecs.rs is checked
-}
-pub struct Parameters2D{
-	pub laser1:Laserparameter,
-	pub laser2:Laserparameter,
-	pub laser3:Laserparameter,
-	pub laser4:Laserparameter,
-	pub pushinglaser:Laserparameter,
-	pub oven:Ovenparameter,
-	pub magnetic:Magneticparameter,
+pub fn load_file(file: &str) {
+	let mut file = File::open(file).expect("Unable to open file");
+	let deserialized : SimArchetype = serde_yaml::from_reader(file).expect("Could not read");
+	println!("{}", deserialized.lasers.get(0).expect("empty array").beam.e_radius);
 }
 
-pub enum Magneticparameter{
-	Quodrapoleparameter{gradient:f64,centre:[f64;3]},
+/// Writes a YAML file. This is so you can check the syntax to use.
+pub fn write_file(file: &str) {
+	let mut file = File::create(file).expect("Unable to open file");
+	let mut writer = BufWriter::new(file);
+
+	let lasers = vec![
+		LaserArchetype {
+			light: CoolingLight::for_species(AtomInfo::rubidium(), -6.0, 1.0),
+			beam: GaussianBeam {
+				intersection: Vector3::new(0.0, 0.0, 0.0),
+				e_radius: 0.01,
+				power: 1.0,
+				direction: -Vector3::z(),
+			},
+		},
+		LaserArchetype {
+			light: CoolingLight::for_species(AtomInfo::rubidium(), -6.0, 1.0),
+			beam: GaussianBeam {
+				intersection: Vector3::new(0.0, 0.0, 0.0),
+				e_radius: 0.01,
+				power: 1.0,
+				direction: Vector3::z(),
+			},
+		},
+	];
+
+	let sim = SimArchetype {
+		lasers: lasers
+	};
+
+	let serialized = serde_yaml::to_string(&sim).unwrap();
+	write!(writer, "{}", serialized.to_string());
 }
 
-pub struct Ovenparameter{
-	temperature:f64,
-	direction:[f64;3],
+/// A laser beam
+#[derive(Deserialize, Serialize)]
+struct LaserArchetype {
+	pub light: CoolingLight,
+	pub beam: GaussianBeam,
 }
 
-pub struct Laserparameter{
-	frequency:f64,
-	direction:[f64;3],
-	intensity:f64,
-	e_radius:f64,
+/// An atomic oven
+#[derive(Deserialize, Serialize)]
+struct OvenArchetype {
+	pub oven: Oven,
+	pub pos: Position,
+	pub mass: Mass,
+	pub atoms: AtomInfo,
+}
+
+#[derive(Deserialize, Serialize)]
+struct SimArchetype {
+	pub lasers: Vec<LaserArchetype>,
+	//pub ovens: Vec<OvenArchetype>,
 }
