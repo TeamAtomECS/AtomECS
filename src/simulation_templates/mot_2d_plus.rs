@@ -8,6 +8,7 @@ use crate::laser::gaussian::GaussianBeam;
 use crate::magnetic::quadrupole::QuadrupoleField3D;
 use crate::oven::{Oven,OvenAperture,EmitNumberPerFrame,AtomNumberToEmit};
 use specs::{Builder, Dispatcher, World};
+use crate::mass::{MassArchetype,MassPercentage};
 extern crate nalgebra;
 use nalgebra::Vector3;
 
@@ -124,6 +125,8 @@ fn mot2d_entity_create(world: &mut World) {
 		.build();
 
 	// Add oven
+	let mut massrubidium = MassArchetype { massdistribution:vec![MassPercentage{atommass:87.,percentage:0.2783},MassPercentage{atommass:85.,percentage:0.7217}] };
+	massrubidium.normalise();
 	world
 		.create_entity()
 		.with(Oven {
@@ -134,7 +137,7 @@ fn mot2d_entity_create(world: &mut World) {
 		.with(EmitNumberPerFrame { number: 1 })
 		.with(AtomNumberToEmit { number: 1 })
 		.with(AtomInfo::rubidium())
-		.with(Mass { value: 87. })
+		.with(massrubidium)
 		.with(Position {
 			pos: Vector3::new(0.0, 0.0, -0.1),
 		})

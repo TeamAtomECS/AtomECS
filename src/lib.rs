@@ -14,3 +14,4 @@ pub mod output;
 pub mod oven;
 pub mod simulation_templates;
 pub mod other_force;
+pub mod mass;

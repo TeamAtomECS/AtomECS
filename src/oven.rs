@@ -5,6 +5,7 @@ use crate::constant;
 use crate::constant::PI;
 use crate::initiate::*;
 use rand::Rng;
+use crate::mass::MassArchetype;
 extern crate specs;
 use crate::atom::*;
 use crate::integrator::Timestep;
@@ -87,20 +88,16 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		ReadStorage<'a, AtomInfo>,
 		ReadStorage<'a, AtomNumberToEmit>,
 		ReadStorage<'a, Position>,
-		ReadExpect<'a, Timestep>,
+		ReadStorage<'a, MassArchetype>,
 		Read<'a, LazyUpdate>,
 	);
 
-	fn run(&mut self, (entities, oven, atom, numbers_to_emit, pos, timestep, updater): Self::SystemData) {
+	fn run(&mut self, (entities, oven, atom, numbers_to_emit, pos, masstype, updater): Self::SystemData) {
 		let mut rng = rand::thread_rng();
 
-		for (oven, atom, number_to_emit, oven_position) in (&oven, &atom, &numbers_to_emit, &pos).join() {
-			// This is only temporary. In future the atom source will have a MassDistribution component,
-			// which will allow us to specify the mass distribution of created atoms. For example,
-			// the natural abundancies of Sr or Rb, or an enriched source of Potassium. Leave as
-			// 87 for now.
-			let mass = 87.0;
+		for (oven, atom, number_to_emit, oven_position,masstype) in (&oven, &atom, &numbers_to_emit, &pos, &masstype).join() {
 			for _i in 0..number_to_emit.number {
+				let mass = masstype.get_mass().value;
 				let new_atom = entities.create();
 				let new_vel =
 					velocity_generate(oven.temperature, mass * constant::AMU, &oven.direction);
@@ -143,6 +140,7 @@ pub fn add_systems_to_dispatch(
 /// Registers resources required by the module to the ecs world.
 pub fn register_components(world: &mut World) {
 	world.register::<Oven>();
+	world.register::<MassArchetype>();
 }
 
 /// Component which indicates the oven should emit a number of atoms per frame.
