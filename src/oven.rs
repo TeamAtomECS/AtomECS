@@ -134,13 +134,18 @@ pub fn add_systems_to_dispatch(
 	builder: DispatcherBuilder<'static, 'static>,
 	deps: &[&str],
 ) -> DispatcherBuilder<'static, 'static> {
-	builder.with(OvenCreateAtomsSystem, "", deps)
+	builder
+	.with(EmitNumberPerFrameSystem, "emit_number_per_frame", deps)
+	.with(OvenCreateAtomsSystem, "", &["emit_number_per_frame"])
 }
 
 /// Registers resources required by the module to the ecs world.
 pub fn register_components(world: &mut World) {
 	world.register::<Oven>();
 	world.register::<MassArchetype>();
+	world.register::<EmitFixedRate>();
+	world.register::<EmitNumberPerFrame>();
+	world.register::<AtomNumberToEmit>();
 }
 
 /// Component which indicates the oven should emit a number of atoms per frame.
