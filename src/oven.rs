@@ -97,6 +97,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 			(&oven, &atom, &numbers_to_emit, &pos, &masstype).join()
 		{
 			for _i in 0..number_to_emit.number {
+				println!("test");
 				let mass = masstype.get_mass().value;
 				let new_atom = entities.create();
 				let new_vel =
@@ -135,8 +136,8 @@ pub fn add_systems_to_dispatch(
 	deps: &[&str],
 ) -> DispatcherBuilder<'static, 'static> {
 	builder
-	.with(EmitNumberPerFrameSystem, "emit_number_per_frame", deps)
-	.with(OvenCreateAtomsSystem, "", &["emit_number_per_frame"])
+		.with(EmitNumberPerFrameSystem, "emit_number_per_frame", deps)
+		.with(OvenCreateAtomsSystem, "", &["emit_number_per_frame"])
 }
 
 /// Registers resources required by the module to the ecs world.

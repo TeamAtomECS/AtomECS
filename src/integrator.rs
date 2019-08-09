@@ -45,6 +45,8 @@ impl<'a> System<'a> for EulerIntegrationSystem {
 fn euler_update(vel: &mut Velocity, pos: &mut Position, force: &Force, mass: &Mass, dt: f64) {
 	pos.pos = pos.pos + vel.vel * dt;
 	vel.vel = vel.vel + force.force * dt / (constant::AMU * mass.value);
+	//println!("{:?}dt{:?}", vel.vel, force.force / (constant::AMU));
+	//println!("acc {:?}", force.force  / (constant::AMU))
 }
 
 pub mod tests {

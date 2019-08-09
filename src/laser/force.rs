@@ -43,7 +43,8 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
         {
             // Inner loop over cooling lasers
             for mut laser_sampler in &mut laser_samplers.contents {
-                let s0 = laser_sampler.intensity / atom_info.saturation_intensity;
+                let s0 = 10.0;
+                //let s0 = laser_sampler.intensity / atom_info.saturation_intensity;
                 let angular_detuning = (laser_sampler.wavevector.norm() * constant::C / 2. / PI
                     - atom_info.frequency
                     - laser_sampler.doppler_shift)
@@ -75,6 +76,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                             / gamma.powf(2.));
                 let cooling_force = wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);
                 laser_sampler.force = cooling_force.clone();
+                //println!("detuning{}", angular_detuning / gamma);
                 force.force = force.force + cooling_force;
             }
         }
@@ -172,11 +174,7 @@ pub mod tests {
     fn test_calculate_cooling_force_system() {
         let detuning = 0.0;
         let intensity = 1.0;
-        let cooling = CoolingLight::for_species(
-                AtomInfo::rubidium(),
-                detuning,
-                1.0,
-            );
+        let cooling = CoolingLight::for_species(AtomInfo::rubidium(), detuning, 1.0);
         let wavenumber = cooling.wavenumber();
         let (mut test_world, laser) = create_world_for_tests(cooling);
         let atom1 = test_world

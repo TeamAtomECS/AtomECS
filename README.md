@@ -16,11 +16,11 @@ Functionality is stored throughout several modules, as detailed below.
 |-------------|-------------|
 |`constant`   | Lists physical constants used by the program. |
 |`maths`      | Maths functions used in the program. |
-|`integration`| Used to integrate the equations of motion to update positions and velocities of entities. |
+|`integrator`| Used to integrate the equations of motion to update positions and velocities of entities. |
 |`ouput`      | Systems and components used to generate output files from the simulation, eg atomic positions or console output. |
 |`magnetic`   | Implements different magnetic fields. |
 |`laser`      | Implements optical scattering forces and lasers. |
-|`atom_create`| Systems and components used to create atoms in the simulation. |
+|`oven`| Systems and components used to create atoms in the simulation. |
 |`atom`       | All components relating to atoms. |
 |`initiate`   | Components and systems used to initiate entities during the simulation. |
 |`ecs`        | Easy functions to setup the simulation dispatcher and world resources. |
