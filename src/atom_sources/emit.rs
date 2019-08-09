@@ -76,3 +76,66 @@ impl<'a> System<'a> for EmitFixedRateSystem {
         }
     }
 }
+
+pub mod tests {
+    // These imports are actually needed! The compiler is getting confused and warning they are not.
+    #[allow(unused_imports)]
+    use super::*;
+    extern crate specs;
+    #[allow(unused_imports)]
+    use specs::{Builder, Entity, RunNow, World};
+    extern crate nalgebra;
+    #[allow(unused_imports)]
+    use nalgebra::Vector3;
+
+    #[test]
+    fn test_fixed_rate_emitter() {
+        let mut test_world = World::new();
+        test_world.register::<EmitFixedRate>();
+        test_world.register::<AtomNumberToEmit>();
+
+        let rate = 3.3;
+        let emitter = test_world
+            .create_entity()
+            .with(EmitFixedRate { rate: rate })
+            .with(AtomNumberToEmit { number: 0 })
+            .build();
+
+        test_world.add_resource(Timestep { delta: 1.0 });
+
+        let mut system = EmitFixedRateSystem;
+
+        let n = 1000;
+        let mut total = 0;
+        for _ in 1..n {
+            system.run_now(&test_world.res);
+            let emits = test_world.read_storage::<AtomNumberToEmit>();
+            let number = emits.get(emitter).expect("Could not get entity").number;
+            assert_eq!(number == 3 || number == 4, true);
+            total = total + number;
+        }
+        assert_eq!(total > (n as f64 * 0.9 * rate) as i32, true);
+        assert_eq!(total < (n as f64 * 1.1 * rate) as i32, true);
+    }
+
+    #[test]
+    fn test_fixed_number_emitter() {
+        let mut test_world = World::new();
+        test_world.register::<EmitNumberPerFrame>();
+        test_world.register::<AtomNumberToEmit>();
+
+        let number = 10;
+        let emitter = test_world
+            .create_entity()
+            .with(EmitNumberPerFrame { number: number })
+            .with(AtomNumberToEmit { number: 0 })
+            .build();
+
+        let mut system = EmitNumberPerFrameSystem;
+
+        system.run_now(&test_world.res);
+        let emits = test_world.read_storage::<AtomNumberToEmit>();
+        let emitted_number = emits.get(emitter).expect("Could not get entity").number;
+        assert_eq!(number, emitted_number);
+    }
+}
