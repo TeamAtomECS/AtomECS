@@ -1,5 +1,6 @@
 pub mod mass;
 pub mod oven;
+pub mod emit;
 
 use specs::{DispatcherBuilder, World};
 
@@ -16,12 +17,12 @@ pub fn add_systems_to_dispatch(
 ) -> DispatcherBuilder<'static, 'static> {
     builder
         .with(
-            oven::EmitNumberPerFrameSystem,
+            emit::EmitNumberPerFrameSystem,
             "emit_number_per_frame",
             deps,
         )
         .with(
-            oven::EmitFixedRateSystem,
+            emit::EmitFixedRateSystem,
             "emit_fixed_rate",
             &["emit_number_per_frame"]
         )
@@ -32,7 +33,7 @@ pub fn add_systems_to_dispatch(
 pub fn register_components(world: &mut World) {
     world.register::<oven::Oven>();
     world.register::<mass::MassArchetype>();
-    world.register::<oven::EmitFixedRate>();
-    world.register::<oven::EmitNumberPerFrame>();
-    world.register::<oven::AtomNumberToEmit>();
+    world.register::<emit::EmitFixedRate>();
+    world.register::<emit::EmitNumberPerFrame>();
+    world.register::<emit::AtomNumberToEmit>();
 }
