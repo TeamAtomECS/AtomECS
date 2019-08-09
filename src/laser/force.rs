@@ -131,6 +131,7 @@ pub mod tests {
     extern crate specs;
     use crate::constant;
     use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser::gaussian::GaussianBeam;
     use crate::laser::sampler::{LaserSampler, LaserSamplers};
     use crate::magnetic::MagneticFieldSampler;
     use assert_approx_eq::assert_approx_eq;
@@ -138,7 +139,7 @@ pub mod tests {
     extern crate nalgebra;
     use nalgebra::Vector3;
 
-    fn create_world_for_tests(cool_light_detuning: f64) -> (World, Entity) {
+    fn create_world_for_tests(cooling_light: CoolingLight) -> (World, Entity) {
         let mut test_world = World::new();
         test_world.register::<CoolingLightIndex>();
         test_world.register::<CoolingLight>();
@@ -152,11 +153,7 @@ pub mod tests {
         let power = 1.0;
         let laser_entity = test_world
             .create_entity()
-            .with(CoolingLight::for_species(
-                AtomInfo::rubidium(),
-                cool_light_detuning,
-                1.0,
-            ))
+            .with(cooling_light)
             .with(CoolingLightIndex {
                 index: 0,
                 initiated: true,
@@ -174,14 +171,22 @@ pub mod tests {
     #[test]
     fn test_calculate_cooling_force_system() {
         let detuning = 0.0;
-        let (mut test_world, laser) = create_world_for_tests(detuning);
-
         let intensity = 1.0;
+        let cooling = CoolingLight::for_species(
+                AtomInfo::rubidium(),
+                detuning,
+                1.0,
+            );
+        let wavenumber = cooling.wavenumber();
+        let (mut test_world, laser) = create_world_for_tests(cooling);
         let atom1 = test_world
             .create_entity()
             .with(Force::new())
             .with(LaserSamplers {
                 contents: vec![LaserSampler {
+                    force: Vector3::new(0.0, 0.0, 0.0),
+                    polarization: 1.0,
+                    wavevector: wavenumber * Vector3::new(1.0, 0.0, 0.0),
                     intensity: intensity,
                     doppler_shift: 0.0,
                 }],
@@ -197,9 +202,9 @@ pub mod tests {
         system.run_now(&test_world.res);
         test_world.maintain();
 
+        // See eg Foot, Atomic Physics, p180.
         let cooling_light_storage = test_world.read_storage::<CoolingLight>();
         let cooling_light = cooling_light_storage.get(laser).expect("entity not found");
-        // See eg Foot, Atomic Physics, p180.
         let photon_momentum = constant::HBAR * cooling_light.wavenumber();
         let i_norm = intensity / AtomInfo::rubidium().saturation_intensity;
         let scattering_rate = (AtomInfo::rubidium().gamma() / 2.0) * i_norm

@@ -53,13 +53,19 @@ pub mod tests {
     fn test_delete_atoms() {
         let mut test_world = World::new();
         test_world.register::<Position>();
+        test_world.register::<Atom>();
 
-        let test_entity1 = test_world.create_entity().with(Position::new()).build();
+        let test_entity1 = test_world
+            .create_entity()
+            .with(Position::new())
+            .with(Atom::default())
+            .build();
         let test_entity2 = test_world
             .create_entity()
             .with(Position {
                 pos: Vector3::new(2.0, 2.0, 2.0),
             })
+            .with(Atom::default())
             .build();
 
         let mut system = DestroyOutOfBoundAtomsSystem;

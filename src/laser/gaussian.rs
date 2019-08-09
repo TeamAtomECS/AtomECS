@@ -7,10 +7,10 @@ use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::sampler::LaserSamplers;
 use crate::atom::Position;
 use crate::maths;
-use serde::{Deserialize,Serialize};
+use serde::{Deserialize, Serialize};
 
 /// A component representing a beam with a gaussian intensity profile.
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct GaussianBeam {
 	/// A point that the laser beam intersects
 	pub intersection: Vector3<f64>,
@@ -44,7 +44,8 @@ impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 				sampler.contents[index.index].intensity =
 					get_gaussian_beam_intensity(&gaussian, &pos);
 				sampler.contents[index.index].polarization = cooling.polarization;
-				sampler.contents[index.index].wavevector = gaussian.direction*cooling.wavenumber();
+				sampler.contents[index.index].wavevector =
+					gaussian.direction * cooling.wavenumber();
 			}
 		}
 	}
@@ -115,7 +116,10 @@ pub mod tests {
 				polarization: 1.0,
 				wavelength: 780e-9,
 			})
-			.with(CoolingLightIndex { index: 0 })
+			.with(CoolingLightIndex {
+				index: 0,
+				initiated: true,
+			})
 			.with(GaussianBeam {
 				direction: Vector3::x(),
 				intersection: Vector3::new(0.0, 0.0, 0.0),
