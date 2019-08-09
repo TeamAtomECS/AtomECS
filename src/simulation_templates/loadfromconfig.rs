@@ -9,7 +9,7 @@ use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::magnetic::quadrupole::QuadrupoleField3D;
 use crate::magnetic::uniform::UniformMagneticField;
-use crate::oven::{Oven,OvenAperture,AtomNumberToEmit,EmitFixedRate};
+use crate::atom_sources::oven::{Oven,OvenAperture,AtomNumberToEmit,EmitFixedRate};
 use specs::{Builder, Dispatcher, World};
 extern crate nalgebra;
 

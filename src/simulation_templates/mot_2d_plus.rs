@@ -6,9 +6,9 @@ use crate::initiate::NewlyCreated;
 use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::magnetic::quadrupole::QuadrupoleField3D;
-use crate::oven::{Oven,OvenAperture,EmitNumberPerFrame,AtomNumberToEmit};
+use crate::atom_sources::oven::{Oven,OvenAperture,EmitNumberPerFrame,AtomNumberToEmit};
 use specs::{Builder, Dispatcher, World};
-use crate::mass::{MassArchetype,MassPercentage};
+use crate::atom_sources::mass::{MassArchetype,MassPercentage};
 extern crate nalgebra;
 use nalgebra::Vector3;
 

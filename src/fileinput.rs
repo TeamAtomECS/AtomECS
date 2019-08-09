@@ -4,7 +4,7 @@ extern crate serde;
 extern crate serde_json;
 extern crate serde_yaml;
 use crate::atom::{AtomInfo};
-use crate::mass::{MassArchetype,MassPercentage};
+use crate::atom_sources::mass::{MassArchetype,MassPercentage};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 use std::io::{BufWriter};
