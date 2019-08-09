@@ -1,0 +1,62 @@
+use crate::fileinput::load_file;
+#[allow(unused_imports)]
+use crate::atom::{Atom, AtomInfo, Force, Mass, Position, Velocity};
+use crate::ecs;
+use crate::constant;
+#[allow(unused_imports)]
+use crate::initiate::NewlyCreated;
+use crate::laser::cooling::CoolingLight;
+use crate::laser::gaussian::GaussianBeam;
+use crate::magnetic::quadrupole::QuadrupoleField3D;
+use crate::magnetic::uniform::UniformMagneticField;
+use crate::oven::{Oven,OvenAperture};
+use specs::{Builder, Dispatcher, World};
+extern crate nalgebra;
+use nalgebra::Vector3;
+
+pub fn create_simulation_entity(filename:&str,world: &mut World){
+    let config = load_file(&filename);
+    for laser in config.lasers.iter(){
+        world
+		.create_entity()
+		.with(GaussianBeam {
+			intersection: laser.intersection,
+			e_radius: laser.e_radius,
+			power: laser.power,
+			direction: laser.direction,
+		})
+		.with(CoolingLight{
+            polarization: laser.polarization,
+            wavelength: constant::C / laser.frequency,
+        }
+        )
+		.build();
+    }
+    for oven in config.ovens.iter(){
+        world
+		.create_entity()
+		.with(Oven {
+			temperature: oven.temperature,
+			direction: oven.direction,
+			rate: oven.rate,
+			aperture:OvenAperture::Circular{radius:oven.radius_aperture,thickness:oven.thickness},
+		})
+		.with(config.atominfo.clone())
+		.with(Mass { value: 87. })
+        // fixed for now, will implemented MassArchetype soon
+		.with(Position {
+			pos: oven.position,
+		})
+		.build();
+    }
+    let quadrupole = QuadrupoleField3D::gauss_per_cm(config.magnetic.gradient);
+	world
+		.create_entity()
+		.with(quadrupole)
+		.with(Position{pos:config.magnetic.centre})
+		.build();
+    world
+        .create_entity()
+        .with(UniformMagneticField{field:config.magnetic.uniform})
+        .build();
+}

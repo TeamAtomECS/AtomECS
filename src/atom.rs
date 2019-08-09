@@ -77,7 +77,7 @@ impl Default for Atom {
 	}
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize,Serialize,Clone)]
 pub struct AtomInfo {
 	/// The dependence of the sigma_+ transition on magnetic fields.
 	/// The sigma_+ transition is shifted by `mup * field.magnitude / h` Hz.
@@ -115,7 +115,6 @@ impl AtomInfo {
 			saturation_intensity: 16.69, // [Steck, Rubidium 87, D2 cycling transition]
 		}
 	}
-
 	pub fn gamma(&self) -> f64 {
 		self.linewidth * 2.0 * std::f64::consts::PI
 	}
