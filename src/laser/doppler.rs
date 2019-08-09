@@ -56,7 +56,7 @@ pub mod tests {
                 polarization: 1.0,
                 wavelength: 780e-9,
             })
-            .with(CoolingLightIndex { index: 0 })
+            .with(CoolingLightIndex { index: 0, initiated: true })
             .with(GaussianBeam {
                 direction: Vector3::new(1.0, 0.0, 0.0),
                 intersection: Vector3::new(0.0, 0.0, 0.0),

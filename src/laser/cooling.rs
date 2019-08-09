@@ -50,20 +50,22 @@ impl Component for CoolingLight {
 
 /// An index that uniquely identifies this cooling light in the interaction list for each atom.
 /// The index value corresponds to the position of each cooling light in the per-atom interaction list array.
+/// 
+/// Default `CoolingLightIndex`s are created with `initiated: false`. 
+/// Once the index is set, initiated is set to true.
+/// This is used to detect if all lasers in the simulation are correctly indexed, incase new lasers are added.
 pub struct CoolingLightIndex {
 	pub index: usize,
+	pub initiated: bool
 }
 impl Component for CoolingLightIndex {
 	type Storage = HashMapStorage<Self>;
 }
 impl Default for CoolingLightIndex {
 	fn default() -> Self {
-		// use of 99 indicate that the index have not been initiliazed yet
-		// this will console panic when a laser uninitiated is used
-		CoolingLightIndex { index: UNDEFINED_COOLING_LIGHT_INDEX }
+		CoolingLightIndex { index: 0, initiated: false }
 	}
 }
-const UNDEFINED_COOLING_LIGHT_INDEX: usize = 129873612312334;
 
 /// Assigns unique indices to cooling light entities.
 ///
@@ -79,13 +81,14 @@ impl<'a> System<'a> for IndexCoolingLightsSystem {
 		let mut iter = 0;
 		let mut need_to_assign_indices = false;
 		for (_, mut index) in (&cooling_light, &mut indices).join() {
-			if index.index == UNDEFINED_COOLING_LIGHT_INDEX {
+			if index.initiated == false {
 				need_to_assign_indices = true;
 			}
 		}
 		if need_to_assign_indices {
 			for (_, mut index) in (&cooling_light, &mut indices).join() {
 				index.index = iter;
+				index.initiated = true;
 				iter = iter + 1;
 			}
 		}

@@ -9,7 +9,7 @@ use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::magnetic::quadrupole::QuadrupoleField3D;
 use crate::magnetic::uniform::UniformMagneticField;
-use crate::oven::{Oven,OvenAperture};
+use crate::oven::{Oven,OvenAperture,AtomNumberToEmit,EmitFixedRate};
 use specs::{Builder, Dispatcher, World};
 extern crate nalgebra;
 use nalgebra::Vector3;
@@ -49,9 +49,10 @@ pub fn create_simulation_entity(filename:&str,world: &mut World){
 		.with(Oven {
 			temperature: oven.temperature,
 			direction: oven.direction,
-			rate: oven.rate,
 			aperture:OvenAperture::Circular{radius:oven.radius_aperture,thickness:oven.thickness},
 		})
+		.with(AtomNumberToEmit { number: 0 })
+		.with(EmitFixedRate { rate: oven.rate })
 		.with(config.atominfo.clone())
 		.with(Mass { value: 87. })
         // fixed for now, will implemented MassArchetype soon
