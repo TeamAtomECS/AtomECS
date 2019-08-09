@@ -1,6 +1,6 @@
 extern crate specs;
 use crate::atom::{Atom, Position};
-use specs::{Component, Entities, HashMapStorage, Join, ReadStorage, System};
+use specs::{Component, Entities, Join, NullStorage, ReadStorage, System};
 
 /// Deletes entities which have been marked for destruction.
 pub struct DeleteToBeDestroyedEntitiesSystem;
@@ -35,7 +35,12 @@ impl<'a> System<'a> for DestroyOutOfBoundAtomsSystem {
 /// Component that marks an entity for deletion.
 pub struct ToBeDestroyed;
 impl Component for ToBeDestroyed {
-    type Storage = HashMapStorage<Self>;
+    type Storage = NullStorage<Self>;
+}
+impl Default for ToBeDestroyed {
+    fn default() -> Self {
+        ToBeDestroyed {}
+    }
 }
 
 pub mod tests {
@@ -50,7 +55,7 @@ pub mod tests {
     use nalgebra::Vector3;
 
     #[test]
-    fn test_delete_atoms() {
+    fn test_destroy_out_of_bounds_system() {
         let mut test_world = World::new();
         test_world.register::<Position>();
         test_world.register::<Atom>();
@@ -69,6 +74,28 @@ pub mod tests {
             .build();
 
         let mut system = DestroyOutOfBoundAtomsSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+
+        let positions = test_world.read_storage::<Position>();
+        assert_eq!(positions.get(test_entity1).is_none(), false);
+        assert_eq!(positions.get(test_entity2).is_none(), true);
+    }
+
+    #[test]
+    fn test_to_be_destroyed_system() {
+        let mut test_world = World::new();
+        test_world.register::<Position>();
+        test_world.register::<ToBeDestroyed>();
+
+        let test_entity1 = test_world.create_entity().with(Position::new()).build();
+        let test_entity2 = test_world
+            .create_entity()
+            .with(Position::new())
+            .with(ToBeDestroyed)
+            .build();
+
+        let mut system = DeleteToBeDestroyedEntitiesSystem;
         system.run_now(&test_world.res);
         test_world.maintain();
 
