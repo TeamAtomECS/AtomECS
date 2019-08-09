@@ -14,6 +14,17 @@ use specs::{Builder, Dispatcher, World};
 extern crate nalgebra;
 use nalgebra::Vector3;
 
+pub fn create_from_config() -> (World, Dispatcher<'static, 'static>){
+	let mut world = World::new();
+	ecs::register_components(&mut world);
+	ecs::register_resources(&mut world);
+	let mut dispatcher = ecs::create_simulation_dispatcher();
+	dispatcher.setup(&mut world.res);
+	create_simulation_entity("example.yaml",&mut world);
+	
+	
+	(world, dispatcher)
+}
 pub fn create_simulation_entity(filename:&str,world: &mut World){
     let config = load_file(&filename);
     for laser in config.lasers.iter(){
