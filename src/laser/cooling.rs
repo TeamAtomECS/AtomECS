@@ -80,7 +80,7 @@ impl<'a> System<'a> for IndexCoolingLightsSystem {
 	fn run(&mut self, (cooling_light, mut indices): Self::SystemData) {
 		let mut iter = 0;
 		let mut need_to_assign_indices = false;
-		for (_, mut index) in (&cooling_light, &mut indices).join() {
+		for (_, index) in (&cooling_light, &indices).join() {
 			if index.initiated == false {
 				need_to_assign_indices = true;
 			}

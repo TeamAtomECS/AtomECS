@@ -4,17 +4,16 @@ extern crate rand;
 use crate::constant;
 use crate::constant::PI;
 use crate::initiate::*;
-use rand::Rng;
 use crate::mass::MassArchetype;
+use rand::Rng;
 extern crate specs;
 use crate::atom::*;
-use crate::integrator::Timestep;
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 
 use specs::{
-	Component, DispatcherBuilder, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadExpect,
-	ReadStorage, System, World, WriteStorage
+	Component, DispatcherBuilder, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage,
+	System, World, WriteStorage,
 };
 
 pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>) -> Vector3<f64> {
@@ -51,17 +50,16 @@ pub struct Oven {
 impl Component for Oven {
 	type Storage = HashMapStorage<Self>;
 }
-impl Oven{
-	pub fn get_random_spawn_position(&self) -> Vector3<f64>{
+impl Oven {
+	pub fn get_random_spawn_position(&self) -> Vector3<f64> {
 		let mut rng = rand::thread_rng();
-		let mut start_position = Vector3::new(0., 0., 0.);
 		match self.aperture {
 			OvenAperture::Cubic { size } => {
 				let size = size.clone();
 				let pos1 = rng.gen_range(-0.5 * size[0], 0.5 * size[0]);
 				let pos2 = rng.gen_range(-0.5 * size[1], 0.5 * size[1]);
 				let pos3 = rng.gen_range(-0.5 * size[2], 0.5 * size[2]);
-				start_position = Vector3::new(pos1, pos2, pos3);
+				Vector3::new(pos1, pos2, pos3)
 			}
 			OvenAperture::Circular { radius, thickness } => {
 				let dir = self.direction.normalize();
@@ -70,10 +68,9 @@ impl Oven{
 				let theta = rng.gen_range(0., 2. * constant::PI);
 				let r = rng.gen_range(0., radius);
 				let h = rng.gen_range(-0.5 * thickness, 0.5 * thickness);
-				start_position = dir * h + dir_1 * theta.sin() + dir_2 * theta.cos();
+				dir * h + r * dir_1 * theta.sin() + r * dir_2 * theta.cos()
 			}
 		}
-		start_position
 	}
 }
 /// This system creates atoms from an oven source.
@@ -92,10 +89,13 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		Read<'a, LazyUpdate>,
 	);
 
-	fn run(&mut self, (entities, oven, atom, numbers_to_emit, pos, masstype, updater): Self::SystemData) {
-		let mut rng = rand::thread_rng();
-
-		for (oven, atom, number_to_emit, oven_position,masstype) in (&oven, &atom, &numbers_to_emit, &pos, &masstype).join() {
+	fn run(
+		&mut self,
+		(entities, oven, atom, numbers_to_emit, pos, masstype, updater): Self::SystemData,
+	) {
+		for (oven, atom, number_to_emit, oven_position, masstype) in
+			(&oven, &atom, &numbers_to_emit, &pos, &masstype).join()
+		{
 			for _i in 0..number_to_emit.number {
 				let mass = masstype.get_mass().value;
 				let new_atom = entities.create();
@@ -163,7 +163,7 @@ impl Component for EmitFixedRate {
 
 /// The number of atoms the oven should emit in the current frame.
 pub struct AtomNumberToEmit {
-	pub number: i32
+	pub number: i32,
 }
 impl Component for AtomNumberToEmit {
 	type Storage = HashMapStorage<Self>;
@@ -178,8 +178,7 @@ impl<'a> System<'a> for EmitNumberPerFrameSystem {
 	);
 
 	fn run(&mut self, (emit_numbers, mut numbers_to_emit): Self::SystemData) {
-		for (emit_number, mut number_to_emit) in (& emit_numbers, &mut numbers_to_emit).join()
-		{
+		for (emit_number, mut number_to_emit) in (&emit_numbers, &mut numbers_to_emit).join() {
 			number_to_emit.number = emit_number.number;
 		}
 	}

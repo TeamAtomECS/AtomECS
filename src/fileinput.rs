@@ -7,10 +7,10 @@ use crate::atom::{AtomInfo};
 use crate::mass::{MassArchetype,MassPercentage};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
-use std::io::{BufWriter, Read};
+use std::io::{BufWriter};
 
 pub fn load_file(file: &str) -> SimArchetype {
-	let mut file = File::open(file).expect("Unable to open file");
+	let file = File::open(file).expect("Unable to open file");
 	let deserialized: SimArchetype = serde_yaml::from_reader(file).expect("Could not read");
 	deserialized
 	//println!("{}", deserialized.lasers.get(0).expect("empty array").beam.e_radius);
@@ -19,7 +19,7 @@ pub fn load_file(file: &str) -> SimArchetype {
 /// Writes a YAML file for 2D plus MOT.
 /// use this as the the input format in detail
 pub fn write_file_template(file: &str) {
-	let mut file = File::create(file).expect("Unable to open file");
+	let file = File::create(file).expect("Unable to open file");
 	let mut writer = BufWriter::new(file);
 
 	let lasers = vec![
@@ -64,7 +64,7 @@ pub fn write_file_template(file: &str) {
 	};
 
 	let serialized = serde_yaml::to_string(&sim).unwrap();
-	write!(writer, "{}", serialized.to_string());
+	write!(writer, "{}", serialized.to_string()).expect("Could not write to file.");
 }
 
 /// A laser beam

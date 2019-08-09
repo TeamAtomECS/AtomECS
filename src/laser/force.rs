@@ -1,18 +1,16 @@
 extern crate specs;
-use rand::Rng;
-use specs::{Join, ReadStorage, System, WriteStorage,ReadExpect};
+use crate::atom::{Atom, AtomInfo};
 use crate::constant;
-use crate::atom::{Atom,AtomInfo};
+use rand::Rng;
+use specs::{Join, ReadExpect, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
-use nalgebra::Vector3;
-use crate::maths;
-use super::cooling::{CoolingLight, CoolingLightIndex};
-use super::gaussian::GaussianBeam;
 use super::sampler::LaserSamplers;
+use crate::maths;
+use nalgebra::Vector3;
 
 use crate::atom::Force;
-use crate::integrator::Timestep;
 use crate::constant::{HBAR, PI};
+use crate::integrator::Timestep;
 use crate::magnetic::MagneticFieldSampler;
 
 /// This sytem calculates the forces exerted by `CoolingLight` on entities.
@@ -24,7 +22,6 @@ use crate::magnetic::MagneticFieldSampler;
 pub struct CalculateCoolingForcesSystem;
 impl<'a> System<'a> for CalculateCoolingForcesSystem {
     type SystemData = (
-        ReadStorage<'a, GaussianBeam>,
         ReadStorage<'a, MagneticFieldSampler>,
         WriteStorage<'a, LaserSamplers>,
         ReadStorage<'a, AtomInfo>,
@@ -33,17 +30,21 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
 
     fn run(
         &mut self,
-        (beams, magnetic_samplers, mut laser_samplers, atom_info, mut forces): Self::SystemData,
+        (magnetic_samplers, mut laser_samplers, atom_info, mut forces): Self::SystemData,
     ) {
         // Outer loop over atoms
-        for (atom_info, bfield, mut laser_samplers, mut force) in
-            (&atom_info, &magnetic_samplers, &mut laser_samplers, &mut forces).join()
+        for (atom_info, bfield, laser_samplers, mut force) in (
+            &atom_info,
+            &magnetic_samplers,
+            &mut laser_samplers,
+            &mut forces,
+        )
+            .join()
         {
             // Inner loop over cooling lasers
             for mut laser_sampler in &mut laser_samplers.contents {
-                let s0 = laser_sampler.intensity
-                    / atom_info.saturation_intensity;
-                let angular_detuning = (laser_sampler.wavevector.norm()*constant::C/2./PI
+                let s0 = laser_sampler.intensity / atom_info.saturation_intensity;
+                let angular_detuning = (laser_sampler.wavevector.norm() * constant::C / 2. / PI
                     - atom_info.frequency
                     - laser_sampler.doppler_shift)
                     * 2.0
@@ -73,12 +74,8 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                             .powf(2.)
                             / gamma.powf(2.));
                 let cooling_force = wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);
-                laser_sampler.force=cooling_force.clone();
+                laser_sampler.force = cooling_force.clone();
                 force.force = force.force + cooling_force;
-                // println!(
-                //     "test={}",
-                //     atom_info.mup / (2.0 * PI * HBAR) * bfield.magnitude
-                // );
             }
         }
     }
@@ -91,38 +88,38 @@ impl<'a> System<'a> for RandomWalkSystem {
         WriteStorage<'a, Force>,
         ReadStorage<'a, LaserSamplers>,
         ReadStorage<'a, Atom>,
-        ReadStorage<'a,AtomInfo>,
-        ReadExpect<'a,Timestep>,
+        ReadStorage<'a, AtomInfo>,
+        ReadExpect<'a, Timestep>,
     );
 
-    fn run(&mut self,(mut force,samplers,_atom,atom_info,timestep):Self::SystemData){
-        for (mut force, samplers,_,atom_info) in (&mut force, &samplers,&_atom,&atom_info).join(){
+    fn run(&mut self, (mut force, samplers, _atom, atom_info, timestep): Self::SystemData) {
+        for (mut force, samplers, _, atom_info) in
+            (&mut force, &samplers, &_atom, &atom_info).join()
+        {
             let mut total_force = 0.;
             let omega = 2.0 * constant::PI * atom_info.frequency;
-            for sampler in samplers.contents.iter(){
+            for sampler in samplers.contents.iter() {
                 total_force = total_force + sampler.force.norm();
             }
             let force_one_atom = constant::HBAR * omega / timestep.delta;
             let mut number_collision = total_force / force_one_atom;
-            let mut force_real = Vector3::new(0.,0.,0.);
+            let mut force_real = Vector3::new(0., 0., 0.);
             let mut rng = rand::thread_rng();
-            loop{
-                if number_collision >1.{
+            loop {
+                if number_collision > 1. {
                     force_real = force_real + force_one_atom * maths::random_direction();
-                    number_collision = number_collision -1.;
-                }
-                else{
-                    	
-	                let luck = rng.gen_range(0.0, 1.0);
-                    if luck < number_collision{
+                    number_collision = number_collision - 1.;
+                } else {
+                    let luck = rng.gen_range(0.0, 1.0);
+                    if luck < number_collision {
                         force_real = force_real + force_one_atom * maths::random_direction();
-                        break
-                    }
-                    else{
-                        break
+                        break;
+                    } else {
+                        break;
                     }
                 }
             }
+            force.force = force.force + force_real;
         }
     }
 }
@@ -160,7 +157,10 @@ pub mod tests {
                 cool_light_detuning,
                 1.0,
             ))
-            .with(CoolingLightIndex { index: 0 })
+            .with(CoolingLightIndex {
+                index: 0,
+                initiated: true,
+            })
             .with(GaussianBeam {
                 direction: Vector3::new(1.0, 0.0, 0.0),
                 intersection: Vector3::new(0.0, 0.0, 0.0),
