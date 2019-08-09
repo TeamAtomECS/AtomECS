@@ -12,7 +12,6 @@ use crate::magnetic::uniform::UniformMagneticField;
 use crate::oven::{Oven,OvenAperture,AtomNumberToEmit,EmitFixedRate};
 use specs::{Builder, Dispatcher, World};
 extern crate nalgebra;
-use nalgebra::Vector3;
 
 pub fn create_from_config() -> (World, Dispatcher<'static, 'static>){
 	let mut world = World::new();

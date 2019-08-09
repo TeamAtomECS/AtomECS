@@ -51,8 +51,8 @@ pub struct Oven {
 impl Component for Oven {
 	type Storage = HashMapStorage<Self>;
 }
-impl Oven {
-	pub fn PositionRandom(&self) -> Vector3<f64> {
+impl Oven{
+	pub fn get_random_spawn_position(&self) -> Vector3<f64>{
 		let mut rng = rand::thread_rng();
 		let mut start_position = Vector3::new(0., 0., 0.);
 		match self.aperture {
@@ -101,7 +101,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				let new_atom = entities.create();
 				let new_vel =
 					velocity_generate(oven.temperature, mass * constant::AMU, &oven.direction);
-				let start_position = oven_position.pos + oven.PositionRandom();
+				let start_position = oven_position.pos + oven.get_random_spawn_position();
 				updater.insert(
 					new_atom,
 					Position {
