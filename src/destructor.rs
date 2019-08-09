@@ -1,20 +1,32 @@
 extern crate specs;
-use crate::atom::Position;
-use specs::{Entities, Join, ReadStorage, System, Component, HashMapStorage};
+use crate::atom::{Atom, Position};
+use specs::{Component, Entities, HashMapStorage, Join, ReadStorage, System};
 
-/// This system is responsible for delete atoms that have strayed out of the simulation region.
-pub struct DestroyAtomsSystem;
+/// Deletes entities which have been marked for destruction.
+pub struct DeleteToBeDestroyedEntitiesSystem;
+impl<'a> System<'a> for DeleteToBeDestroyedEntitiesSystem {
+    type SystemData = (Entities<'a>, ReadStorage<'a, ToBeDestroyed>);
 
-impl<'a> System<'a> for DestroyAtomsSystem {
-    type SystemData = (Entities<'a>, ReadStorage<'a, Position>,ReadStorage<'a,ToBeDestroyed>);
-
-    fn run(&mut self, (ents, position,_des): Self::SystemData) {
-        for (entity, position, _des) in (&ents, &position, &_des).join(){
+    fn run(&mut self, (ents, _des): Self::SystemData) {
+        for (entity, _des) in (&ents, &_des).join() {
             ents.delete(entity).expect("Could not delete entity");
         }
-        for (entity, position) in (&ents, &position).join() {
+    }
+}
+
+/// Deletes atoms that have strayed outside of the simulation region.
+pub struct DestroyOutOfBoundAtomsSystem;
+impl<'a> System<'a> for DestroyOutOfBoundAtomsSystem {
+    type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a, Position>,
+        ReadStorage<'a, Atom>,
+    );
+
+    fn run(&mut self, (entities, positions, atoms): Self::SystemData) {
+        for (entity, position, _) in (&entities, &positions, &atoms).join() {
             if position.pos.norm_squared() > (0.5_f64).powf(2.0) {
-                ents.delete(entity).expect("Could not delete entity");
+                entities.delete(entity).expect("Could not delete entity");
             }
         }
     }
@@ -22,7 +34,7 @@ impl<'a> System<'a> for DestroyAtomsSystem {
 
 /// Component that marks an entity for deletion.
 pub struct ToBeDestroyed;
-impl Component for ToBeDestroyed{
+impl Component for ToBeDestroyed {
     type Storage = HashMapStorage<Self>;
 }
 
@@ -50,7 +62,7 @@ pub mod tests {
             })
             .build();
 
-        let mut system = DestroyAtomsSystem;
+        let mut system = DestroyOutOfBoundAtomsSystem;
         system.run_now(&test_world.res);
         test_world.maintain();
 

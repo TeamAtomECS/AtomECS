@@ -1,5 +1,5 @@
 use crate::atom::ClearForceSystem;
-use crate::destructor::DestroyAtomsSystem;
+use crate::destructor::{DeleteToBeDestroyedEntitiesSystem,DestroyOutOfBoundAtomsSystem};
 use crate::initiate::DeflagNewAtomsSystem;
 use crate::integrator::EulerIntegrationSystem;
 use crate::integrator::{Step, Timestep};
@@ -35,7 +35,8 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 	builder = builder.with(ApplyGravitationalForceSystem,"add_gravity",&["clear"]);
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
 	builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
-	builder = builder.with(DestroyAtomsSystem, "", &[]);
+	builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &[]);
+	builder = builder.with(DestroyOutOfBoundAtomsSystem, "", &[]);
 	builder.build()
 }
 
