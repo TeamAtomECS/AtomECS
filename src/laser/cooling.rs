@@ -37,7 +37,7 @@ impl CoolingLight {
 	///
 	/// `polarization`: Polarization of the cooling beam.
 	pub fn for_species(species: AtomInfo, detuning: f64, polarization: f64) -> Self {
-		let freq = species.frequency + detuning * species.linewidth;
+		let freq = species.frequency + detuning * 1.0e6;
 		CoolingLight {
 			wavelength: constant::C / freq,
 			polarization: polarization,
