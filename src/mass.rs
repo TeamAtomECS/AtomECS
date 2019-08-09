@@ -6,10 +6,13 @@ extern crate specs;
 use specs::{Component, VecStorage};
 use serde::{Deserialize,Serialize};
 
+#[derive(Deserialize,Serialize,Clone)]
 pub struct MassPercentage{
     pub atommass:f64,
     pub percentage:f64,
 }
+
+#[derive(Deserialize,Serialize,Clone)]
 pub struct MassArchetype{
     pub massdistribution : Vec<MassPercentage>,
 }

@@ -54,7 +54,7 @@ pub fn create_simulation_entity(filename:&str,world: &mut World){
 		.with(AtomNumberToEmit { number: 0 })
 		.with(EmitFixedRate { rate: oven.rate })
 		.with(config.atominfo.clone())
-		.with(Mass { value: 87. })
+		.with(config.mass.clone())
         // fixed for now, will implemented MassArchetype soon
 		.with(Position {
 			pos: oven.position,

@@ -7,6 +7,7 @@ use crate::atom::{AtomInfo, Mass, Position};
 use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::oven::Oven;
+use crate::mass::{MassArchetype,MassPercentage};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 use std::io::{BufWriter, Read};
@@ -20,7 +21,7 @@ pub fn load_file(file: &str) -> SimArchetype {
 
 /// Writes a YAML file for 2D plus MOT.
 /// use this as the the input format in detail
-pub fn write_file(file: &str) {
+pub fn write_file_template(file: &str) {
 	let mut file = File::create(file).expect("Unable to open file");
 	let mut writer = BufWriter::new(file);
 
@@ -55,11 +56,14 @@ pub fn write_file(file: &str) {
 		gradient: 0.011,
 		uniform: Vector3::new(0., 0., 2.),
 	};
+	let mut massrubidium = MassArchetype { massdistribution:vec![MassPercentage{atommass:87.,percentage:0.2783},MassPercentage{atommass:85.,percentage:0.7217}] };
+	massrubidium.normalise();
 	let sim = SimArchetype {
 		lasers: lasers,
 		ovens,
-		magnetic: mag,
-		atominfo: AtomInfo::rubidium(),
+		magnetic:mag,
+		mass:massrubidium,
+		atominfo:AtomInfo::rubidium(),
 	};
 
 	let serialized = serde_yaml::to_string(&sim).unwrap();
@@ -96,13 +100,11 @@ pub struct MagArchetype {
 	pub uniform: Vector3<f64>,
 }
 
-struct MassArchetype {
-	// TODO
-}
 #[derive(Deserialize, Serialize)]
 pub struct SimArchetype {
 	pub lasers: Vec<LaserArchetype>,
 	pub ovens: Vec<OvenArchetype>,
-	pub atominfo: AtomInfo,
+	pub atominfo:AtomInfo,
+	pub mass:MassArchetype,
 	pub magnetic: MagArchetype,
 }
