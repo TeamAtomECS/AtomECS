@@ -3,13 +3,13 @@ extern crate specs;
 extern crate specs_derive;
 use crate::constant::{BOHRMAG, C};
 use nalgebra::Vector3;
-use specs::{Component, NullStorage, System, VecStorage, WriteStorage, Join};
-use serde::{Deserialize,Serialize};
+use serde::{Deserialize, Serialize};
+use specs::{Component, Join, NullStorage, System, VecStorage, WriteStorage};
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
 ///
 /// SI units (metres)
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Position {
 	pub pos: Vector3<f64>,
 }
@@ -56,7 +56,7 @@ impl Force {
 /// Inertial and Gravitational mass of an entity
 ///
 /// Mass is specified in atom mass units (amu).
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Mass {
 	pub value: f64,
 }
@@ -77,7 +77,7 @@ impl Default for Atom {
 	}
 }
 
-#[derive(Deserialize,Serialize,Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct AtomInfo {
 	/// The dependence of the sigma_+ transition on magnetic fields.
 	/// The sigma_+ transition is shifted by `mup * field.magnitude / h` Hz.
@@ -115,6 +115,20 @@ impl AtomInfo {
 			saturation_intensity: 16.69, // [Steck, Rubidium 87, D2 cycling transition]
 		}
 	}
+
+	/// Creates an `AtomInfo` component populated with parameters for Strontium.
+	/// The parameters are taken from doi:10.1103/PhysRevA.97.039901 [Nosske 2017].
+	pub fn strontium() -> Self {
+		AtomInfo {
+			mup: BOHRMAG,  // to check
+			mum: -BOHRMAG, // to check
+			muz: 0.0,
+			frequency: C / 461.0e-9,
+			linewidth: 32e6,             // [Nosske2017]
+			saturation_intensity: 430.0, // [Nosske2017, 43mW/cm^2]
+		}
+	}
+
 	pub fn gamma(&self) -> f64 {
 		self.linewidth * 2.0 * std::f64::consts::PI
 	}
@@ -127,7 +141,7 @@ impl<'a> System<'a> for ClearForceSystem {
 	type SystemData = (WriteStorage<'a, Force>);
 	fn run(&mut self, mut force: Self::SystemData) {
 		for force in (&mut force).join() {
-			force.force = Vector3::new(0.0,0.0,0.0);
+			force.force = Vector3::new(0.0, 0.0, 0.0);
 		}
 	}
 }
