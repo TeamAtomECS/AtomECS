@@ -1,4 +1,3 @@
-/// The laser module relates to optical scattering forces.
 pub mod cooling;
 pub mod doppler;
 pub mod force;
@@ -81,7 +80,7 @@ pub fn add_systems_to_dispatch(
 		.with(
 			force::RandomWalkSystem,
 			"random_walk_system",
-			&["sample_gaussian_beam_intensity"]
+			&["sample_gaussian_beam_intensity"],
 		)
 }
 

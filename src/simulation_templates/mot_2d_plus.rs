@@ -1,15 +1,16 @@
 #[allow(unused_imports)]
 use crate::atom::{Atom, AtomInfo, Force, Mass, Position, Velocity};
+use crate::atom_sources::emit::{AtomNumberToEmit, EmitNumberPerFrame};
+use crate::atom_sources::mass::{MassArchetype, MassPercentage};
+use crate::atom_sources::oven::{Oven, OvenAperture};
+use crate::destructor::ToBeDestroyed;
 use crate::ecs;
 #[allow(unused_imports)]
 use crate::initiate::NewlyCreated;
 use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::magnetic::quadrupole::QuadrupoleField3D;
-use crate::atom_sources::oven::{Oven,OvenAperture};
-use crate::atom_sources::emit::{AtomNumberToEmit,EmitNumberPerFrame};
 use specs::{Builder, Dispatcher, World};
-use crate::atom_sources::mass::{MassArchetype,MassPercentage};
 extern crate nalgebra;
 use nalgebra::Vector3;
 
@@ -126,16 +127,30 @@ fn mot2d_entity_create(world: &mut World) {
 		.build();
 
 	// Add oven
-	let mut massrubidium = MassArchetype { massdistribution:vec![MassPercentage{atommass:87.,percentage:0.2783},MassPercentage{atommass:85.,percentage:0.7217}] };
+	let mut massrubidium = MassArchetype {
+		massdistribution: vec![
+			MassPercentage {
+				atommass: 87.,
+				percentage: 0.2783,
+			},
+			MassPercentage {
+				atommass: 85.,
+				percentage: 0.7217,
+			},
+		],
+	};
 	massrubidium.normalise();
 	world
 		.create_entity()
 		.with(Oven {
 			temperature: 100.,
 			direction: Vector3::z(),
-			aperture:OvenAperture::Cubic{size:[1e-6,1e-6,1e-6]},
+			aperture: OvenAperture::Cubic {
+				size: [1e-6, 1e-6, 1e-6],
+			},
 		})
-		.with(EmitNumberPerFrame { number: 1 })
+		.with(EmitNumberPerFrame { number: 10000 })
+		.with(ToBeDestroyed)
 		.with(AtomNumberToEmit { number: 1 })
 		.with(AtomInfo::rubidium())
 		.with(massrubidium)
@@ -143,20 +158,4 @@ fn mot2d_entity_create(world: &mut World) {
 			pos: Vector3::new(0.0, 0.0, -0.1),
 		})
 		.build();
-
-	// Add single atom
-	// world
-	// 	.create_entity()
-	// 	.with(Position {
-	// 		pos: Vector3::new(0.001, 0.0, 0.0),
-	// 	})
-	// 	.with(Velocity {
-	// 		vel: Vector3::new(-1.0, 0.0, 0.0),
-	// 	})
-	// 	.with(NewlyCreated {})
-	// 	.with(Force::new())
-	// 	.with(Atom {})
-	// 	.with(AtomInfo::rubidium())
-	// 	.with(Mass { value: 87. })
-	// 	.build();
 }
