@@ -2,7 +2,7 @@ use crate::maths;
 extern crate nalgebra;
 extern crate rand;
 use super::emit;
-use super::mass::MassArchetype;
+use super::mass::MassDistribution;
 use crate::constant;
 use crate::constant::PI;
 use crate::initiate::*;
@@ -85,7 +85,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		ReadStorage<'a, AtomInfo>,
 		ReadStorage<'a, emit::AtomNumberToEmit>,
 		ReadStorage<'a, Position>,
-		ReadStorage<'a, MassArchetype>,
+		ReadStorage<'a, MassDistribution>,
 		Read<'a, LazyUpdate>,
 	);
 
@@ -97,7 +97,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 			(&oven, &atom, &numbers_to_emit, &pos, &masstype).join()
 		{
 			for _i in 0..number_to_emit.number {
-				let mass = masstype.get_mass().value;
+				let mass = masstype.draw_random_mass().value;
 				let new_atom = entities.create();
 				let new_vel =
 					velocity_generate(oven.temperature, mass * constant::AMU, &oven.direction);

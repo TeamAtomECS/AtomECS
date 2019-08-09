@@ -32,7 +32,7 @@ pub fn add_systems_to_dispatch(
 /// Registers resources required by `atom_sources` to the ecs world.
 pub fn register_components(world: &mut World) {
     world.register::<oven::Oven>();
-    world.register::<mass::MassArchetype>();
+    world.register::<mass::MassDistribution>();
     world.register::<emit::EmitFixedRate>();
     world.register::<emit::EmitNumberPerFrame>();
     world.register::<emit::AtomNumberToEmit>();

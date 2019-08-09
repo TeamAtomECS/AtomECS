@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use crate::atom::{Atom, AtomInfo, Force, Mass, Position, Velocity};
 use crate::atom_sources::emit::{AtomNumberToEmit, EmitNumberPerFrame};
-use crate::atom_sources::mass::{MassArchetype, MassPercentage};
+use crate::atom_sources::mass::{MassDistribution, MassRatio};
 use crate::atom_sources::oven::{Oven, OvenAperture};
 use crate::destructor::ToBeDestroyed;
 use crate::ecs;
@@ -127,19 +127,16 @@ fn mot2d_entity_create(world: &mut World) {
 		.build();
 
 	// Add oven
-	let mut massrubidium = MassArchetype {
-		massdistribution: vec![
-			MassPercentage {
-				atommass: 87.,
-				percentage: 0.2783,
-			},
-			MassPercentage {
-				atommass: 85.,
-				percentage: 0.7217,
-			},
-		],
-	};
-	massrubidium.normalise();
+	let massrubidium = MassDistribution::new(vec![
+		MassRatio {
+			mass: 87.,
+			ratio: 0.2783,
+		},
+		MassRatio {
+			mass: 85.,
+			ratio: 0.7217,
+		},
+	]);
 	world
 		.create_entity()
 		.with(Oven {
