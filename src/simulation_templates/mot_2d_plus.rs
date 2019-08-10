@@ -1,16 +1,17 @@
 #[allow(unused_imports)]
 use crate::atom::{Atom, AtomInfo, Force, Mass, Position, Velocity};
-
+use crate::atom_sources::emit::{AtomNumberToEmit, EmitNumberPerFrame};
+use crate::atom_sources::mass::{MassDistribution, MassRatio};
+use crate::atom_sources::oven::{Oven, OvenAperture};
+use crate::destructor::ToBeDestroyed;
+use crate::ecs;
 #[allow(unused_imports)]
 use crate::destructor::ToBeDestroyed;
 use crate::ecs;
 use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::magnetic::quadrupole::QuadrupoleField3D;
-use crate::mass::{MassArchetype, MassPercentage};
-use crate::oven::{AtomNumberToEmit, EmitNumberPerFrame, Oven, OvenAperture};
 use specs::{Builder, Dispatcher, World};
-
 extern crate nalgebra;
 use nalgebra::Vector3;
 
@@ -127,19 +128,16 @@ fn mot2d_entity_create(world: &mut World) {
 		.build();
 
 	// Add oven
-	let mut massrubidium = MassArchetype {
-		massdistribution: vec![
-			MassPercentage {
-				atommass: 87.,
-				percentage: 0.2783,
-			},
-			MassPercentage {
-				atommass: 85.,
-				percentage: 0.7217,
-			},
-		],
-	};
-	massrubidium.normalise();
+	let massrubidium = MassDistribution::new(vec![
+		MassRatio {
+			mass: 87.,
+			ratio: 0.2783,
+		},
+		MassRatio {
+			mass: 85.,
+			ratio: 0.7217,
+		},
+	]);
 	world
 		.create_entity()
 		.with(Oven {
@@ -158,20 +156,4 @@ fn mot2d_entity_create(world: &mut World) {
 			pos: Vector3::new(0.0, 0.0, 0.0),
 		})
 		.build();
-
-	// Add single atom
-	// world
-	// 	.create_entity()
-	// 	.with(Position {
-	// 		pos: Vector3::new(0.001, 0.0, 0.0),
-	// 	})
-	// 	.with(Velocity {
-	// 		vel: Vector3::new(-1.0, 0.0, 0.0),
-	// 	})
-	// 	.with(NewlyCreated {})
-	// 	.with(Force::new())
-	// 	.with(Atom {})
-	// 	.with(AtomInfo::rubidium())
-	// 	.with(Mass { value: 87. })
-	// 	.build();
 }

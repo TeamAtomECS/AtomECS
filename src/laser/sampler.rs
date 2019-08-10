@@ -8,12 +8,16 @@ use nalgebra::Vector3;
 /// Represents a sample of a laser beam
 #[derive(Clone)]
 pub struct LaserSampler {
+    /// Calculated force exerted by this laser sampler on the atom. Units of N.
     pub force: Vector3<f64>,
+
     /// Intensity of the laser beam, in SI units of Watts per metre
     pub intensity: f64,
-    /// wavevector of the laser beam on the atom
+
+    /// wavevector of the laser beam on the atom, in units of inverse m.
     pub wavevector: Vector3<f64>,
 
+    /// Polarization of the cooling laser. See [CoolingLight](crate::laser::cooling::CoolingLight) for more info.
     pub polarization: f64,
 
     /// Doppler shift with respect to laser beam, in SI units of Hz.

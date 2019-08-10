@@ -1,19 +1,19 @@
 use crate::maths;
 extern crate nalgebra;
 extern crate rand;
+use super::emit;
+use super::mass::MassDistribution;
 use crate::constant;
 use crate::constant::PI;
 use crate::initiate::*;
-use crate::mass::MassArchetype;
 use rand::Rng;
+
 extern crate specs;
 use crate::atom::*;
 use nalgebra::Vector3;
-use serde::{Deserialize, Serialize};
 
 use specs::{
-	Component, DispatcherBuilder, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage,
-	System, World, WriteStorage,
+	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System
 };
 
 pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>) -> Vector3<f64> {
@@ -34,8 +34,8 @@ pub enum OvenAperture {
 	Cubic { size: [f64; 3] },
 	Circular { radius: f64, thickness: f64 },
 }
-/// Component representing an oven, which is a source of hot atoms.
 
+/// Component representing an oven, which is a source of hot atoms.
 pub struct Oven {
 	/// Temperature of the oven, in Kelvin
 	pub temperature: f64,
@@ -83,9 +83,9 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		Entities<'a>,
 		ReadStorage<'a, Oven>,
 		ReadStorage<'a, AtomInfo>,
-		ReadStorage<'a, AtomNumberToEmit>,
+		ReadStorage<'a, emit::AtomNumberToEmit>,
 		ReadStorage<'a, Position>,
-		ReadStorage<'a, MassArchetype>,
+		ReadStorage<'a, MassDistribution>,
 		Read<'a, LazyUpdate>,
 	);
 
@@ -97,8 +97,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 			(&oven, &atom, &numbers_to_emit, &pos, &masstype).join()
 		{
 			for _i in 0..number_to_emit.number {
-				println!("test");
-				let mass = masstype.get_mass().value;
+				let mass = masstype.draw_random_mass().value;
 				let new_atom = entities.create();
 				let new_vel =
 					velocity_generate(oven.temperature, mass * constant::AMU, &oven.direction);
@@ -126,66 +125,6 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				updater.insert(new_atom, Atom);
 				updater.insert(new_atom, NewlyCreated);
 			}
-		}
-	}
-}
-
-/// Adds required systems to the dispatcher.
-pub fn add_systems_to_dispatch(
-	builder: DispatcherBuilder<'static, 'static>,
-	deps: &[&str],
-) -> DispatcherBuilder<'static, 'static> {
-	builder
-		.with(EmitNumberPerFrameSystem, "emit_number_per_frame", deps)
-		.with(OvenCreateAtomsSystem, "", &["emit_number_per_frame"])
-}
-
-/// Registers resources required by the module to the ecs world.
-pub fn register_components(world: &mut World) {
-	world.register::<Oven>();
-	world.register::<MassArchetype>();
-	world.register::<EmitFixedRate>();
-	world.register::<EmitNumberPerFrame>();
-	world.register::<AtomNumberToEmit>();
-}
-
-/// Component which indicates the oven should emit a number of atoms per frame.
-#[derive(Serialize, Deserialize, Clone)]
-pub struct EmitNumberPerFrame {
-	pub number: i32,
-}
-impl Component for EmitNumberPerFrame {
-	type Storage = HashMapStorage<Self>;
-}
-
-/// Component which indicates the oven should emit at a fixed average rate.
-#[derive(Serialize, Deserialize, Clone)]
-pub struct EmitFixedRate {
-	pub rate: f64,
-}
-impl Component for EmitFixedRate {
-	type Storage = HashMapStorage<Self>;
-}
-
-/// The number of atoms the oven should emit in the current frame.
-pub struct AtomNumberToEmit {
-	pub number: i32,
-}
-impl Component for AtomNumberToEmit {
-	type Storage = HashMapStorage<Self>;
-}
-
-/// Calculates the number of atoms to emit per frame for fixed atoms-per-timestep ovens
-pub struct EmitNumberPerFrameSystem;
-impl<'a> System<'a> for EmitNumberPerFrameSystem {
-	type SystemData = (
-		ReadStorage<'a, EmitNumberPerFrame>,
-		WriteStorage<'a, AtomNumberToEmit>,
-	);
-
-	fn run(&mut self, (emit_numbers, mut numbers_to_emit): Self::SystemData) {
-		for (emit_number, mut number_to_emit) in (&emit_numbers, &mut numbers_to_emit).join() {
-			number_to_emit.number = emit_number.number;
 		}
 	}
 }

@@ -3,20 +3,20 @@ use crate::destructor::{DeleteToBeDestroyedEntitiesSystem, DestroyOutOfBoundAtom
 use crate::initiate::DeflagNewAtomsSystem;
 use crate::integrator::EulerIntegrationSystem;
 use crate::integrator::{Step, Timestep};
-
+use crate::gravity::ApplyGravitationalForceSystem;
 use crate::laser;
 use crate::magnetic;
 use crate::other_force::ApplyGravitationalForceSystem;
 use crate::output::console_output::ConsoleOutputSystem;
 use crate::output::file_output::FileOutputSystem;
-use crate::oven;
+use crate::atom_sources;
 use specs::{Dispatcher, DispatcherBuilder, World};
 
 /// Registers all components used by the modules of the program.
 pub fn register_components(world: &mut World) {
 	magnetic::register_components(world);
 	laser::register_components(world);
-	oven::register_components(world);
+	atom_sources::register_components(world);
 }
 
 /// Creates a `Dispatcher` that can be used to calculate each simulation frame.
@@ -29,7 +29,7 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 	builder.add_barrier();
 	builder = laser::add_systems_to_dispatch(builder, &[]);
 	builder.add_barrier();
-	builder = oven::add_systems_to_dispatch(builder, &[]);
+	builder = atom_sources::add_systems_to_dispatch(builder, &[]);
 	builder.add_barrier();
 	builder = builder.with(ApplyGravitationalForceSystem, "add_gravity", &["clear"]);
 	builder = builder.with(

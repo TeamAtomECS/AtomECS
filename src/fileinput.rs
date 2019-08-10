@@ -3,11 +3,11 @@ use std::io::prelude::*;
 extern crate serde;
 extern crate serde_json;
 extern crate serde_yaml;
-use crate::atom::{AtomInfo};
-use crate::mass::{MassArchetype,MassPercentage};
+use crate::atom::AtomInfo;
+use crate::atom_sources::mass::{MassDistribution, MassRatio};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
-use std::io::{BufWriter};
+use std::io::BufWriter;
 
 pub fn load_file(file: &str) -> SimArchetype {
 	let file = File::open(file).expect("Unable to open file");
@@ -53,14 +53,22 @@ pub fn write_file_template(file: &str) {
 		gradient: 0.011,
 		uniform: Vector3::new(0., 0., 2.),
 	};
-	let mut massrubidium = MassArchetype { massdistribution:vec![MassPercentage{atommass:87.,percentage:0.2783},MassPercentage{atommass:85.,percentage:0.7217}] };
-	massrubidium.normalise();
+	let massrubidium = MassDistribution::new(vec![
+		MassRatio {
+			mass: 87.,
+			ratio: 0.2783,
+		},
+		MassRatio {
+			mass: 85.,
+			ratio: 0.7217,
+		},
+	]);
 	let sim = SimArchetype {
 		lasers: lasers,
 		ovens,
-		magnetic:mag,
-		mass:massrubidium,
-		atominfo:AtomInfo::rubidium(),
+		magnetic: mag,
+		mass: massrubidium,
+		atominfo: AtomInfo::rubidium(),
 	};
 
 	let serialized = serde_yaml::to_string(&sim).unwrap();
@@ -101,7 +109,7 @@ pub struct MagArchetype {
 pub struct SimArchetype {
 	pub lasers: Vec<LaserArchetype>,
 	pub ovens: Vec<OvenArchetype>,
-	pub atominfo:AtomInfo,
-	pub mass:MassArchetype,
+	pub atominfo: AtomInfo,
+	pub mass: MassDistribution,
 	pub magnetic: MagArchetype,
 }
