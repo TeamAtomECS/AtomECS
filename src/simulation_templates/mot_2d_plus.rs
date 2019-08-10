@@ -3,8 +3,6 @@ use crate::atom::{Atom, AtomInfo, Force, Mass, Position, Velocity};
 use crate::atom_sources::emit::{AtomNumberToEmit, EmitNumberPerFrame};
 use crate::atom_sources::mass::{MassDistribution, MassRatio};
 use crate::atom_sources::oven::{Oven, OvenAperture};
-use crate::destructor::ToBeDestroyed;
-use crate::ecs;
 #[allow(unused_imports)]
 use crate::destructor::ToBeDestroyed;
 use crate::ecs;

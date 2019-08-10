@@ -43,8 +43,8 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
         {
             // Inner loop over cooling lasers
             for mut laser_sampler in &mut laser_samplers.contents {
-                let s0 = 10.0;
-                //let s0 = laser_sampler.intensity / atom_info.saturation_intensity;
+                //let s0 = 50.0;
+                let s0 = laser_sampler.intensity / atom_info.saturation_intensity;
                 let angular_detuning = (laser_sampler.wavevector.norm() * constant::C / 2. / PI
                     - atom_info.frequency
                     - laser_sampler.doppler_shift)
@@ -76,7 +76,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                             / gamma.powf(2.));
                 let cooling_force = wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);
                 laser_sampler.force = cooling_force.clone();
-                //println!("detuning{}", angular_detuning / gamma);
+                println!("detuning{}", angular_detuning / gamma);
                 force.force = force.force + cooling_force;
             }
         }
@@ -105,6 +105,7 @@ impl<'a> System<'a> for RandomWalkSystem {
             }
             let force_one_atom = constant::HBAR * omega / timestep.delta;
             let mut number_collision = total_force / force_one_atom;
+            //println!("{}", number_collision);
             let mut force_real = Vector3::new(0., 0., 0.);
             let mut rng = rand::thread_rng();
             loop {

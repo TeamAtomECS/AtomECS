@@ -42,6 +42,7 @@ impl MassDistribution {
         for mut mr in &mut self.distribution {
             mr.ratio = mr.ratio / total;
         }
+        self.normalised = true
     }
 
     /// Randomly draw a mass from the distribution.

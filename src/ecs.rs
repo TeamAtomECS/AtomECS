@@ -6,7 +6,6 @@ use crate::integrator::{Step, Timestep};
 use crate::gravity::ApplyGravitationalForceSystem;
 use crate::laser;
 use crate::magnetic;
-use crate::other_force::ApplyGravitationalForceSystem;
 use crate::output::console_output::ConsoleOutputSystem;
 use crate::output::file_output::FileOutputSystem;
 use crate::atom_sources;
