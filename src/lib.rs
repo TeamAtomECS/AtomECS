@@ -14,3 +14,4 @@ pub mod output;
 pub mod atom_sources;
 pub mod simulation_templates;
 pub mod gravity;
+pub mod detector;
