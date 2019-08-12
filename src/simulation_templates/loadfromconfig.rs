@@ -1,7 +1,7 @@
 
 #[allow(unused_imports)]
 use crate::atom::{Atom, AtomInfo, Force, Mass, Position, Velocity};
-use crate::atom_sources::emit::{AtomNumberToEmit, EmitFixedRate,EmitNumberPerFrame};
+use crate::atom_sources::emit::{AtomNumberToEmit, EmitFixedRate, EmitNumberPerFrame};
 use crate::atom_sources::oven::{Oven, OvenAperture};
 use crate::constant;
 
@@ -23,7 +23,7 @@ pub fn create_from_config() -> (World, Dispatcher<'static, 'static>) {
 	ecs::register_resources(&mut world);
 	let mut dispatcher = ecs::create_simulation_dispatcher();
 	dispatcher.setup(&mut world.res);
-	create_simulation_entity("example.yml", &mut world);
+	create_simulation_entity("example.yaml", &mut world);
 
 	(world, dispatcher)
 }
@@ -44,6 +44,9 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 			})
 			.build();
 	}
+	let mut mass = config.mass.clone();
+	mass.normalise();
+	println!("{:?}",mass.normalised);
 	for oven in config.ovens.iter() {
 		world
 			.create_entity()
@@ -58,7 +61,7 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 			.with(AtomNumberToEmit { number: 0 })
 			.with(EmitFixedRate { rate: oven.rate })
 			.with(config.atominfo.clone())
-			.with(config.mass.clone())
+			.with(mass.clone())
 			.with(Position { pos: oven.position })
 			.build();
 		if oven.instant_emission != 0 {
@@ -72,11 +75,13 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 						thickness: oven.thickness,
 					},
 				})
-				.with(AtomNumberToEmit {number:0})
-				.with(EmitNumberPerFrame{number:oven.instant_emission as i32})
+				.with(AtomNumberToEmit { number: 0 })
+				.with(EmitNumberPerFrame {
+					number: oven.instant_emission as i32,
+				})
 				.with(ToBeDestroyed)
 				.with(config.atominfo.clone())
-				.with(config.mass.clone())
+				.with(mass.clone())
 				.with(Position { pos: oven.position })
 				.build();
 		}

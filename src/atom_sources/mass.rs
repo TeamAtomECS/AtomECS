@@ -16,7 +16,7 @@ pub struct MassRatio {
 #[derive(Deserialize, Serialize, Clone)]
 pub struct MassDistribution {
     pub distribution: Vec<MassRatio>,
-    normalised: bool,
+    pub normalised: bool,
 }
 impl Component for MassDistribution {
     type Storage = HashMapStorage<Self>;
@@ -33,7 +33,7 @@ impl MassDistribution {
     }
 
     /// Normalise the distribution of masses so that the ratios add to one.
-    fn normalise(&mut self) {
+    pub fn normalise(&mut self) {
         let mut total = 0.;
         for mr in self.distribution.iter() {
             total = total + mr.ratio;
