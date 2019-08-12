@@ -5,7 +5,7 @@ use specs::{
     Component, Dispatcher, DispatcherBuilder, Entities, HashMapStorage, Join, LazyUpdate, Read,
     ReadExpect, ReadStorage, System, World,
 };
-
+use std::fs::File;
 use std::fs::OpenOptions;
 extern crate csv;
 
@@ -124,6 +124,7 @@ pub fn print_detected_to_file(
 }
 
 pub fn clearcsv(filename: &str) -> Result<(), Box<Error>> {
+    let file = File::create(filename).expect("Unable to open file");
     let mut file = OpenOptions::new().write(true).open(filename).unwrap();
     let mut wtr = csv::Writer::from_writer(file);
     wtr.write_record(&[

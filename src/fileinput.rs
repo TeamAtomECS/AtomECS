@@ -43,7 +43,7 @@ pub fn write_file_template(file: &str) {
 	let ovens = vec![OvenArchetype {
 		position: Vector3::new(1., 0., 0.),
 		rate: 100.,
-		instant_emission:100,
+		instant_emission: 100,
 		direction: Vector3::new(0., 0., 1.0),
 		temperature: 300.,
 		radius_aperture: 0.01,
@@ -64,12 +64,19 @@ pub fn write_file_template(file: &str) {
 			ratio: 0.7217,
 		},
 	]);
+	let detector = DetectorArchetype{
+		position:Vector3::new(1.,0.,0.),
+		direction:Vector3::new(1.,0.,0.),
+		radius:0.01,
+		thickness:0.01,
+	};
 	let sim = SimArchetype {
 		lasers: lasers,
 		ovens,
 		magnetic: mag,
 		mass: massrubidium,
 		atominfo: AtomInfo::rubidium(),
+		detector,
 	};
 
 	let serialized = serde_yaml::to_string(&sim).unwrap();
@@ -92,7 +99,7 @@ pub struct LaserArchetype {
 pub struct OvenArchetype {
 	pub position: Vector3<f64>,
 	pub rate: f64,
-	pub instant_emission:u64,
+	pub instant_emission: u64,
 	pub direction: Vector3<f64>,
 	pub temperature: f64,
 	pub radius_aperture: f64,
@@ -114,4 +121,13 @@ pub struct SimArchetype {
 	pub atominfo: AtomInfo,
 	pub mass: MassDistribution,
 	pub magnetic: MagArchetype,
+	pub detector: DetectorArchetype,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct DetectorArchetype{
+	pub position: Vector3<f64>,
+	pub direction: Vector3<f64>,
+	pub thickness: f64,
+	pub radius: f64,
 }

@@ -1,0 +1,75 @@
+---
+lasers:
+  - direction:
+      - 1.0
+      - 0.0
+      - 0.0
+    frequency: 10000000000.0
+    polarization: 1.0
+    power: 10.0
+    e_radius: 0.1
+    intersection:
+      - 0.0
+      - 0.0
+      - 1.0
+  - direction:
+      - -1.0
+      - 0.0
+      - 0.0
+    frequency: 10000000000.0
+    polarization: -1.0
+    power: 10.0
+    e_radius: 0.1
+    intersection:
+      - 0.0
+      - 2.0
+      - 1.0
+ovens:
+  - position:
+      - 1.0
+      - 0.0
+      - 0.0
+    rate: 0.0
+    instant_emission: 100
+    direction:
+      - 0.0
+      - 0.0
+      - 1.0
+    temperature: 300.0
+    radius_aperture: 0.01
+    thickness: 0.01
+atominfo:
+  mup: 9.274e-24
+  mum: -9.274e-24
+  muz: 0.0
+  frequency: 384358974358974.3
+  linewidth: 6065000.0
+  saturation_intensity: 16.69
+mass:
+  distribution:
+    - mass: 87.0
+      ratio: 0.2783
+    - mass: 85.0
+      ratio: 0.7217
+  normalised: true
+magnetic:
+  centre:
+    - 1.0
+    - 0.0
+    - 0.0
+  gradient: 0.011
+  uniform:
+    - 0.0
+    - 0.0
+    - 2.0
+detector:
+  position:
+    - 1.0
+    - 0.0
+    - 0.0
+  direction:
+    - 1.0
+    - 0.0
+    - 0.0
+  thickness: 0.01
+  radius: 0.01

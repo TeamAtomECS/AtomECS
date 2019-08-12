@@ -1,17 +1,19 @@
 
 #[allow(unused_imports)]
 use crate::atom::{Atom, AtomInfo, Force, Mass, Position, Velocity};
-use crate::atom_sources::emit::{AtomNumberToEmit, EmitFixedRate};
+use crate::atom_sources::emit::{AtomNumberToEmit, EmitFixedRate,EmitNumberPerFrame};
 use crate::atom_sources::oven::{Oven, OvenAperture};
 use crate::constant;
-use crate::ecs;
+
 use crate::destructor::ToBeDestroyed;
-use crate::fileinput::load_file;
+use crate::detector::Detector;
+use crate::ecs;
 use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::magnetic::quadrupole::QuadrupoleField3D;
 use crate::magnetic::uniform::UniformMagneticField;
 
+use crate::fileinput::load_file;
 use specs::{Builder, Dispatcher, World};
 extern crate nalgebra;
 
@@ -21,7 +23,7 @@ pub fn create_from_config() -> (World, Dispatcher<'static, 'static>) {
 	ecs::register_resources(&mut world);
 	let mut dispatcher = ecs::create_simulation_dispatcher();
 	dispatcher.setup(&mut world.res);
-	create_simulation_entity("example.yaml", &mut world);
+	create_simulation_entity("example.yml", &mut world);
 
 	(world, dispatcher)
 }
@@ -59,7 +61,7 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 			.with(config.mass.clone())
 			.with(Position { pos: oven.position })
 			.build();
-		if oven.instant_emission !=0 {
+		if oven.instant_emission != 0 {
 			world
 				.create_entity()
 				.with(Oven {
@@ -70,8 +72,8 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 						thickness: oven.thickness,
 					},
 				})
-				.with(AtomNumberToEmit { number: oven.instant_emission as i32 })
-				.with(EmitFixedRate { rate: 0. })
+				.with(AtomNumberToEmit {number:0})
+				.with(EmitNumberPerFrame{number:oven.instant_emission as i32})
 				.with(ToBeDestroyed)
 				.with(config.atominfo.clone())
 				.with(config.mass.clone())
@@ -94,5 +96,16 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 			field: config.magnetic.uniform,
 		})
 		.build();
-
+	world
+		.create_entity()
+		.with(Detector {
+			filename: "detector.csv",
+			direction: config.detector.direction.clone(),
+			radius: config.detector.radius,
+			thickness: config.detector.thickness,
+		})
+		.with(Position {
+			pos: config.detector.position.clone(),
+		})
+		.build();
 }
