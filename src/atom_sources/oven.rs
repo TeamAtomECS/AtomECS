@@ -13,7 +13,7 @@ use crate::atom::*;
 use nalgebra::Vector3;
 
 use specs::{
-	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System
+	WriteExpect, Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System
 };
 
 pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>) -> Vector3<f64> {
@@ -86,12 +86,13 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		ReadStorage<'a, emit::AtomNumberToEmit>,
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, MassDistribution>,
+		WriteExpect<'a,Index>,
 		Read<'a, LazyUpdate>,
 	);
 
 	fn run(
 		&mut self,
-		(entities, oven, atom, numbers_to_emit, pos, masstype, updater): Self::SystemData,
+		(entities, oven, atom, numbers_to_emit, pos, masstype,mut index, updater): Self::SystemData,
 	) {
 		for (oven, atom, number_to_emit, oven_position, masstype) in
 			(&oven, &atom, &numbers_to_emit, &pos, &masstype).join()
@@ -108,7 +109,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 						pos: start_position,
 					},
 				);
-				updater.insert(new_atom, Velocity { vel: new_vel });
+				updater.insert(new_atom, Velocity { vel: new_vel.clone() });
 				updater.insert(new_atom, Force::new());
 				updater.insert(new_atom, Mass { value: mass });
 				updater.insert(
@@ -122,7 +123,8 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 						saturation_intensity: atom.saturation_intensity,
 					},
 				);
-				updater.insert(new_atom, Atom);
+				updater.insert(new_atom, Atom{index:index.current_index,initial_velocity:new_vel});
+				index.current_index = index.current_index +1;
 				updater.insert(new_atom, NewlyCreated);
 			}
 		}

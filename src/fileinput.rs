@@ -43,6 +43,7 @@ pub fn write_file_template(file: &str) {
 	let ovens = vec![OvenArchetype {
 		position: Vector3::new(1., 0., 0.),
 		rate: 100.,
+		instant_emission:100,
 		direction: Vector3::new(0., 0., 1.0),
 		temperature: 300.,
 		radius_aperture: 0.01,
@@ -91,6 +92,7 @@ pub struct LaserArchetype {
 pub struct OvenArchetype {
 	pub position: Vector3<f64>,
 	pub rate: f64,
+	pub instant_emission:u64,
 	pub direction: Vector3<f64>,
 	pub temperature: f64,
 	pub radius_aperture: f64,

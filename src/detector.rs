@@ -80,10 +80,10 @@ impl<'a> System<'a> for DetectingAtomSystem {
         ReadExpect<'a, Step>,
         ReadExpect<'a, Timestep>,
     );
-    fn run(&mut self, (pos, detector, ent, _atom, lazy, vel, step, timestep): Self::SystemData) {
+    fn run(&mut self, (pos, detector, ent, atom, lazy, vel, step, timestep): Self::SystemData) {
         let time = step.n as f64 * timestep.delta;
         for (detector_pos, detector) in (&pos, &detector).join() {
-            for (atom_pos, _, ent, vel) in (&pos, &_atom, &ent, &vel).join() {
+            for (atom_pos, atom, ent, vel) in (&pos, &atom, &ent, &vel).join() {
                 let rela_pos = atom_pos.pos - detector_pos.pos;
                 if detector.if_detect(&rela_pos) {
                     lazy.insert(ent, ToBeDestroyed);
@@ -91,6 +91,9 @@ impl<'a> System<'a> for DetectingAtomSystem {
                         vel.vel[0],
                         vel.vel[1],
                         vel.vel[2],
+                        atom.initial_velocity[0],
+                        atom.initial_velocity[1],
+                        atom.initial_velocity[2],
                         time,
                         atom_pos.pos[0],
                         atom_pos.pos[1],

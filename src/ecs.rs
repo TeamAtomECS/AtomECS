@@ -9,6 +9,7 @@ use crate::magnetic;
 use crate::output::console_output::ConsoleOutputSystem;
 use crate::output::file_output::FileOutputSystem;
 use crate::atom_sources;
+use crate::atom::Index;
 use specs::{Dispatcher, DispatcherBuilder, World};
 
 /// Registers all components used by the modules of the program.
@@ -51,4 +52,5 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 pub fn register_resources(world: &mut World) {
 	world.add_resource(Timestep { delta: 1e-6 });
 	world.add_resource(Step { n: 0 });
+	world.add_resource(Index{current_index:0})
 }
