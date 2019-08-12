@@ -1,22 +1,27 @@
 use crate::atom::ClearForceSystem;
+use crate::atom::Index;
+use crate::atom_sources;
 use crate::destructor::{DeleteToBeDestroyedEntitiesSystem, DestroyOutOfBoundAtomsSystem};
-use crate::initiate::DeflagNewAtomsSystem;
-use crate::integrator::EulerIntegrationSystem;
-use crate::integrator::{Step, Timestep};
 use crate::gravity::ApplyGravitationalForceSystem;
+use crate::initiate::DeflagNewAtomsSystem;
+use crate::integrator::{Step, Timestep};
+use crate::integrator::EulerIntegrationSystem;
 use crate::laser;
+
 use crate::magnetic;
 use crate::output::console_output::ConsoleOutputSystem;
 use crate::output::file_output::FileOutputSystem;
-use crate::atom_sources;
-use crate::atom::Index;
+
+use crate::detector;
 use specs::{Dispatcher, DispatcherBuilder, World};
+
 
 /// Registers all components used by the modules of the program.
 pub fn register_components(world: &mut World) {
 	magnetic::register_components(world);
 	laser::register_components(world);
 	atom_sources::register_components(world);
+	detector::register_components(world);
 }
 
 /// Creates a `Dispatcher` that can be used to calculate each simulation frame.
@@ -41,6 +46,7 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 			"add_gravity",
 		],
 	);
+	builder = detector::add_systems_to_dispatch(builder,&[]);
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
 	builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
 	builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &[]);
@@ -52,5 +58,5 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 pub fn register_resources(world: &mut World) {
 	world.add_resource(Timestep { delta: 1e-6 });
 	world.add_resource(Step { n: 0 });
-	world.add_resource(Index{current_index:0})
+	world.add_resource(Index { current_index: 0 })
 }

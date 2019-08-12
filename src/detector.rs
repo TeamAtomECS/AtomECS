@@ -2,6 +2,7 @@ use crate::atom::{Atom, Position, Velocity};
 use crate::integrator::{Step, Timestep};
 extern crate specs;
 use specs::{
+    DispatcherBuilder, Dispatcher,World,
     Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System,
 };
 
@@ -138,4 +139,27 @@ pub fn clearcsv(filename: &str) -> Result<(), Box<Error>> {
     ])?;
 
     Ok(())
+}
+
+
+pub fn register_components(world: &mut World) {
+    world.register::<Detector>();
+    world.register::<ClearerCSV>();
+}
+
+pub fn add_systems_to_dispatch(
+    builder: DispatcherBuilder<'static, 'static>,
+    deps: &[&str],
+) -> DispatcherBuilder<'static, 'static> {
+    builder
+        .with(
+            ClearCSVSystem,
+            "clearcsv",
+            &[],
+        )
+        .with(
+            DetectingAtomSystem,
+            "detect_atom",
+            &["euler_integrator"]
+        )
 }
