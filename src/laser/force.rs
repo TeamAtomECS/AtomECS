@@ -46,10 +46,10 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                 //let s0 = 50.0;
                 let s0 = laser_sampler.intensity / atom_info.saturation_intensity;
                 let angular_detuning = (laser_sampler.wavevector.norm() * constant::C / 2. / PI
-                    - atom_info.frequency
-                    - laser_sampler.doppler_shift)
+                    - atom_info.frequency)
                     * 2.0
-                    * PI;
+                    * PI
+                    - laser_sampler.doppler_shift;
                 let wavevector = laser_sampler.wavevector.clone();
                 let costheta = wavevector.normalize().dot(&bfield.field.normalize());
                 let gamma = atom_info.gamma();
