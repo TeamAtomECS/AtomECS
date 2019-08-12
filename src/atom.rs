@@ -67,21 +67,27 @@ impl Component for Mass {
 
 /// Component that marks an entity as an [atom](struct.Atom.html).
 /// This provides a simple way for systems to get only [atom](struct.Atom.html)s, even though non-atom entities may also share components, eg [position](struct.Position.html).
-#[derive(Component)]
-#[storage(NullStorage)]
-pub struct Atom{
-	pub index:u64,
-	pub initial_velocity:Vector3<f64>,
+
+pub struct Atom {
+	pub index: u64,
+	pub initial_velocity: Vector3<f64>,
+}
+
+impl Component for Atom {
+	type Storage = VecStorage<Self>;
 }
 
 impl Default for Atom {
 	fn default() -> Self {
-		Atom {index:0,initial_velocity:Vector3::new(0.,0.,0.)}
+		Atom {
+			index: 0,
+			initial_velocity: Vector3::new(0., 0., 0.),
+		}
 	}
 }
 
-pub struct Index{
-	pub current_index : u64,
+pub struct Index {
+	pub current_index: u64,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

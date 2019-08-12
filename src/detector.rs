@@ -2,8 +2,8 @@ use crate::atom::{Atom, Position, Velocity};
 use crate::integrator::{Step, Timestep};
 extern crate specs;
 use specs::{
-    DispatcherBuilder, Dispatcher,World,
-    Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System,
+    Component, Dispatcher, DispatcherBuilder, Entities, HashMapStorage, Join, LazyUpdate, Read,
+    ReadExpect, ReadStorage, System, World,
 };
 
 use std::fs::OpenOptions;
@@ -16,7 +16,7 @@ use crate::destructor::ToBeDestroyed;
 use nalgebra::Vector3;
 
 pub struct ClearerCSV {
-    filename: &'static str,
+    pub filename: &'static str,
 }
 
 impl Component for ClearerCSV {
@@ -44,10 +44,10 @@ impl<'a> System<'a> for ClearCSVSystem {
 }
 
 pub struct Detector {
-    radius: f64,
-    thickness: f64,
-    direction: Vector3<f64>,
-    filename: &'static str,
+    pub radius: f64,
+    pub thickness: f64,
+    pub direction: Vector3<f64>,
+    pub filename: &'static str,
 }
 
 
@@ -85,6 +85,7 @@ impl<'a> System<'a> for DetectingAtomSystem {
             for (atom_pos, atom, ent, vel) in (&pos, &atom, &ent, &vel).join() {
                 let rela_pos = atom_pos.pos - detector_pos.pos;
                 if detector.if_detect(&rela_pos) {
+                    println!("atom detected");
                     lazy.insert(ent, ToBeDestroyed);
                     let content = vec![
                         vel.vel[0],
@@ -151,15 +152,9 @@ pub fn add_systems_to_dispatch(
     builder: DispatcherBuilder<'static, 'static>,
     deps: &[&str],
 ) -> DispatcherBuilder<'static, 'static> {
-    builder
-        .with(
-            ClearCSVSystem,
-            "clearcsv",
-            &[],
-        )
-        .with(
-            DetectingAtomSystem,
-            "detect_atom",
-            &["euler_integrator"]
-        )
+    builder.with(ClearCSVSystem, "clearcsv", &[]).with(
+        DetectingAtomSystem,
+        "detect_atom",
+        &["euler_integrator"],
+    )
 }
