@@ -7,7 +7,6 @@ use crate::constant;
 use crate::ecs;
 use crate::destructor::ToBeDestroyed;
 use crate::fileinput::load_file;
-use crate::initiate::NewlyCreated;
 use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::magnetic::quadrupole::QuadrupoleField3D;

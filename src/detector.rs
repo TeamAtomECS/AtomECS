@@ -2,11 +2,9 @@ use crate::atom::{Atom, Position, Velocity};
 use crate::integrator::{Step, Timestep};
 extern crate specs;
 use specs::{
-    Component, Entities, HashMapStorage, Join, LazyUpdate, NullStorage, Read, ReadExpect,
-    ReadStorage, System,
+    Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System,
 };
 
-use std::fs::File;
 use std::fs::OpenOptions;
 extern crate csv;
 
@@ -54,7 +52,7 @@ pub struct Detector {
 
 impl Detector {
     pub fn if_detect(&self, pos: &Vector3<f64>) -> bool {
-        let dir = pos.normalize();
+        let dir = self.direction.normalize();
         let dis_vertical = dir.dot(&pos);
         let dis_radial = (pos.norm_squared() - dis_vertical.powf(2.0)).powf(0.5);
         (dis_vertical > -0.5 * self.thickness)
