@@ -43,8 +43,8 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
         {
             // Inner loop over cooling lasers
             for mut laser_sampler in &mut laser_samplers.contents {
-                let s0 = 20.0;
-                //let s0 = laser_sampler.intensity / atom_info.saturation_intensity;
+                //let s0 = 30.0;
+                let s0 = laser_sampler.intensity / atom_info.saturation_intensity;
                 //println!("{}", s0);
                 let angular_detuning = (laser_sampler.wavevector.norm() * constant::C / 2. / PI
                     - atom_info.frequency)

@@ -27,7 +27,7 @@ pub fn get_minimum_distance_line_point(
 
 pub fn gaussian_dis(std: f64, distance: f64) -> f64 {
 	//checked
-	1.0 / ((2.0 * PI).powf(0.5) * std) * EXP.powf(-distance.powf(2.0) / 2.0 / (std).powf(2.0))
+	1.0 / (2.0 * PI * std.powf(2.0)) * EXP.powf(-distance.powf(2.0) / 2.0 / (std).powf(2.0))
 }
 
 pub fn maxwell_dis(_t: f64, _mass: f64, _velocity: f64) -> f64 {
@@ -102,7 +102,7 @@ pub fn random_direction() -> Vector3<f64> {
 	let mut rng = rand::thread_rng();
 	let angle1 = rng.gen_range(0.0, PI);
 	let angle2 = rng.gen_range(0., 2. * PI);
-	let result = Vector3::new (
+	let result = Vector3::new(
 		angle1.cos(),
 		angle1.sin() * angle2.sin(),
 		angle1.sin() * angle2.cos(),

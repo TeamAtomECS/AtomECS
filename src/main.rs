@@ -10,7 +10,7 @@ use specs::RunNow;
 fn main() {
     let (mut world, mut dispatcher) = create_from_config();
     //let (mut world, mut dispatcher) = create();
-    for _i in 0..20000 {
+    for _i in 0..50000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
