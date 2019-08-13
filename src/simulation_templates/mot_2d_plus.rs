@@ -11,9 +11,9 @@ use crate::laser::gaussian::GaussianBeam;
 use crate::magnetic::quadrupole::QuadrupoleField3D;
 use specs::{Builder, Dispatcher, World};
 extern crate nalgebra;
-use nalgebra::Vector3;
-use crate::detector;
 
+use crate::detector;
+use nalgebra::Vector3;
 /// Creates a world describing a 2D plus MOT and the dispatcher.
 #[allow(dead_code)]
 pub fn create() -> (World, Dispatcher<'static, 'static>) {
@@ -40,7 +40,7 @@ fn mot2d_entity_create(world: &mut World) {
 		.build();
 
 	// Add lasers
-	let detuning = 150.0;
+	let detuning = 50.0;
 	world
 		.create_entity()
 		.with(GaussianBeam {
@@ -113,11 +113,23 @@ fn mot2d_entity_create(world: &mut World) {
 		))
 		.build();
 
-	world.
-		create_entity()
-		.with(detector::Detector{radius:0.1,thickness:0.01,direction:Vector3::new(1.,0.,0.),filename:"detector.csv"})
-		.with(Position{pos:Vector3::new(1.,1.,0.)})
-		.with(detector::ClearerCSV{filename:"detector.csv"})
+	world
+		.create_entity()
+		.with(detector::Detector {
+			radius: 0.05,
+			thickness: 0.01,
+			direction: Vector3::new(1., 0., 0.),
+			filename: "detector.csv",
+		})
+		.with(Position {
+			pos: Vector3::new(0.3, 0., 0.),
+		})
+		.build();
+	world
+		.create_entity()
+		.with(detector::ClearerCSV {
+			filename: "detector.csv",
+		})
 		.build();
 	// Add oven
 	let massrubidium = MassDistribution::new(vec![
@@ -139,9 +151,10 @@ fn mot2d_entity_create(world: &mut World) {
 				size: [1e-9, 1e-9, 1e-9],
 			},
 		})
-		.with(EmitNumberPerFrame { number: 1 })
+		.with(EmitNumberPerFrame { number: 100 })
 		.with(AtomNumberToEmit { number: 0 })
 		.with(AtomInfo::rubidium())
+		.with(ToBeDestroyed)
 		.with(massrubidium)
 		.with(Position {
 			pos: Vector3::new(0.0, 0.0, 0.0),

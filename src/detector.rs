@@ -6,10 +6,10 @@ use specs::{
     ReadExpect, ReadStorage, System, World, WriteExpect,
 };
 
-use std::io::BufWriter;
+
 use std::fs::File;
 use std::fs::OpenOptions;
-extern crate csv;
+use std::io::BufWriter;
 
 use std::error::Error;
 extern crate nalgebra;
@@ -179,20 +179,47 @@ pub struct PrintOptResultSystem;
 impl<'a> System<'a> for PrintOptResultSystem {
     type SystemData = (ReadExpect<'a, DetectingInfo>);
     fn run(&mut self, detect_info: Self::SystemData) {
-        match write_file_output(detect_info.atom_detected,detect_info.total_velocity/(detect_info.atom_detected as f64)) {
-                Ok(_) => (),
-                Err(why) => panic!("output error{}", why.description()),
+        println!("number detected{}", detect_info.atom_detected);
+        match write_file_output(
+            detect_info.atom_detected,
+            detect_info.total_velocity / (detect_info.atom_detected as f64),
+        ) {
+            Ok(_) => (),
+            Err(why) => panic!("output error{}", why.description()),
         };
     }
 }
 
-pub fn write_file_output(number:i32, average_vel:Vector3<f64>) -> Result<(), Box<Error>> {
+pub fn write_file_output(number: i32, average_vel: Vector3<f64>) -> Result<(), Box<Error>> {
     let file = File::create("output.csv").expect("Unable to open file");
     let mut file = OpenOptions::new().write(true).open("output.csv").unwrap();
     let mut wtr = csv::Writer::from_writer(file);
     wtr.serialize(&[
-        number as f64,average_vel[0],average_vel[1],average_vel[2]
+        number as f64,
+        average_vel[0],
+        average_vel[1],
+        average_vel[2],
     ])?;
 
     Ok(())
+}
+pub mod tests {
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[allow(unused_imports)]
+    extern crate nalgebra;
+    extern crate specs;
+    use nalgebra::Vector3;
+
+    #[test]
+    fn test_detector() {
+        let detect = Detector {
+            direction: Vector3::new(1., 0., 0.),
+            radius: 0.1,
+            thickness: 0.1,
+            filename: "detector.csv",
+        };
+        assert!(detect.if_detect(&Vector3::new(0.04, 0.01, 0.01)));
+    }
 }

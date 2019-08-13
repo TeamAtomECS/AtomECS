@@ -6,7 +6,7 @@ use crate::atom_sources::oven::{Oven, OvenAperture};
 use crate::constant;
 
 use crate::destructor::ToBeDestroyed;
-use crate::detector::Detector;
+use crate::detector::{Detector,ClearerCSV};
 use crate::ecs;
 use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
@@ -111,6 +111,12 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 		})
 		.with(Position {
 			pos: config.detector.position.clone(),
+		})
+		.build();
+	world
+		.create_entity()
+		.with(ClearerCSV {
+			filename: "detector.csv",
 		})
 		.build();
 }
