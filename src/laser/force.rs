@@ -76,7 +76,6 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                             / gamma.powf(2.));
                 let cooling_force = wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);
                 laser_sampler.force = cooling_force.clone();
-                println!("detuning{}", angular_detuning / gamma);
                 force.force = force.force + cooling_force;
             }
         }
