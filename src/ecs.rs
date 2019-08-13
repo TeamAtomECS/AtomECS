@@ -4,15 +4,16 @@ use crate::atom_sources;
 use crate::destructor::{DeleteToBeDestroyedEntitiesSystem, DestroyOutOfBoundAtomsSystem};
 use crate::gravity::ApplyGravitationalForceSystem;
 use crate::initiate::DeflagNewAtomsSystem;
-use crate::integrator::{Step, Timestep};
-use crate::integrator::EulerIntegrationSystem;
-use crate::laser;
 
-use crate::magnetic;
-use crate::output::console_output::ConsoleOutputSystem;
-use crate::output::file_output::FileOutputSystem;
+use crate::integrator::EulerIntegrationSystem;
+use crate::integrator::{Step, Timestep};
+
 use crate::detector;
 use crate::detector::DetectingInfo;
+use crate::output::console_output::ConsoleOutputSystem;
+use crate::output::file_output::FileOutputSystem;
+use crate::laser;
+use crate::magnetic;
 use specs::{Dispatcher, DispatcherBuilder, World};
 
 extern crate nalgebra;
@@ -48,10 +49,11 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 			"add_gravity",
 		],
 	);
-	builder = detector::add_systems_to_dispatch(builder,&[]);
+	builder = detector::add_systems_to_dispatch(builder, &[]);
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
 	builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
-	builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &[]);
+	builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &["detect_atom","euler_integrator"]);
+	//it is quite necessary to put the delete system at the end, otherwise some atoms are not detroyed on time
 	builder = builder.with(DestroyOutOfBoundAtomsSystem, "", &[]);
 	builder.build()
 }
@@ -61,5 +63,8 @@ pub fn register_resources(world: &mut World) {
 	world.add_resource(Timestep { delta: 1e-6 });
 	world.add_resource(Step { n: 0 });
 	world.add_resource(Index { current_index: 0 });
-	world.add_resource(DetectingInfo{atom_detected:0, total_velocity:Vector3::new(0.,0.,0.)});
+	world.add_resource(DetectingInfo {
+		atom_detected: 0,
+		total_velocity: Vector3::new(0., 0., 0.),
+	});
 }

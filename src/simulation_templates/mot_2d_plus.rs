@@ -151,7 +151,7 @@ fn mot2d_entity_create(world: &mut World) {
 				size: [1e-9, 1e-9, 1e-9],
 			},
 		})
-		.with(EmitNumberPerFrame { number: 100 })
+		.with(EmitNumberPerFrame { number: 1000 })
 		.with(AtomNumberToEmit { number: 0 })
 		.with(AtomInfo::rubidium())
 		.with(ToBeDestroyed)

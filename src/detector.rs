@@ -3,7 +3,7 @@ use crate::integrator::{Step, Timestep};
 extern crate specs;
 use specs::{
     Component, Dispatcher, DispatcherBuilder, Entities, HashMapStorage, Join, LazyUpdate, Read,
-    ReadExpect, ReadStorage, System, World, WriteExpect,
+    ReadExpect, ReadStorage, System, World, WriteExpect, WriteStorage,
 };
 
 
@@ -31,16 +31,16 @@ impl<'a> System<'a> for ClearCSVSystem {
     type SystemData = (
         Entities<'a>,
         ReadStorage<'a, ClearerCSV>,
-        Read<'a, LazyUpdate>,
+        WriteStorage<'a, ToBeDestroyed>,
     );
 
-    fn run(&mut self, (ent, clearer, lazy): Self::SystemData) {
-        for (ent, clearer) in (&ent, &clearer).join() {
+    fn run(&mut self, (ents, clearer, mut destroy): Self::SystemData) {
+        for (entity, clearer) in (&ents, &clearer).join() {
             match clearcsv(clearer.filename) {
                 Ok(_) => (),
                 Err(why) => panic!("output error{}", why.description()),
             };
-            lazy.insert(ent, ToBeDestroyed);
+            ents.delete(entity).expect("Could not delete entity");
         }
     }
 }
@@ -90,17 +90,18 @@ impl<'a> System<'a> for DetectingAtomSystem {
     );
     fn run(
         &mut self,
-        (pos, detector, ent, atom, lazy, vel, step, timestep, mut detect_info): Self::SystemData,
+        (pos, detector, entities, atom, lazy, vel, step, timestep, mut detect_info): Self::SystemData,
     ) {
         let time = step.n as f64 * timestep.delta;
         for (detector_pos, detector) in (&pos, &detector).join() {
-            for (atom_pos, atom, ent, vel) in (&pos, &atom, &ent, &vel).join() {
+            for (atom_pos, atom, ent, vel) in (&pos, &atom, &entities, &vel).join() {
                 let rela_pos = atom_pos.pos - detector_pos.pos;
                 if detector.if_detect(&rela_pos) {
                     println!("atom detected");
                     detect_info.atom_detected = detect_info.atom_detected + 1;
                     detect_info.total_velocity = detect_info.total_velocity + vel.vel;
-                    lazy.insert(ent, ToBeDestroyed);
+
+                    entities.delete(ent).expect("Could not delete entity");
                     let content = vec![
                         vel.vel[0],
                         vel.vel[1],
@@ -170,7 +171,7 @@ pub fn add_systems_to_dispatch(
     builder.with(ClearCSVSystem, "clearcsv", &[]).with(
         DetectingAtomSystem,
         "detect_atom",
-        &["euler_integrator"],
+        &["clearcsv"],
     )
 }
 
