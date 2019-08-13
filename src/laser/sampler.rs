@@ -11,6 +11,9 @@ pub struct LaserSampler {
     /// Calculated force exerted by this laser sampler on the atom. Units of N.
     pub force: Vector3<f64>,
 
+    /// Scattering rate of this laser sampler. Units of Hz, as in 'photons scattered per second'.
+    pub scattering_rate: f64,
+
     /// Intensity of the laser beam, in SI units of Watts per metre
     pub intensity: f64,
 
@@ -31,6 +34,7 @@ impl Default for LaserSampler {
             wavevector: Vector3::new(0., 0., 0.),
             intensity: f64::NAN,
             doppler_shift: f64::NAN,
+            scattering_rate: f64::NAN,
         }
     }
 }
@@ -57,13 +61,7 @@ impl<'a> System<'a> for InitialiseLaserSamplersSystem {
     fn run(&mut self, (cooling, cooling_index, mut intensity_samplers): Self::SystemData) {
         let mut content = Vec::new();
         for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(LaserSampler {
-                force: Vector3::new(0., 0., 0.),
-                wavevector: Vector3::new(0., 0., 0.),
-                polarization: 0.,
-                intensity: f64::NAN,
-                doppler_shift: f64::NAN,
-            });
+            content.push(LaserSampler::default());
         }
 
         for mut intensity_sampler in (&mut intensity_samplers).join() {
