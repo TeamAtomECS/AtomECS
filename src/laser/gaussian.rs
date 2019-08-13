@@ -66,6 +66,7 @@ pub mod tests {
 	use super::*;
 
 	extern crate specs;
+	use crate::constant::EXP;
 	use crate::constant::PI;
 	use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 	use crate::laser::sampler::{LaserSampler, LaserSamplers};
@@ -138,18 +139,38 @@ pub mod tests {
 			})
 			.build();
 
+		let sampler2 = test_world
+			.create_entity()
+			.with(Position {
+				pos: Vector3::new(1.0, e_radius, 0.0),
+			})
+			.with(LaserSamplers {
+				contents: vec![LaserSampler::default()],
+			})
+			.build();
+
 		let mut system = SampleGaussianBeamIntensitySystem;
 		system.run_now(&test_world.res);
 		test_world.maintain();
 		let sampler_storage = test_world.read_storage::<LaserSamplers>();
-
+		let peak_intensity = power / (PI.powf(0.5) * e_radius);
 		assert_approx_eq!(
 			sampler_storage
 				.get(sampler1)
 				.expect("entity not found")
 				.contents[0]
-				.intensity,
-			power / (PI.powf(0.5) * e_radius)
+				.intensity / peak_intensity,
+			1.0,
+			0.01
+		);
+		assert_approx_eq!(
+			sampler_storage
+				.get(sampler2)
+				.expect("entity not found")
+				.contents[0]
+				.intensity / (peak_intensity / EXP),
+			1.0,
+			0.01
 		);
 	}
 }
