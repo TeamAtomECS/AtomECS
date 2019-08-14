@@ -19,8 +19,9 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
     fn run(&mut self, (cooling, indices, gaussian, mut samplers, velocities): Self::SystemData) {
         for (cooling, index, gaussian) in (&cooling, &indices, &gaussian).join() {
             for (sampler, vel) in (&mut samplers, &velocities).join() {
-                sampler.contents[index.index].doppler_shift = 
-                vel.vel.dot(&(gaussian.direction * cooling.wavenumber()));
+                sampler.contents[index.index].doppler_shift = vel
+                    .vel
+                    .dot(&(gaussian.direction.normalize() * cooling.wavenumber()));
             }
         }
     }
@@ -56,7 +57,10 @@ pub mod tests {
                 polarization: 1.0,
                 wavelength: 780e-9,
             })
-            .with(CoolingLightIndex { index: 0, initiated: true })
+            .with(CoolingLightIndex {
+                index: 0,
+                initiated: true,
+            })
             .with(GaussianBeam {
                 direction: Vector3::new(1.0, 0.0, 0.0),
                 intersection: Vector3::new(0.0, 0.0, 0.0),

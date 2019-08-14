@@ -5,9 +5,13 @@ extern crate specs;
 
 use lib::fileinput::write_file_template;
 use lib::simulation_templates::loadfromconfig::create_from_config;
+
+
 use lib::simulation_templates::mot_2d_plus::create;
+
 use specs::RunNow;
 fn main() {
+
     let (mut world, mut dispatcher) = create_from_config();
     //let (mut world, mut dispatcher) = create();
     for _i in 0..50000 {

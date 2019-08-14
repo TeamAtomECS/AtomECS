@@ -123,7 +123,7 @@ impl<'a> System<'a> for RandomWalkSystem {
                     }
                 }
             }
-            force.force = force.force + force_real;
+            //force.force = force.force + force_real;
         }
     }
 }

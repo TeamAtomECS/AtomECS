@@ -12,8 +12,10 @@ extern crate specs;
 use crate::atom::*;
 use nalgebra::Vector3;
 
+use crate::destructor::ToBeDestroyed;
+
 use specs::{
-	WriteExpect, Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System
+	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System, WriteExpect,
 };
 
 pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>) -> Vector3<f64> {
@@ -27,7 +29,10 @@ pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>) -> Vector3<f
 	let theta2 = rng.gen_range(0.0, 2.0 * PI);
 	let dir_div = dir_1 * theta.sin() * theta2.cos() + dir_2 * theta.sin() * theta2.sin();
 	let dirf = dir * theta.cos() + dir_div;
-	let v_out = dirf * v_mag;
+	let mut v_out = dirf * v_mag;
+	if theta > PI / 4.0 {
+		v_out = Vector3::new(0., 0., 0.);
+	}
 	v_out
 }
 pub enum OvenAperture {
@@ -86,7 +91,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		ReadStorage<'a, emit::AtomNumberToEmit>,
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, MassDistribution>,
-		WriteExpect<'a,Index>,
+		WriteExpect<'a, Index>,
 		Read<'a, LazyUpdate>,
 	);
 
@@ -109,7 +114,15 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 						pos: start_position,
 					},
 				);
-				updater.insert(new_atom, Velocity { vel: new_vel.clone() });
+				updater.insert(
+					new_atom,
+					Velocity {
+						vel: new_vel.clone(),
+					},
+				);
+				if new_vel == Vector3::new(0., 0., 0.) {
+					updater.insert(new_atom, ToBeDestroyed);
+				}
 				updater.insert(new_atom, Force::new());
 				updater.insert(new_atom, Mass { value: mass });
 				updater.insert(
@@ -123,8 +136,14 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 						saturation_intensity: atom.saturation_intensity,
 					},
 				);
-				updater.insert(new_atom, Atom{index:index.current_index,initial_velocity:new_vel});
-				index.current_index = index.current_index +1;
+				updater.insert(
+					new_atom,
+					Atom {
+						index: index.current_index,
+						initial_velocity: new_vel,
+					},
+				);
+				index.current_index = index.current_index + 1;
 				updater.insert(new_atom, NewlyCreated);
 			}
 		}

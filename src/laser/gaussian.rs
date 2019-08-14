@@ -45,7 +45,7 @@ impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 					get_gaussian_beam_intensity(&gaussian, &pos);
 				sampler.contents[index.index].polarization = cooling.polarization;
 				sampler.contents[index.index].wavevector =
-					gaussian.direction * cooling.wavenumber();
+					gaussian.direction.normalize() * cooling.wavenumber();
 			}
 		}
 	}
