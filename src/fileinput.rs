@@ -77,6 +77,7 @@ pub fn write_file_template(file: &str) {
 		mass: massrubidium,
 		atominfo: AtomInfo::rubidium(),
 		detector,
+		timestep:1e-6,
 	};
 
 	let serialized = serde_yaml::to_string(&sim).unwrap();
@@ -122,6 +123,7 @@ pub struct SimArchetype {
 	pub mass: MassDistribution,
 	pub magnetic: MagArchetype,
 	pub detector: DetectorArchetype,
+	pub timestep:f64,
 }
 
 #[derive(Deserialize, Serialize)]

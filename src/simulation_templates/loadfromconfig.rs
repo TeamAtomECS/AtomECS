@@ -6,12 +6,14 @@ use crate::atom_sources::oven::{Oven, OvenAperture};
 use crate::constant;
 
 use crate::destructor::ToBeDestroyed;
-use crate::detector::{Detector,ClearerCSV};
+use crate::detector::{ClearerCSV, Detector};
 use crate::ecs;
 use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::magnetic::quadrupole::QuadrupoleField3D;
 use crate::magnetic::uniform::UniformMagneticField;
+
+use crate::integrator::Timestep;
 
 use crate::fileinput::load_file;
 use specs::{Builder, Dispatcher, World};
@@ -46,7 +48,7 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 	}
 	let mut mass = config.mass.clone();
 	mass.normalise();
-	println!("{:?}",mass.normalised);
+	println!("{:?}", mass.normalised);
 	for oven in config.ovens.iter() {
 		world
 			.create_entity()
@@ -119,4 +121,6 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 			filename: "detector.csv",
 		})
 		.build();
+
+	world.add_resource(Timestep { delta: config.timestep });
 }

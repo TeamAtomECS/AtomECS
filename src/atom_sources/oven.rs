@@ -30,7 +30,7 @@ pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>) -> Vector3<f
 	let dir_div = dir_1 * theta.sin() * theta2.cos() + dir_2 * theta.sin() * theta2.sin();
 	let dirf = dir * theta.cos() + dir_div;
 	let mut v_out = dirf * v_mag;
-	if theta > PI / 4.0 {
+	if theta > 0.372 {
 		v_out = Vector3::new(0., 0., 0.);
 	}
 	v_out

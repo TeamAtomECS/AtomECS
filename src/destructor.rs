@@ -1,7 +1,8 @@
 extern crate specs;
 use crate::atom::{Atom, Position};
 use specs::{Component, Entities, Join, NullStorage, ReadStorage, System};
-
+extern crate nalgebra;
+use nalgebra::Vector3;
 /// Deletes entities which have been marked for destruction.
 pub struct DeleteToBeDestroyedEntitiesSystem;
 impl<'a> System<'a> for DeleteToBeDestroyedEntitiesSystem {
@@ -25,11 +26,23 @@ impl<'a> System<'a> for DestroyOutOfBoundAtomsSystem {
 
     fn run(&mut self, (entities, positions, atoms): Self::SystemData) {
         for (entity, position, _) in (&entities, &positions, &atoms).join() {
-            if position.pos.norm_squared() > (0.5_f64).powf(2.0) {
+
+            if out_of_bound(&position.pos) {
                 entities.delete(entity).expect("Could not delete entity");
             }
         }
     }
+}
+
+fn out_of_bound(position: &Vector3<f64>) -> bool {
+    let mut result = true;
+    if position.norm() < 0.040 {
+        result = false
+    }
+    if position[0].powf(2.0) + position[1].powf(2.0) < 0.02_f64.powf(2.0) {
+        result = false
+    }
+    result
 }
 
 /// Component that marks an entity for deletion.
