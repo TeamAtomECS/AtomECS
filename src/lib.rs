@@ -20,3 +20,5 @@ pub mod gravity;
 pub mod detector;
 
 pub mod optimization;
+
+pub mod tests;

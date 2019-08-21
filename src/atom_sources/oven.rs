@@ -32,7 +32,7 @@ pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>) -> Vector3<f
 	let dirf = dir * theta.cos() + dir_div;
 	let mut v_out = dirf * v_mag;
 	//v_out
-	150. * Vector3::new(t, 0., 1.0).normalize()
+	t * Vector3::new(0., 0., 1.0).normalize()
 }
 pub enum OvenAperture {
 	Cubic { size: [f64; 3] },

@@ -60,12 +60,7 @@ impl<'a> System<'a> for FileOutputSystem {
 
             //Write (x,y,z) for each atom
             for (pos, vel, _) in (&positions, &velocity, &atoms).join() {
-                match write!(
-                    self.writer,
-                    "{:.8},{:.8}\n",
-                    pos.pos.index(2),
-                    vel.vel.index(2)
-                ) {
+                match write!(self.writer, "{:.8},{:.8}\n", pos.pos[2], vel.vel[2]) {
                     Err(why) => panic!("could not write to output: {}", why.description()),
                     Ok(_) => (),
                 }
