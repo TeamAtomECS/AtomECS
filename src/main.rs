@@ -22,7 +22,7 @@ fn main() {
     //    .expect("Did not enter a correct string");
     let now = Instant::now();
 
-    let (mut world, mut dispatcher) = create_from_config();
+    let (mut world, mut dispatcher) = create_from_config("example.yaml");
     world
         .create_entity()
         .with(OptEarly {

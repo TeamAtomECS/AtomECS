@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod tests {
     #[test]
-    fn test_initialise_laser_sampler_system() {
+    fn test_1D() {
         extern crate specs;
         use crate::atom::*;
         use crate::integrator::Step;
@@ -11,22 +11,7 @@ pub mod tests {
         use assert_approx_eq::assert_approx_eq;
         use nalgebra::Vector3;
         use specs::{Builder, Entity, Join, RunNow, World};
-        let (mut world, mut dispatcher) = create_from_config();
-
-        let new_atom = world
-            .create_entity()
-            .with(NewlyCreated)
-            .with(Position {
-                pos: Vector3::new(0., 0., -0.15),
-            })
-            .with(Velocity {
-                vel: Vector3::new(0., 0., 50.0),
-            })
-            .with(Force::new())
-            .with(Mass { value: 88.0 })
-            .with(AtomInfo::strontium())
-            .build();
-
+        let (mut world, mut dispatcher) = create_from_config("test1D.yaml");
 
         for _i in 0..2000 {
             dispatcher.dispatch(&mut world.res);

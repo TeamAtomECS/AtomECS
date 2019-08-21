@@ -19,13 +19,13 @@ use crate::fileinput::load_file;
 use specs::{Builder, Dispatcher, World};
 extern crate nalgebra;
 
-pub fn create_from_config() -> (World, Dispatcher<'static, 'static>) {
+pub fn create_from_config(filename: &str) -> (World, Dispatcher<'static, 'static>) {
 	let mut world = World::new();
 	ecs::register_components(&mut world);
 	ecs::register_resources(&mut world);
 	let mut dispatcher = ecs::create_simulation_dispatcher();
 	dispatcher.setup(&mut world.res);
-	create_simulation_entity("example.yaml", &mut world);
+	create_simulation_entity(&filename, &mut world);
 
 	(world, dispatcher)
 }
