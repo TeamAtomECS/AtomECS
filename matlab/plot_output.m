@@ -5,7 +5,7 @@ set(gcf, 'Color', 'w');
 iter = 1;
 while ishandle(fh) && iter <= length(pos)
     p = pos{iter};
-    plot3(p(1,:), p(2,:), p(3,:), '.');
+    plot2(p(1,:), p(2,:), '.');
     
     iter = iter+1;
     

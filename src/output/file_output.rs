@@ -41,30 +41,30 @@ impl FileOutputSystem {
 impl<'a> System<'a> for FileOutputSystem {
     type SystemData = (
         ReadStorage<'a, Position>,
+        ReadStorage<'a, Velocity>,
         ReadStorage<'a, Atom>,
         ReadExpect<'a, Step>,
     );
 
-    fn run(&mut self, (positions, atoms, step): Self::SystemData) {
+    fn run(&mut self, (positions, velocity, atoms, step): Self::SystemData) {
         // Write number of atoms
         if step.n % self.frequency == 0 {
             let mut ctr = 0;
             for _pos in (&positions, &atoms).join() {
                 ctr = ctr + 1;
             }
-            match write!(self.writer, "{}\n", ctr) {
-                Err(why) => panic!("couldn't write to output: {}", why.description()),
-                Ok(_) => (),
-            }
+            //match write!(self.writer, "{}\n", ctr) {
+            //    Err(why) => panic!("couldn't write to output: {}", why.description()),
+            //    Ok(_) => (),
+            //}
 
             //Write (x,y,z) for each atom
-            for (pos, _) in (&positions, &atoms).join() {
+            for (pos, vel, _) in (&positions, &velocity, &atoms).join() {
                 match write!(
                     self.writer,
-                    "{:.8},{:.8},{:.8}\n",
-                    pos.pos.index(0),
-                    pos.pos.index(1),
-                    pos.pos.index(2)
+                    "{:.8},{:.8}\n",
+                    pos.pos.index(2),
+                    vel.vel.index(2)
                 ) {
                     Err(why) => panic!("could not write to output: {}", why.description()),
                     Ok(_) => (),

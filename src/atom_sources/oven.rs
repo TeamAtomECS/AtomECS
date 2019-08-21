@@ -19,21 +19,20 @@ use specs::{
 };
 
 pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>) -> Vector3<f64> {
-	let v_mag = maths::maxwell_generate(t, mass);
+	let v_mag = maths::maxwell_generate(t + 0.1, mass);
 	let dir = &new_dir.normalize();
 	let dir_1 = new_dir.cross(&Vector3::new(2.0, 1.0, 0.5)).normalize();
 	let dir_2 = new_dir.cross(&dir_1).normalize();
 
 	let mut rng = rand::thread_rng();
+	//let theta = 0.05_f64;
 	let theta = maths::jtheta_gen();
 	let theta2 = rng.gen_range(0.0, 2.0 * PI);
 	let dir_div = dir_1 * theta.sin() * theta2.cos() + dir_2 * theta.sin() * theta2.sin();
 	let dirf = dir * theta.cos() + dir_div;
 	let mut v_out = dirf * v_mag;
-	if theta > 0.372 {
-		v_out = Vector3::new(0., 0., 0.);
-	}
-	v_out
+	//v_out
+	150. * Vector3::new(t, 0., 1.0).normalize()
 }
 pub enum OvenAperture {
 	Cubic { size: [f64; 3] },

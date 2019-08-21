@@ -5,11 +5,11 @@ oc = onCleanup(@() fclose(fh));
 
 output = {};
 while ~feof(fh)
-   natoms = str2num(fgetl(fh));
+   natoms = str2num(fget1(fh));
    pos = textscan(fh, '%f,%f,%f\n', natoms);
    pos = cat(2, pos{:})';
    output{end+1} = pos;
 end
 
 end
-
+    
