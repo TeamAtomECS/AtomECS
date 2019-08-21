@@ -24,7 +24,9 @@ Functionality is stored throughout several modules, as detailed below.
 |`atom`       | All components relating to atoms. |
 |`initiate`   | Components and systems used to initiate entities during the simulation. |
 |`ecs`        | Easy functions to setup the simulation dispatcher and world resources. |
-|`simulation_templates`| Well, simulation templates... |
+|`simulation_templates`| Well, it is simulation templates, one of the simulation templates is load_from_config which will create the simulation based on the yaml file|
+
+
 
 ## Components:
 
@@ -38,11 +40,19 @@ We outline a few of the key components here.
 |`Position`, `Velocity`, `Mass` | No need for any explanation. |
 |`Detector`,`RingDetector` | These detectors count the number of atoms that enter a defined region. The detector systems delete the atoms and store the relevant data. |
 |`NewlyCreated`        | A marker that indicates an entity is newly created. This signals to other modules to initialize required components. The marker is removed by the `DeflagSystem`. |
+|`ToBeDestroyed`| A marker that indicate that the entity needs to be detroyed the next frame. DO NOTE that though it can be very convenient and useful at times, it should NOT Be used when an entity need to be detroyed immediately |
+|`SimArchetype`,`...Archetyep`| information used to generate the simulations.|
 
 
-## Systems
+## Important Systems
 
-TODO
+|Systems in `Laser` module| (can be registered easily using laser.add_system_to_dispatch) Those systems calculate the forces and assign the details to each atoms. Need to be run after the magnetic systems. It will also index the lasers and record the interaction between different lasers and an atom in cooling_force component (the info is recorded in the order of the laser)
+
+|Systems in `magnetic` module| (can be registered using magnetic.add_system_to_dispatch) These systems calculate the magnetic field at the position of each individual atoms. Different type of magnetic field can be used.
+
+|`Random_Walk_System`| Including the effect of random walk due to emission of photon. in this system only random walk of the size of a photon will be included.
+|`DestoyedOutofBoundAtomSystem`| destroyed the atoms that hit the walls, the bound need to be set manually.
+
 
 ### Execution Order
 
@@ -53,3 +63,7 @@ TODO
 ### Current Limitations
 
 * atom-atom interactions are ignored. This isn't a problem for the 2D MOT that we want to simulate, but it is going to be incorrect for 3D MOT simulations which achieve higher steady-state densities.
+
+* Choices of Oven types as well as some other choices (e.x. shape of the wall) cannot be made using hte config file. A new "world" need to be created manually if all functionality of the program need to be used.
+
+
