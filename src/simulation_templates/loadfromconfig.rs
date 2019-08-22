@@ -54,7 +54,7 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 			.create_entity()
 			.with(Oven {
 				temperature: oven.temperature,
-				direction: oven.direction,
+				direction: oven.direction.clone(),
 				aperture: OvenAperture::Circular {
 					radius: oven.radius_aperture,
 					thickness: oven.thickness,
@@ -71,7 +71,7 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 				.create_entity()
 				.with(Oven {
 					temperature: oven.temperature,
-					direction: oven.direction,
+					direction: oven.direction.clone(),
 					aperture: OvenAperture::Circular {
 						radius: oven.radius_aperture,
 						thickness: oven.thickness,
@@ -122,5 +122,7 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 		})
 		.build();
 
-	world.add_resource(Timestep { delta: config.timestep });
+	world.add_resource(Timestep {
+		delta: config.timestep,
+	});
 }

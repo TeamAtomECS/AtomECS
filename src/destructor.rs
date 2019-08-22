@@ -1,6 +1,6 @@
 extern crate specs;
 use crate::atom::{Atom, Position};
-use specs::{Component, Entities, Join, NullStorage, ReadStorage, System};
+use specs::{Component, Entities, HashMapStorage, Join, NullStorage, ReadStorage, System};
 extern crate nalgebra;
 use nalgebra::Vector3;
 /// Deletes entities which have been marked for destruction.
@@ -15,31 +15,41 @@ impl<'a> System<'a> for DeleteToBeDestroyedEntitiesSystem {
     }
 }
 
+pub struct BoundaryMarker;
+
+impl Component for BoundaryMarker {
+    type Storage = HashMapStorage<Self>;
+}
+
 /// Deletes atoms that have strayed outside of the simulation region.
 pub struct DestroyOutOfBoundAtomsSystem;
 impl<'a> System<'a> for DestroyOutOfBoundAtomsSystem {
     type SystemData = (
         Entities<'a>,
+        ReadStorage<'a, BoundaryMarker>,
         ReadStorage<'a, Position>,
         ReadStorage<'a, Atom>,
     );
 
-    fn run(&mut self, (entities, positions, atoms): Self::SystemData) {
-        for (entity, position, _) in (&entities, &positions, &atoms).join() {
+    fn run(&mut self, (entities, boundary, positions, atoms): Self::SystemData) {
+        for boundary in (&boundary).join() {
+            for (entity, position, _) in (&entities, &positions, &atoms).join() {
 
-            if out_of_bound(&position.pos) {
-                entities.delete(entity).expect("Could not delete entity");
+                if out_of_bound(&position.pos) {
+                    entities.delete(entity).expect("Could not delete entity");
+                }
             }
+            break;
         }
     }
 }
 
 fn out_of_bound(position: &Vector3<f64>) -> bool {
     let mut result = true;
-    if position.norm() < 0.040 {
+    if position.norm() < 0.060 && position[0] > -0.025 && position[0] < 0.025 {
         result = false
     }
-    if position[0].powf(2.0) + position[1].powf(2.0) < 0.02_f64.powf(2.0) {
+    if position[2].powf(2.0) + position[1].powf(2.0) < 0.02_f64.powf(2.0) {
         result = false
     }
     result
@@ -73,6 +83,8 @@ pub mod tests {
         test_world.register::<Position>();
         test_world.register::<Atom>();
 
+        test_world.register::<BoundaryMarker>();
+        test_world.create_entity().with(BoundaryMarker {}).build();
         let test_entity1 = test_world
             .create_entity()
             .with(Position::new())
@@ -100,7 +112,6 @@ pub mod tests {
         let mut test_world = World::new();
         test_world.register::<Position>();
         test_world.register::<ToBeDestroyed>();
-
         let test_entity1 = test_world.create_entity().with(Position::new()).build();
         let test_entity2 = test_world
             .create_entity()

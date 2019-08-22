@@ -20,7 +20,7 @@ impl<'a> System<'a> for ConsoleOutputSystem {
     fn run(&mut self, (pos, vel, atom, force, step, timestep): Self::SystemData) {
         let _time = timestep.delta * step.n as f64;
         let mut atom_number = 0;
-        if step.n % 1 == 0 {
+        if step.n % 1000 == 0 {
             for (_vel, _pos, _, force) in (&vel, &pos, &atom, &force).join() {
                 atom_number = atom_number + 1;
                 println!(

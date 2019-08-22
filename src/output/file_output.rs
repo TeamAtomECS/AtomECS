@@ -59,8 +59,31 @@ impl<'a> System<'a> for FileOutputSystem {
             //}
 
             //Write (x,y,z) for each atom
-            for (pos, vel, _) in (&positions, &velocity, &atoms).join() {
-                match write!(self.writer, "{:.8},{:.8}\n", pos.pos[2], vel.vel[2]) {
+            let mut content = vec![0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.];
+            for (pos, vel, atom) in (&positions, &velocity, &atoms).join() {
+                //println!("atom");
+                content[(atom.index*2) as usize]=(pos.pos[2]);
+                content[(atom.index*2+1) as usize]=(vel.vel[2]);
+
+            }
+            //println!("{:?}", content);
+            if content.len() != 0 {
+                match write!(
+                    self.writer,
+                    "{:.8},{:.8},{:.8},{:.8},{:.8},{:.8},{:.8},{:.8},{:.8},{:.8},{:.8},{:.8}\n",
+                    content[0],
+                    content[1],
+                    content[2],
+                    content[3],
+                    content[4],
+                    content[5],
+                    content[6],
+                    content[7],
+                    content[8],
+                    content[9],
+                    content[10],
+                    content[11]
+                ) {
                     Err(why) => panic!("could not write to output: {}", why.description()),
                     Ok(_) => (),
                 }
