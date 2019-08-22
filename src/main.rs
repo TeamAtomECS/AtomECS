@@ -7,6 +7,7 @@ use lib::fileinput::write_file_template;
 use lib::simulation_templates::loadfromconfig::create_from_config;
 use specs::Builder;
 
+use lib::laser::force::RandomWalkMarker;
 use lib::optimization::OptEarly;
 
 use lib::simulation_templates::mot_2d_plus::create;
@@ -21,8 +22,9 @@ fn main() {
     //    .read_line(&mut s)
     //    .expect("Did not enter a correct string");
     let now = Instant::now();
-
     let (mut world, mut dispatcher) = create_from_config("example.yaml");
+
+    //increase the timestep at the begining of the simulation
     world
         .create_entity()
         .with(OptEarly {
@@ -30,6 +32,9 @@ fn main() {
             if_opt: false,
         })
         .build();
+    //include random walk(Optional)
+    world.create_entity().with(RandomWalkMarker {}).build();
+
     //let (mut world, mut dispatcher) = create();
     for _i in 0..50000 {
         dispatcher.dispatch(&mut world.res);
@@ -37,8 +42,7 @@ fn main() {
     }
     let mut output = detector::PrintOptResultSystem;
     output.run_now(&world.res);
-    println!("time taken to run{}", now.elapsed().as_millis());
+    println!("time taken to run in ms{}", now.elapsed().as_millis());
     //write_file_template("example.yml")
-    //detector::clearcsv("detector.csv");
-    //detector::print_detected_to_file("detector.csv", &vec![1.0,2.0,3.0,4.0,5.0]);
+
 }

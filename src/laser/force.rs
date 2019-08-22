@@ -2,7 +2,7 @@ extern crate specs;
 use crate::atom::{Atom, AtomInfo};
 use crate::constant;
 use rand::Rng;
-use specs::{Join, ReadExpect, ReadStorage, System, WriteStorage};
+use specs::{Component, HashMapStorage, Join, ReadExpect, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
 use super::sampler::LaserSamplers;
 use crate::maths;
@@ -84,10 +84,17 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
     }
 }
 
+pub struct RandomWalkMarker;
+
+impl Component for RandomWalkMarker {
+    type Storage = HashMapStorage<Self>;
+}
+
 pub struct RandomWalkSystem;
 
 impl<'a> System<'a> for RandomWalkSystem {
     type SystemData = (
+        ReadStorage<'a, RandomWalkMarker>,
         WriteStorage<'a, Force>,
         ReadStorage<'a, LaserSamplers>,
         ReadStorage<'a, Atom>,
@@ -95,35 +102,38 @@ impl<'a> System<'a> for RandomWalkSystem {
         ReadExpect<'a, Timestep>,
     );
 
-    fn run(&mut self, (mut force, samplers, _atom, atom_info, timestep): Self::SystemData) {
-        for (mut force, samplers, _, atom_info) in
-            (&mut force, &samplers, &_atom, &atom_info).join()
-        {
-            let mut total_force = 0.;
-            let omega = 2.0 * constant::PI * atom_info.frequency;
-            for sampler in samplers.contents.iter() {
-                total_force = total_force + sampler.force.norm();
-            }
-            let force_one_atom = constant::HBAR * omega / timestep.delta;
-            let mut number_collision = total_force / force_one_atom;
-            //println!("{}", number_collision);
-            let mut force_real = Vector3::new(0., 0., 0.);
-            let mut rng = rand::thread_rng();
-            loop {
-                if number_collision > 1. {
-                    force_real = force_real + force_one_atom * maths::random_direction();
-                    number_collision = number_collision - 1.;
-                } else {
-                    let luck = rng.gen_range(0.0, 1.0);
-                    if luck < number_collision {
+    fn run(&mut self, (_rand, mut force, samplers, _atom, atom_info, timestep): Self::SystemData) {
+        for _ in (&_rand).join() {
+            for (mut force, samplers, _, atom_info) in
+                (&mut force, &samplers, &_atom, &atom_info).join()
+            {
+                let mut total_force = 0.;
+                let omega = 2.0 * constant::PI * atom_info.frequency;
+                for sampler in samplers.contents.iter() {
+                    total_force = total_force + sampler.force.norm();
+                }
+                let force_one_atom = constant::HBAR * omega / timestep.delta;
+                let mut number_collision = total_force / force_one_atom;
+                println!("collision{}", number_collision);
+                let mut force_real = Vector3::new(0., 0., 0.);
+                let mut rng = rand::thread_rng();
+                loop {
+                    if number_collision > 1. {
                         force_real = force_real + force_one_atom * maths::random_direction();
-                        break;
+                        number_collision = number_collision - 1.;
                     } else {
-                        break;
+                        let luck = rng.gen_range(0.0, 1.0);
+                        if luck < number_collision {
+                            force_real = force_real + force_one_atom * maths::random_direction();
+                            break;
+                        } else {
+                            break;
+                        }
                     }
                 }
+                force.force = force.force + force_real;
             }
-            //force.force = force.force + force_real;
+            break;
         }
     }
 }
