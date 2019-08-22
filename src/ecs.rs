@@ -56,7 +56,7 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 	
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
 	
-	builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
+	//builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
 	builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &["detect_atom","euler_integrator"]);
 	//it is quite necessary to put the delete system at the end, otherwise some atoms are not detroyed on time
 	builder = builder.with(DestroyOutOfBoundAtomsSystem, "", &[]);
