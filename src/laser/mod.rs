@@ -20,6 +20,7 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 
 	fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
 		for (ent, _) in (&ent, &newly_created).join() {
+
 			updater.insert(
 				ent,
 				sampler::LaserSamplers {

@@ -12,13 +12,15 @@ pub mod tests {
         use nalgebra::Vector3;
         use specs::{Builder, Entity, Join, RunNow, World};
         let (mut world, mut dispatcher) = create_from_config("test1D.yaml");
+        world.register::<NewlyCreated>();
         world
             .create_entity()
-            .with(NewlyCreated)
             .with(Atom {
                 index: 1,
                 initial_velocity: Vector3::new(0., 0., 50.),
             })
+
+            .with(NewlyCreated {})
             .with(AtomInfo::strontium())
             .with(Force::new())
             .with(Mass { value: 88.0 })

@@ -136,7 +136,7 @@ impl AtomInfo {
 			mup: BOHRMAG,  // to check
 			mum: -BOHRMAG, // to check
 			muz: 0.0,
-			frequency: C / 461.0e-9,
+			frequency: 650759219088937.,
 			linewidth: 32e6,             // [Nosske2017]
 			saturation_intensity: 430.0, // [Nosske2017, 43mW/cm^2]
 		}

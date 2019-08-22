@@ -86,14 +86,15 @@ pub mod tests {
 
 		let pos1 = Position { pos: Vector3::x() };
 		assert_approx_eq!(
-			beam.power / (PI.powf(0.5) * beam.e_radius),
+			beam.power / (PI.powf(0.5) * beam.e_radius).powf(2.0),
 			get_gaussian_beam_intensity(&beam, &pos1),
 			1e-6_f64
 		);
 
 		let pos2 = Position { pos: Vector3::y() };
 		assert_approx_eq!(
-			1.0 / (PI.powf(0.5) * beam.e_radius) * (-pos2.pos[1] / beam.e_radius.powf(2.0)).exp(),
+			1.0 / (PI.powf(0.5) * beam.e_radius).powf(2.0)
+				* (-pos2.pos[1] / beam.e_radius.powf(2.0)).exp(),
 			get_gaussian_beam_intensity(&beam, &pos2),
 			1e-6_f64
 		);
@@ -149,7 +150,7 @@ pub mod tests {
 				.expect("entity not found")
 				.contents[0]
 				.intensity,
-			power / (PI.powf(0.5) * e_radius)
+			power / (PI.powf(0.5) * e_radius).powf(2.0)
 		);
 	}
 }

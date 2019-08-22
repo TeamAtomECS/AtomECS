@@ -72,6 +72,7 @@ impl<'a> System<'a> for AttachFieldSamplersToNewlyCreatedAtomsSystem {
 	);
 	fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
 		for (ent, _nc) in (&ent, &newly_created).join() {
+
 			updater.insert(ent, MagneticFieldSampler::default());
 		}
 	}

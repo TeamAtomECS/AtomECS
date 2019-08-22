@@ -51,6 +51,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                     * 2.0
                     * PI
                     - laser_sampler.doppler_shift;
+                //println!("laserfre{},atomfre{},shift {}",laser_sampler.wavevector.norm() * constant::C / 2. / PI,atom_info.frequency,laser_sampler.doppler_shift);
                 let wavevector = laser_sampler.wavevector.clone();
                 let costheta = wavevector.normalize().dot(&bfield.field.normalize());
                 let gamma = atom_info.gamma();
@@ -223,9 +224,9 @@ pub mod tests {
 
         let force_storage = test_world.read_storage::<Force>();
         assert_approx_eq!(
-            force_storage.get(atom1).expect("entity not found").force[0],
-            f_scatt,
-            1e-30
+            1e20 * force_storage.get(atom1).expect("entity not found").force[0],
+            1e20 * f_scatt,
+            1e-6
         );
         assert_eq!(
             force_storage.get(atom1).expect("entity not found").force[1],
