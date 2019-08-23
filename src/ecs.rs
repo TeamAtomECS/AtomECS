@@ -10,13 +10,18 @@ use crate::integrator::{Step, Timestep};
 
 use crate::detector;
 use crate::detector::DetectingInfo;
+
 use crate::output::console_output::ConsoleOutputSystem;
-use crate::output::file_output::FileOutputSystem;
+use specs::{World,DispatcherBuilder,Dispatcher};
+
 use crate::laser;
+
 use crate::magnetic;
-use specs::{Dispatcher, DispatcherBuilder, World};
+use crate::output::file_output::FileOutputSystem;
 
 use crate::optimization::OptEarlySystem;
+
+use crate::laser::repump::Dark;
 
 extern crate nalgebra;
 use nalgebra::Vector3;
@@ -27,12 +32,13 @@ pub fn register_components(world: &mut World) {
 	laser::register_components(world);
 	atom_sources::register_components(world);
 	detector::register_components(world);
+	world.register::<Dark>();
 }
 
 /// Creates a `Dispatcher` that can be used to calculate each simulation frame.
 pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 	let mut builder = DispatcherBuilder::new();
-	builder = builder.with(OptEarlySystem,"opt",&[]);
+	builder = builder.with(OptEarlySystem, "opt", &[]);
 	builder = builder.with(ClearForceSystem, "clear", &[]);
 	builder = builder.with(DeflagNewAtomsSystem, "deflag", &[]);
 	builder.add_barrier();
@@ -53,11 +59,15 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 		],
 	);
 	builder = detector::add_systems_to_dispatch(builder, &[]);
-	
+
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
-	
+
 	builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
-	builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &["detect_atom","euler_integrator"]);
+	builder = builder.with(
+		DeleteToBeDestroyedEntitiesSystem,
+		"",
+		&["detect_atom", "euler_integrator"],
+	);
 	//it is quite necessary to put the delete system at the end, otherwise some atoms are not detroyed on time
 	builder = builder.with(DestroyOutOfBoundAtomsSystem, "", &[]);
 	builder.build()

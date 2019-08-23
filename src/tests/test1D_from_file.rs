@@ -10,9 +10,22 @@ pub mod tests {
         use crate::simulation_templates::loadfromconfig::create_from_config;
         use assert_approx_eq::assert_approx_eq;
         use nalgebra::Vector3;
+
+        use crate::destructor::BoundaryMarker;
+        use crate::laser::force::RandomWalkMarker;
+        use crate::laser::repump::{Dark, RepumpLoss};
         use specs::{Builder, Entity, Join, RunNow, World};
+
+        use crate::atom_sources::oven::VelocityCap;
         let (mut world, mut dispatcher) = create_from_config("test1D.yaml");
         world.register::<NewlyCreated>();
+        world.add_resource(RandomWalkMarker { value: false });
+
+        //include boundary (walls)
+
+        world.add_resource(BoundaryMarker { value: false });
+        world.add_resource(VelocityCap { cap: std::f64::NAN});
+        world.add_resource(RepumpLoss { proportion: 0.0 });
         world
             .create_entity()
             .with(Atom {

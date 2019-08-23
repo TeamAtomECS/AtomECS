@@ -82,8 +82,7 @@ pub mod tests {
         test_world.register::<Position>();
         test_world.register::<Atom>();
 
-        test_world.register::<BoundaryMarker>();
-        test_world.create_entity().with(BoundaryMarker {}).build();
+        test_world.add_resource(BoundaryMarker {value:true});
         let test_entity1 = test_world
             .create_entity()
             .with(Position::new())

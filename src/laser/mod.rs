@@ -3,6 +3,7 @@ pub mod doppler;
 pub mod force;
 pub mod gaussian;
 pub mod sampler;
+pub mod repump;
 
 extern crate specs;
 use crate::initiate::NewlyCreated;

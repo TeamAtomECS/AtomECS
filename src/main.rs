@@ -10,6 +10,7 @@ use specs::Builder;
 use lib::laser::force::RandomWalkMarker;
 use lib::optimization::OptEarly;
 
+use lib::laser::repump::RepumpLoss;
 
 use lib::atom_sources::oven::VelocityCap;
 use lib::destructor::BoundaryMarker;
@@ -41,6 +42,7 @@ fn main() {
 
     world.add_resource(BoundaryMarker { value: true });
     world.add_resource(VelocityCap { cap: 200. });
+    world.add_resource(RepumpLoss{proportion:0.0});
     //let (mut world, mut dispatcher) = create();
     for _i in 0..50000 {
         dispatcher.dispatch(&mut world.res);
