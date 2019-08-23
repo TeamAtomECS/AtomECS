@@ -112,9 +112,9 @@ impl<'a> System<'a> for RandomWalkSystem {
                 for sampler in samplers.contents.iter() {
                     total_force = total_force + sampler.force.norm();
                 }
-                let force_one_atom = constant::HBAR * omega / timestep.delta;
+                let force_one_atom = constant::HBAR * omega / constant::C / timestep.delta;
                 let mut number_collision = total_force / force_one_atom;
-                //println!("collision{}", number_collision);
+                println!("collision{}", number_collision);
                 let mut force_real = Vector3::new(0., 0., 0.);
                 let mut rng = rand::thread_rng();
                 loop {
