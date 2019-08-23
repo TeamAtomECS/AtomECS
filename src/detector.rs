@@ -17,6 +17,7 @@ extern crate nalgebra;
 use crate::destructor::ToBeDestroyed;
 use nalgebra::Vector3;
 
+/// a Component that clear the csv file that record the informatino about atom detected
 pub struct ClearerCSV {
     pub filename: &'static str,
 }
@@ -25,6 +26,7 @@ impl Component for ClearerCSV {
     type Storage = HashMapStorage<Self>;
 }
 
+/// system that clear the csv.file, by default detector.csv
 pub struct ClearCSVSystem;
 
 impl<'a> System<'a> for ClearCSVSystem {
@@ -44,17 +46,23 @@ impl<'a> System<'a> for ClearCSVSystem {
         }
     }
 }
-
+/// a resource that record down some of the information about detected atom
 pub struct DetectingInfo {
     // I still put it here, because they are quite important parameters to optimize and keeping it is not costly at all
     pub atom_detected: i32,
     pub total_velocity: Vector3<f64>,
 }
 
+/// a component that remove the atom that enter its region
+/// it has the shape of a cylinder
 pub struct Detector {
+    /// the radius of the detector
     pub radius: f64,
+    /// the thickness/ height of the cylindrical detector
     pub thickness: f64,
+    /// direction of the cylindrical detector
     pub direction: Vector3<f64>,
+    /// the filename of the csv that record the info about captured atoms
     pub filename: &'static str,
 }
 
@@ -74,6 +82,7 @@ impl Component for Detector {
     type Storage = HashMapStorage<Self>;
 }
 
+/// system used to detecting the atom
 pub struct DetectingAtomSystem;
 
 impl<'a> System<'a> for DetectingAtomSystem {
@@ -174,10 +183,10 @@ pub fn add_systems_to_dispatch(
         &["clearcsv"],
     )
 }
+/// system that print the detected atom info to the output file
+pub struct PrintDetectResultSystem;
 
-pub struct PrintOptResultSystem;
-
-impl<'a> System<'a> for PrintOptResultSystem {
+impl<'a> System<'a> for PrintDetectResultSystem {
     type SystemData = (ReadExpect<'a, DetectingInfo>);
     fn run(&mut self, detect_info: Self::SystemData) {
         println!("number detected{}", detect_info.atom_detected);

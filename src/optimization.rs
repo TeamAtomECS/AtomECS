@@ -4,6 +4,7 @@ use specs::{
     VecStorage, WriteExpect, WriteStorage,
 };
 pub struct OptEarly {
+    /// how long the timestep should be increased
     pub timethreshold: f64,
     pub if_opt: bool,
 }
@@ -12,6 +13,8 @@ impl Component for OptEarly {
     type Storage = HashMapStorage<Self>;
 }
 
+/// a system that increase the timestep at the begining of the simulation
+/// usually, if the timethreshold is carefully chosen, the impact on accuracy is not noticable
 pub struct OptEarlySystem;
 
 impl<'a> System<'a> for OptEarlySystem {

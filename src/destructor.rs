@@ -1,8 +1,24 @@
 extern crate specs;
 use crate::atom::{Atom, Position};
-use specs::{Component, Entities, ReadExpect,HashMapStorage, Join, NullStorage, ReadStorage, System};
+use specs::{
+    Component, Entities, HashMapStorage, Join, NullStorage, ReadExpect, ReadStorage, System,
+};
 extern crate nalgebra;
 use nalgebra::Vector3;
+///  the system that check whether an atom is out of bound
+///  out of bound atoms will be destroyed immediately as atoms that hit the wall in real experiment will be absorbed
+///  need to be edited manually, as the shape of the allowed region is arbitrary
+fn out_of_bound(position: &Vector3<f64>) -> bool {
+    let mut result = true;
+    if position.norm() < 0.060 && position[0] > -0.025 && position[0] < 0.025 {
+        result = false
+    }
+    if position[2].powf(2.0) + position[1].powf(2.0) < 0.02_f64.powf(2.0) {
+        result = false
+    }
+    result
+}
+
 /// Deletes entities which have been marked for destruction.
 pub struct DeleteToBeDestroyedEntitiesSystem;
 impl<'a> System<'a> for DeleteToBeDestroyedEntitiesSystem {
@@ -14,11 +30,11 @@ impl<'a> System<'a> for DeleteToBeDestroyedEntitiesSystem {
         }
     }
 }
-
-pub struct BoundaryMarker{
+/// a resource that indicate that the Boundary/ Wall is being used
+/// if value = false, then no boundary will be implemented in the simulation
+pub struct BoundaryMarker {
     pub value: bool,
 }
-
 
 
 /// Deletes atoms that have strayed outside of the simulation region.
@@ -43,18 +59,8 @@ impl<'a> System<'a> for DestroyOutOfBoundAtomsSystem {
     }
 }
 
-fn out_of_bound(position: &Vector3<f64>) -> bool {
-    let mut result = true;
-    if position.norm() < 0.060 && position[0] > -0.025 && position[0] < 0.025 {
-        result = false
-    }
-    if position[2].powf(2.0) + position[1].powf(2.0) < 0.02_f64.powf(2.0) {
-        result = false
-    }
-    result
-}
-
 /// Component that marks an entity for deletion.
+/// if an entity need to be destroyed immediately, do not use the component as it cause problem
 pub struct ToBeDestroyed;
 impl Component for ToBeDestroyed {
     type Storage = NullStorage<Self>;
@@ -82,7 +88,7 @@ pub mod tests {
         test_world.register::<Position>();
         test_world.register::<Atom>();
 
-        test_world.add_resource(BoundaryMarker {value:true});
+        test_world.add_resource(BoundaryMarker { value: true });
         let test_entity1 = test_world
             .create_entity()
             .with(Position::new())

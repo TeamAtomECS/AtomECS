@@ -97,3 +97,5 @@ TODO
 * Shape of the boundary
 
 * Shape of the oven aperture (optional)
+
+* FileOutputSystem, you can decide what you want as the output

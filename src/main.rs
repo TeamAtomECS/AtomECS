@@ -48,7 +48,7 @@ fn main() {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
-    let mut output = detector::PrintOptResultSystem;
+    let mut output = detector::PrintDetectResultSystem;
     output.run_now(&world.res);
     println!("time taken to run in ms{}", now.elapsed().as_millis());
     //write_file_template("example.yml")

@@ -3,11 +3,14 @@ extern crate rand;
 extern crate specs;
 
 use specs::{Join, ReadExpect, ReadStorage, System, WriteExpect, WriteStorage};
-
+/// step/frame of the simulation
 pub struct Step {
 	pub n: u64,
 }
 
+/// the timestep for the integration
+/// the smaller the integration, the better
+/// usually a timestep that is smaller than 1e-6 is not necessary as it does not lead to further accuracy increase
 pub struct Timestep {
 	pub delta: f64,
 }

@@ -8,7 +8,7 @@ use crate::atom_sources::mass::{MassDistribution, MassRatio};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 use std::io::BufWriter;
-
+/// convert a yaml type file into a SimArchetype which tells everything about the simulation
 pub fn load_file(file: &str) -> SimArchetype {
 	let file = File::open(file).expect("Unable to open file");
 	let deserialized: SimArchetype = serde_yaml::from_reader(file).expect("Could not read");
@@ -64,11 +64,11 @@ pub fn write_file_template(file: &str) {
 			ratio: 0.7217,
 		},
 	]);
-	let detector = DetectorArchetype{
-		position:Vector3::new(1.,0.,0.),
-		direction:Vector3::new(1.,0.,0.),
-		radius:0.01,
-		thickness:0.01,
+	let detector = DetectorArchetype {
+		position: Vector3::new(1., 0., 0.),
+		direction: Vector3::new(1., 0., 0.),
+		radius: 0.01,
+		thickness: 0.01,
 	};
 	let sim = SimArchetype {
 		lasers: lasers,
@@ -77,7 +77,7 @@ pub fn write_file_template(file: &str) {
 		mass: massrubidium,
 		atominfo: AtomInfo::rubidium(),
 		detector,
-		timestep:1e-6,
+		timestep: 1e-6,
 	};
 
 	let serialized = serde_yaml::to_string(&sim).unwrap();
@@ -123,11 +123,11 @@ pub struct SimArchetype {
 	pub mass: MassDistribution,
 	pub magnetic: MagArchetype,
 	pub detector: DetectorArchetype,
-	pub timestep:f64,
+	pub timestep: f64,
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct DetectorArchetype{
+pub struct DetectorArchetype {
 	pub position: Vector3<f64>,
 	pub direction: Vector3<f64>,
 	pub thickness: f64,
