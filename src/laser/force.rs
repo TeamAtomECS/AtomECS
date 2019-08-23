@@ -85,17 +85,16 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
     }
 }
 
-pub struct RandomWalkMarker;
-
-impl Component for RandomWalkMarker {
-    type Storage = HashMapStorage<Self>;
+pub struct RandomWalkMarker {
+    pub value: bool,
 }
+
 
 pub struct RandomWalkSystem;
 
 impl<'a> System<'a> for RandomWalkSystem {
     type SystemData = (
-        ReadStorage<'a, RandomWalkMarker>,
+        ReadExpect<'a, RandomWalkMarker>,
         WriteStorage<'a, Force>,
         ReadStorage<'a, LaserSamplers>,
         ReadStorage<'a, Atom>,
@@ -103,8 +102,8 @@ impl<'a> System<'a> for RandomWalkSystem {
         ReadExpect<'a, Timestep>,
     );
 
-    fn run(&mut self, (_rand, mut force, samplers, _atom, atom_info, timestep): Self::SystemData) {
-        for _ in (&_rand).join() {
+    fn run(&mut self, (rand, mut force, samplers, _atom, atom_info, timestep): Self::SystemData) {
+        if rand.value {
             for (mut force, samplers, _, atom_info) in
                 (&mut force, &samplers, &_atom, &atom_info).join()
             {
@@ -115,7 +114,7 @@ impl<'a> System<'a> for RandomWalkSystem {
                 }
                 let force_one_atom = constant::HBAR * omega / timestep.delta;
                 let mut number_collision = total_force / force_one_atom;
-                println!("collision{}", number_collision);
+                //println!("collision{}", number_collision);
                 let mut force_real = Vector3::new(0., 0., 0.);
                 let mut rng = rand::thread_rng();
                 loop {
@@ -134,7 +133,6 @@ impl<'a> System<'a> for RandomWalkSystem {
                 }
                 force.force = force.force + force_real;
             }
-            break;
         }
     }
 }

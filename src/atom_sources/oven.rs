@@ -15,13 +15,16 @@ use nalgebra::Vector3;
 use crate::destructor::ToBeDestroyed;
 
 use specs::{
-	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System, WriteExpect,
+	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System,
+	WriteExpect,
 };
 
 pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>, cap: f64) -> Vector3<f64> {
 	let v_mag = maths::maxwell_generate(t, mass);
-	if v_mag > cap {
-		return Vector3::new(0., 0., 0.);
+	if cap != std::f64::NAN {
+		if v_mag > cap {
+			return Vector3::new(std::f64::NAN, std::f64::NAN, std::f64::NAN);
+		}
 	}
 	let dir = &new_dir.normalize();
 	let dir_1 = new_dir.cross(&Vector3::new(2.0, 1.0, 0.5)).normalize();
@@ -34,8 +37,8 @@ pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>, cap: f64) ->
 	let dir_div = dir_1 * theta.sin() * theta2.cos() + dir_2 * theta.sin() * theta2.sin();
 	let dirf = dir * theta.cos() + dir_div;
 	let mut v_out = dirf * v_mag;
-	v_out
-	//t * Vector3::new(0., 0., 1.0).normalize()
+	//v_out
+	t * Vector3::new(0., 0., 1.0).normalize()
 }
 pub enum OvenAperture {
 	Cubic { size: [f64; 3] },
@@ -104,7 +107,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, MassDistribution>,
 		WriteExpect<'a, Index>,
-		ReadStorage<'a, VelocityCap>,
+		ReadExpect<'a, VelocityCap>,
 		Read<'a, LazyUpdate>,
 	);
 
@@ -112,11 +115,8 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		&mut self,
 		(entities, oven, atom, numbers_to_emit, pos, masstype,mut index,cap, updater): Self::SystemData,
 	) {
-		// by default the velocity cap is 9999 m/s
-		let mut vel_cap = 9999.;
-		for cap in (&cap).join() {
-			vel_cap = cap.cap;
-		}
+		let mut vel_cap = std::f64::NAN;
+		vel_cap = cap.cap;
 		for (oven, atom, number_to_emit, oven_position, masstype) in
 			(&oven, &atom, &numbers_to_emit, &pos, &masstype).join()
 		{
@@ -129,7 +129,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 					&oven.direction,
 					vel_cap,
 				);
-				if new_vel == Vector3::new(0., 0., 0.) {
+				if new_vel == Vector3::new(std::f64::NAN, std::f64::NAN, std::f64::NAN) {
 					entities.delete(new_atom).expect("Could not delete entity");
 					continue;
 				}

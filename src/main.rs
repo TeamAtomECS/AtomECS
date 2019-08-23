@@ -10,10 +10,10 @@ use specs::Builder;
 use lib::laser::force::RandomWalkMarker;
 use lib::optimization::OptEarly;
 
-use lib::simulation_templates::mot_2d_plus::create;
+
 use lib::atom_sources::oven::VelocityCap;
 use lib::destructor::BoundaryMarker;
-
+use lib::simulation_templates::mot_2d_plus::create;
 use specs::RunNow;
 use std::time::{Duration, Instant};
 
@@ -35,12 +35,12 @@ fn main() {
         })
         .build();
     //include random walk(Optional)
-    //world.create_entity().with(RandomWalkMarker {}).build();
+    world.add_resource(RandomWalkMarker {value:true});
 
     //include boundary (walls)
 
-    world.create_entity().with(BoundaryMarker {}).build();
-    world.create_entity().with(VelocityCap{cap:200.}).build();
+    world.add_resource(BoundaryMarker { value: true });
+    world.add_resource(VelocityCap { cap: 200. });
     //let (mut world, mut dispatcher) = create();
     for _i in 0..50000 {
         dispatcher.dispatch(&mut world.res);

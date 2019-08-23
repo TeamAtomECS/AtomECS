@@ -1,6 +1,6 @@
 extern crate specs;
 use crate::atom::{Atom, Position};
-use specs::{Component, Entities, HashMapStorage, Join, NullStorage, ReadStorage, System};
+use specs::{Component, Entities, ReadExpect,HashMapStorage, Join, NullStorage, ReadStorage, System};
 extern crate nalgebra;
 use nalgebra::Vector3;
 /// Deletes entities which have been marked for destruction.
@@ -15,31 +15,30 @@ impl<'a> System<'a> for DeleteToBeDestroyedEntitiesSystem {
     }
 }
 
-pub struct BoundaryMarker;
-
-impl Component for BoundaryMarker {
-    type Storage = HashMapStorage<Self>;
+pub struct BoundaryMarker{
+    pub value: bool,
 }
+
+
 
 /// Deletes atoms that have strayed outside of the simulation region.
 pub struct DestroyOutOfBoundAtomsSystem;
 impl<'a> System<'a> for DestroyOutOfBoundAtomsSystem {
     type SystemData = (
         Entities<'a>,
-        ReadStorage<'a, BoundaryMarker>,
+        ReadExpect<'a, BoundaryMarker>,
         ReadStorage<'a, Position>,
         ReadStorage<'a, Atom>,
     );
 
     fn run(&mut self, (entities, boundary, positions, atoms): Self::SystemData) {
-        for boundary in (&boundary).join() {
+        if boundary.value {
             for (entity, position, _) in (&entities, &positions, &atoms).join() {
 
                 if out_of_bound(&position.pos) {
                     entities.delete(entity).expect("Could not delete entity");
                 }
             }
-            break;
         }
     }
 }
