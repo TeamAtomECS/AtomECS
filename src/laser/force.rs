@@ -2,7 +2,10 @@ extern crate specs;
 use crate::atom::{Atom, AtomInfo};
 use crate::constant;
 use rand::Rng;
-use specs::{Read, LazyUpdate,Component, Entities, HashMapStorage, Join, ReadExpect, ReadStorage, System, WriteStorage};
+use specs::{
+    Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System,
+    WriteStorage,
+};
 extern crate nalgebra;
 use super::sampler::LaserSamplers;
 use crate::maths;
@@ -28,15 +31,15 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
         WriteStorage<'a, LaserSamplers>,
         ReadStorage<'a, AtomInfo>,
         WriteStorage<'a, Force>,
-        ReadStorage<'a,Dark>
+        ReadStorage<'a, Dark>,
     );
 
     fn run(
         &mut self,
-        (magnetic_samplers, mut laser_samplers, atom_info, mut forces,_dark): Self::SystemData,
+        (magnetic_samplers, mut laser_samplers, atom_info, mut forces, _dark): Self::SystemData,
     ) {
         // Outer loop over atoms
-        for (atom_info, bfield, laser_samplers, mut force,()) in (
+        for (atom_info, bfield, laser_samplers, mut force, ()) in (
             &atom_info,
             &magnetic_samplers,
             &mut laser_samplers,
@@ -106,9 +109,9 @@ impl<'a> System<'a> for RandomWalkSystem {
         ReadStorage<'a, Atom>,
         ReadStorage<'a, AtomInfo>,
         ReadExpect<'a, Timestep>,
-        ReadStorage<'a,Dark>,
+        ReadStorage<'a, Dark>,
         Entities<'a>,
-        Read<'a,LazyUpdate>,
+        Read<'a, LazyUpdate>,
     );
 
     fn run(
@@ -117,8 +120,10 @@ impl<'a> System<'a> for RandomWalkSystem {
     ) {
         if rand.value {
             let proportion = repump.proportion;
-            for (mut force, samplers, _, atom_info,(),ent) in
-                (&mut force, &samplers, &_atom, &atom_info,!&_dark,&entities).join()
+            for (mut force, samplers, _, atom_info, (), ent) in (
+                &mut force, &samplers, &_atom, &atom_info, !&_dark, &entities,
+            )
+                .join()
             {
                 let mut total_force = 0.;
                 let omega = 2.0 * constant::PI * atom_info.frequency;
@@ -134,16 +139,16 @@ impl<'a> System<'a> for RandomWalkSystem {
                     if number_collision > 1. {
                         force_real = force_real + force_one_atom * maths::random_direction();
                         number_collision = number_collision - 1.;
-                        if repump.if_loss(){
-                            lazy.insert(ent,Dark);
+                        if repump.if_loss() {
+                            lazy.insert(ent, Dark);
                             break;
                         }
                     } else {
                         let luck = rng.gen_range(0.0, 1.0);
                         if luck < number_collision {
                             force_real = force_real + force_one_atom * maths::random_direction();
-                            if repump.if_loss(){
-                                lazy.insert(ent,Dark);
+                            if repump.if_loss() {
+                                lazy.insert(ent, Dark);
                             }
                             break;
                         } else {
@@ -256,6 +261,61 @@ pub mod tests {
             0.0
         );
     }
+
+
     #[test]
-    fn test_repump(){}
+    fn test_dark() {
+        let detuning = 0.0;
+        let intensity = 1.0;
+        let cooling = CoolingLight::for_species(AtomInfo::rubidium(), detuning, 1.0);
+        let wavenumber = cooling.wavenumber();
+        let (mut test_world, laser) = create_world_for_tests(cooling);
+        test_world.register::<Dark>();
+        let atom1 = test_world
+            .create_entity()
+            .with(Dark {})
+            .with(Force::new())
+            .with(LaserSamplers {
+                contents: vec![LaserSampler {
+                    force: Vector3::new(0.0, 0.0, 0.0),
+                    polarization: 1.0,
+                    wavevector: wavenumber * Vector3::new(1.0, 0.0, 0.0),
+                    intensity: intensity,
+                    doppler_shift: 0.0,
+                }],
+            })
+            .with(MagneticFieldSampler {
+                field: Vector3::new(1e-8, 0.0, 0.0),
+                magnitude: 1e-8,
+            })
+            .with(AtomInfo::rubidium())
+            .build();
+
+        let mut system = CalculateCoolingForcesSystem {};
+        system.run_now(&test_world.res);
+        test_world.maintain();
+
+        let cooling_light_storage = test_world.read_storage::<CoolingLight>();
+        let cooling_light = cooling_light_storage.get(laser).expect("entity not found");
+        let photon_momentum = constant::HBAR * cooling_light.wavenumber();
+        let i_norm = intensity / AtomInfo::rubidium().saturation_intensity;
+        let scattering_rate = (AtomInfo::rubidium().gamma() / 2.0) * i_norm
+            / (1.0 + i_norm + 4.0 * (detuning * 1e6 / AtomInfo::rubidium().linewidth).powf(2.0));
+        let f_scatt = photon_momentum * scattering_rate;
+
+        let force_storage = test_world.read_storage::<Force>();
+        assert_approx_eq!(
+            force_storage.get(atom1).expect("entity not found").force[0],
+            0.,
+            1e-9
+        );
+        assert_eq!(
+            force_storage.get(atom1).expect("entity not found").force[1],
+            0.0
+        );
+        assert_eq!(
+            force_storage.get(atom1).expect("entity not found").force[2],
+            0.0
+        );
+    }
 }
