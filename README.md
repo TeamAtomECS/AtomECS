@@ -66,4 +66,34 @@ We outline a few of the key components here.
 
 * Choices of Oven types as well as some other choices (e.x. shape of the wall) cannot be made using hte config file. A new "world" need to be created manually if all functionality of the program need to be used.
 
+# Users guide
 
+## execute from file
+
+* load_from_config function can create a world (exp setup) based on the a simple yaml file, an example is given in the crate as example.yaml. Multiple lasers and ovens are allowed.
+
+* for the oven part of the file, rate indicate the number of atom emitted per second while instand_emission indicate the number of atom produced at the beginning of the simulation. both can be used at the same time.
+
+## execute from rust program
+
+* Some templates exist in simulation templates file, they can be ran to create the world (exp setup).
+
+* A customised design can be created by just changing the templates.
+
+## resources that need to be registered manually
+
+* RandomWalkMarker indicates if random walk needs to be included, BoundaryMarker indicates if boundary( walls ) needs to be included. ( the shape of the boudnary still need to be changed manually in the program). 
+
+* VelocityCap is the velocity cap for all atom sources. All atoms that goes beyond the cap will be discarded immediately to save the computational power.
+
+* RepumpLoss indicate the proportion of the atoms that will be lost (not longer interact with the laser) during emission of one photon. 
+
+* OptEarly, a Component that indicate that the simulation will be optimized at the cost of the accuracy. If used, the simulation timestep will be doubled at the begining of the simulation when the atoms are barely interacting with the lasers.
+
+## parts that need to be designed manually
+
+TODO
+
+* Shape of the boundary
+
+* Shape of the oven aperture (optional)
