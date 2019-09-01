@@ -7,10 +7,17 @@ pub struct OptEarly {
     /// how long the timestep should be increased
     pub timethreshold: f64,
     pub if_opt: bool,
+    pub opt_finish: bool,
 }
 
-impl Component for OptEarly {
-    type Storage = HashMapStorage<Self>;
+impl OptEarly {
+    pub fn new(timethreshold: f64) -> OptEarly {
+        OptEarly {
+            timethreshold,
+            if_opt: false,
+            opt_finish: false,
+        }
+    }
 }
 
 /// a system that increase the timestep at the begining of the simulation
@@ -20,24 +27,22 @@ pub struct OptEarlySystem;
 impl<'a> System<'a> for OptEarlySystem {
     type SystemData = (
         Entities<'a>,
-        WriteStorage<'a, OptEarly>,
+        WriteExpect<'a, OptEarly>,
         WriteExpect<'a, Timestep>,
         ReadExpect<'a, Step>,
     );
 
     fn run(&mut self, (ents, mut opt, mut timestep, step): Self::SystemData) {
-        for (ent, mut opt) in (&ents, &mut opt).join() {
-            if !opt.if_opt {
-                println!("timestep increased");
-                timestep.delta = timestep.delta * 2.;
-                opt.if_opt = true;
-            }
-            let time = timestep.delta * (step.n as f64);
-            if time > opt.timethreshold {
-                println!("timestep decrease at time:{}", time);
-                timestep.delta = timestep.delta / 2.;
-                ents.delete(ent).expect("Could not delete entity");
-            }
+        if !opt.if_opt {
+            println!("timestep increased");
+            timestep.delta = timestep.delta * 2.;
+            opt.if_opt = true;
+        }
+        let time = timestep.delta * (step.n as f64);
+        if time > opt.timethreshold && !opt.opt_finish {
+            println!("timestep decrease at time:{}", time);
+            timestep.delta = timestep.delta / 2.;
+            opt.opt_finish = true;
         }
     }
 }

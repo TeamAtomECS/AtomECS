@@ -14,8 +14,39 @@ extern crate nalgebra;
 
 use crate::detector;
 use nalgebra::Vector3;
-/// Creates a world describing a 2D plus MOT and the dispatcher.
+
+use crate::optimization::OptEarly;
+use crate::laser::force::RandomWalkMarker;
+use crate::destructor::BoundaryMarker;
+use crate::Oven::VelocityCap;
+use crate::laser::repump::RepumpLoss;
+use crate::output::file_output::FileOutputMarker;
+use crate::detector;
+/// main running code
+fn main(){
+	let (mut world,mut dispatcher) =create();
+    //increase the timestep at the begining of the simulation
+    world.add_resource(OptEarly::new(2e-4));
+    //include random walk(Optional)
+    world.add_resource(RandomWalkMarker { value: true });
+
+    //include boundary (walls)
+
+    world.add_resource(BoundaryMarker { value: true });
+    world.add_resource(VelocityCap { cap: 1000. });
+    world.add_resource(RepumpLoss { proportion: 0.0 });
+    world.add_resource(FileOutputMarker { value: false });
+    //let (mut world, mut dispatcher) = create();
+    for _i in 0..50000 {
+        dispatcher.dispatch(&mut world.res);
+        world.maintain();
+    }
+    let mut output = detector::PrintDetectResultSystem;
+    output.run_now(&world.res);
+}
+
 #[allow(dead_code)]
+/// Creates a world describing a 2D plus MOT and the dispatcher.
 pub fn create() -> (World, Dispatcher<'static, 'static>) {
 	let mut world = World::new();
 	ecs::register_components(&mut world);
@@ -120,7 +151,7 @@ fn mot2d_entity_create(world: &mut World) {
 			thickness: 0.01,
 			direction: Vector3::new(1., 0., 0.),
 			filename: "detector.csv",
-			trigger_time:0.0,
+			trigger_time: 0.0,
 		})
 		.with(Position {
 			pos: Vector3::new(0.3, 0., 0.),

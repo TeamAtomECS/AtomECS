@@ -110,6 +110,7 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 			direction: config.detector.direction.clone(),
 			radius: config.detector.radius,
 			thickness: config.detector.thickness,
+			trigger_time: config.detector.trigger_time,
 		})
 		.with(Position {
 			pos: config.detector.position.clone(),

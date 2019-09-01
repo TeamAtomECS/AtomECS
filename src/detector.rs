@@ -2,8 +2,8 @@ use crate::atom::{Atom, Position, Velocity};
 use crate::integrator::{Step, Timestep};
 extern crate specs;
 use specs::{
-    Component, Dispatcher, DispatcherBuilder, Entities, HashMapStorage, Join, LazyUpdate, Read,
-    ReadExpect, ReadStorage, System, World, WriteExpect, WriteStorage,
+    Component, Dispatcher, DispatcherBuilder, Entities,VecStorage, HashMapStorage, Join, LazyUpdate, Read,
+    ReadExpect, ReadStorage, System, World, WriteExpect, WriteStorage
 };
 
 
@@ -62,6 +62,9 @@ pub struct Detector {
     pub thickness: f64,
     /// direction of the cylindrical detector
     pub direction: Vector3<f64>,
+    /// how long the atom needs to be in the detector before it is decided as detected
+    /// for an instant detector, this variable should be set to be zero
+    pub trigger_time:f64,
     /// the filename of the csv that record the info about captured atoms
     pub filename: &'static str,
 }
@@ -82,6 +85,16 @@ impl Component for Detector {
     type Storage = HashMapStorage<Self>;
 }
 
+/// a component indicates that the atom has been detected
+pub struct Detected{
+    /// time that this atom has been in the detected region.
+    pub time:f64,
+}
+
+impl Component for Detected {
+    type Storage = VecStorage<Self>;
+}
+
 /// system used to detecting the atom
 pub struct DetectingAtomSystem;
 
@@ -91,43 +104,82 @@ impl<'a> System<'a> for DetectingAtomSystem {
         ReadStorage<'a, Detector>,
         Entities<'a>,
         ReadStorage<'a, Atom>,
-        Read<'a, LazyUpdate>,
         ReadStorage<'a, Velocity>,
         ReadExpect<'a, Step>,
         ReadExpect<'a, Timestep>,
         WriteExpect<'a, DetectingInfo>,
+        WriteStorage<'a,Detected>,
+        Read<'a,LazyUpdate>,
     );
     fn run(
         &mut self,
-        (pos, detector, entities, atom, lazy, vel, step, timestep, mut detect_info): Self::SystemData,
+        (pos, detector, entities, atom, vel, step, timestep, mut detect_info,mut detected,updater): Self::SystemData,
     ) {
         let time = step.n as f64 * timestep.delta;
         for (detector_pos, detector) in (&pos, &detector).join() {
-            for (atom_pos, atom, ent, vel) in (&pos, &atom, &entities, &vel).join() {
-                let rela_pos = atom_pos.pos - detector_pos.pos;
-                if detector.if_detect(&rela_pos) {
-                    println!("atom detected");
-                    detect_info.atom_detected = detect_info.atom_detected + 1;
-                    detect_info.total_velocity = detect_info.total_velocity + vel.vel;
+            if detector.trigger_time == 0.0{
+                for (atom_pos, atom, ent, vel) in (&pos, &atom, &entities, &vel).join() {
+                    let rela_pos = atom_pos.pos - detector_pos.pos;
+                    if detector.if_detect(&rela_pos) {
+                        detect_info.atom_detected = detect_info.atom_detected + 1;
+                        detect_info.total_velocity = detect_info.total_velocity + vel.vel;
 
-                    entities.delete(ent).expect("Could not delete entity");
-                    let content = vec![
-                        vel.vel[0],
-                        vel.vel[1],
-                        vel.vel[2],
-                        atom.initial_velocity[0],
-                        atom.initial_velocity[1],
-                        atom.initial_velocity[2],
-                        time,
-                        atom_pos.pos[0],
-                        atom_pos.pos[1],
-                        atom_pos.pos[2],
-                    ];
-                    match print_detected_to_file(detector.filename, &content) {
-                        Ok(_) => (),
-                        Err(why) => panic!("error writing file,{}", why.description()),
-                    };
+                        entities.delete(ent).expect("Could not delete entity");
+                        let content = vec![
+                            vel.vel[0],
+                            vel.vel[1],
+                            vel.vel[2],
+                            atom.initial_velocity[0],
+                            atom.initial_velocity[1],
+                            atom.initial_velocity[2],
+                            time,
+                            atom_pos.pos[0],
+                            atom_pos.pos[1],
+                            atom_pos.pos[2],
+                        ];
+                        match print_detected_to_file(detector.filename, &content) {
+                            Ok(_) => (),
+                            Err(why) => panic!("error writing file,{}", why.description()),
+                        };
+                    }
                 }
+            }
+            else{
+                for (atom_pos, atom,mut detect, ent, vel) in (&pos, &atom, &mut detected, &entities, &vel).join(){
+                    let rela_pos = atom_pos.pos - detector_pos.pos;
+                    if detector.if_detect(&rela_pos) {
+                        detect.time = timestep.delta +detect.time;
+                        if detect.time < detector.trigger_time{
+                            detect_info.atom_detected = detect_info.atom_detected + 1;
+                            detect_info.total_velocity = detect_info.total_velocity + vel.vel;
+
+                            entities.delete(ent).expect("Could not delete entity");
+                            let content = vec![
+                                vel.vel[0],
+                                vel.vel[1],
+                                vel.vel[2],
+                                atom.initial_velocity[0],
+                                atom.initial_velocity[1],
+                                atom.initial_velocity[2],
+                                time,
+                                atom_pos.pos[0],
+                                atom_pos.pos[1],
+                                atom_pos.pos[2],
+                            ];
+                            match print_detected_to_file(detector.filename, &content) {
+                                Ok(_) => (),
+                                Err(why) => panic!("error writing file,{}", why.description()),
+                            };
+                        }
+                    }
+                    else{
+                        updater.remove::<Detected>(ent);
+                    }
+                }
+                for (atom_pos, atom, (), ent, vel) in (&pos, &atom,!&detected, &entities, &vel).join(){
+                    updater.insert(ent,Detected{time:0.0});
+                }
+
             }
         }
     }
@@ -228,6 +280,7 @@ pub mod tests {
             direction: Vector3::new(1., 0., 0.),
             radius: 0.1,
             thickness: 0.1,
+            trigger_time:0.0,
             filename: "detector.csv",
         };
         assert!(detect.if_detect(&Vector3::new(0.04, 0.01, 0.01)));

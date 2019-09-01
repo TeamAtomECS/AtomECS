@@ -12,7 +12,7 @@ use crate::detector;
 use crate::detector::DetectingInfo;
 
 use crate::output::console_output::ConsoleOutputSystem;
-use specs::{World,DispatcherBuilder,Dispatcher};
+use specs::{Dispatcher, DispatcherBuilder, World};
 
 use crate::laser;
 
@@ -62,7 +62,7 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
 
-	builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
+	//builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
 	builder = builder.with(
 		DeleteToBeDestroyedEntitiesSystem,
 		"",

@@ -69,6 +69,7 @@ pub fn write_file_template(file: &str) {
 		direction: Vector3::new(1., 0., 0.),
 		radius: 0.01,
 		thickness: 0.01,
+		trigger_time:0.0,
 	};
 	let sim = SimArchetype {
 		lasers: lasers,
@@ -132,4 +133,5 @@ pub struct DetectorArchetype {
 	pub direction: Vector3<f64>,
 	pub thickness: f64,
 	pub radius: f64,
+	pub trigger_time: f64,
 }

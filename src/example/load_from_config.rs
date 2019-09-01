@@ -1,24 +1,24 @@
-extern crate magneto_optical_trap as lib;
 
-use lib::detector;
+
+use crate::detector;
 extern crate specs;
 
-use lib::fileinput::write_file_template;
-use lib::simulation_templates::loadfromconfig::create_from_config;
+use crate::fileinput::write_file_template;
+use crate::simulation_templates::loadfromconfig::create_from_config;
 use specs::Builder;
 
-use lib::laser::force::RandomWalkMarker;
-use lib::optimization::OptEarly;
+use crate::laser::force::RandomWalkMarker;
+use crate::optimization::OptEarly;
 
-use lib::laser::repump::RepumpLoss;
+use crate::laser::repump::RepumpLoss;
 
-use lib::atom_sources::oven::VelocityCap;
-use lib::destructor::BoundaryMarker;
-use lib::simulation_templates::mot_2d_plus::create;
+use crate::atom_sources::oven::VelocityCap;
+use crate::destructor::BoundaryMarker;
+use crate::simulation_templates::mot_2d_plus::create;
 use specs::RunNow;
 use std::time::{Duration, Instant};
 
-use lib::output::file_output::FileOutputMarker;
+use crate::output::file_output::FileOutputMarker;
 
 //use std::io::stdin;
 fn main() {
