@@ -66,7 +66,6 @@ pub mod tests {
 	use super::*;
 
 	extern crate specs;
-	use crate::constant::EXP;
 	use crate::constant::PI;
 	use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 	use crate::laser::sampler::{LaserSampler, LaserSamplers};
@@ -154,7 +153,6 @@ pub mod tests {
 		system.run_now(&test_world.res);
 		test_world.maintain();
 		let sampler_storage = test_world.read_storage::<LaserSamplers>();
-		let peak_intensity = power / (PI.powf(0.5) * e_radius);
 		assert_approx_eq!(
 			sampler_storage
 				.get(sampler1)

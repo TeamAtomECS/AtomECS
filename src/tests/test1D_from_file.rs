@@ -1,10 +1,9 @@
 #[cfg(test)]
 pub mod tests {
     #[test]
-    fn test_1D() {
+    fn test_1d() {
         extern crate specs;
         use crate::atom::*;
-        use crate::integrator::Step;
         use crate::laser::force::NumberKick;
 
         use crate::initiate::NewlyCreated;

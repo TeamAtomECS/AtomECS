@@ -307,10 +307,7 @@ pub mod tests {
 
         let cooling_light_storage = test_world.read_storage::<CoolingLight>();
         let cooling_light = cooling_light_storage.get(laser).expect("entity not found");
-        let photon_momentum = constant::HBAR * cooling_light.wavenumber();
-        let i_norm = intensity / AtomInfo::rubidium().saturation_intensity;
-        let scattering_rate = (AtomInfo::rubidium().gamma() / 2.0) * i_norm
-            / (1.0 + i_norm + 4.0 * (detuning * 1e6 / AtomInfo::rubidium().linewidth).powf(2.0));
+
 
         let force_storage = test_world.read_storage::<Force>();
         assert_approx_eq!(

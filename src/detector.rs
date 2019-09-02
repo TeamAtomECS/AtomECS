@@ -7,13 +7,11 @@ use specs::{
 };
 
 
-use std::fs::File;
 use std::fs::OpenOptions;
 
 use std::error::Error;
 extern crate nalgebra;
 
-use crate::destructor::ToBeDestroyed;
 use nalgebra::Vector3;
 
 /// a Component that clear the csv file that record the informatino about atom detected
@@ -29,13 +27,9 @@ impl Component for ClearerCSV {
 pub struct ClearCSVSystem;
 
 impl<'a> System<'a> for ClearCSVSystem {
-    type SystemData = (
-        Entities<'a>,
-        ReadStorage<'a, ClearerCSV>,
-        WriteStorage<'a, ToBeDestroyed>,
-    );
+    type SystemData = (Entities<'a>, ReadStorage<'a, ClearerCSV>);
 
-    fn run(&mut self, (ents, clearer, destroy): Self::SystemData) {
+    fn run(&mut self, (ents, clearer): Self::SystemData) {
         for (entity, clearer) in (&ents, &clearer).join() {
             match clearcsv(clearer.filename) {
                 Ok(_) => (),

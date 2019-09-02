@@ -2,10 +2,9 @@ extern crate magneto_optical_trap as lib;
 
 use lib::detector;
 extern crate specs;
-
-use lib::fileinput::write_file_template;
+#[allow(unused_imports)]
 use lib::simulation_templates::loadfromconfig::create_from_config;
-use specs::Builder;
+
 
 use lib::laser::force::RandomWalkMarker;
 use lib::optimization::OptEarly;
