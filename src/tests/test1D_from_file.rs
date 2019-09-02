@@ -5,11 +5,16 @@ pub mod tests {
         extern crate specs;
         use crate::atom::*;
         use crate::integrator::Step;
+        use crate::laser::force::NumberKick;
 
         use crate::initiate::NewlyCreated;
         use crate::simulation_templates::loadfromconfig::create_from_config;
         use assert_approx_eq::assert_approx_eq;
         use nalgebra::Vector3;
+
+
+        use crate::detector::Detected;
+        use crate::output::file_output::FileOutputMarker;
 
         use crate::destructor::BoundaryMarker;
         use crate::laser::force::RandomWalkMarker;
@@ -17,15 +22,22 @@ pub mod tests {
         use specs::{Builder, Entity, Join, RunNow, World};
 
         use crate::atom_sources::oven::VelocityCap;
+        use crate::optimization::OptEarly;
         let (mut world, mut dispatcher) = create_from_config("test1D.yaml");
         world.register::<NewlyCreated>();
         world.add_resource(RandomWalkMarker { value: false });
 
         //include boundary (walls)
 
+        world.add_resource(OptEarly::not_opt());
+
+        world.register::<Dark>();
+        world.register::<NumberKick>();
+        world.register::<Detected>();
         world.add_resource(BoundaryMarker { value: false });
-        world.add_resource(VelocityCap { cap: std::f64::NAN});
+        world.add_resource(VelocityCap { cap: 1000. });
         world.add_resource(RepumpLoss { proportion: 0.0 });
+        world.add_resource(FileOutputMarker { value: false });
         world
             .create_entity()
             .with(Atom {
@@ -43,6 +55,7 @@ pub mod tests {
             .with(Velocity {
                 vel: Vector3::new(0., 0., 50.),
             })
+            .with(NumberKick { value: 0 })
             .build();
         for _i in 0..2000 {
             dispatcher.dispatch(&mut world.res);

@@ -160,23 +160,8 @@ pub mod tests {
 				.get(sampler1)
 				.expect("entity not found")
 				.contents[0]
-<<<<<<< HEAD
 				.intensity,
 			power / (PI.powf(0.5) * e_radius).powf(2.0)
-=======
-				.intensity / peak_intensity,
-			1.0,
-			0.01
-		);
-		assert_approx_eq!(
-			sampler_storage
-				.get(sampler2)
-				.expect("entity not found")
-				.contents[0]
-				.intensity / (peak_intensity / EXP),
-			1.0,
-			0.01
->>>>>>> master
 		);
 	}
 }

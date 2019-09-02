@@ -192,16 +192,158 @@ pub mod tests {
 
     extern crate specs;
     use crate::constant;
+    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser::gaussian::GaussianBeam;
     use crate::laser::sampler::{LaserSampler, LaserSamplers};
     use crate::magnetic::MagneticFieldSampler;
-    use crate::laser::cooling::*;
-    use crate::laser::gaussian::*;
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
+    use specs::{Builder, Entity, RunNow, World};
     extern crate nalgebra;
     use nalgebra::Vector3;
 
-    /// Test cooling force calculations
+    fn create_world_for_tests(cooling_light: CoolingLight) -> (World, Entity) {
+        let mut test_world = World::new();
+        test_world.register::<CoolingLightIndex>();
+        test_world.register::<CoolingLight>();
+        test_world.register::<GaussianBeam>();
+        test_world.register::<AtomInfo>();
+        test_world.register::<MagneticFieldSampler>();
+        test_world.register::<Force>();
+        test_world.register::<LaserSamplers>();
+
+        let e_radius = 2.0;
+        let power = 1.0;
+        let laser_entity = test_world
+            .create_entity()
+            .with(cooling_light)
+            .with(CoolingLightIndex {
+                index: 0,
+                initiated: true,
+            })
+            .with(GaussianBeam {
+                direction: Vector3::new(1.0, 0.0, 0.0),
+                intersection: Vector3::new(0.0, 0.0, 0.0),
+                e_radius: e_radius,
+                power: power,
+            })
+            .build();
+        (test_world, laser_entity)
+    }
+
+    #[test]
+    fn test_calculate_cooling_force_system() {
+        let detuning = 0.0;
+        let intensity = 1.0;
+        let cooling = CoolingLight::for_species(AtomInfo::rubidium(), detuning, 1.0);
+        let wavenumber = cooling.wavenumber();
+        let (mut test_world, laser) = create_world_for_tests(cooling);
+        test_world.register::<Dark>();
+        let atom1 = test_world
+            .create_entity()
+            .with(Force::new())
+            .with(LaserSamplers {
+                contents: vec![LaserSampler {
+                    scattering_rate: 0.0,
+                    force: Vector3::new(0.0, 0.0, 0.0),
+                    polarization: 1.0,
+                    wavevector: wavenumber * Vector3::new(1.0, 0.0, 0.0),
+                    intensity: intensity,
+                    doppler_shift: 0.0,
+                }],
+            })
+            .with(MagneticFieldSampler {
+                field: Vector3::new(1e-8, 0.0, 0.0),
+                magnitude: 1e-8,
+            })
+            .with(AtomInfo::rubidium())
+            .build();
+
+        let mut system = CalculateCoolingForcesSystem {};
+        system.run_now(&test_world.res);
+        test_world.maintain();
+
+        // See eg Foot, Atomic Physics, p180.
+        let cooling_light_storage = test_world.read_storage::<CoolingLight>();
+        let cooling_light = cooling_light_storage.get(laser).expect("entity not found");
+        let photon_momentum = constant::HBAR * cooling_light.wavenumber();
+        let i_norm = intensity / AtomInfo::rubidium().saturation_intensity;
+        let scattering_rate = (AtomInfo::rubidium().gamma() / 2.0) * i_norm
+            / (1.0 + i_norm + 4.0 * (detuning * 1e6 / AtomInfo::rubidium().linewidth).powf(2.0));
+        let f_scatt = photon_momentum * scattering_rate;
+
+        let force_storage = test_world.read_storage::<Force>();
+        assert_approx_eq!(
+            1e20 * force_storage.get(atom1).expect("entity not found").force[0],
+            1e20 * f_scatt,
+            1e-6
+        );
+        assert_eq!(
+            force_storage.get(atom1).expect("entity not found").force[1],
+            0.0
+        );
+        assert_eq!(
+            force_storage.get(atom1).expect("entity not found").force[2],
+            0.0
+        );
+    }
+
+
+    #[test]
+    fn test_dark() {
+        let detuning = 0.0;
+        let intensity = 1.0;
+        let cooling = CoolingLight::for_species(AtomInfo::rubidium(), detuning, 1.0);
+        let wavenumber = cooling.wavenumber();
+        let (mut test_world, laser) = create_world_for_tests(cooling);
+        test_world.register::<Dark>();
+        let atom1 = test_world
+            .create_entity()
+            .with(Dark {})
+            .with(Force::new())
+            .with(LaserSamplers {
+                contents: vec![LaserSampler {
+                    scattering_rate: 0.0,
+                    force: Vector3::new(0.0, 0.0, 0.0),
+                    polarization: 1.0,
+                    wavevector: wavenumber * Vector3::new(1.0, 0.0, 0.0),
+                    intensity: intensity,
+                    doppler_shift: 0.0,
+                }],
+            })
+            .with(MagneticFieldSampler {
+                field: Vector3::new(1e-8, 0.0, 0.0),
+                magnitude: 1e-8,
+            })
+            .with(AtomInfo::rubidium())
+            .build();
+
+        let mut system = CalculateCoolingForcesSystem {};
+        system.run_now(&test_world.res);
+        test_world.maintain();
+
+        let cooling_light_storage = test_world.read_storage::<CoolingLight>();
+        let cooling_light = cooling_light_storage.get(laser).expect("entity not found");
+        let photon_momentum = constant::HBAR * cooling_light.wavenumber();
+        let i_norm = intensity / AtomInfo::rubidium().saturation_intensity;
+        let scattering_rate = (AtomInfo::rubidium().gamma() / 2.0) * i_norm
+            / (1.0 + i_norm + 4.0 * (detuning * 1e6 / AtomInfo::rubidium().linewidth).powf(2.0));
+        let f_scatt = photon_momentum * scattering_rate;
+
+        let force_storage = test_world.read_storage::<Force>();
+        assert_approx_eq!(
+            force_storage.get(atom1).expect("entity not found").force[0],
+            0.,
+            1e-9
+        );
+        assert_eq!(
+            force_storage.get(atom1).expect("entity not found").force[1],
+            0.0
+        );
+        assert_eq!(
+            force_storage.get(atom1).expect("entity not found").force[2],
+            0.0
+        );
+    }
     #[test]
     fn test_cooling_force() {
         let rb = AtomInfo::rubidium();
@@ -223,8 +365,9 @@ pub mod tests {
             // Test that the force goes to zero in the limit of large detuning
             let doppler_shift = 1.0e16;
             let intensity = rb.saturation_intensity;
+
             let force = calculate_cooling_force(wavevector, intensity, doppler_shift, 1.0, b_field);
-            assert_approx_eq!(force[0], 0.0, 1.0e-38);
+            assert_approx_eq!(force[0] as f64, 0.0, 1.0e-30);
             assert_eq!(force[1], 0.0);
             assert_eq!(force[2], 0.0);
         }
@@ -293,38 +436,12 @@ pub mod tests {
         b_field: MagneticFieldSampler,
     ) -> Vector3<f64> {
         let mut test_world = World::new();
+        test_world.register::<Dark>();
         test_world.register::<AtomInfo>();
         test_world.register::<MagneticFieldSampler>();
         test_world.register::<Force>();
         test_world.register::<LaserSamplers>();
 
-        let e_radius = 2.0;
-        let power = 1.0;
-        let laser_entity = test_world
-            .create_entity()
-            .with(cooling_light)
-            .with(CoolingLightIndex {
-                index: 0,
-                initiated: true,
-            })
-            .with(GaussianBeam {
-                direction: Vector3::new(1.0, 0.0, 0.0),
-                intersection: Vector3::new(0.0, 0.0, 0.0),
-                e_radius: e_radius,
-                power: power,
-            })
-            .build();
-        (test_world, laser_entity)
-    }
-
-    #[test]
-    fn test_calculate_cooling_force_system() {
-        let detuning = 0.0;
-        let intensity = 1.0;
-        let cooling = CoolingLight::for_species(AtomInfo::rubidium(), detuning, 1.0);
-        let wavenumber = cooling.wavenumber();
-        let (mut test_world, laser) = create_world_for_tests(cooling);
-        test_world.register::<Dark>();
         let atom1 = test_world
             .create_entity()
             .with(Force::new())
@@ -347,75 +464,8 @@ pub mod tests {
 
         // See eg Foot, Atomic Physics, p180.
         let force_storage = test_world.read_storage::<Force>();
-        assert_approx_eq!(
-            1e20 * force_storage.get(atom1).expect("entity not found").force[0],
-            1e20 * f_scatt,
-            1e-6
-        );
-        assert_eq!(
-            force_storage.get(atom1).expect("entity not found").force[1],
-            0.0
-        );
-        assert_eq!(
-            force_storage.get(atom1).expect("entity not found").force[2],
-            0.0
-        );
+        force_storage.get(atom1).expect("entity not found").force
     }
 
 
-    #[test]
-    fn test_dark() {
-        let detuning = 0.0;
-        let intensity = 1.0;
-        let cooling = CoolingLight::for_species(AtomInfo::rubidium(), detuning, 1.0);
-        let wavenumber = cooling.wavenumber();
-        let (mut test_world, laser) = create_world_for_tests(cooling);
-        test_world.register::<Dark>();
-        let atom1 = test_world
-            .create_entity()
-            .with(Dark {})
-            .with(Force::new())
-            .with(LaserSamplers {
-                contents: vec![LaserSampler {
-                    force: Vector3::new(0.0, 0.0, 0.0),
-                    polarization: 1.0,
-                    wavevector: wavenumber * Vector3::new(1.0, 0.0, 0.0),
-                    intensity: intensity,
-                    doppler_shift: 0.0,
-                }],
-            })
-            .with(MagneticFieldSampler {
-                field: Vector3::new(1e-8, 0.0, 0.0),
-                magnitude: 1e-8,
-            })
-            .with(AtomInfo::rubidium())
-            .build();
-
-        let mut system = CalculateCoolingForcesSystem {};
-        system.run_now(&test_world.res);
-        test_world.maintain();
-
-        let cooling_light_storage = test_world.read_storage::<CoolingLight>();
-        let cooling_light = cooling_light_storage.get(laser).expect("entity not found");
-        let photon_momentum = constant::HBAR * cooling_light.wavenumber();
-        let i_norm = intensity / AtomInfo::rubidium().saturation_intensity;
-        let scattering_rate = (AtomInfo::rubidium().gamma() / 2.0) * i_norm
-            / (1.0 + i_norm + 4.0 * (detuning * 1e6 / AtomInfo::rubidium().linewidth).powf(2.0));
-        let f_scatt = photon_momentum * scattering_rate;
-
-        let force_storage = test_world.read_storage::<Force>();
-        assert_approx_eq!(
-            force_storage.get(atom1).expect("entity not found").force[0],
-            0.,
-            1e-9
-        );
-        assert_eq!(
-            force_storage.get(atom1).expect("entity not found").force[1],
-            0.0
-        );
-        assert_eq!(
-            force_storage.get(atom1).expect("entity not found").force[2],
-            0.0
-        );
-    }
 }

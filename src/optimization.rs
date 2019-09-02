@@ -11,6 +11,13 @@ pub struct OptEarly {
 }
 
 impl OptEarly {
+    pub fn not_opt() -> OptEarly {
+        OptEarly {
+            timethreshold: 0.0,
+            if_opt: true,
+            opt_finish: true,
+        }
+    }
     pub fn new(timethreshold: f64) -> OptEarly {
         OptEarly {
             timethreshold,
