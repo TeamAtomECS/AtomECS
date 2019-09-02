@@ -1,8 +1,6 @@
 extern crate specs;
 use crate::atom::{Atom, Position};
-use specs::{
-    Component, Entities, HashMapStorage, Join, NullStorage, ReadExpect, ReadStorage, System,
-};
+use specs::{Component, Entities, Join, NullStorage, ReadExpect, ReadStorage, System};
 extern crate nalgebra;
 use nalgebra::Vector3;
 ///  the system that check whether an atom is out of bound

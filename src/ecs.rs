@@ -6,7 +6,7 @@ use crate::gravity::ApplyGravitationalForceSystem;
 use crate::initiate::DeflagNewAtomsSystem;
 
 use crate::integrator::EulerIntegrationSystem;
-use crate::integrator::{Step, Timestep};
+use crate::integrator::{Step};
 
 use crate::detector;
 use crate::detector::DetectingInfo;
@@ -62,7 +62,7 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
 
-	//builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
+	builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
 	builder = builder.with(
 		DeleteToBeDestroyedEntitiesSystem,
 		"",

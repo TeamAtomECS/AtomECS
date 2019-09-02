@@ -2,14 +2,13 @@ use crate::atom::{Atom, Position, Velocity};
 use crate::integrator::{Step, Timestep};
 extern crate specs;
 use specs::{
-    Component, Dispatcher, DispatcherBuilder, Entities,VecStorage, HashMapStorage, Join, LazyUpdate, Read,
-    ReadExpect, ReadStorage, System, World, WriteExpect, WriteStorage
+    Component, DispatcherBuilder, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadExpect,
+    ReadStorage, System, VecStorage, World, WriteExpect, WriteStorage,
 };
 
 
 use std::fs::File;
 use std::fs::OpenOptions;
-use std::io::BufWriter;
 
 use std::error::Error;
 extern crate nalgebra;
@@ -36,7 +35,7 @@ impl<'a> System<'a> for ClearCSVSystem {
         WriteStorage<'a, ToBeDestroyed>,
     );
 
-    fn run(&mut self, (ents, clearer, mut destroy): Self::SystemData) {
+    fn run(&mut self, (ents, clearer, destroy): Self::SystemData) {
         for (entity, clearer) in (&ents, &clearer).join() {
             match clearcsv(clearer.filename) {
                 Ok(_) => (),
@@ -64,7 +63,7 @@ pub struct Detector {
     pub direction: Vector3<f64>,
     /// how long the atom needs to be in the detector before it is decided as detected
     /// for an instant detector, this variable should be set to be zero
-    pub trigger_time:f64,
+    pub trigger_time: f64,
     /// the filename of the csv that record the info about captured atoms
     pub filename: &'static str,
 }
@@ -86,9 +85,9 @@ impl Component for Detector {
 }
 
 /// a component indicates that the atom has been detected
-pub struct Detected{
+pub struct Detected {
     /// time that this atom has been in the detected region.
-    pub time:f64,
+    pub time: f64,
 }
 
 impl Component for Detected {
@@ -108,16 +107,27 @@ impl<'a> System<'a> for DetectingAtomSystem {
         ReadExpect<'a, Step>,
         ReadExpect<'a, Timestep>,
         WriteExpect<'a, DetectingInfo>,
-        WriteStorage<'a,Detected>,
-        Read<'a,LazyUpdate>,
+        WriteStorage<'a, Detected>,
+        Read<'a, LazyUpdate>,
     );
     fn run(
         &mut self,
-        (pos, detector, entities, atom, vel, step, timestep, mut detect_info,mut detected,updater): Self::SystemData,
+        (
+            pos,
+            detector,
+            entities,
+            atom,
+            vel,
+            step,
+            timestep,
+            mut detect_info,
+            mut detected,
+            updater,
+        ): Self::SystemData,
     ) {
         let time = step.n as f64 * timestep.delta;
         for (detector_pos, detector) in (&pos, &detector).join() {
-            if detector.trigger_time == 0.0{
+            if detector.trigger_time == 0.0 {
                 for (atom_pos, atom, ent, vel) in (&pos, &atom, &entities, &vel).join() {
                     let rela_pos = atom_pos.pos - detector_pos.pos;
                     if detector.if_detect(&rela_pos) {
@@ -143,13 +153,14 @@ impl<'a> System<'a> for DetectingAtomSystem {
                         };
                     }
                 }
-            }
-            else{
-                for (atom_pos, atom,mut detect, ent, vel) in (&pos, &atom, &mut detected, &entities, &vel).join(){
+            } else {
+                for (atom_pos, atom, mut detect, ent, vel) in
+                    (&pos, &atom, &mut detected, &entities, &vel).join()
+                {
                     let rela_pos = atom_pos.pos - detector_pos.pos;
                     if detector.if_detect(&rela_pos) {
-                        detect.time = timestep.delta +detect.time;
-                        if detect.time < detector.trigger_time{
+                        detect.time = timestep.delta + detect.time;
+                        if detect.time < detector.trigger_time {
                             detect_info.atom_detected = detect_info.atom_detected + 1;
                             detect_info.total_velocity = detect_info.total_velocity + vel.vel;
 
@@ -171,13 +182,14 @@ impl<'a> System<'a> for DetectingAtomSystem {
                                 Err(why) => panic!("error writing file,{}", why.description()),
                             };
                         }
-                    }
-                    else{
+                    } else {
                         updater.remove::<Detected>(ent);
                     }
                 }
-                for (atom_pos, atom, (), ent, vel) in (&pos, &atom,!&detected, &entities, &vel).join(){
-                    updater.insert(ent,Detected{time:0.0});
+                for (_atom_pos, _atom, (), ent, _vel) in
+                    (&pos, &atom, !&detected, &entities, &vel).join()
+                {
+                    updater.insert(ent, Detected { time: 0.0 });
                 }
 
             }
@@ -200,7 +212,6 @@ pub fn print_detected_to_file(
 }
 
 pub fn clearcsv(filename: &str) -> Result<(), Box<Error>> {
-    let file = File::create(filename).expect("Unable to open file");
     let mut file = OpenOptions::new().write(true).open(filename).unwrap();
     let mut wtr = csv::Writer::from_writer(file);
     wtr.write_record(&[
@@ -253,7 +264,6 @@ impl<'a> System<'a> for PrintDetectResultSystem {
 }
 
 pub fn write_file_output(number: i32, average_vel: Vector3<f64>) -> Result<(), Box<Error>> {
-    let file = File::create("output.csv").expect("Unable to open file");
     let mut file = OpenOptions::new().write(true).open("output.csv").unwrap();
     let mut wtr = csv::Writer::from_writer(file);
     wtr.serialize(&[
@@ -272,7 +282,6 @@ pub mod tests {
     #[allow(unused_imports)]
     extern crate nalgebra;
     extern crate specs;
-    use nalgebra::Vector3;
 
     #[test]
     fn test_detector() {
@@ -280,7 +289,7 @@ pub mod tests {
             direction: Vector3::new(1., 0., 0.),
             radius: 0.1,
             thickness: 0.1,
-            trigger_time:0.0,
+            trigger_time: 0.0,
             filename: "detector.csv",
         };
         assert!(detect.if_detect(&Vector3::new(0.04, 0.01, 0.01)));

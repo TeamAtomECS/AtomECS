@@ -19,7 +19,7 @@ pub mod tests {
         use crate::destructor::BoundaryMarker;
         use crate::laser::force::RandomWalkMarker;
         use crate::laser::repump::{Dark, RepumpLoss};
-        use specs::{Builder, Entity, Join, RunNow, World};
+        use specs::{Builder, Join};
 
         use crate::atom_sources::oven::VelocityCap;
         use crate::optimization::OptEarly;
@@ -68,6 +68,6 @@ pub mod tests {
             println!("detect position");
             position = pos.pos[2];
         }
-        assert_approx_eq!(position, -0.0162, 0.0001);
+        assert_approx_eq!(position as f64, -0.0162, 0.0001);
     }
 }

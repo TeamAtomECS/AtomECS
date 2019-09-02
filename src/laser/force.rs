@@ -2,10 +2,7 @@ extern crate specs;
 use crate::atom::{Atom, AtomInfo};
 use crate::constant;
 use rand::Rng;
-use specs::{
-    Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System,
-    VecStorage, WriteStorage,
-};
+use specs::{Component, Join, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
 extern crate nalgebra;
 use super::sampler::LaserSamplers;
 use crate::maths;
@@ -113,24 +110,12 @@ impl<'a> System<'a> for CalculateKickSystem {
         ReadStorage<'a, AtomInfo>,
         ReadExpect<'a, Timestep>,
         ReadStorage<'a, Dark>,
-        Entities<'a>,
-        Read<'a, LazyUpdate>,
         WriteStorage<'a, NumberKick>,
     );
 
-    fn run(
-        &mut self,
-        (samplers, _atom, atom_info, timestep,_dark,mut entities,lazy, mut number): Self::SystemData,
-    ) {
-        for (samplers, _, atom_info, (), ent, num) in (
-            &samplers,
-            &_atom,
-            &atom_info,
-            !&_dark,
-            &entities,
-            &mut number,
-        )
-            .join()
+    fn run(&mut self, (samplers, _atom, atom_info, timestep, _dark, mut number): Self::SystemData) {
+        for (samplers, _, atom_info, (), num) in
+            (&samplers, &_atom, &atom_info, !&_dark, &mut number).join()
         {
             num.value = 0;
             let mut total_force = 0.;
@@ -176,8 +161,7 @@ impl<'a> System<'a> for RandomWalkSystem {
                 let omega = 2.0 * constant::PI * atom_info.frequency;
                 let force_one_atom = constant::HBAR * omega / constant::C / timestep.delta;
                 let mut force_real = Vector3::new(0., 0., 0.);
-                let mut rng = rand::thread_rng();
-                for i in 0..kick.value {
+                for _i in 0..kick.value {
                     force_real = force_real + force_one_atom * maths::random_direction();
                 }
                 force.force = force.force + force_real;
@@ -327,7 +311,6 @@ pub mod tests {
         let i_norm = intensity / AtomInfo::rubidium().saturation_intensity;
         let scattering_rate = (AtomInfo::rubidium().gamma() / 2.0) * i_norm
             / (1.0 + i_norm + 4.0 * (detuning * 1e6 / AtomInfo::rubidium().linewidth).powf(2.0));
-        let f_scatt = photon_momentum * scattering_rate;
 
         let force_storage = test_world.read_storage::<Force>();
         assert_approx_eq!(

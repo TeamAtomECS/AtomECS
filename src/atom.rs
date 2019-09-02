@@ -4,7 +4,7 @@ extern crate specs_derive;
 use crate::constant::{BOHRMAG, C};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
-use specs::{Component, Join, NullStorage, System, VecStorage, WriteStorage};
+use specs::{Component, Join, System, VecStorage, WriteStorage};
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
 ///

@@ -12,7 +12,6 @@ extern crate specs;
 use crate::atom::*;
 use nalgebra::Vector3;
 
-use crate::destructor::ToBeDestroyed;
 
 use specs::{
 	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System,
@@ -36,7 +35,7 @@ pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>, cap: f64) ->
 	let theta2 = rng.gen_range(0.0, 2.0 * PI);
 	let dir_div = dir_1 * theta.sin() * theta2.cos() + dir_2 * theta.sin() * theta2.sin();
 	let dirf = dir * theta.cos() + dir_div;
-	let mut v_out = dirf * v_mag;
+	let v_out = dirf * v_mag;
 	v_out
 	//t * Vector3::new(0., 0., 1.0).normalize()
 }
@@ -115,8 +114,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		&mut self,
 		(entities, oven, atom, numbers_to_emit, pos, masstype,mut index,cap, updater): Self::SystemData,
 	) {
-		let mut vel_cap = std::f64::NAN;
-		vel_cap = cap.cap;
+		let vel_cap = cap.cap;
 		for (oven, atom, number_to_emit, oven_position, masstype) in
 			(&oven, &atom, &numbers_to_emit, &pos, &masstype).join()
 		{

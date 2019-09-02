@@ -1,1 +1,1 @@
-pub mod test1D_from_file;
+pub mod test1d_from_file;
