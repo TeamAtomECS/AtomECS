@@ -11,6 +11,7 @@ pub mod quadrupole;
 pub mod uniform;
 
 /// A component that stores the magnetic field at an entity's location.
+#[derive(Copy,Clone)]
 pub struct MagneticFieldSampler {
 	/// Vector representing the magnetic field components along x,y,z in units of Tesla.
 	pub field: Vector3<f64>,
@@ -18,7 +19,14 @@ pub struct MagneticFieldSampler {
 	/// Magnitude of the magnetic field in units of Tesla
 	pub magnitude: f64,
 }
-
+impl MagneticFieldSampler {
+	pub fn tesla(b_field: Vector3<f64>) -> Self {
+		MagneticFieldSampler {
+			field: b_field,
+			magnitude: b_field.norm()
+		}
+	}
+}
 impl Component for MagneticFieldSampler {
 	type Storage = VecStorage<Self>;
 }
