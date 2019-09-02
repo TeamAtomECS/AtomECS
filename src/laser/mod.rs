@@ -7,6 +7,7 @@ pub mod repump;
 
 extern crate specs;
 use crate::initiate::NewlyCreated;
+use crate::laser::force::NumberKick;
 use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System, World};
 
 /// Attachs components used for optical force calculation to newly created atoms.
@@ -28,6 +29,7 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 					contents: Vec::new(),
 				},
 			);
+			updater.insert(ent,NumberKick{value:0});
 		}
 	}
 }
@@ -79,10 +81,12 @@ pub fn add_systems_to_dispatch(
 			"calculate_cooling_forces",
 			&["calculate_doppler_shift", "sample_gaussian_beam_intensity"],
 		)
+		.with(force::CalculateKickSystem,"cal_kick",&["sample_gaussian_beam_intensity"])
+		.with(repump::RepumpSystem,"repump",&["cal_kick"])
 		.with(
 			force::RandomWalkSystem,
 			"random_walk_system",
-			&["sample_gaussian_beam_intensity"],
+			&["cal_kick"],
 		)
 }
 

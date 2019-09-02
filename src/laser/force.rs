@@ -4,7 +4,7 @@ use crate::constant;
 use rand::Rng;
 use specs::{
     Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System,
-    WriteStorage,
+    WriteStorage, VecStorage,
 };
 extern crate nalgebra;
 use super::sampler::LaserSamplers;
@@ -92,19 +92,22 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
     }
 }
 
+pub struct NumberKick{
+    pub value:i32,
+}
+
+impl Component for NumberKick {
+	type Storage = VecStorage<Self>;
+}
 
 pub struct RandomWalkMarker {
     pub value: bool,
 }
 
+pub struct CalculateKickSystem;
 
-pub struct RandomWalkSystem;
-
-impl<'a> System<'a> for RandomWalkSystem {
+impl<'a> System <'a> for CalculateKickSystem{
     type SystemData = (
-        ReadExpect<'a, RandomWalkMarker>,
-        ReadExpect<'a, RepumpLoss>,
-        WriteStorage<'a, Force>,
         ReadStorage<'a, LaserSamplers>,
         ReadStorage<'a, Atom>,
         ReadStorage<'a, AtomInfo>,
@@ -112,19 +115,19 @@ impl<'a> System<'a> for RandomWalkSystem {
         ReadStorage<'a, Dark>,
         Entities<'a>,
         Read<'a, LazyUpdate>,
+        WriteStorage<'a,NumberKick>,
     );
 
     fn run(
         &mut self,
-        (rand, repump, mut force, samplers, _atom, atom_info, timestep,_dark,mut entities,lazy): Self::SystemData,
+        (samplers, _atom, atom_info, timestep,_dark,mut entities,lazy, mut number): Self::SystemData,
     ) {
-        if rand.value {
-            let proportion = repump.proportion;
-            for (mut force, samplers, _, atom_info, (), ent) in (
-                &mut force, &samplers, &_atom, &atom_info, !&_dark, &entities,
+            for (samplers, _, atom_info, (), ent, num) in (
+                &samplers, &_atom, &atom_info, !&_dark, &entities,&mut number
             )
                 .join()
             {
+                num.value= 0;
                 let mut total_force = 0.;
                 let omega = 2.0 * constant::PI * atom_info.frequency;
                 for sampler in samplers.contents.iter() {
@@ -133,28 +136,51 @@ impl<'a> System<'a> for RandomWalkSystem {
                 let force_one_atom = constant::HBAR * omega / constant::C / timestep.delta;
                 let mut number_collision = total_force / force_one_atom;
                 //println!("collision{}", number_collision);
-                let mut force_real = Vector3::new(0., 0., 0.);
                 let mut rng = rand::thread_rng();
                 loop {
                     if number_collision > 1. {
-                        force_real = force_real + force_one_atom * maths::random_direction();
+                        num.value = num.value + 1;
                         number_collision = number_collision - 1.;
-                        if repump.if_loss() {
-                            lazy.insert(ent, Dark);
-                            break;
-                        }
                     } else {
                         let luck = rng.gen_range(0.0, 1.0);
                         if luck < number_collision {
-                            force_real = force_real + force_one_atom * maths::random_direction();
-                            if repump.if_loss() {
-                                lazy.insert(ent, Dark);
-                            }
+                            num.value = num.value + 1;
                             break;
                         } else {
                             break;
                         }
                     }
+                }
+        }
+    }
+}
+pub struct RandomWalkSystem;
+
+impl<'a> System<'a> for RandomWalkSystem {
+    type SystemData = (
+        ReadExpect<'a, RandomWalkMarker>,
+        WriteStorage<'a, Force>,
+        ReadStorage<'a,NumberKick>,
+        ReadStorage<'a, AtomInfo>,
+        ReadExpect<'a, Timestep>,
+    );
+
+    fn run(
+        &mut self,
+        (rand,mut force,kick,atom_info, timestep): Self::SystemData,
+    ) {
+        if rand.value {
+            for (mut force,atom_info,kick) in (
+                &mut force,&atom_info,&kick
+            )
+                .join()
+            {
+                let omega = 2.0 * constant::PI * atom_info.frequency;
+                let force_one_atom = constant::HBAR * omega / constant::C / timestep.delta;
+                let mut force_real = Vector3::new(0., 0., 0.);
+                let mut rng = rand::thread_rng();
+                for i in 0..kick.value {
+                        force_real = force_real + force_one_atom * maths::random_direction();
                 }
                 force.force = force.force + force_real;
             }
