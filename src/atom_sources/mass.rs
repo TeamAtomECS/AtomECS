@@ -6,13 +6,18 @@ extern crate specs;
 use serde::{Deserialize, Serialize};
 use specs::{Component, HashMapStorage};
 
+/// A [MassRatio](struct.MassRatio.html) describes the abundance of a given isotope.
 #[derive(Deserialize, Serialize, Clone)]
 pub struct MassRatio {
+    /// The mass an atom will be created with. See [Mass](struct.Mass.html).
     pub mass: f64,
+    /// The relative abundance of this mass.
     pub ratio: f64,
 }
 
-/// Describes the distribution of masses when atoms are created.
+/// Describes the abundance of each mass.
+///
+/// When atoms are created, a random mass is drawn from the [MassDistribution](struct.MassDistribution.html) and assigned to the atom.
 #[derive(Deserialize, Serialize, Clone)]
 pub struct MassDistribution {
     pub distribution: Vec<MassRatio>,
@@ -22,7 +27,9 @@ impl Component for MassDistribution {
     type Storage = HashMapStorage<Self>;
 }
 impl MassDistribution {
-    /// Create a new distribution of masses
+    /// Creates a new [MassDistribution](struct.MassDistribution.html), with the specified [MassRatio](struct.MassRatio.html)s.
+    ///
+    /// The created distribution will be normalised.
     pub fn new(distribution: Vec<MassRatio>) -> Self {
         let mut mass_dist = MassDistribution {
             distribution: distribution,
@@ -32,8 +39,8 @@ impl MassDistribution {
         mass_dist
     }
 
-    /// Normalise the distribution of masses so that the ratios add to one.
-    pub fn normalise(&mut self) {
+    /// Normalises the distribution of masses so that the ratios add to one.
+    fn normalise(&mut self) {
         let mut total = 0.;
         for mr in self.distribution.iter() {
             total = total + mr.ratio;
