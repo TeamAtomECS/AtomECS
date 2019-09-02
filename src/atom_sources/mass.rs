@@ -40,7 +40,7 @@ impl MassDistribution {
     }
 
     /// Normalises the distribution of masses so that the ratios add to one.
-    fn normalise(&mut self) {
+    pub fn normalise(&mut self) {
         let mut total = 0.;
         for mr in self.distribution.iter() {
             total = total + mr.ratio;
