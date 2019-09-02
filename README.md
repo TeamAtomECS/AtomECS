@@ -25,6 +25,8 @@ Functionality is stored throughout several modules, as detailed below.
 |`initiate`   | Components and systems used to initiate entities during the simulation. |
 |`ecs`        | Easy functions to setup the simulation dispatcher and world resources. |
 |`simulation_templates`| Well, it is simulation templates, one of the simulation templates is load_from_config which will create the simulation based on the yaml file|
+|`example`| A few running example of the program|
+|`destructor`| A module reponsible for destroying the atoms and decide if an atom is out of bound 
 
 
 
@@ -39,9 +41,11 @@ We outline a few of the key components here.
 |`MagneticSampler`     | A component that directs the `magnetic` Systems to calculate magnetic fields at the location of this entity. |
 |`Position`, `Velocity`, `Mass` | No need for any explanation. |
 |`Detector`,`RingDetector` | These detectors count the number of atoms that enter a defined region. The detector systems delete the atoms and store the relevant data. |
-|`NewlyCreated`        | A marker that indicates an entity is newly created. This signals to other modules to initialize required components. The marker is removed by the `DeflagSystem`. |
-|`ToBeDestroyed`| A marker that indicate that the entity needs to be detroyed the next frame. DO NOTE that though it can be very convenient and useful at times, it should NOT Be used when an entity need to be detroyed immediately |
-|`SimArchetype`,`...Archetyep`| information used to generate the simulations.|
+|`NewlyCreated`         | A marker that indicates an entity is newly created. This signals to other modules to initialize required components. The marker is removed by the `DeflagSystem`.|
+|`ToBeDestroyed `       | A marker that indicate that the entity needs to be detroyed the next frame. DO NOTE that though it can be very convenient and useful at times, it should NOT Be used when an entity need to be detroyed immediately |
+|`SimArchetype`,`...Archetype`| information used to generate the simulations.|
+|`Detected`                 | A marker that indicated that the atom is currently in the detecting region, once the atom is inside the detecting region for a user-specified amount of time, the time will be considered "captured" |
+
 
 
 ## Important Systems
@@ -51,7 +55,16 @@ We outline a few of the key components here.
 |Systems in `magnetic` module| (can be registered using magnetic.add_system_to_dispatch) These systems calculate the magnetic field at the position of each individual atoms. Different type of magnetic field can be used.
 
 |`Random_Walk_System`| Including the effect of random walk due to emission of photon. in this system only random walk of the size of a photon will be included.
+
 |`DestoyedOutofBoundAtomSystem`| destroyed the atoms that hit the walls, the bound need to be set manually.
+
+|`DetectingAtomSystem`| The system that detect the atoms and print the information the file corresponding to the detectors
+
+|`FileOutputSystem`| The system that print the information of atom every a number of frames
+
+|`ConsoleOutputSystem`| The system that print the information of the atom very 1000 (can be customized) frames
+
+|`DestroyOutOfBoundAtomsSystem`| The system that detects the atoms that are out of bound, the bound can be specified 
 
 
 ### Execution Order
@@ -92,10 +105,11 @@ We outline a few of the key components here.
 
 ## parts that need to be designed manually
 
-TODO
-
 * Shape of the boundary
+Can be changed manually at detructor::out_of_bound function. This part can only be changed manually as the shaoe of the allowed region cannot be specified simply by a few parameters.
 
 * Shape of the oven aperture (optional)
+The default shape is circular, but cubic choice is also available and can be registered manually.
 
 * FileOutputSystem, you can decide what you want as the output
+The default file output will be the velocity and the position of the atoms. If some other information is needed, output::fileoutput::FileOutputSystem can be changed.
