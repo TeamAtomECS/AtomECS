@@ -15,7 +15,7 @@ use crate::magnetic::uniform::UniformMagneticField;
 
 use crate::integrator::Timestep;
 
-use crate::fileinput::load_file;
+use crate::fileinput::SimArchetype;
 use specs::{Builder, Dispatcher, World};
 extern crate nalgebra;
 
@@ -30,7 +30,7 @@ pub fn create_from_config(filename: &str) -> (World, Dispatcher<'static, 'static
 	(world, dispatcher)
 }
 pub fn create_simulation_entity(filename: &str, world: &mut World) {
-	let config = load_file(&filename);
+	let config = SimArchetype::from_yaml_file(&filename);
 	for laser in config.lasers.iter() {
 		world
 			.create_entity()

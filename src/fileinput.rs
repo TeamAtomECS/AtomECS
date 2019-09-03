@@ -1,3 +1,8 @@
+//! Functionality for serializing/deserializing simulations to file.
+//! 
+//! The module uses `serde` to deserialize Archetype structs that describe
+//! different facets of the simulation.
+
 use std::fs::File;
 use std::io::prelude::*;
 extern crate serde;
@@ -8,13 +13,6 @@ use crate::atom_sources::mass::{MassDistribution, MassRatio};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 use std::io::BufWriter;
-/// convert a yaml type file into a SimArchetype which tells everything about the simulation
-pub fn load_file(file: &str) -> SimArchetype {
-	let file = File::open(file).expect("Unable to open file");
-	let deserialized: SimArchetype = serde_yaml::from_reader(file).expect("Could not read");
-	deserialized
-	//println!("{}", deserialized.lasers.get(0).expect("empty array").beam.e_radius);
-}
 
 /// Writes a YAML file for 2D plus MOT.
 /// use this as the the input format in detail
@@ -69,7 +67,7 @@ pub fn write_file_template(file: &str) {
 		direction: Vector3::new(1., 0., 0.),
 		radius: 0.01,
 		thickness: 0.01,
-		trigger_time:0.0,
+		trigger_time: 0.0,
 	};
 	let sim = SimArchetype {
 		lasers: lasers,
@@ -85,7 +83,7 @@ pub fn write_file_template(file: &str) {
 	write!(writer, "{}", serialized.to_string()).expect("Could not write to file.");
 }
 
-/// A laser beam
+/// Archetype describing a gaussian cooling laser beam
 #[derive(Deserialize, Serialize)]
 pub struct LaserArchetype {
 	pub direction: Vector3<f64>,
@@ -96,7 +94,7 @@ pub struct LaserArchetype {
 	pub intersection: Vector3<f64>,
 }
 
-/// An oven
+/// Archetype describing an atomic oven source.
 #[derive(Deserialize, Serialize)]
 pub struct OvenArchetype {
 	pub position: Vector3<f64>,
@@ -108,7 +106,7 @@ pub struct OvenArchetype {
 	pub thickness: f64,
 }
 
-/// Magnetic fields used
+/// Archetype describing the magnetic fields used by the simulation.
 #[derive(Deserialize, Serialize)]
 pub struct MagArchetype {
 	pub centre: Vector3<f64>,
@@ -116,6 +114,11 @@ pub struct MagArchetype {
 	pub uniform: Vector3<f64>,
 }
 
+/// Archetype describing a complete simulation.
+/// 
+/// This includes arrays of other archetypes also present in the simulation, 
+/// see _eg_ [OvenArchetype](struct.OvenArchetype.html) and 
+/// [LaserArchetype](struct.LaserArchetype.html).
 #[derive(Deserialize, Serialize)]
 pub struct SimArchetype {
 	pub lasers: Vec<LaserArchetype>,
@@ -127,6 +130,16 @@ pub struct SimArchetype {
 	pub timestep: f64,
 }
 
+impl SimArchetype {
+	/// Loads and deserializes a [SimArchetype](struct.SimArchetype.html) from a YAML file.
+	pub fn from_yaml_file(file: &str) -> Self {
+		let file = File::open(file).expect("Unable to open file");
+		let deserialized: SimArchetype = serde_yaml::from_reader(file).expect("Could not read");
+		deserialized
+	}
+}
+
+/// Archetype describing an atom detector.
 #[derive(Deserialize, Serialize)]
 pub struct DetectorArchetype {
 	pub position: Vector3<f64>,

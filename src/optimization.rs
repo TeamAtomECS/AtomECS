@@ -33,7 +33,8 @@ impl LargerEarlyTimestepOptimization {
 ///
 /// At the start of the simulation, the timestep is increased by the factor defined by
 /// [LargerEarlyTimestepOptimization.factor](struct.LargerEarlyTimestepOptimization.html).
-/// The timestep stays at this duration until the [LargerEarlyTimestepOptimization.early_time] is reached.
+/// The timestep stays at this duration until the
+/// [LargerEarlyTimestepOptimization.early_time](struct.LargerEarlyTimestepOptimization.html) is reached.
 /// At this point, the timestep duration is returned to the original value.
 ///
 /// This optimization allows the simulation to evolve faster duration the initial stages, where atoms

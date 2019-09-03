@@ -1,12 +1,12 @@
-/// Module for calculating doppler shift
+//! Calculations of the Doppler shift.
 extern crate specs;
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::gaussian::GaussianBeam;
 use super::sampler::LaserSamplers;
 use crate::atom::Velocity;
-use specs::{Join, ReadStorage, System, WriteStorage}; //todo - change for a Direction component
+use specs::{Join, ReadStorage, System, WriteStorage};
 
-/// This system calculates the doppler shift for each atom in each cooling beam.
+/// This system calculates the Doppler shift for each atom in each cooling beam.
 pub struct CalculateDopplerShiftSystem;
 impl<'a> System<'a> for CalculateDopplerShiftSystem {
     type SystemData = (
