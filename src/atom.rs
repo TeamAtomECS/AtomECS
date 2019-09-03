@@ -1,10 +1,10 @@
 //! Common atom components and systems.
 
 use crate::constant::{BOHRMAG, C};
-use std::fmt;
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 use specs::{Component, Join, NullStorage, System, VecStorage, WriteStorage};
+use std::fmt;
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
 ///
@@ -26,8 +26,8 @@ impl Component for Position {
 }
 impl fmt::Display for Position {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.pos)
-    }
+		write!(f, "{:?},{:?},{:?}", self.pos[0], self.pos[1], self.pos[2])
+	}
 }
 
 /// Velocity of an entity in space, with respect to cartesian x,y,z axes.

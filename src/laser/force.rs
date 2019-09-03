@@ -2,7 +2,7 @@ extern crate specs;
 use crate::atom::{Atom, AtomInfo};
 use crate::constant;
 use rand::Rng;
-use specs::{Component, Join, ReadExpect, ReadStorage, System, VecStorage, WriteStorage, Read};
+use specs::{Component, Join, Read, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
 extern crate nalgebra;
 use super::sampler::LaserSamplers;
 use crate::maths;
@@ -158,15 +158,16 @@ impl<'a> System<'a> for RandomWalkSystem {
     fn run(&mut self, (rand_opt, mut force, kick, atom_info, timestep): Self::SystemData) {
         match rand_opt {
             None => (),
-            Some(rand) => 
-            for (mut force, atom_info, kick) in (&mut force, &atom_info, &kick).join() {
-                let omega = 2.0 * constant::PI * atom_info.frequency;
-                let force_one_atom = constant::HBAR * omega / constant::C / timestep.delta;
-                let mut force_real = Vector3::new(0., 0., 0.);
-                for _i in 0..kick.value {
-                    force_real = force_real + force_one_atom * maths::random_direction();
+            Some(_rand) => {
+                for (mut force, atom_info, kick) in (&mut force, &atom_info, &kick).join() {
+                    let omega = 2.0 * constant::PI * atom_info.frequency;
+                    let force_one_atom = constant::HBAR * omega / constant::C / timestep.delta;
+                    let mut force_real = Vector3::new(0., 0., 0.);
+                    for _i in 0..kick.value {
+                        force_real = force_real + force_one_atom * maths::random_direction();
+                    }
+                    force.force = force.force + force_real;
                 }
-                force.force = force.force + force_real;
             }
         }
     }
