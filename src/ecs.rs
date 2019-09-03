@@ -1,29 +1,24 @@
-use crate::atom::ClearForceSystem;
+//! Helper methods to setup the ECS world and dispatcher.
+//!
+//! This module contains a number of helpful methods that are used to setup the `specs::World`
+//! and to create the `specs::Dispatcher` that is used to perform the simulation itself.
+
+use crate::atom::{ClearForceSystem, Position};
 use crate::atom_sources;
 use crate::destructor::{DeleteToBeDestroyedEntitiesSystem, DestroyOutOfBoundAtomsSystem};
-use crate::gravity::ApplyGravitationalForceSystem;
-use crate::initiate::DeflagNewAtomsSystem;
-
-use crate::integrator::EulerIntegrationSystem;
-use crate::integrator::{Step};
-
 use crate::detector;
 use crate::detector::DetectingInfo;
-
-use crate::output::console_output::ConsoleOutputSystem;
-use specs::{Dispatcher, DispatcherBuilder, World};
-
+use crate::gravity::ApplyGravitationalForceSystem;
+use crate::initiate::DeflagNewAtomsSystem;
+use crate::integrator::{EulerIntegrationSystem, Step};
 use crate::laser;
-
-use crate::magnetic;
-use crate::output::file_output::FileOutputSystem;
-
-use crate::optimization::LargerEarlyTimestepOptimizationSystem;
-
 use crate::laser::repump::Dark;
-
-extern crate nalgebra;
+use crate::magnetic;
+use crate::optimization::LargerEarlyTimestepOptimizationSystem;
+use crate::output::console_output::ConsoleOutputSystem;
+use crate::output::file_output::FileOutputSystem;
 use nalgebra::Vector3;
+use specs::{Dispatcher, DispatcherBuilder, World};
 
 /// Registers all components used by the modules of the program.
 pub fn register_components(world: &mut World) {
@@ -34,7 +29,7 @@ pub fn register_components(world: &mut World) {
 	world.register::<Dark>();
 }
 
-/// Creates a `Dispatcher` that can be used to calculate each simulation frame.
+/// Creates a [Dispatcher](specs::Dispatcher) that is used to calculate each simulation frame.
 pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 	let mut builder = DispatcherBuilder::new();
 	builder = builder.with(LargerEarlyTimestepOptimizationSystem, "opt", &[]);
@@ -58,21 +53,19 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 		],
 	);
 	builder = detector::add_systems_to_dispatch(builder, &[]);
-
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
-
-	builder = builder.with(FileOutputSystem::new("output.txt".to_string(), 10), "", &[]);
+	type fos = FileOutputSystem<Position>;
+	builder = builder.with(fos::new("output.txt".to_string(), 10), "", &[]);
 	builder = builder.with(
 		DeleteToBeDestroyedEntitiesSystem,
 		"",
 		&["detect_atom", "euler_integrator"],
 	);
-	//it is quite necessary to put the delete system at the end, otherwise some atoms are not detroyed on time
 	builder = builder.with(DestroyOutOfBoundAtomsSystem, "", &[]);
 	builder.build()
 }
 
-/// Add resources to the world
+/// Add required resources to the world
 pub fn register_resources(world: &mut World) {
 	world.add_resource(Step { n: 0 });
 	world.add_resource(DetectingInfo {

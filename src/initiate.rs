@@ -1,18 +1,24 @@
+//! A module responsible for initiating newly created atoms.
+//!
+//! When new atoms are added to the simulation, a [NewlyCreated](struct.NewlyCreated.html)
+//! component is attached. This provides a signal that modules can use to identify which
+//! atoms are new, and thus to attach any required components. For instance, the `magnetics`
+//! module attaches a [MagneticFieldSampler](struct.MagneticFieldSampler.html) to new atoms
+//! so that the `magnetics` systems can calculate fields at each atom's location.
+//!
+//! This module defines the [NewlyCreated](struct.NewlyCreated.html) component, and also the
+//! [DeflagNewAtomsSystem](struct.DeflagNewAtomsSystem.html) which is responsible for cleaning
+//! up these components each integration step.
+
 extern crate specs;
 use specs::{Component, Entities, Join, LazyUpdate, NullStorage, Read, ReadStorage, System};
 
 /// A marker component that indicates an entity has been `NewlyCreated`.
 /// The main use of this component is to allow different modules to identify when an atom has been created and to attach any appropriate components required.
 /// For instance, a NewlyCreated atom could have a field sampler added to it so that magnetic systems will be able to calculate fields at the atom's position.
-#[derive(Component)]
+#[derive(Component, Default)]
 #[storage(NullStorage)]
 pub struct NewlyCreated;
-
-impl Default for NewlyCreated {
-	fn default() -> Self {
-		NewlyCreated {}
-	}
-}
 
 /// This system is responsible for removing the `NewlyCreated` marker component from atoms.
 ///
@@ -42,7 +48,6 @@ impl<'a> System<'a> for DeflagNewAtomsSystem {
 }
 
 pub mod tests {
-	// These imports are actually needed! The compiler is getting confused and warning they are not.
 	#[allow(unused_imports)]
 	use super::*;
 	extern crate specs;

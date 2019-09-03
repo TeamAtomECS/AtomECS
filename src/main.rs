@@ -20,8 +20,6 @@ use specs::RunNow;
 #[allow(unused_imports)]
 use std::time::{Duration, Instant};
 
-use lib::output::file_output::FileOutputMarker;
-
 //use std::io::stdin;
 fn main() {
     //let mut s=String::new();
@@ -40,7 +38,6 @@ fn main() {
     });
     world.add_resource(OvenVelocityCap { cap: 1000. });
     world.add_resource(RepumpLoss { proportion: 0.0 });
-    world.add_resource(FileOutputMarker { value: false });
     //let (mut world, mut dispatcher) = create();
     for _i in 0..50000 {
         dispatcher.dispatch(&mut world.res);

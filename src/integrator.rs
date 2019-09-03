@@ -1,22 +1,32 @@
+//! Module that performs time-integration.
+//!
+//! This module implements the [EulerIntegrationSystem](struct.EulerIntegrationSystem.html),
+//! which uses the euler method to integrate classical equations of motion.
+
 extern crate nalgebra;
 extern crate rand;
 extern crate specs;
 
+use crate::atom::*;
+use crate::constant;
 use specs::{Join, ReadExpect, ReadStorage, System, WriteExpect, WriteStorage};
-/// step/frame of the simulation
+
+/// Tracks the number of the current integration step.
 pub struct Step {
 	pub n: u64,
 }
 
-/// the timestep for the integration
-/// the smaller the integration, the better
-/// usually a timestep that is smaller than 1e-6 is not necessary as it does not lead to further accuracy increase
+/// The timestep used for the integration.
+///
+/// The duration of the timestep should be sufficiently small to resolve the fastest timescale of motion,
+/// otherwise significant numerical errors will accumulate during the integration.
+/// For a typical magneto-optical trap simulation, the timestep should be around 1us.
+/// Decreasing the timestep further will not improve the accuracy, and will require more integration steps
+/// to simulate the same total simulation time.
 pub struct Timestep {
+	/// Duration of the simulation timestep, in SI units of seconds.
 	pub delta: f64,
 }
-
-use crate::atom::*;
-use crate::constant;
 
 /// # Euler Integration
 ///
@@ -24,7 +34,7 @@ use crate::constant;
 /// `x' = x + v * dt`.
 /// This integrator is simple to implement but prone to integration error.
 ///
-/// The timestep duration is specified by the `Timestep` system resource.
+/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource.
 pub struct EulerIntegrationSystem;
 
 impl<'a> System<'a> for EulerIntegrationSystem {
@@ -45,15 +55,13 @@ impl<'a> System<'a> for EulerIntegrationSystem {
 	}
 }
 
+/// Performs the euler method to update [Velocity](struct.Velocity.html) and [Position](struct.Position.html) given an applied [Force](struct.Force.html).
 fn euler_update(vel: &mut Velocity, pos: &mut Position, force: &Force, mass: &Mass, dt: f64) {
 	pos.pos = pos.pos + vel.vel * dt;
 	vel.vel = vel.vel + force.force * dt / (constant::AMU * mass.value);
-	//println!("{:?}dt{:?}", vel.vel, force.force / (constant::AMU));
-	//println!("acc {:?}", force.force  / (constant::AMU))
 }
 
 pub mod tests {
-	// These imports are actually needed! The compiler is getting confused and warning they are not.
 	#[allow(unused_imports)]
 	use super::*;
 	extern crate specs;

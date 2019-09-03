@@ -1,10 +1,10 @@
-extern crate nalgebra;
-extern crate specs;
-extern crate specs_derive;
+//! Common atom components and systems.
+
 use crate::constant::{BOHRMAG, C};
+use std::fmt;
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
-use specs::{Component, Join, System, VecStorage, WriteStorage, NullStorage};
+use specs::{Component, Join, NullStorage, System, VecStorage, WriteStorage};
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
 ///
@@ -23,6 +23,11 @@ impl Position {
 
 impl Component for Position {
 	type Storage = VecStorage<Self>;
+}
+impl fmt::Display for Position {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.pos)
+    }
 }
 
 /// Velocity of an entity in space, with respect to cartesian x,y,z axes.
@@ -141,7 +146,7 @@ impl AtomInfo {
 	}
 }
 
-/// System that sets force to zero at the start of each iteration.
+/// A system that sets force to zero at the start of each simulation step.
 pub struct ClearForceSystem;
 
 impl<'a> System<'a> for ClearForceSystem {

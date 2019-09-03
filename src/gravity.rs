@@ -1,11 +1,11 @@
+//! Implements the force of gravity.
+
 use crate::atom::{Force, Mass};
-use specs::{Join, ReadStorage, System, WriteStorage};
-extern crate nalgebra;
 use crate::constant;
 use nalgebra::Vector3;
+use specs::{Join, ReadStorage, System, WriteStorage};
 
-/// Applies the force of gravity to all entities with mass.
-/// usually completely negligible
+/// This system adds the gravitational force to all entities with [Mass](struct.Mass.html).
 pub struct ApplyGravitationalForceSystem;
 impl<'a> System<'a> for ApplyGravitationalForceSystem {
     type SystemData = (WriteStorage<'a, Force>, ReadStorage<'a, Mass>);

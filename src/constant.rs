@@ -1,3 +1,5 @@
+//! Mathematical and physical constants.
+
 /// Reduced plank constant in SI units
 pub const HBAR: f64 = 1.0545718e-34;
 
