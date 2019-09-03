@@ -1,11 +1,8 @@
-
 extern crate rand;
 extern crate specs;
 use crate::laser::force::NumberKick;
 use rand::Rng;
-use specs::{
-    Component, Entities, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System, VecStorage,
-};
+use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
 pub struct Dark;
 
@@ -29,19 +26,23 @@ pub struct RepumpSystem;
 
 impl<'a> System<'a> for RepumpSystem {
     type SystemData = (
-        ReadExpect<'a, RepumpLoss>,
+        Option<Read<'a, RepumpLoss>>,
         Read<'a, LazyUpdate>,
         ReadStorage<'a, NumberKick>,
         Entities<'a>,
     );
-    fn run(&mut self, (repump, lazy, num, ent): Self::SystemData) {
-        for (ent, num) in (&ent, &num).join() {
-            for _i in 0..num.value {
-                if repump.if_loss() {
-                    lazy.insert(ent, Dark {})
+    fn run(&mut self, (repump_opt, lazy, num, ent): Self::SystemData) {
+        match repump_opt {
+            None => (),
+            Some(repump) => {
+                for (ent, num) in (&ent, &num).join() {
+                    for _i in 0..num.value {
+                        if repump.if_loss() {
+                            lazy.insert(ent, Dark {})
+                        }
+                    }
                 }
             }
         }
     }
 }
-

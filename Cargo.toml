@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["Pi-sun <37469116+Pi-sun@users.noreply.github.com>"]
 edition = "2018"
 
+[[example]]
+name = "zeeman_slower"
+crate-type = ["bin"]
+
+
 [dependencies]
 specs="0.14.0"
 specs-derive = "0.4.0"

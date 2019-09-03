@@ -2,7 +2,7 @@ extern crate specs;
 use crate::atom::{Atom, AtomInfo};
 use crate::constant;
 use rand::Rng;
-use specs::{Component, Join, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
+use specs::{Component, Join, ReadExpect, ReadStorage, System, VecStorage, WriteStorage, Read};
 extern crate nalgebra;
 use super::sampler::LaserSamplers;
 use crate::maths;
@@ -148,15 +148,17 @@ pub struct RandomWalkSystem;
 
 impl<'a> System<'a> for RandomWalkSystem {
     type SystemData = (
-        ReadExpect<'a, RandomWalkMarker>,
+        Option<Read<'a, RandomWalkMarker>>,
         WriteStorage<'a, Force>,
         ReadStorage<'a, NumberKick>,
         ReadStorage<'a, AtomInfo>,
         ReadExpect<'a, Timestep>,
     );
 
-    fn run(&mut self, (rand, mut force, kick, atom_info, timestep): Self::SystemData) {
-        if rand.value {
+    fn run(&mut self, (rand_opt, mut force, kick, atom_info, timestep): Self::SystemData) {
+        match rand_opt {
+            None => (),
+            Some(rand) => 
             for (mut force, atom_info, kick) in (&mut force, &atom_info, &kick).join() {
                 let omega = 2.0 * constant::PI * atom_info.frequency;
                 let force_one_atom = constant::HBAR * omega / constant::C / timestep.delta;
@@ -271,7 +273,6 @@ pub mod tests {
         );
     }
 
-
     #[test]
     fn test_dark() {
         let detuning = 0.0;
@@ -307,7 +308,6 @@ pub mod tests {
 
         let cooling_light_storage = test_world.read_storage::<CoolingLight>();
         let cooling_light = cooling_light_storage.get(laser).expect("entity not found");
-
 
         let force_storage = test_world.read_storage::<Force>();
         assert_approx_eq!(
@@ -446,6 +446,5 @@ pub mod tests {
         let force_storage = test_world.read_storage::<Force>();
         force_storage.get(atom1).expect("entity not found").force
     }
-
 
 }
