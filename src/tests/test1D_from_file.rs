@@ -15,12 +15,12 @@ pub mod tests {
         use crate::detector::Detected;
         use crate::output::file_output::FileOutputMarker;
 
-        use crate::destructor::BoundaryMarker;
+        use crate::destructor::SimulationBounds;
         use crate::laser::force::RandomWalkMarker;
         use crate::laser::repump::{Dark, RepumpLoss};
         use specs::{Builder, Join};
 
-        use crate::atom_sources::oven::VelocityCap;
+        use crate::atom_sources::oven::OvenVelocityCap;
         use crate::optimization::OptEarly;
         let (mut world, mut dispatcher) = create_from_config("test1D.yaml");
         world.register::<NewlyCreated>();
@@ -33,18 +33,14 @@ pub mod tests {
         world.register::<Dark>();
         world.register::<NumberKick>();
         world.register::<Detected>();
-        world.add_resource(BoundaryMarker { value: false });
-        world.add_resource(VelocityCap { cap: 1000. });
+        world.add_resource(SimulationBounds { half_width: Vector3::new(0.1,0.1,0.1) });
+        world.add_resource(OvenVelocityCap { cap: 1000. });
         world.add_resource(RepumpLoss { proportion: 0.0 });
         world.add_resource(FileOutputMarker { value: false });
         world
             .create_entity()
-            .with(Atom {
-                index: 1,
-                initial_velocity: Vector3::new(0., 0., 50.),
-            })
-
-            .with(NewlyCreated {})
+            .with(Atom)
+            .with(NewlyCreated)
             .with(AtomInfo::strontium())
             .with(Force::new())
             .with(Mass { value: 88.0 })

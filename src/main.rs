@@ -1,4 +1,5 @@
 extern crate magneto_optical_trap as lib;
+extern crate nalgebra;
 
 use lib::detector;
 extern crate specs;
@@ -11,9 +12,10 @@ use lib::optimization::OptEarly;
 use lib::laser::repump::RepumpLoss;
 
 use lib::atom_sources::oven::OvenVelocityCap;
-use lib::destructor::BoundaryMarker;
+use lib::destructor::SimulationBounds;
 #[allow(unused_imports)]
 use lib::simulation_templates::mot_2d_plus::create;
+use nalgebra::Vector3;
 use specs::RunNow;
 #[allow(unused_imports)]
 use std::time::{Duration, Instant};
@@ -33,10 +35,9 @@ fn main() {
     world.add_resource(OptEarly::new(2e-4));
     //include random walk(Optional)
     world.add_resource(RandomWalkMarker { value: true });
-
-    //include boundary (walls)
-
-    world.add_resource(BoundaryMarker { value: true });
+    world.add_resource(SimulationBounds {
+        half_width: Vector3::new(0.1, 0.1, 0.1),
+    });
     world.add_resource(OvenVelocityCap { cap: 1000. });
     world.add_resource(RepumpLoss { proportion: 0.0 });
     world.add_resource(FileOutputMarker { value: false });
