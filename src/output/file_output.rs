@@ -2,9 +2,9 @@
 
 use crate::atom::*;
 use crate::integrator::Step;
-use std::fmt::Display;
-use specs::{Component, Join, ReadExpect, ReadStorage, System, Entities};
+use specs::{Component, Entities, Join, ReadExpect, ReadStorage, System};
 use std::error::Error;
+use std::fmt::Display;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufWriter;
@@ -12,6 +12,17 @@ use std::marker::PhantomData;
 use std::path::Path;
 
 /// A system that writes simulation data to file.
+///
+/// This system writes per-atom data `T` to a file at a defined interval.
+/// The data type `T` must be a [Component](specs::Component) and implement the
+/// [Display](std::fmt::Display) trait, which determines how the per-atom component is
+/// presented in the output file.
+///
+/// The output file is structured as follows. Each frame begins with the line
+/// `step n atomNumber`, where `n` is the step number and `atomNumber` the number of
+/// atoms to write to the file. This is followed by the `data : T` for each atom,
+/// written to the file in the format `gen id: data`, where `gen` and `id` are the
+/// [Entity](specs::Entity) generation and id, and data consists of the per-atom payload.
 pub struct FileOutputSystem<T: Component + Display> {
     /// The [FileOutputSystem](struct.FileOutputSystem.html) writes to file every time
     /// this number of steps are completed.
@@ -23,12 +34,6 @@ pub struct FileOutputSystem<T: Component + Display> {
     writer: BufWriter<File>,
 
     phantom: std::marker::PhantomData<T>,
-}
-
-/// Trait that indicates the type can be output to file.
-pub trait Output {
-    /// Converts the struct to a string representation.
-    fn to_str(&self) -> str;
 }
 
 impl<T> FileOutputSystem<T>
@@ -64,20 +69,26 @@ where
     );
 
     fn run(&mut self, (entities, data, atoms, step): Self::SystemData) {
-            if step.n % self.interval == 0 {
-                let atom_number = (&atoms).join().count();
-                match write!(self.writer, "{:?} {:?}\n", step.n, atom_number) {
+        if step.n % self.interval == 0 {
+            let atom_number = (&atoms).join().count();
+            match write!(self.writer, "step {:?}, {:?}\n", step.n, atom_number) {
+                Err(why) => panic!("Could not write to output: {}", why.description()),
+                Ok(_) => (),
+            }
+
+            //Write for each atom
+            for (data, _, ent) in (&data, &atoms, &entities).join() {
+                match write!(
+                    self.writer,
+                    "{:?},{:?}: {}\n",
+                    ent.gen().id(),
+                    ent.id(),
+                    data
+                ) {
                     Err(why) => panic!("Could not write to output: {}", why.description()),
                     Ok(_) => (),
                 }
-
-                //Write for each atom
-                for (data, _, ent) in (&data, &atoms, &entities).join() {
-                    match write!(self.writer, "{:?},{:?}: {}", ent.gen().id(), ent.id(), data) {
-                        Err(why) => panic!("Could not write to output: {}", why.description()),
-                        Ok(_) => (),
-                    }
-                }
             }
+        }
     }
 }
