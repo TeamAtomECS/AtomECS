@@ -1,4 +1,4 @@
-use crate::atom::{Atom, Position, Velocity};
+use crate::atom::{Atom, Position, Velocity, InitialVelocity};
 use crate::integrator::{Step, Timestep};
 extern crate specs;
 use specs::{
@@ -98,6 +98,7 @@ impl<'a> System<'a> for DetectingAtomSystem {
         Entities<'a>,
         ReadStorage<'a, Atom>,
         ReadStorage<'a, Velocity>,
+        ReadStorage<'a, InitialVelocity>,
         ReadExpect<'a, Step>,
         ReadExpect<'a, Timestep>,
         WriteExpect<'a, DetectingInfo>,
@@ -112,6 +113,7 @@ impl<'a> System<'a> for DetectingAtomSystem {
             entities,
             atom,
             vel,
+            initial_vel,
             step,
             timestep,
             mut detect_info,
@@ -122,7 +124,7 @@ impl<'a> System<'a> for DetectingAtomSystem {
         let time = step.n as f64 * timestep.delta;
         for (detector_pos, detector) in (&pos, &detector).join() {
             if detector.trigger_time == 0.0 {
-                for (atom_pos, atom, ent, vel) in (&pos, &atom, &entities, &vel).join() {
+                for (atom_pos, atom, ent, vel, initial_vel) in (&pos, &atom, &entities, &vel, &initial_vel).join() {
                     let rela_pos = atom_pos.pos - detector_pos.pos;
                     if detector.if_detect(&rela_pos) {
                         detect_info.atom_detected = detect_info.atom_detected + 1;
@@ -133,9 +135,9 @@ impl<'a> System<'a> for DetectingAtomSystem {
                             vel.vel[0],
                             vel.vel[1],
                             vel.vel[2],
-                            atom.initial_velocity[0],
-                            atom.initial_velocity[1],
-                            atom.initial_velocity[2],
+                            initial_vel.vel[0],
+                            initial_vel.vel[1],
+                            initial_vel.vel[2],
                             time,
                             atom_pos.pos[0],
                             atom_pos.pos[1],
@@ -148,8 +150,8 @@ impl<'a> System<'a> for DetectingAtomSystem {
                     }
                 }
             } else {
-                for (atom_pos, atom, mut detect, ent, vel) in
-                    (&pos, &atom, &mut detected, &entities, &vel).join()
+                for (atom_pos, atom, mut detect, ent, vel, initial_vel) in
+                    (&pos, &atom, &mut detected, &entities, &vel, &initial_vel).join()
                 {
                     let rela_pos = atom_pos.pos - detector_pos.pos;
                     if detector.if_detect(&rela_pos) {
@@ -163,9 +165,9 @@ impl<'a> System<'a> for DetectingAtomSystem {
                                 vel.vel[0],
                                 vel.vel[1],
                                 vel.vel[2],
-                                atom.initial_velocity[0],
-                                atom.initial_velocity[1],
-                                atom.initial_velocity[2],
+                                initial_vel.vel[0],
+                                initial_vel.vel[1],
+                                initial_vel.vel[2],
                                 time,
                                 atom_pos.pos[0],
                                 atom_pos.pos[1],

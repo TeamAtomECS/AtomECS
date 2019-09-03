@@ -36,6 +36,16 @@ impl Component for Velocity {
 	type Storage = VecStorage<Self>;
 }
 
+/// Initial velocity of an atom.
+/// 
+/// See [Velocity](struct.Velocity.html).
+pub struct InitialVelocity { 
+	pub vel: Vector3<f64>
+	}
+impl Component for InitialVelocity {
+	type Storage = VecStorage<Self>;
+}
+
 /// Force applies to an entity, with respect to cartesian x,y,z axes.
 ///
 /// SI units (Newtons)
@@ -67,10 +77,8 @@ impl Component for Mass {
 
 /// Component that marks an entity as an [atom](struct.Atom.html).
 /// This provides a simple way for systems to get only [atom](struct.Atom.html)s, even though non-atom entities may also share components, eg [position](struct.Position.html).
-
 pub struct Atom {
 	pub index: u64,
-	pub initial_velocity: Vector3<f64>,
 }
 
 impl Component for Atom {
@@ -79,10 +87,7 @@ impl Component for Atom {
 
 impl Default for Atom {
 	fn default() -> Self {
-		Atom {
-			index: 0,
-			initial_velocity: Vector3::new(0., 0., 0.),
-		}
+		Atom { index: 0 }
 	}
 }
 

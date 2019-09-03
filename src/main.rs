@@ -5,16 +5,17 @@ extern crate specs;
 #[allow(unused_imports)]
 use lib::simulation_templates::loadfromconfig::create_from_config;
 
-
 use lib::laser::force::RandomWalkMarker;
 use lib::optimization::OptEarly;
 
 use lib::laser::repump::RepumpLoss;
 
-use lib::atom_sources::oven::VelocityCap;
+use lib::atom_sources::oven::OvenVelocityCap;
 use lib::destructor::BoundaryMarker;
+#[allow(unused_imports)]
 use lib::simulation_templates::mot_2d_plus::create;
 use specs::RunNow;
+#[allow(unused_imports)]
 use std::time::{Duration, Instant};
 
 use lib::output::file_output::FileOutputMarker;
@@ -36,7 +37,7 @@ fn main() {
     //include boundary (walls)
 
     world.add_resource(BoundaryMarker { value: true });
-    world.add_resource(VelocityCap { cap: 1000. });
+    world.add_resource(OvenVelocityCap { cap: 1000. });
     world.add_resource(RepumpLoss { proportion: 0.0 });
     world.add_resource(FileOutputMarker { value: false });
     //let (mut world, mut dispatcher) = create();
@@ -48,5 +49,4 @@ fn main() {
     output.run_now(&world.res);
     println!("time taken to run in ms{}", now.elapsed().as_millis());
     //write_file_template("example.yml")
-
 }
