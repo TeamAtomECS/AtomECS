@@ -101,14 +101,13 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		ReadStorage<'a, AtomNumberToEmit>,
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, MassDistribution>,
-		WriteExpect<'a, Index>,
 		ReadExpect<'a, OvenVelocityCap>,
 		Read<'a, LazyUpdate>,
 	);
 
 	fn run(
 		&mut self,
-		(entities, oven, atom, numbers_to_emit, pos, masstype,mut index,cap, updater): Self::SystemData,
+		(entities, oven, atom, numbers_to_emit, pos, masstype, cap, updater): Self::SystemData,
 	) {
 		let vel_cap = cap.cap;
 		for (oven, atom, number_to_emit, oven_position, masstype) in
@@ -156,12 +155,9 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				);
 				updater.insert(
 					new_atom,
-					Atom {
-						index: index.current_index,
-					},
+					Atom
 				);
 				updater.insert(new_atom, InitialVelocity { vel: new_vel });
-				index.current_index = index.current_index + 1;
 				updater.insert(new_atom, NewlyCreated);
 			}
 		}

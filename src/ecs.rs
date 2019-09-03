@@ -1,5 +1,4 @@
 use crate::atom::ClearForceSystem;
-use crate::atom::Index;
 use crate::atom_sources;
 use crate::destructor::{DeleteToBeDestroyedEntitiesSystem, DestroyOutOfBoundAtomsSystem};
 use crate::gravity::ApplyGravitationalForceSystem;
@@ -76,7 +75,6 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 /// Add resources to the world
 pub fn register_resources(world: &mut World) {
 	world.add_resource(Step { n: 0 });
-	world.add_resource(Index { current_index: 0 });
 	world.add_resource(DetectingInfo {
 		atom_detected: 0,
 		total_velocity: Vector3::new(0., 0., 0.),

@@ -1,5 +1,4 @@
 pub mod emit;
-pub mod index;
 pub mod mass;
 pub mod oven;
 

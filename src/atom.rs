@@ -84,16 +84,6 @@ impl Component for Atom {
 	type Storage = NullStorage<Self>;
 }
 
-/// An [AtomIndex](struct.AtomIndex.html) is used to uniquely identify an [Atom](struct.AtomIndex.html).
-pub struct AtomIndex {
-	/// Unique index that identifies the atom.
-	pub index: u32
-}
-
-impl Component for AtomIndex {
-	type Storage = VecStorage<Self>;
-}
-
 #[derive(Deserialize, Serialize, Clone)]
 pub struct AtomInfo {
 	/// The dependence of the sigma_+ transition on magnetic fields.
