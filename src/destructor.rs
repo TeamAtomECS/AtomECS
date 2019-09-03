@@ -4,13 +4,13 @@ use specs::{Component, Entities, Join, NullStorage, Read, ReadStorage, System};
 extern crate nalgebra;
 use nalgebra::Vector3;
 
-/// Deletes entities which have been marked for destruction.
+/// A system that deletes entities which have been marked for destruction using the [ToBeDestroyed](struct.ToBeDestroyed.html) component.
 pub struct DeleteToBeDestroyedEntitiesSystem;
 impl<'a> System<'a> for DeleteToBeDestroyedEntitiesSystem {
     type SystemData = (Entities<'a>, ReadStorage<'a, ToBeDestroyed>);
 
-    fn run(&mut self, (ents, _des): Self::SystemData) {
-        for (entity, _des) in (&ents, &_des).join() {
+    fn run(&mut self, (ents, des): Self::SystemData) {
+        for (entity, _) in (&ents, &des).join() {
             ents.delete(entity).expect("Could not delete entity");
         }
     }
@@ -27,6 +27,8 @@ pub struct SimulationBounds {
 }
 
 /// A system that deletes atoms that have strayed outside of the simulation region.
+///
+/// See [SimulationBounds](struct.SimulationBounds.html) for the associated resource.
 pub struct DestroyOutOfBoundAtomsSystem;
 impl<'a> System<'a> for DestroyOutOfBoundAtomsSystem {
     type SystemData = (
