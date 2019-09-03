@@ -4,7 +4,7 @@ extern crate specs_derive;
 use crate::constant::{BOHRMAG, C};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
-use specs::{Component, Join, System, VecStorage, WriteStorage};
+use specs::{Component, Join, System, VecStorage, WriteStorage, NullStorage};
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
 ///
@@ -37,11 +37,11 @@ impl Component for Velocity {
 }
 
 /// Initial velocity of an atom.
-/// 
+///
 /// See [Velocity](struct.Velocity.html).
-pub struct InitialVelocity { 
-	pub vel: Vector3<f64>
-	}
+pub struct InitialVelocity {
+	pub vel: Vector3<f64>,
+}
 impl Component for InitialVelocity {
 	type Storage = VecStorage<Self>;
 }
@@ -77,22 +77,21 @@ impl Component for Mass {
 
 /// Component that marks an entity as an [atom](struct.Atom.html).
 /// This provides a simple way for systems to get only [atom](struct.Atom.html)s, even though non-atom entities may also share components, eg [position](struct.Position.html).
-pub struct Atom {
-	pub index: u64,
-}
+#[derive(Default)]
+pub struct Atom;
 
 impl Component for Atom {
+	type Storage = NullStorage<Self>;
+}
+
+/// An [AtomIndex](struct.AtomIndex.html) is used to uniquely identify an [Atom](struct.AtomIndex.html).
+pub struct AtomIndex {
+	/// Unique index that identifies the atom.
+	pub index: u32
+}
+
+impl Component for AtomIndex {
 	type Storage = VecStorage<Self>;
-}
-
-impl Default for Atom {
-	fn default() -> Self {
-		Atom { index: 0 }
-	}
-}
-
-pub struct Index {
-	pub current_index: u64,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

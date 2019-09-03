@@ -1,6 +1,7 @@
+pub mod emit;
+pub mod index;
 pub mod mass;
 pub mod oven;
-pub mod emit;
 
 use specs::{DispatcherBuilder, World};
 
@@ -24,7 +25,7 @@ pub fn add_systems_to_dispatch(
         .with(
             emit::EmitFixedRateSystem,
             "emit_fixed_rate",
-            &["emit_number_per_frame"]
+            &["emit_number_per_frame"],
         )
         .with(oven::OvenCreateAtomsSystem, "", &["emit_number_per_frame"])
 }
