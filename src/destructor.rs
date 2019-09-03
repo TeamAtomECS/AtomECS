@@ -1,3 +1,9 @@
+//! Systems and Components used to delete atoms from the simulation.
+//!
+//! Atoms that leave a region defined by the [SimulationBounds](struct.SimulationBounds.html)
+//! world resource will be deleted by the [DestroyOutOfBoundAtomsSystem](struct.DestroyOutOfBoundAtomsSystem.html).
+//! Removing atoms that will not be of interest for further simulation (eg, those that escape the trapping region)
+//! ensures that CPU time will not be wasted simulating them.
 extern crate specs;
 use crate::atom::{Atom, Position};
 use specs::{Component, Entities, Join, NullStorage, Read, ReadStorage, System};
