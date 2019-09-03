@@ -21,15 +21,10 @@ pub mod tests {
         use specs::{Builder, Join};
 
         use crate::atom_sources::oven::OvenVelocityCap;
-        use crate::optimization::OptEarly;
+
         let (mut world, mut dispatcher) = create_from_config("test1D.yaml");
         world.register::<NewlyCreated>();
         world.add_resource(RandomWalkMarker { value: false });
-
-        //include boundary (walls)
-
-        world.add_resource(OptEarly::not_opt());
-
         world.register::<Dark>();
         world.register::<NumberKick>();
         world.register::<Detected>();

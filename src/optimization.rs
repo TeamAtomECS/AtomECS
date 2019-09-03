@@ -1,51 +1,73 @@
+//! Various optimization strategies to improve performance.
+
 use crate::integrator::{Step, Timestep};
-use specs::{ReadExpect, System, WriteExpect};
-pub struct OptEarly {
-    /// how long the timestep should be increased
-    pub timethreshold: f64,
-    pub if_opt: bool,
-    pub opt_finish: bool,
+use specs::{ReadExpect, System, Write, WriteExpect};
+
+/// A resource that configures the [LargerEarlyTimestepOptimizationSystem](struct.LargerEarlyTimestepOptimizationSystem.html)
+pub struct LargerEarlyTimestepOptimization {
+    /// The end time for the `EarlySimulation` stage. See [Timestep](struct.Timestep.html) for details of time units.
+    pub early_time: f64,
+    /// Factor by which the [Timestep](struct.Timestep.html) is increased by during the `EarlySimulation` stage.
+    pub factor: f64,
+    /// state of the optimization
+    state: OptimizationState,
 }
 
-impl OptEarly {
-    pub fn not_opt() -> OptEarly {
-        OptEarly {
-            timethreshold: 0.0,
-            if_opt: true,
-            opt_finish: true,
-        }
-    }
-    pub fn new(timethreshold: f64) -> OptEarly {
-        OptEarly {
-            timethreshold,
-            if_opt: false,
-            opt_finish: false,
+enum OptimizationState {
+    StartOfSimulation,
+    EarlySimulation,
+    LateSimulation,
+}
+
+impl LargerEarlyTimestepOptimization {
+    pub fn new(early_time: f64) -> LargerEarlyTimestepOptimization {
+        LargerEarlyTimestepOptimization {
+            early_time: early_time,
+            factor: 2.0,
+            state: OptimizationState::StartOfSimulation,
         }
     }
 }
 
-/// a system that increase the timestep at the begining of the simulation
-/// usually, if the timethreshold is carefully chosen, the impact on accuracy is not noticable
-pub struct OptEarlySystem;
+/// A system that modifies the [Timestep](struct.Timestep.html) duration as the simulation proceeds.
+///
+/// At the start of the simulation, the timestep is increased by the factor defined by
+/// [LargerEarlyTimestepOptimization.factor](struct.LargerEarlyTimestepOptimization.html).
+/// The timestep stays at this duration until the [LargerEarlyTimestepOptimization.early_time] is reached.
+/// At this point, the timestep duration is returned to the original value.
+/// 
+/// This optimization allows the simulation to evolve faster duration the initial stages, where atoms
+/// travel fast along straight paths.
+pub struct LargerEarlyTimestepOptimizationSystem;
 
-impl<'a> System<'a> for OptEarlySystem {
+impl<'a> System<'a> for LargerEarlyTimestepOptimizationSystem {
     type SystemData = (
-        WriteExpect<'a, OptEarly>,
+        Option<Write<'a, LargerEarlyTimestepOptimization>>,
         WriteExpect<'a, Timestep>,
         ReadExpect<'a, Step>,
     );
 
-    fn run(&mut self, (mut opt, mut timestep, step): Self::SystemData) {
-        if !opt.if_opt {
-            println!("timestep increased");
-            timestep.delta = timestep.delta * 2.;
-            opt.if_opt = true;
-        }
-        let time = timestep.delta * (step.n as f64);
-        if time > opt.timethreshold && !opt.opt_finish {
-            println!("timestep decrease at time:{}", time);
-            timestep.delta = timestep.delta / 2.;
-            opt.opt_finish = true;
+    fn run(&mut self, (mut optimization_options, mut timestep, step): Self::SystemData) {
+        match optimization_options {
+            None => return,
+            Some(mut opts) => match &opts.state {
+                OptimizationState::StartOfSimulation => {
+                    timestep.delta = timestep.delta * 2.;
+                    println!("timestep increased");
+                    opts.state = OptimizationState::EarlySimulation;
+                }
+
+                OptimizationState::EarlySimulation => {
+                    let time = timestep.delta * (step.n as f64);
+                    if time > opts.early_time {
+                        timestep.delta = timestep.delta / 2.;
+                        println!("timestep decrease at time:{}", time);
+                        opts.state = OptimizationState::LateSimulation;
+                    }
+                }
+
+                OptimizationState::LateSimulation => {}
+            },
         }
     }
 }

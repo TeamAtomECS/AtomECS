@@ -18,7 +18,7 @@ use crate::laser;
 use crate::magnetic;
 use crate::output::file_output::FileOutputSystem;
 
-use crate::optimization::OptEarlySystem;
+use crate::optimization::LargerEarlyTimestepOptimizationSystem;
 
 use crate::laser::repump::Dark;
 
@@ -37,7 +37,7 @@ pub fn register_components(world: &mut World) {
 /// Creates a `Dispatcher` that can be used to calculate each simulation frame.
 pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 	let mut builder = DispatcherBuilder::new();
-	builder = builder.with(OptEarlySystem, "opt", &[]);
+	builder = builder.with(LargerEarlyTimestepOptimizationSystem, "opt", &[]);
 	builder = builder.with(ClearForceSystem, "clear", &[]);
 	builder = builder.with(DeflagNewAtomsSystem, "deflag", &[]);
 	builder.add_barrier();

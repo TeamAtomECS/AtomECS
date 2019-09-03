@@ -7,7 +7,7 @@ extern crate specs;
 use lib::simulation_templates::loadfromconfig::create_from_config;
 
 use lib::laser::force::RandomWalkMarker;
-use lib::optimization::OptEarly;
+use lib::optimization::LargerEarlyTimestepOptimization;
 
 use lib::laser::repump::RepumpLoss;
 
@@ -32,7 +32,7 @@ fn main() {
     let (mut world, mut dispatcher) = create_from_config("example.yaml");
 
     //increase the timestep at the begining of the simulation
-    world.add_resource(OptEarly::new(2e-4));
+    world.add_resource(LargerEarlyTimestepOptimization::new(2e-4));
     //include random walk(Optional)
     world.add_resource(RandomWalkMarker { value: true });
     world.add_resource(SimulationBounds {
