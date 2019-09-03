@@ -55,7 +55,7 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 	builder = detector::add_systems_to_dispatch(builder, &[]);
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
 	builder = builder.with(
-		FileOutputSystem::<Position>::new("output.txt".to_string(), 10),
+		FileOutputSystem::<Position>::new("pos.txt".to_string(), 10),
 		"",
 		&[],
 	);

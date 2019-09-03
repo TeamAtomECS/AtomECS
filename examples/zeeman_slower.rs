@@ -36,27 +36,29 @@ fn main() {
         .with(CoolingLight::for_species(AtomInfo::rubidium(), -6.0, 1.0))
         .build();
 
-    // Create an atom
-    world
-        .create_entity()
-        .with(Position {
-            pos: Vector3::new(0.0, 0.0, -0.01),
-        })
-        .with(Atom)
-        .with(Force::new())
-        .with(Velocity {
-            vel: Vector3::new(0.0, 0.0, 50.0),
-        })
-        .with(NewlyCreated)
-        .with(AtomInfo::rubidium())
-        .with(Mass { value: 87.0 })
-        .build();
+    // Create atoms
+    for i in 0..10 {
+        world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(0.0, 0.0, -0.01),
+            })
+            .with(Atom)
+            .with(Force::new())
+            .with(Velocity {
+                vel: Vector3::new(0.0, 0.0, 30.0 + (i as f64) * 10.0),
+            })
+            .with(NewlyCreated)
+            .with(AtomInfo::rubidium())
+            .with(Mass { value: 87.0 })
+            .build();
+    }
 
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-6 });
 
     // Run the simulation for a number of steps.
-    for _i in 0..50000 {
+    for _i in 0..5000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }

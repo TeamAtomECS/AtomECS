@@ -1,11 +1,12 @@
-pos = read_output('output.txt');
+output = read_output('pos.txt');
+pos = {output.pos};
 %%
 fh = gcf;
 set(gcf, 'Color', 'w');
 iter = 1;
 while ishandle(fh) && iter <= length(pos)
     p = pos{iter};
-    plot2(p(1,:), p(2,:), '.');
+    plot3(p(:,1), p(:,2), p(:,3), '.');
     
     iter = iter+1;
     
