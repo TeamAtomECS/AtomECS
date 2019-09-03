@@ -12,18 +12,9 @@ extern crate specs;
 use crate::atom::*;
 use nalgebra::Vector3;
 
-use specs::{
-	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System,
-	WriteExpect,
-};
+use specs::{Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System};
 
-pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>, cap: f64) -> Vector3<f64> {
-	let v_mag = maths::maxwell_generate(t, mass);
-	if cap != std::f64::NAN {
-		if v_mag > cap {
-			return Vector3::new(std::f64::NAN, std::f64::NAN, std::f64::NAN);
-		}
-	}
+pub fn velocity_generate(v_mag: f64, new_dir: &Vector3<f64>) -> Vector3<f64> {
 	let dir = &new_dir.normalize();
 	let dir_1 = new_dir.cross(&Vector3::new(2.0, 1.0, 0.5)).normalize();
 	let dir_2 = new_dir.cross(&dir_1).normalize();
@@ -35,6 +26,7 @@ pub fn velocity_generate(t: f64, mass: f64, new_dir: &Vector3<f64>, cap: f64) ->
 	let v_out = dirf * v_mag;
 	v_out
 }
+
 pub enum OvenAperture {
 	Cubic { size: [f64; 3] },
 	Circular { radius: f64, thickness: f64 },
@@ -84,7 +76,7 @@ impl Oven {
 /// This resource indicates that any atoms emitted from an oven with velocity greater than the cap should be destroyed.
 /// To use the cap, add it as a resource to the world.
 pub struct OvenVelocityCap {
-	/// The maximum speed of an atom emitted by an oven, in SI units of m/s. See [Velocity](struct.Velocity.html)
+	/// The maximum speed of an atom emitted by an oven. See [Velocity](struct.Velocity.html) for units.
 	pub cap: f64,
 }
 
@@ -101,31 +93,31 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		ReadStorage<'a, AtomNumberToEmit>,
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, MassDistribution>,
-		ReadExpect<'a, OvenVelocityCap>,
+		Option<Read<'a, OvenVelocityCap>>,
 		Read<'a, LazyUpdate>,
 	);
 
 	fn run(
 		&mut self,
-		(entities, oven, atom, numbers_to_emit, pos, masstype, cap, updater): Self::SystemData,
+		(entities, oven, atom, numbers_to_emit, pos, mass_dist, velocity_cap, updater): Self::SystemData,
 	) {
-		let vel_cap = cap.cap;
-		for (oven, atom, number_to_emit, oven_position, masstype) in
-			(&oven, &atom, &numbers_to_emit, &pos, &masstype).join()
+		let max_vel = match velocity_cap {
+			Some(cap) => cap.cap,
+			None => std::f64::MAX
+		};
+
+		for (oven, atom, number_to_emit, oven_position, mass_dist) in
+			(&oven, &atom, &numbers_to_emit, &pos, &mass_dist).join()
 		{
 			for _i in 0..number_to_emit.number {
-				let mass = masstype.draw_random_mass().value;
-				let new_atom = entities.create();
-				let new_vel = velocity_generate(
-					oven.temperature,
-					mass * constant::AMU,
-					&oven.direction,
-					vel_cap,
-				);
-				if new_vel == Vector3::new(std::f64::NAN, std::f64::NAN, std::f64::NAN) {
-					entities.delete(new_atom).expect("Could not delete entity");
+				let mass = mass_dist.draw_random_mass().value;
+				let speed = maths::maxwell_generate(oven.temperature, mass);
+				if speed > max_vel {
 					continue;
 				}
+
+				let new_atom = entities.create();
+				let new_vel = velocity_generate(speed, &oven.direction);
 				let start_position = oven_position.pos + oven.get_random_spawn_position();
 				updater.insert(
 					new_atom,
@@ -153,10 +145,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 						saturation_intensity: atom.saturation_intensity,
 					},
 				);
-				updater.insert(
-					new_atom,
-					Atom
-				);
+				updater.insert(new_atom, Atom);
 				updater.insert(new_atom, InitialVelocity { vel: new_vel });
 				updater.insert(new_atom, NewlyCreated);
 			}
