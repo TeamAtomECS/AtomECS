@@ -1,5 +1,5 @@
 use crate::integrator::{Step, Timestep};
-use specs::{Entities, ReadExpect, System, WriteExpect};
+use specs::{ReadExpect, System, WriteExpect};
 pub struct OptEarly {
     /// how long the timestep should be increased
     pub timethreshold: f64,

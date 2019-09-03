@@ -1,11 +1,10 @@
-use crate::atom::{Atom, Position, Velocity, InitialVelocity};
+use crate::atom::{Atom, InitialVelocity, Position, Velocity};
 use crate::integrator::{Step, Timestep};
 extern crate specs;
 use specs::{
     Component, DispatcherBuilder, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadExpect,
     ReadStorage, System, VecStorage, World, WriteExpect, WriteStorage,
 };
-
 
 use std::fs::OpenOptions;
 
@@ -61,7 +60,6 @@ pub struct Detector {
     /// the filename of the csv that record the info about captured atoms
     pub filename: &'static str,
 }
-
 
 impl Detector {
     pub fn if_detect(&self, pos: &Vector3<f64>) -> bool {
@@ -124,7 +122,9 @@ impl<'a> System<'a> for DetectingAtomSystem {
         let time = step.n as f64 * timestep.delta;
         for (detector_pos, detector) in (&pos, &detector).join() {
             if detector.trigger_time == 0.0 {
-                for (atom_pos, atom, ent, vel, initial_vel) in (&pos, &atom, &entities, &vel, &initial_vel).join() {
+                for (atom_pos, _, ent, vel, initial_vel) in
+                    (&pos, &atom, &entities, &vel, &initial_vel).join()
+                {
                     let rela_pos = atom_pos.pos - detector_pos.pos;
                     if detector.if_detect(&rela_pos) {
                         detect_info.atom_detected = detect_info.atom_detected + 1;
@@ -150,7 +150,7 @@ impl<'a> System<'a> for DetectingAtomSystem {
                     }
                 }
             } else {
-                for (atom_pos, atom, mut detect, ent, vel, initial_vel) in
+                for (atom_pos, _, mut detect, ent, vel, initial_vel) in
                     (&pos, &atom, &mut detected, &entities, &vel, &initial_vel).join()
                 {
                     let rela_pos = atom_pos.pos - detector_pos.pos;
@@ -187,7 +187,6 @@ impl<'a> System<'a> for DetectingAtomSystem {
                 {
                     updater.insert(ent, Detected { time: 0.0 });
                 }
-
             }
         }
     }
@@ -196,7 +195,7 @@ pub fn print_detected_to_file(
     filename: &'static str,
     content: &Vec<f64>,
 ) -> Result<(), Box<Error>> {
-    let mut file = OpenOptions::new()
+    let file = OpenOptions::new()
         .write(true)
         .append(true)
         .open(filename)
@@ -208,7 +207,7 @@ pub fn print_detected_to_file(
 }
 
 pub fn clearcsv(filename: &str) -> Result<(), Box<Error>> {
-    let mut file = OpenOptions::new().write(true).open(filename).unwrap();
+    let file = OpenOptions::new().write(true).open(filename).unwrap();
     let mut wtr = csv::Writer::from_writer(file);
     wtr.write_record(&[
         "Velocity_Upon_Capture_X",
@@ -226,12 +225,12 @@ pub fn clearcsv(filename: &str) -> Result<(), Box<Error>> {
     Ok(())
 }
 
-
 pub fn register_components(world: &mut World) {
     world.register::<Detector>();
     world.register::<ClearerCSV>();
 }
 
+#[allow(unused_variables)]
 pub fn add_systems_to_dispatch(
     builder: DispatcherBuilder<'static, 'static>,
     deps: &[&str],
@@ -260,7 +259,7 @@ impl<'a> System<'a> for PrintDetectResultSystem {
 }
 
 pub fn write_file_output(number: i32, average_vel: Vector3<f64>) -> Result<(), Box<Error>> {
-    let mut file = OpenOptions::new().write(true).open("output.csv").unwrap();
+    let file = OpenOptions::new().write(true).open("output.csv").unwrap();
     let mut wtr = csv::Writer::from_writer(file);
     wtr.serialize(&[
         number as f64,
