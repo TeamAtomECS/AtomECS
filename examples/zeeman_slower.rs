@@ -7,6 +7,7 @@ use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
+use lib::output::file_output::FileOutputSystem;
 use nalgebra::Vector3;
 use specs::{Builder, World};
 
@@ -14,7 +15,21 @@ fn main() {
     let mut world = World::new();
     ecs::register_components(&mut world);
     ecs::register_resources(&mut world);
-    let mut dispatcher = ecs::create_simulation_dispatcher();
+    let mut builder = ecs::create_simulation_dispatcher_builder();
+
+    // Add some output to the simulation
+    builder = builder.with(
+        FileOutputSystem::<Position>::new("pos.txt".to_string(), 20),
+        "",
+        &[],
+    );
+    builder = builder.with(
+        FileOutputSystem::<Velocity>::new("vel.txt".to_string(), 20),
+        "",
+        &[],
+    );
+
+    let mut dispatcher = builder.build();
     dispatcher.setup(&mut world.res);
 
     // Create magnetic field.
@@ -41,7 +56,7 @@ fn main() {
         world
             .create_entity()
             .with(Position {
-                pos: Vector3::new(0.0, 0.0, -0.01),
+                pos: Vector3::new(0.0, 0.0, -0.03),
             })
             .with(Atom)
             .with(Force::new())

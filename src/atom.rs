@@ -26,7 +26,7 @@ impl Component for Position {
 }
 impl fmt::Display for Position {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "{:?},{:?},{:?}", self.pos[0], self.pos[1], self.pos[2])
+		write!(f, "({:?},{:?},{:?})", self.pos[0], self.pos[1], self.pos[2])
 	}
 }
 
@@ -35,6 +35,11 @@ impl fmt::Display for Position {
 /// SI units (metres/second)
 pub struct Velocity {
 	pub vel: Vector3<f64>,
+}
+impl fmt::Display for Velocity {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "({:?},{:?},{:?})", self.vel[0], self.vel[1], self.vel[2])
+	}
 }
 
 impl Component for Velocity {

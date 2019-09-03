@@ -3,7 +3,7 @@
 //! This module contains a number of helpful methods that are used to setup the `specs::World`
 //! and to create the `specs::Dispatcher` that is used to perform the simulation itself.
 
-use crate::atom::{ClearForceSystem, Position};
+use crate::atom::ClearForceSystem;
 use crate::atom_sources;
 use crate::destructor::{DeleteToBeDestroyedEntitiesSystem, DestroyOutOfBoundAtomsSystem};
 use crate::detector;
@@ -16,7 +16,6 @@ use crate::laser::repump::Dark;
 use crate::magnetic;
 use crate::optimization::LargerEarlyTimestepOptimizationSystem;
 use crate::output::console_output::ConsoleOutputSystem;
-use crate::output::file_output::FileOutputSystem;
 use nalgebra::Vector3;
 use specs::{Dispatcher, DispatcherBuilder, World};
 
@@ -31,6 +30,11 @@ pub fn register_components(world: &mut World) {
 
 /// Creates a [Dispatcher](specs::Dispatcher) that is used to calculate each simulation frame.
 pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
+	let builder = create_simulation_dispatcher_builder();
+	builder.build()
+}
+
+pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'static> {
 	let mut builder = DispatcherBuilder::new();
 	builder = builder.with(LargerEarlyTimestepOptimizationSystem, "opt", &[]);
 	builder = builder.with(ClearForceSystem, "clear", &[]);
@@ -55,17 +59,13 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 	builder = detector::add_systems_to_dispatch(builder, &[]);
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
 	builder = builder.with(
-		FileOutputSystem::<Position>::new("pos.txt".to_string(), 10),
-		"",
-		&[],
-	);
-	builder = builder.with(
 		DeleteToBeDestroyedEntitiesSystem,
 		"",
 		&["detect_atom", "euler_integrator"],
 	);
 	builder = builder.with(DestroyOutOfBoundAtomsSystem, "", &[]);
-	builder.build()
+	builder.add_barrier();
+	builder
 }
 
 /// Add required resources to the world

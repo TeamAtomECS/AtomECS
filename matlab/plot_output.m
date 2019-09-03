@@ -1,5 +1,5 @@
 output = read_output('pos.txt');
-pos = {output.pos};
+pos = {output.vec};
 %%
 fh = gcf;
 set(gcf, 'Color', 'w');
