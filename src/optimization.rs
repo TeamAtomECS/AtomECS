@@ -35,7 +35,7 @@ impl LargerEarlyTimestepOptimization {
 /// [LargerEarlyTimestepOptimization.factor](struct.LargerEarlyTimestepOptimization.html).
 /// The timestep stays at this duration until the [LargerEarlyTimestepOptimization.early_time] is reached.
 /// At this point, the timestep duration is returned to the original value.
-/// 
+///
 /// This optimization allows the simulation to evolve faster duration the initial stages, where atoms
 /// travel fast along straight paths.
 pub struct LargerEarlyTimestepOptimizationSystem;
@@ -47,7 +47,7 @@ impl<'a> System<'a> for LargerEarlyTimestepOptimizationSystem {
         ReadExpect<'a, Step>,
     );
 
-    fn run(&mut self, (mut optimization_options, mut timestep, step): Self::SystemData) {
+    fn run(&mut self, (optimization_options, mut timestep, step): Self::SystemData) {
         match optimization_options {
             None => return,
             Some(mut opts) => match &opts.state {
