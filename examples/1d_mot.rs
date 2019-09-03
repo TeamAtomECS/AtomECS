@@ -44,8 +44,8 @@ fn main() {
         .build();
 
     // Create cooling lasers.
-    let detuning = -6.0;
-    let power = 100.0;
+    let detuning = -12.0;
+    let power = 0.03;
     world
         .create_entity()
         .with(GaussianBeam {
@@ -72,12 +72,12 @@ fn main() {
         world
             .create_entity()
             .with(Position {
-                pos: Vector3::new(0.0, 0.0, -0.03),
+                pos: Vector3::new(0.0, 0.0, -0.05),
             })
             .with(Atom)
             .with(Force::new())
             .with(Velocity {
-                vel: Vector3::new(0.0, 0.0, 5.0 + (i as f64) * 1.0),
+                vel: Vector3::new(0.0, 0.0, 10.0 + (i as f64) * 5.0),
             })
             .with(NewlyCreated)
             .with(AtomInfo::rubidium())
@@ -89,7 +89,7 @@ fn main() {
     world.add_resource(Timestep { delta: 1.0e-6 });
 
     // Run the simulation for a number of steps.
-    for _i in 0..50000 {
+    for _i in 0..5000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }

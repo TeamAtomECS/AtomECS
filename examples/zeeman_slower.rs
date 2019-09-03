@@ -19,12 +19,12 @@ fn main() {
 
     // Add some output to the simulation
     builder = builder.with(
-        FileOutputSystem::<Position>::new("pos.txt".to_string(), 20),
+        FileOutputSystem::<Position>::new("pos.txt".to_string(), 5),
         "",
         &[],
     );
     builder = builder.with(
-        FileOutputSystem::<Velocity>::new("vel.txt".to_string(), 20),
+        FileOutputSystem::<Velocity>::new("vel.txt".to_string(), 5),
         "",
         &[],
     );
@@ -45,14 +45,14 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: 0.01,
-            power: 10.0,
+            power: 0.5,
             direction: -Vector3::z(),
         })
-        .with(CoolingLight::for_species(AtomInfo::rubidium(), -6.0, 1.0))
+        .with(CoolingLight::for_species(AtomInfo::rubidium(), -6.0, -1.0))
         .build();
 
     // Create atoms
-    for i in 0..10 {
+    for i in 0..20 {
         world
             .create_entity()
             .with(Position {
@@ -61,7 +61,7 @@ fn main() {
             .with(Atom)
             .with(Force::new())
             .with(Velocity {
-                vel: Vector3::new(0.0, 0.0, 30.0 + (i as f64) * 10.0),
+                vel: Vector3::new(0.0, 0.0, 10.0 + (i as f64) * 5.0),
             })
             .with(NewlyCreated)
             .with(AtomInfo::rubidium())

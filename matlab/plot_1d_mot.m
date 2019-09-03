@@ -1,6 +1,6 @@
 %%
 % Plots a graph showing the output of the zeeman_slower example.
-system('cargo run --example zeeman_slower --release');
+system('cargo run --example 1d_mot --release');
 
 output = read_output('pos.txt');
 position = {output.vec};
@@ -18,14 +18,14 @@ vz = squeeze(velocity(:,3,:));
 % Color code the entries by the initial velocities.
 c1 = [ 0.1608 0.5804 0.6980 ];
 c0 = [ 0.0118 0.0196 0.1176 ];
-c = interp1([0; 50], [ c0; c1 ], vz(:,1), 'linear', 1);
+c = interp1([0; 120], [ c0; c1 ], vz(:,1));
 
 clf;
 for i=1:size(vz,1)
     plot(z(i,:), vz(i,:), 'k', 'Color', c(i,:)); hold on;
 end
-ylim([ 0 50 ]);
-xlim([ -0.005 0.005 ]);
+ylim([ 0 100 ]);
+xlim([ -0.04 0.001 ]);
 set(gcf, 'Color', 'w');
 xlabel('$z$ (m)', 'interpreter', 'latex');
 ylabel('$v_z$ (m/s)', 'interpreter', 'latex');
