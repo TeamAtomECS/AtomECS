@@ -6,3 +6,4 @@
 .vs/**
 **/*.yaml
 **/*.csv
+**/__pycache*

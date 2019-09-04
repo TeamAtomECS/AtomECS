@@ -6,6 +6,13 @@ import numpy as np
 from load import load_from_file
 import matplotlib
 import matplotlib.pyplot as plt
+import subprocess
+import os
+
+# run the example. Change to root directory.
+os.getcwd()
+os.chdir("..")
+subprocess.run(["cargo","run","--example","python","--release"])
 
 position_results = load_from_file('pos.dat')
 velocity_results = load_from_file('vel.dat')
