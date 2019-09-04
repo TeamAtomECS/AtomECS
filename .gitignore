@@ -2,6 +2,7 @@
 **/*.rs.bk
 /doc/**
 **/*.txt
+**/*.dat
 .vs/**
 **/*.yaml
 **/*.csv

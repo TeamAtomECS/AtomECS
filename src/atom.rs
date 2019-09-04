@@ -4,12 +4,13 @@ use crate::constant::{BOHRMAG, C};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 use specs::{Component, Join, NullStorage, System, VecStorage, WriteStorage};
+use crate::output::binary_output::Binary;
 use std::fmt;
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
 ///
 /// SI units (metres)
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize,Serialize,Clone)]
 pub struct Position {
 	pub pos: Vector3<f64>,
 }
@@ -29,10 +30,14 @@ impl fmt::Display for Position {
 		write!(f, "({:?},{:?},{:?})", self.pos[0], self.pos[1], self.pos[2])
 	}
 }
+impl Binary for Position {
+	fn data(&self) -> Vec<f64> { vec!{self.pos[0], self.pos[1], self.pos[2]} }
+}
 
 /// Velocity of an entity in space, with respect to cartesian x,y,z axes.
 ///
 /// SI units (metres/second)
+#[derive(Clone)]
 pub struct Velocity {
 	pub vel: Vector3<f64>,
 }
@@ -40,6 +45,9 @@ impl fmt::Display for Velocity {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(f, "({:?},{:?},{:?})", self.vel[0], self.vel[1], self.vel[2])
 	}
+}
+impl Binary for Velocity {
+	fn data(&self) -> Vec<f64> { vec!{self.vel[0], self.vel[1], self.vel[2]} }
 }
 
 impl Component for Velocity {
