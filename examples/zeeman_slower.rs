@@ -7,7 +7,7 @@ use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use lib::output::file_output::FileOutputSystem;
+use lib::output::file_output::{FileOutputSystem,Text};
 use nalgebra::Vector3;
 use specs::{Builder, World};
 
@@ -19,12 +19,12 @@ fn main() {
 
     // Add some output to the simulation
     builder = builder.with(
-        FileOutputSystem::<Position>::new("pos.txt".to_string(), 5),
+        FileOutputSystem::<Position,Text>::new("pos.txt".to_string(), 5),
         "",
         &[],
     );
     builder = builder.with(
-        FileOutputSystem::<Velocity>::new("vel.txt".to_string(), 5),
+        FileOutputSystem::<Velocity,Text>::new("vel.txt".to_string(), 5),
         "",
         &[],
     );

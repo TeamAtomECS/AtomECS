@@ -23,7 +23,7 @@ use std::path::Path;
 /// atoms to write to the file. This is followed by the `data : T` for each atom,
 /// written to the file in the format `gen id: data`, where `gen` and `id` are the
 /// [Entity](specs::Entity) generation and id, and data consists of the per-atom payload.
-pub struct FileOutputSystem<C:Component,W:AtomWriter<C>> {
+pub struct FileOutputSystem<C:Component+Clone,W:Output> {
     /// The [FileOutputSystem](struct.FileOutputSystem.html) writes to file every time
     /// this number of steps are completed.
     pub interval: u64,
@@ -39,8 +39,8 @@ pub struct FileOutputSystem<C:Component,W:AtomWriter<C>> {
 
 impl<C,W> FileOutputSystem<C,W>
 where
-    C: Component,
-    W: AtomWriter<C>
+    C: Component+Clone,
+    W: Output
 {
     pub fn new(file_name: String, interval: u64) -> Self {
         let path = Path::new(&file_name);
@@ -60,23 +60,33 @@ where
     }
 }
 
+/// A system that does something periodically
+trait PeriodicSystem {
+    /// Number of simulation steps between action.
+    fn get_interval(&self) -> u64;
+}
+impl<C,W> PeriodicSystem for FileOutputSystem<C,W>
+where C:Component+Clone,W:Output
+{
+    fn get_interval(&self) -> u64 { self.interval }
+}
+
 /// A trait for structs that write atomic trajectories.
-trait AtomWriter<C:Component> {
+trait AtomWriterSystem<C:Component+Clone> : PeriodicSystem {
     /// Writes data indicating the start of a frame.
-    fn write_frame_header(&writer: BufWriter, step: u64, atom_number: usize);
+    fn write_frame_header(&mut self, step: u64, atom_number: usize);
     
     /// Writes data associated with an atom.
-    fn write_atom(&writer: BufWriter, atom: Entity, data: C);
+    fn write_atom(&mut self, atom: Entity, data: C);
 }
 
 /// System implementation for all [AtomWriterSystem](struct.AtomWriterSystem.html)s.
 /// 
 /// Each time an interval number of steps elapses, the system writes a frame.
 /// The frame consists of a header, followed by per-atom data.
-impl<'a,C,W> System<'a> for FileOutputSystem<C,W>
+impl<'a,C> System<'a> for AtomWriterSystem<C>
 where
-    W: AtomWriter<C>,
-    C: Component
+    C: Component+Clone
 {
     type SystemData = (
         Entities<'a>,
@@ -86,13 +96,13 @@ where
     );
 
     fn run(&mut self, (entities, data, atoms, step): Self::SystemData) {
-        if step.n % self.interval == 0 {
+        if step.n % self.get_interval() == 0 {
             let atom_number = (&atoms).join().count();
-            W::write_frame_header(&self.writer, step.n, atom_number);
+            self.write_frame_header(step.n, atom_number);
 
             // write each atom
             for (data, _, ent) in (&data, &atoms, &entities).join() {
-                W::write_atom(&self.writer, ent, data);
+                self.write_atom(ent, data.clone());
             }
         }
     }
@@ -101,21 +111,21 @@ where
 /// Indicates binary output.
 /// 
 /// See [FileOutputSystem](struct.FileOutputSystem.html)
-pub struct Binary<C> {
-    phantom: std::marker::PhantomData<C>,
-}
+pub struct Binary { }
 
 /// Indicates text output.
 /// 
 /// See [FileOutputSystem](struct.FileOutputSystem.html)
-pub struct Text<C> {
-    phantom: std::marker::PhantomData<C>,
-}
+pub struct Text { }
 
-impl<C> AtomWriter<C> for Text<C>
-where C: Component+Display
+pub trait Output {}
+impl Output for Text {}
+impl Output for Binary {}
+
+impl<C> AtomWriterSystem<C> for FileOutputSystem<C,Text>
+where C: Component+Clone+Display
 {
-    fn write_frame_header(writer: Write, step: u64, atom_number: usize)
+    fn write_frame_header(&mut self, step: u64, atom_number: usize)
     {
         match write!(self.writer, "step {:?}, {:?}\n", step, atom_number) {
                 Err(why) => panic!("Could not write to output: {}", why.description()),
@@ -123,7 +133,7 @@ where C: Component+Display
         };
     }
 
-    fn write_atom(writer: Write, atom: Entity, data: C)
+    fn write_atom(&mut self, atom: Entity, data: C)
     {
         match write!(
                     self.writer,
