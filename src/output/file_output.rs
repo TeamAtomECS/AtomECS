@@ -2,7 +2,7 @@
 
 use crate::atom::*;
 use crate::integrator::Step;
-use specs::{Component, Entities, Join, ReadExpect, ReadStorage, System};
+use specs::{Component, Entities, Join, ReadExpect, ReadStorage, System, Entity};
 use std::error::Error;
 use std::fmt::Display;
 use std::fs::File;
@@ -23,7 +23,7 @@ use std::path::Path;
 /// atoms to write to the file. This is followed by the `data : T` for each atom,
 /// written to the file in the format `gen id: data`, where `gen` and `id` are the
 /// [Entity](specs::Entity) generation and id, and data consists of the per-atom payload.
-pub struct FileOutputSystem<T: Component + Display> {
+pub struct FileOutputSystem<C:Component,W:AtomWriter<C>> {
     /// The [FileOutputSystem](struct.FileOutputSystem.html) writes to file every time
     /// this number of steps are completed.
     pub interval: u64,
@@ -33,12 +33,14 @@ pub struct FileOutputSystem<T: Component + Display> {
 
     writer: BufWriter<File>,
 
-    phantom: std::marker::PhantomData<T>,
+    phantom: std::marker::PhantomData<C>,
+    output: std::marker::PhantomData<W>
 }
 
-impl<T> FileOutputSystem<T>
+impl<C,W> FileOutputSystem<C,W>
 where
-    T: Component + Display,
+    C: Component,
+    W: AtomWriter<C>
 {
     pub fn new(file_name: String, interval: u64) -> Self {
         let path = Path::new(&file_name);
@@ -53,17 +55,32 @@ where
             interval: interval,
             writer: writer,
             phantom: PhantomData,
+            output: PhantomData
         }
     }
 }
 
-impl<'a, T> System<'a> for FileOutputSystem<T>
+/// A trait for structs that write atomic trajectories.
+trait AtomWriter<C:Component> {
+    /// Writes data indicating the start of a frame.
+    fn write_frame_header(&writer: BufWriter, step: u64, atom_number: usize);
+    
+    /// Writes data associated with an atom.
+    fn write_atom(&writer: BufWriter, atom: Entity, data: C);
+}
+
+/// System implementation for all [AtomWriterSystem](struct.AtomWriterSystem.html)s.
+/// 
+/// Each time an interval number of steps elapses, the system writes a frame.
+/// The frame consists of a header, followed by per-atom data.
+impl<'a,C,W> System<'a> for FileOutputSystem<C,W>
 where
-    T: Component + Display,
+    W: AtomWriter<C>,
+    C: Component
 {
     type SystemData = (
         Entities<'a>,
-        ReadStorage<'a, T>,
+        ReadStorage<'a, C>,
         ReadStorage<'a, Atom>,
         ReadExpect<'a, Step>,
     );
@@ -71,24 +88,52 @@ where
     fn run(&mut self, (entities, data, atoms, step): Self::SystemData) {
         if step.n % self.interval == 0 {
             let atom_number = (&atoms).join().count();
-            match write!(self.writer, "step {:?}, {:?}\n", step.n, atom_number) {
+            W::write_frame_header(&self.writer, step.n, atom_number);
+
+            // write each atom
+            for (data, _, ent) in (&data, &atoms, &entities).join() {
+                W::write_atom(&self.writer, ent, data);
+            }
+        }
+    }
+}
+
+/// Indicates binary output.
+/// 
+/// See [FileOutputSystem](struct.FileOutputSystem.html)
+pub struct Binary<C> {
+    phantom: std::marker::PhantomData<C>,
+}
+
+/// Indicates text output.
+/// 
+/// See [FileOutputSystem](struct.FileOutputSystem.html)
+pub struct Text<C> {
+    phantom: std::marker::PhantomData<C>,
+}
+
+impl<C> AtomWriter<C> for Text<C>
+where C: Component+Display
+{
+    fn write_frame_header(writer: Write, step: u64, atom_number: usize)
+    {
+        match write!(self.writer, "step {:?}, {:?}\n", step, atom_number) {
                 Err(why) => panic!("Could not write to output: {}", why.description()),
                 Ok(_) => (),
-            }
+        };
+    }
 
-            //Write for each atom
-            for (data, _, ent) in (&data, &atoms, &entities).join() {
-                match write!(
+    fn write_atom(writer: Write, atom: Entity, data: C)
+    {
+        match write!(
                     self.writer,
                     "{:?},{:?}: {}\n",
-                    ent.gen().id(),
-                    ent.id(),
+                    atom.gen().id(),
+                    atom.id(),
                     data
                 ) {
                     Err(why) => panic!("Could not write to output: {}", why.description()),
                     Ok(_) => (),
                 }
-            }
-        }
     }
 }
