@@ -14,15 +14,36 @@ use std::path::Path;
 
 pub struct Text { }
 impl<C,W> Format<C,W> for Text where C:Component+Clone+Display, W:Write {
-    fn test(writer: &mut W, data: C)
-    {
-        write!(writer, "{}", data);
+    fn write_frame_header(writer: &mut W, step: u64, atom_number: usize) {
+        match write!(writer, "step {:?}, {:?}\n", step, atom_number) {
+                Err(why) => panic!("Could not write to output: {}", why.description()),
+                Ok(_) => (),
+        };
+    }
+
+    fn write_atom(writer: &mut W, atom: Entity, data: C) {
+                match write!(
+                    writer,
+                    "{:?},{:?}: {}\n",
+                    atom.gen().id(),
+                    atom.id(),
+                    data
+                ) {
+                    Err(why) => panic!("Could not write to output: {}", why.description()),
+                    Ok(_) => (),
+                }
     }
 }
 
 /// A trait implemented by output formats.
 pub trait Format<C,W> where C:Component+Clone, W:Write {
-    fn test(writer: &mut W, data: C);
+    /// Writes data indicating the start of a frame.
+    fn write_frame_header(writer: &mut W, step: u64, atom_number: usize);
+    
+    /// Writes data associated with an atom.
+    fn write_atom(writer: &mut W, atom: Entity, data: C);
+    
+    //fn test(writer: &mut W, data: C);
 }
 
 pub struct OutputSystem<C:Component+Clone, W:Write, F: Format<C,W>> {
@@ -32,16 +53,16 @@ pub struct OutputSystem<C:Component+Clone, W:Write, F: Format<C,W>> {
     marker: PhantomData<C>
 }
 
-impl<C,W,F> OutputSystem<C,W,F> 
-where C: Component+Clone,
-W:Write,
-F:Format<C,W>
-{
-    pub fn test(&mut self, data: C) {
-        F::test(&mut self.stream, data);
-        //self.stream.write(buf: &[u8])
-    }
-}
+// impl<C,W,F> OutputSystem<C,W,F> 
+// where C: Component+Clone,
+// W:Write,
+// F:Format<C,W>
+// {
+//     // pub fn test(&mut self, data: C) {
+//     //     F::test(&mut self.stream, data);
+//     //     //self.stream.write(buf: &[u8])
+//     // }
+// }
 
 /// `let output = new<Position,Text>("pos.txt", 10)`
 pub fn new<C, F>(file_name: String, interval: u64) -> OutputSystem<C, BufWriter<File>, F>
@@ -77,12 +98,11 @@ where
     fn run(&mut self, (entities, data, atoms, step): Self::SystemData) {
         if step.n % self.interval == 0 {
         let atom_number = (&atoms).join().count();
-        //     self.write_frame_header(step.n, atom_number);
+        F::write_frame_header(&mut self.stream, step.n, atom_number);
 
-        //     // write each atom
+        // write each atom
         for (data, _, ent) in (&data, &atoms, &entities).join() {
-        //         self.write_atom(ent, data.clone());
-
+                 F::write_atom(&mut self.stream, ent, data.clone());
             }
         }
     }
