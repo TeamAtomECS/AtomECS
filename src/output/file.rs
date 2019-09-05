@@ -12,17 +12,17 @@ use std::io::Write;
 use std::marker::PhantomData;
 use std::path::Path;
 
-pub struct Text;
+pub struct Text { }
 impl<C,W> Format<C,W> for Text where C:Component+Clone+Display, W:Write {
-    fn test(&mut writer: W, data: C)
+    fn test(writer: &mut W, data: C)
     {
         write!(writer, "{}", data);
     }
 }
 
-/// Format used for output.
+/// A trait implemented by output formats.
 pub trait Format<C,W> where C:Component+Clone, W:Write {
-    fn test(&mut writer: W, data: C);
+    fn test(writer: &mut W, data: C);
 }
 
 pub struct OutputSystem<C:Component+Clone, W:Write, F: Format<C,W>> {
@@ -37,8 +37,9 @@ where C: Component+Clone,
 W:Write,
 F:Format<C,W>
 {
-    pub fn test(&self, data: C) {
+    pub fn test(&mut self, data: C) {
         F::test(&mut self.stream, data);
+        //self.stream.write(buf: &[u8])
     }
 }
 
