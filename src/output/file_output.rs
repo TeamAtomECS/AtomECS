@@ -72,19 +72,21 @@ where C:Component+Clone,W:Output
 }
 
 /// A trait for structs that write atomic trajectories.
-trait AtomWriterSystem<C:Component+Clone> : PeriodicSystem {
+trait AtomWriterSystem : PeriodicSystem {
+    type DataComponent : Component + Clone;
+
     /// Writes data indicating the start of a frame.
     fn write_frame_header(&mut self, step: u64, atom_number: usize);
     
     /// Writes data associated with an atom.
-    fn write_atom(&mut self, atom: Entity, data: C);
+    fn write_atom(&mut self, atom: Entity, data: Self::DataComponent);
 }
 
 /// System implementation for all [AtomWriterSystem](struct.AtomWriterSystem.html)s.
 /// 
 /// Each time an interval number of steps elapses, the system writes a frame.
 /// The frame consists of a header, followed by per-atom data.
-impl<'a,C> System<'a> for AtomWriterSystem<C>
+impl<'a,C> System<'a> for AtomWriterSystem<DataComponent=C>
 where
     C: Component+Clone
 {
@@ -122,9 +124,11 @@ pub trait Output {}
 impl Output for Text {}
 impl Output for Binary {}
 
-impl<C> AtomWriterSystem<C> for FileOutputSystem<C,Text>
+impl<C> AtomWriterSystem for FileOutputSystem<C,Text>
 where C: Component+Clone+Display
 {
+    type DataComponent=C;
+
     fn write_frame_header(&mut self, step: u64, atom_number: usize)
     {
         match write!(self.writer, "step {:?}, {:?}\n", step, atom_number) {
