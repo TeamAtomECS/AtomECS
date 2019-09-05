@@ -103,7 +103,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 	) {
 		let max_vel = match velocity_cap {
 			Some(cap) => cap.cap,
-			None => std::f64::MAX
+			None => std::f64::MAX,
 		};
 
 		for (oven, atom, number_to_emit, oven_position, mass_dist) in
@@ -111,7 +111,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		{
 			for _i in 0..number_to_emit.number {
 				let mass = mass_dist.draw_random_mass().value;
-				let speed = maths::maxwell_generate(oven.temperature, mass);
+				let speed = maths::maxwell_generate(oven.temperature, constant::AMU * mass);
 				if speed > max_vel {
 					continue;
 				}
@@ -131,20 +131,9 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 						vel: new_vel.clone(),
 					},
 				);
-
 				updater.insert(new_atom, Force::new());
 				updater.insert(new_atom, Mass { value: mass });
-				updater.insert(
-					new_atom,
-					AtomInfo {
-						mup: atom.mup,
-						muz: atom.muz,
-						mum: atom.mum,
-						frequency: atom.frequency,
-						linewidth: atom.linewidth,
-						saturation_intensity: atom.saturation_intensity,
-					},
-				);
+				updater.insert(new_atom, atom.clone());
 				updater.insert(new_atom, Atom);
 				updater.insert(new_atom, InitialVelocity { vel: new_vel });
 				updater.insert(new_atom, NewlyCreated);
