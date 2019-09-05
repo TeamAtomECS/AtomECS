@@ -12,59 +12,29 @@ use std::io::Write;
 use std::marker::PhantomData;
 use std::path::Path;
 
-pub struct Text { }
-impl<C,W> Format<C,W> for Text where C:Component+Clone+Display, W:Write {
-    fn write_frame_header(writer: &mut W, step: u64, atom_number: usize) {
-        match write!(writer, "step {:?}, {:?}\n", step, atom_number) {
-                Err(why) => panic!("Could not write to output: {}", why.description()),
-                Ok(_) => (),
-        };
-    }
+extern crate byteorder;
+use byteorder::{LittleEndian, WriteBytesExt};
 
-    fn write_atom(writer: &mut W, atom: Entity, data: C) {
-                match write!(
-                    writer,
-                    "{:?},{:?}: {}\n",
-                    atom.gen().id(),
-                    atom.id(),
-                    data
-                ) {
-                    Err(why) => panic!("Could not write to output: {}", why.description()),
-                    Ok(_) => (),
-                }
-    }
-}
-
-/// A trait implemented by output formats.
-pub trait Format<C,W> where C:Component+Clone, W:Write {
-    /// Writes data indicating the start of a frame.
-    fn write_frame_header(writer: &mut W, step: u64, atom_number: usize);
-    
-    /// Writes data associated with an atom.
-    fn write_atom(writer: &mut W, atom: Entity, data: C);
-    
-    //fn test(writer: &mut W, data: C);
-}
-
+/// A system that writes simulation data to file.
+///
+/// This system writes per-atom data `C` to a file at a defined interval.
+/// The data type `C` must be a [Component](specs::Component) and implement the
+/// [Clone](struct.Clone.html) trait.
 pub struct OutputSystem<C:Component+Clone, W:Write, F: Format<C,W>> {
+    /// Number of integration steps between each file output.
     interval: u64,
+    /// The [Write](std::io::Write)able output stream.
     stream : W,
     formatter: PhantomData<F>,
     marker: PhantomData<C>
 }
 
-// impl<C,W,F> OutputSystem<C,W,F> 
-// where C: Component+Clone,
-// W:Write,
-// F:Format<C,W>
-// {
-//     // pub fn test(&mut self, data: C) {
-//     //     F::test(&mut self.stream, data);
-//     //     //self.stream.write(buf: &[u8])
-//     // }
-// }
-
-/// `let output = new<Position,Text>("pos.txt", 10)`
+/// Creates a new [OutputSystem](struct.OutputSystem.html) to write per-atom [Component](specs::Component) data
+/// according to the specified [Format](struct.Format.html). 
+/// 
+/// The interval specifies how often, in integration steps, the file should be written.
+/// 
+/// For example, `new::<Position,Text>("pos.txt", 10).
 pub fn new<C, F>(file_name: String, interval: u64) -> OutputSystem<C, BufWriter<File>, F>
 where C: Component+Clone, F: Format<C,BufWriter<File>> {
             let path = Path::new(&file_name);
@@ -105,5 +75,78 @@ where
                  F::write_atom(&mut self.stream, ent, data.clone());
             }
         }
+    }
+}
+
+/// A trait implemented for each file output format.
+pub trait Format<C,W> where C:Component+Clone, W:Write {
+    /// Writes data indicating the start of a frame.
+    fn write_frame_header(writer: &mut W, step: u64, atom_number: usize);
+    
+    /// Writes data associated with an atom.
+    fn write_atom(writer: &mut W, atom: Entity, data: C);
+}
+
+/// Prints files in a [Format](struct.Format.html) that is human readable.
+/// 
+/// The output file is structured as follows. Each frame begins with the line
+/// `step n atomNumber`, where `n` is the step number and `atomNumber` the number of
+/// atoms to write to the file. This is followed by the `data : T` for each atom,
+/// written to the file in the format `gen id: data`, where `gen` and `id` are the
+/// [Entity](specs::Entity) generation and id, and data consists of the per-atom payload.
+/// 
+/// Components printed using text must implement the [Display](std::fmt::Display) trait.
+pub struct Text { }
+impl<C,W> Format<C,W> for Text where C:Component+Clone+Display, W:Write {
+    fn write_frame_header(writer: &mut W, step: u64, atom_number: usize) {
+        match write!(writer, "step {:?}, {:?}\n", step, atom_number) {
+                Err(why) => panic!("Could not write to output: {}", why.description()),
+                Ok(_) => (),
+        };
+    }
+
+    fn write_atom(writer: &mut W, atom: Entity, data: C) {
+                match write!(
+                    writer,
+                    "{:?},{:?}: {}\n",
+                    atom.gen().id(),
+                    atom.id(),
+                    data
+                ) {
+                    Err(why) => panic!("Could not write to output: {}", why.description()),
+                    Ok(_) => (),
+                }
+    }
+}
+
+type Endianness = LittleEndian;
+
+pub trait BinaryConversion {
+    fn data(&self) -> Vec<f64>;
+    }
+
+pub struct Binary {}
+impl<C,W> Format<C,W> for Binary where C:Component+Clone+BinaryConversion, W:Write {
+    fn write_frame_header(writer: &mut W, step: u64, atom_number: usize) {
+            writer
+                .write_u64::<Endianness>(step)
+                .expect("Could not write to file.");
+            writer
+                .write_u64::<Endianness>(atom_number as u64)
+                .expect("Could not write to file.");
+    }
+
+    fn write_atom(writer: &mut W, atom: Entity, data: C) {
+        writer
+                    .write_i32::<Endianness>(atom.gen().id())
+                    .expect("Could not write to file.");
+                writer
+                    .write_u32::<Endianness>(atom.id())
+                    .expect("Could not write to file.");
+                for element in data.data() {
+                    writer
+                        .write_f64::<Endianness>(element)
+                        .expect("Could not write to file.")
+                }
     }
 }

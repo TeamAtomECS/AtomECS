@@ -11,7 +11,8 @@ use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use lib::output::binary_output::FileOutputSystem;
+use lib::output::file::{OutputSystem,Binary};
+use lib::output::file;
 use nalgebra::Vector3;
 use specs::{Builder, World};
 
@@ -23,12 +24,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        FileOutputSystem::<Position>::new("pos.dat".to_string(), 20),
+        file::new::<Position, Binary>("pos.dat".to_string(), 10),
         "",
         &[],
     );
     builder = builder.with(
-        FileOutputSystem::<Velocity>::new("vel.dat".to_string(), 20),
+        file::new::<Velocity, Binary>("vel.dat".to_string(), 10),
         "",
         &[],
     );

@@ -4,7 +4,7 @@ use crate::constant::{BOHRMAG, C};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 use specs::{Component, Join, NullStorage, System, VecStorage, WriteStorage};
-use crate::output::binary_output::Binary;
+use crate::output::file::BinaryConversion;
 use std::fmt;
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
@@ -30,7 +30,7 @@ impl fmt::Display for Position {
 		write!(f, "({:?},{:?},{:?})", self.pos[0], self.pos[1], self.pos[2])
 	}
 }
-impl Binary for Position {
+impl BinaryConversion for Position {
 	fn data(&self) -> Vec<f64> { vec!{self.pos[0], self.pos[1], self.pos[2]} }
 }
 
@@ -46,7 +46,7 @@ impl fmt::Display for Velocity {
 		write!(f, "({:?},{:?},{:?})", self.vel[0], self.vel[1], self.vel[2])
 	}
 }
-impl Binary for Velocity {
+impl BinaryConversion for Velocity {
 	fn data(&self) -> Vec<f64> { vec!{self.vel[0], self.vel[1], self.vel[2]} }
 }
 
