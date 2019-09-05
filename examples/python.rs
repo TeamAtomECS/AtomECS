@@ -11,8 +11,8 @@ use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use lib::output::file::{Binary};
 use lib::output::file;
+use lib::output::file::Binary;
 use nalgebra::Vector3;
 use specs::{Builder, World};
 

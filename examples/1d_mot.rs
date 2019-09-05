@@ -1,5 +1,5 @@
 //! Simulate a 1D MOT.
-//! 
+//!
 //! The 1D MOT is formed by counter-propagating laser beams along the z-axis.
 
 extern crate magneto_optical_trap as lib;
@@ -11,8 +11,8 @@ use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use lib::output::file::{Text};
 use lib::output::file;
+use lib::output::file::Text;
 use nalgebra::Vector3;
 use specs::{Builder, World};
 
@@ -29,9 +29,9 @@ fn main() {
         &[],
     );
     builder = builder.with(
-         file::new::<Velocity, Text>("vel.txt".to_string(), 10),
-         "",
-         &[],
+        file::new::<Velocity, Text>("vel.txt".to_string(), 10),
+        "",
+        &[],
     );
 
     let mut dispatcher = builder.build();
@@ -55,7 +55,11 @@ fn main() {
             power: power,
             direction: -Vector3::z(),
         })
-        .with(CoolingLight::for_species(AtomInfo::rubidium(), detuning, -1.0))
+        .with(CoolingLight::for_species(
+            AtomInfo::rubidium(),
+            detuning,
+            -1.0,
+        ))
         .build();
     world
         .create_entity()
@@ -65,7 +69,11 @@ fn main() {
             power: power,
             direction: Vector3::z(),
         })
-        .with(CoolingLight::for_species(AtomInfo::rubidium(), detuning, -1.0))
+        .with(CoolingLight::for_species(
+            AtomInfo::rubidium(),
+            detuning,
+            -1.0,
+        ))
         .build();
 
     // Create atoms

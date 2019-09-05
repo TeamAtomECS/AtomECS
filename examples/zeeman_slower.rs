@@ -7,8 +7,8 @@ use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use lib::output::file::{Text};
 use lib::output::file;
+use lib::output::file::Text;
 use nalgebra::Vector3;
 use specs::{Builder, World};
 
@@ -25,9 +25,9 @@ fn main() {
         &[],
     );
     builder = builder.with(
-         file::new::<Velocity, Text>("vel.txt".to_string(), 10),
-         "",
-         &[],
+        file::new::<Velocity, Text>("vel.txt".to_string(), 10),
+        "",
+        &[],
     );
 
     let mut dispatcher = builder.build();
