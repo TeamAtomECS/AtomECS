@@ -8,15 +8,16 @@ use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 /// A component representing a 3D quadrupole field.
 pub struct QuadrupoleField3D {
     /// Gradient of the quadrupole field, in units of Tesla/m
-    pub gradient: f64,
-    pub direction: Vector3<f64>,
+    gradient: f64,
+    /// A unit vector pointing along the symmetry axis of the 3D quadrupole field.
+    direction: Vector3<f64>,
 }
 impl QuadrupoleField3D {
     /// Creates a `QuadrupoleField3D` component with gradient specified in Gauss per cm.
     pub fn gauss_per_cm(gradient: f64, direction: Vector3<f64>) -> Self {
         Self {
             gradient: gradient * 0.01,
-            direction: direction,
+            direction: direction.normalize(),
         }
     }
 }
@@ -39,21 +40,18 @@ impl Sample3DQuadrupoleFieldSystem {
     /// `centre`: position of the quadrupole node, m
     ///
     /// `gradient`: quadrupole gradient, in Tesla/m
+    ///
+    /// `direction`: A _normalized_ vector pointing in the direction of the quadrupole's symmetry axis.
     pub fn calculate_field(
-        pos: &Vector3<f64>,
-        centre: &Vector3<f64>,
+        pos: Vector3<f64>,
+        centre: Vector3<f64>,
         gradient: f64,
-        direction: &Vector3<f64>,
+        direction: Vector3<f64>,
     ) -> Vector3<f64> {
-        let rel_pos = pos - centre;
-        let dir = direction.normalize();
-        let dis_para = rel_pos.dot(&dir);
-        let new_dir = Vector3::new(1.212, 2.31, 0.4123).normalize();
-        let dir_1 = dir.cross(&new_dir);
-        let dir_2 = dir.cross(&dir_1);
-        let dis_per_1 = rel_pos.dot(&dir_1);
-        let dis_per_2 = rel_pos.dot(&dir_2);
-        gradient * (dir_1 * dis_per_1 + dir_2 * dis_per_2 - 2.0 * dir * dis_para)
+        let delta = pos - centre;
+        let z_comp = delta.dot(&direction) * direction;
+        let r_comp = delta - z_comp;
+        gradient * (r_comp - 2.0 * z_comp)
     }
 }
 
@@ -67,10 +65,10 @@ impl<'a> System<'a> for Sample3DQuadrupoleFieldSystem {
         for (centre, quadrupole) in (&pos, &quadrupole).join() {
             for (pos, mut sampler) in (&pos, &mut sampler).join() {
                 let quad_field = Sample3DQuadrupoleFieldSystem::calculate_field(
-                    &pos.pos,
-                    &centre.pos,
+                    pos.pos,
+                    centre.pos,
                     quadrupole.gradient,
-                    &quadrupole.direction,
+                    quadrupole.direction,
                 );
                 sampler.field = sampler.field + quad_field;
             }
@@ -87,16 +85,12 @@ pub mod tests {
 
     /// Tests the correct implementation of the quadrupole 3D field
     #[test]
-    fn test_quadrupole3dfield() {
+    fn test_quadrupole_3d_field() {
         let pos = Vector3::new(1.0, 1.0, 1.0);
         let centre = Vector3::new(0., 1., 0.);
         let gradient = 1.;
-        let field = Sample3DQuadrupoleFieldSystem::calculate_field(
-            &pos,
-            &centre,
-            gradient,
-            &Vector3::new(0., 0., 1.0),
-        );
+        let field =
+            Sample3DQuadrupoleFieldSystem::calculate_field(pos, centre, gradient, Vector3::z());
         assert_eq!(field, Vector3::new(1., 0., -2.));
     }
 }

@@ -11,7 +11,7 @@ pub mod quadrupole;
 pub mod uniform;
 
 /// A component that stores the magnetic field at an entity's location.
-#[derive(Copy,Clone)]
+#[derive(Copy, Clone)]
 pub struct MagneticFieldSampler {
 	/// Vector representing the magnetic field components along x,y,z in units of Tesla.
 	pub field: Vector3<f64>,
@@ -23,7 +23,7 @@ impl MagneticFieldSampler {
 	pub fn tesla(b_field: Vector3<f64>) -> Self {
 		MagneticFieldSampler {
 			field: b_field,
-			magnitude: b_field.norm()
+			magnitude: b_field.norm(),
 		}
 	}
 }
@@ -80,7 +80,6 @@ impl<'a> System<'a> for AttachFieldSamplersToNewlyCreatedAtomsSystem {
 	);
 	fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
 		for (ent, _nc) in (&ent, &newly_created).join() {
-
 			updater.insert(ent, MagneticFieldSampler::default());
 		}
 	}
@@ -153,7 +152,10 @@ pub mod tests {
 			.with(uniform::UniformMagneticField {
 				field: Vector3::new(2.0, 0.0, 0.0),
 			})
-			.with(quadrupole::QuadrupoleField3D { gradient: 1.0, direction: Vector3::z() })
+			.with(quadrupole::QuadrupoleField3D::gauss_per_cm(
+				100.0,
+				Vector3::z(),
+			))
 			.with(Position {
 				pos: Vector3::new(0.0, 0.0, 0.0),
 			})
