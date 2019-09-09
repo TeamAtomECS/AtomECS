@@ -5,7 +5,7 @@
 
 use crate::atom::ClearForceSystem;
 use crate::atom_sources;
-use crate::destructor::{DeleteToBeDestroyedEntitiesSystem, DestroyOutOfBoundAtomsSystem};
+use crate::destructor::{DeleteToBeDestroyedEntitiesSystem};
 use crate::detector;
 use crate::detector::DetectingInfo;
 use crate::gravity::ApplyGravitationalForceSystem;
@@ -16,6 +16,7 @@ use crate::laser::repump::Dark;
 use crate::magnetic;
 use crate::optimization::LargerEarlyTimestepOptimizationSystem;
 use crate::output::console_output::ConsoleOutputSystem;
+use crate::sim_region;
 use nalgebra::Vector3;
 use specs::{Dispatcher, DispatcherBuilder, World};
 
@@ -25,6 +26,7 @@ pub fn register_components(world: &mut World) {
 	laser::register_components(world);
 	atom_sources::register_components(world);
 	detector::register_components(world);
+	sim_region::register_components(world);
 	world.register::<Dark>();
 }
 
@@ -63,7 +65,7 @@ pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'sta
 		"",
 		&["detect_atom", "euler_integrator"],
 	);
-	builder = builder.with(DestroyOutOfBoundAtomsSystem, "", &[]);
+	builder = sim_region::add_systems_to_dispatch(builder, &[]);
 	builder.add_barrier();
 	builder
 }

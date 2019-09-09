@@ -8,15 +8,16 @@ use lib::simulation_templates::loadfromconfig::create_from_config;
 
 use lib::laser::force::RandomWalkMarker;
 use lib::optimization::LargerEarlyTimestepOptimization;
-
+use lib::atom::Position;
 use lib::laser::repump::RepumpLoss;
 
 use lib::atom_sources::oven::OvenVelocityCap;
-use lib::destructor::SimulationBounds;
+use lib::sim_region::{Cuboid, VolumeType};
+
 #[allow(unused_imports)]
 use lib::simulation_templates::mot_2d_plus::create;
 use nalgebra::Vector3;
-use specs::RunNow;
+use specs::{RunNow, Builder};
 #[allow(unused_imports)]
 use std::time::{Duration, Instant};
 
@@ -33,9 +34,9 @@ fn main() {
     world.add_resource(LargerEarlyTimestepOptimization::new(2e-4));
     //include random walk(Optional)
     world.add_resource(RandomWalkMarker { value: true });
-    world.add_resource(SimulationBounds {
-        half_width: Vector3::new(0.1, 0.1, 0.1),
-    });
+    
+    world.create_entity().with(Position { pos: Vector3::new(0.0,0.0,0.0)}).with(Cuboid { half_width: Vector3::new(0.1,0.1,0.1), vol_type: VolumeType::Inclusive}).build();
+
     world.add_resource(OvenVelocityCap { cap: 1000. });
     world.add_resource(RepumpLoss { proportion: 0.0 });
     //let (mut world, mut dispatcher) = create();
