@@ -88,7 +88,7 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 				.build();
 		}
 	}
-	let quadrupole = QuadrupoleField3D::gauss_per_cm(config.magnetic.gradient);
+	let quadrupole = QuadrupoleField3D::gauss_per_cm(config.magnetic.gradient,&config.magnetic.direction_quadru.clone());
 	world
 		.create_entity()
 		.with(quadrupole)

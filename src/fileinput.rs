@@ -51,6 +51,7 @@ pub fn write_file_template(file: &str) {
 		centre: Vector3::new(1., 0., 0.),
 		gradient: 0.011,
 		uniform: Vector3::new(0., 0., 2.),
+		direction_quadru: Vector3::new(0.,0.,1.0),
 	};
 	let massrubidium = MassDistribution::new(vec![
 		MassRatio {
@@ -112,6 +113,7 @@ pub struct MagArchetype {
 	pub centre: Vector3<f64>,
 	pub gradient: f64,
 	pub uniform: Vector3<f64>,
+	pub direction_quadru: Vector3<f64>,
 }
 
 /// Archetype describing a complete simulation.
