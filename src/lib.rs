@@ -19,3 +19,4 @@ pub mod optimization;
 pub mod output;
 pub mod simulation_templates;
 pub mod tests;
+pub mod sim_region;
