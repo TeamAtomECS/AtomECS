@@ -15,7 +15,7 @@ use lib::atom_sources::oven::OvenVelocityCap;
 use lib::sim_region::{Cuboid, VolumeType};
 
 #[allow(unused_imports)]
-use lib::simulation_templates::mot_2d_plus::create;
+
 use nalgebra::Vector3;
 use specs::{RunNow, Builder};
 #[allow(unused_imports)]
