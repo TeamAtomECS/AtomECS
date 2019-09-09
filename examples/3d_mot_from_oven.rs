@@ -12,9 +12,9 @@ use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use lib::sim_region::{Cuboid,VolumeType};
 use lib::output::file;
 use lib::output::file::Text;
+use lib::sim_region::{Cuboid, VolumeType};
 use nalgebra::Vector3;
 use specs::{Builder, World};
 
@@ -89,7 +89,7 @@ fn main() {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
             power: power,
-            direction: Vector3::new(1.0,1.0,0.0).normalize(),
+            direction: Vector3::new(1.0, 1.0, 0.0).normalize(),
         })
         .with(CoolingLight::for_species(
             AtomInfo::strontium(),
@@ -103,7 +103,7 @@ fn main() {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
             power: power,
-            direction: Vector3::new(1.0,-1.0,0.0).normalize(),
+            direction: Vector3::new(1.0, -1.0, 0.0).normalize(),
         })
         .with(CoolingLight::for_species(
             AtomInfo::strontium(),
@@ -117,7 +117,7 @@ fn main() {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
             power: power,
-            direction: Vector3::new(-1.0,1.0,0.0).normalize(),
+            direction: Vector3::new(-1.0, 1.0, 0.0).normalize(),
         })
         .with(CoolingLight::for_species(
             AtomInfo::strontium(),
@@ -131,7 +131,7 @@ fn main() {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
             power: power,
-            direction: Vector3::new(-1.0,-1.0,0.0).normalize(),
+            direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
         })
         .with(CoolingLight::for_species(
             AtomInfo::strontium(),
@@ -170,8 +170,17 @@ fn main() {
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-6 });
 
-    // Use a simulation bound so that fast-moving atoms are deleted from the simulation
-    world.create_entity().with(Position{pos:Vector3::new(0.0,0.0,0.0)}).with(Cuboid { half_width: Vector3::new(0.1, 0.01, 0.01), vol_type: VolumeType::Inclusive }).build();
+    // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
+    world
+        .create_entity()
+        .with(Position {
+            pos: Vector3::new(0.0, 0.0, 0.0),
+        })
+        .with(Cuboid {
+            half_width: Vector3::new(0.1, 0.01, 0.01),
+            vol_type: VolumeType::Inclusive,
+        })
+        .build();
 
     // Run the simulation for a number of steps.
     for _i in 0..100000 {
