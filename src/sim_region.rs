@@ -12,6 +12,18 @@ use specs::{Component, Entities, Join, NullStorage, Read, ReadStorage, System,Wr
 use std::marker::PhantomData;
 use nalgebra::Vector3;
 
+trait Volume {
+    fn contains(&self, volume_position: &Vector3<f64>, entity_position: &Vector3<f64>) -> bool;
+    fn get_type(&self) -> &VolumeType;
+}
+
+pub enum VolumeType {
+    /// Entities within the volume are accepted
+    Inclusive,
+    /// Entities outside the volume are accepted, entities within are rejected.
+    Exclusive
+}
+
 /// The [SimulationBounds](struct.SimulationBounds.html) is a resource that defines a bounding box encompassing the simulation region.
 /// Atoms outside of the bounding box are deleted by the [DestroyOutOfBoundsAtomsSystem](struct.DestroyOutOfBoundAtomsSystem.html).
 ///
@@ -20,23 +32,33 @@ use nalgebra::Vector3;
 pub struct Cuboid {
     /// The dimension of the cuboid volume, from center to vertex (1,1,1).
     pub half_width: Vector3<f64>,
+    /// Whether the volume is `Inclusive` or `Exclusive`.
+    pub vol_type: VolumeType,
+}
+impl Volume for Cuboid { 
+    fn contains(&self, volume_position: &Vector3<f64>, entity_position: &Vector3<f64>) -> bool {
+        let delta = entity_position - volume_position;
+        let result = delta[0].abs() < self.half_width[0] && delta[1].abs() < self.half_width[1] && delta[2].abs() < self.half_width[2];
+        result
+    }
+
+    fn get_type(&self) -> &VolumeType { &self.vol_type }
 }
 
 pub struct Sphere { 
     /// The radius of the spherical volume
     pub radius: f64,
+    /// Whether the volume is `Inclusive` or `Exclusive`.
+    pub vol_type: VolumeType,
 }
+impl Volume for Sphere { 
+    fn contains(&self, volume_position: &Vector3<f64>, entity_position: &Vector3<f64>) -> bool {
+        let delta = entity_position - volume_position;
+        let result = delta.norm_squared() < self.radius * self.radius;
+        result
+    }
 
-enum VolumeType {
-    /// Entities within the volume are accepted
-    Inclusive,
-    /// Entities outside the volume are accepted, entities within are rejected.
-    Exclusive
-}
-
-trait Volume {
-    fn contains(&self, volume_position: &Vector3<f64>, entity_position: &Vector3<f64>) -> bool;
-    fn get_type(&self) -> VolumeType;
+    fn get_type(&self) -> &VolumeType { &self.vol_type }
 }
 
 /// All possible results of region testing.
@@ -77,15 +99,15 @@ where T:Volume+Component
 
     fn run (&mut self, (volumes, mut test_results, positions) : Self::SystemData)
     {
-        for (&volume, &vol_pos) in (&volumes, &positions).join() {
-            for (&mut result, &pos) in (&mut test_results, &positions).join() {
+        for (volume, vol_pos) in (&volumes, &positions).join() {
+            for (result, pos) in (&mut test_results, &positions).join() {
                 match result.result {
                     Result::Reject => (),
                     _ => {
                          let contained = volume.contains(&vol_pos.pos, &pos.pos);
                          match volume.get_type() {
-                             Inclusive => if contained { result.result = Result::Accept; } else { result.result = Result::Failed; },
-                             Exclusive => if contained { result.result = Result::Reject; }
+                             VolumeType::Inclusive => if contained { result.result = Result::Accept; } else { result.result = Result::Failed; },
+                             VolumeType::Exclusive => if contained { result.result = Result::Reject; }
                          }
                     }
                 }
@@ -101,7 +123,7 @@ impl<'a> System<'a> for ClearRegionTestSystem {
     type SystemData = (WriteStorage<'a,RegionTest>);
 
     fn run(&mut self, mut tests: Self::SystemData) {
-        for &mut test in (&mut tests).join() {
+        for test in (&mut tests).join() {
             test.result = Result::Untested;
         }
     }
