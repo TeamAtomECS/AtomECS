@@ -12,7 +12,7 @@ use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use lib::destructor::SimulationBounds;
+use lib::sim_region::{Cuboid,VolumeType};
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;
@@ -171,7 +171,7 @@ fn main() {
     world.add_resource(Timestep { delta: 1.0e-6 });
 
     // Use a simulation bound so that fast-moving atoms are deleted from the simulation
-    //world.add_resource(SimulationBounds { half_width: Vector3::new(0.1, 0.01, 0.01) });
+    world.create_entity().with(Position{pos:Vector3::new(0.0,0.0,0.0)}).with(Cuboid { half_width: Vector3::new(0.1, 0.01, 0.01), vol_type: VolumeType::Inclusive }).build();
 
     // Run the simulation for a number of steps.
     for _i in 0..100000 {
