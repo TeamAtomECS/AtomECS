@@ -13,7 +13,6 @@ pub mod tests {
 
 
         use crate::detector::Detected;
-        use crate::output::file_output::FileOutputMarker;
 
         use crate::destructor::SimulationBounds;
         use crate::laser::force::RandomWalkMarker;
@@ -31,7 +30,6 @@ pub mod tests {
         world.add_resource(SimulationBounds { half_width: Vector3::new(0.1,0.1,0.1) });
         world.add_resource(OvenVelocityCap { cap: 1000. });
         world.add_resource(RepumpLoss { proportion: 0.0 });
-        world.add_resource(FileOutputMarker { value: false });
         world
             .create_entity()
             .with(Atom)

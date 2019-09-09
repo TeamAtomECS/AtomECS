@@ -153,7 +153,7 @@ pub mod tests {
 			.with(uniform::UniformMagneticField {
 				field: Vector3::new(2.0, 0.0, 0.0),
 			})
-			.with(quadrupole::QuadrupoleField3D { gradient: 1.0 })
+			.with(quadrupole::QuadrupoleField3D { gradient: 1.0, direction: Vector3::z() })
 			.with(Position {
 				pos: Vector3::new(0.0, 0.0, 0.0),
 			})
