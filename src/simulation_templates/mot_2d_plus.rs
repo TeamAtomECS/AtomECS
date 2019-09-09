@@ -32,7 +32,7 @@ pub fn create() -> (World, Dispatcher<'static, 'static>) {
 
 fn mot2d_entity_create(world: &mut World) {
 	// Add quadrupole gradient
-	let quadrupole = QuadrupoleField3D::gauss_per_cm(25.0,&Vector3::new(0.,0.,1.0));
+	let quadrupole = QuadrupoleField3D::gauss_per_cm(25.0,Vector3::new(0.,0.,1.0));
 	world
 		.create_entity()
 		.with(quadrupole)

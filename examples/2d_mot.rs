@@ -42,7 +42,7 @@ fn main() {
     // Create magnetic field.
     world
         .create_entity()
-        .with(QuadrupoleField3D::gauss_per_cm(15.0))
+        .with(QuadrupoleField3D::gauss_per_cm(15.0, Vector3::z()))
         .with(Position::new())
         .build();
 
