@@ -7,8 +7,9 @@
 // Perhaps there is some nice macro I can write to produce the required attachment systems?
 // This pattern is also used elsewhere, eg `MagneticFieldSampler`.
 
-use crate::atom::{Atom, Position};
-use specs::{Component, Entities, Join, NullStorage, Read, ReadStorage, System,WriteStorage, VecStorage};
+use crate::atom::{Position};
+use specs::{Component, Entities, Join, Read, ReadStorage, System,WriteStorage, VecStorage, LazyUpdate, DispatcherBuilder, World, HashMapStorage};
+use crate::initiate::NewlyCreated;
 use std::marker::PhantomData;
 use nalgebra::Vector3;
 
@@ -24,11 +25,7 @@ pub enum VolumeType {
     Exclusive
 }
 
-/// The [SimulationBounds](struct.SimulationBounds.html) is a resource that defines a bounding box encompassing the simulation region.
-/// Atoms outside of the bounding box are deleted by the [DestroyOutOfBoundsAtomsSystem](struct.DestroyOutOfBoundAtomsSystem.html).
-///
-/// The simulation region is cubic. Atoms are deleted if any `abs(pos[i]) > half_width[i]`.
-/// See [Position](struct.Position.html) for details of atom positions.
+/// A cuboid volume.
 pub struct Cuboid {
     /// The dimension of the cuboid volume, from center to vertex (1,1,1).
     pub half_width: Vector3<f64>,
@@ -44,9 +41,13 @@ impl Volume for Cuboid {
 
     fn get_type(&self) -> &VolumeType { &self.vol_type }
 }
+impl Component for Cuboid {
+    type Storage = HashMapStorage<Self>;
+}
 
+/// A spherical volume.
 pub struct Sphere { 
-    /// The radius of the spherical volume
+    /// The radius of the spherical volume.
     pub radius: f64,
     /// Whether the volume is `Inclusive` or `Exclusive`.
     pub vol_type: VolumeType,
@@ -59,6 +60,9 @@ impl Volume for Sphere {
     }
 
     fn get_type(&self) -> &VolumeType { &self.vol_type }
+}
+impl Component for Sphere {
+    type Storage = HashMapStorage<Self>;
 }
 
 /// All possible results of region testing.
@@ -147,6 +151,60 @@ impl <'a> System<'a> for DeleteFailedRegionTestsSystem {
 
 /// This sytem attaches [RegionTest](struct.RegionTest.html) components
 /// to all entities that are [NewlyCreated](struct.NewlyCreated.html).
-struct AttachRegionTestsToNewlyCreatedSystem {
+struct AttachRegionTestsToNewlyCreatedSystem;
+impl<'a> System<'a> for AttachRegionTestsToNewlyCreatedSystem {
+    type SystemData = (
+		Entities<'a>,
+		ReadStorage<'a, NewlyCreated>,
+		Read<'a, LazyUpdate>,
+	);
+	fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
+		for (ent, _nc) in (&ent, &newly_created).join() {
+			updater.insert(ent, RegionTest { result: Result::Untested });
+		}
+	}
+}
 
+
+
+/// Adds the systems required by `sim_region` to the dispatcher.
+///
+/// #Arguments
+///
+/// `builder`: the dispatch builder to modify
+///
+/// `deps`: any dependencies that must be completed before the `sim_region` systems run.
+pub fn add_systems_to_dispatch(
+	builder: DispatcherBuilder<'static, 'static>,
+	deps: &[&str],
+) -> DispatcherBuilder<'static, 'static> {
+	builder
+		.with(ClearRegionTestSystem, "clear_region_test", deps)
+		.with(
+			RegionTestSystem::<Sphere> { marker: PhantomData},
+			"region_test_sphere",
+			&["clear_region_test"],
+		)
+        .with(
+			RegionTestSystem::<Cuboid> { marker: PhantomData},
+			"region_test_cuboid",
+			&["region_test_sphere"],
+		)
+        .with(
+			DeleteFailedRegionTestsSystem,
+			"delete_region_test_failure",
+			&["region_test_cuboid"],
+		)
+        .with(
+            AttachRegionTestsToNewlyCreatedSystem,
+            "attach_region_tests_to_newly_created",
+            deps
+        )
+}
+
+/// Registers resources required by magnetics to the ecs world.
+pub fn register_components(world: &mut World) {
+	world.register::<Sphere>();
+	world.register::<Cuboid>();
+	world.register::<RegionTest>();
 }
