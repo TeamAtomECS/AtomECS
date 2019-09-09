@@ -1,4 +1,4 @@
-//! Loading a Sr 3D MOT directly from an oven source.
+//! A 2D+ mot configuration, loaded directly from oven.
 
 extern crate magneto_optical_trap as lib;
 extern crate nalgebra;
@@ -18,6 +18,7 @@ use lib::sim_region::{Cuboid, VolumeType};
 use nalgebra::Vector3;
 use specs::{Builder, World};
 use std::time::Instant;
+use lib::atom_sources::oven::OvenVelocityCap;
 
 fn main() {
     let now = Instant::now();
@@ -50,42 +51,30 @@ fn main() {
         .with(Position::new())
         .build();
 
-    // Create cooling lasers.
-    let detuning = -90.0;
-    let power = 0.23;
-    let radius = 0.0033 / (2.0 * 2.0_f64.sqrt()); // 33mm 1/e^2 diameter
+    // Push beam along z
+    let push_beam_radius = 0.5e-3;
+    let push_beam_power = 0.020;
+    let push_beam_detuning = 0.0;
 
-    // Horizontal beams along z
     world
         .create_entity()
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 5.0,
+            e_radius: push_beam_radius,
+            power: push_beam_power,
             direction: Vector3::z(),
         })
         .with(CoolingLight::for_species(
             AtomInfo::strontium(),
-            detuning,
-            -1.0,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 5.0,
-            direction: -Vector3::z(),
-        })
-        .with(CoolingLight::for_species(
-            AtomInfo::strontium(),
-            detuning,
+            push_beam_detuning,
             -1.0,
         ))
         .build();
 
-    // Angled vertical beams
+    // Create cooling lasers.
+    let detuning = -90.0;
+    let power = 0.23;
+    let radius = 0.0033 / (2.0 * 2.0_f64.sqrt()); // 33mm 1/e^2 diameter
     world
         .create_entity()
         .with(GaussianBeam {
@@ -145,7 +134,7 @@ fn main() {
 
     // Create an oven.
     // The oven will eject atoms on the first frame and then be deleted.
-    let number_to_emit = 1000000;
+    let number_to_emit = 100000;
     world
         .create_entity()
         .with(Oven {
@@ -173,7 +162,7 @@ fn main() {
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-6 });
 
-    // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
+    // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation.
     world
         .create_entity()
         .with(Position {
@@ -184,6 +173,21 @@ fn main() {
             vol_type: VolumeType::Inclusive,
         })
         .build();
+
+    // The simulation bound also now includes a small pipe to capture the 2D MOT output properly.
+    world
+        .create_entity()
+        .with(Position {
+            pos: Vector3::new(0.0, 0.0, 0.1),
+        })
+        .with(Cuboid {
+            half_width: Vector3::new(0.01, 0.01, 0.1),
+            vol_type: VolumeType::Inclusive,
+        })
+        .build();
+
+    // Also use a velocity cap so that fast atoms are not even simulated.
+    world.add_resource(OvenVelocityCap { cap: 200.0 });
 
     // Run the simulation for a number of steps.
     for _i in 0..10000 {
