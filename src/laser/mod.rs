@@ -2,8 +2,8 @@ pub mod cooling;
 pub mod doppler;
 pub mod force;
 pub mod gaussian;
-pub mod sampler;
 pub mod repump;
+pub mod sampler;
 
 extern crate specs;
 use crate::initiate::NewlyCreated;
@@ -22,14 +22,13 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 
 	fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
 		for (ent, _) in (&ent, &newly_created).join() {
-
 			updater.insert(
 				ent,
 				sampler::LaserSamplers {
 					contents: Vec::new(),
 				},
 			);
-			updater.insert(ent,NumberKick{value:0});
+			updater.insert(ent, NumberKick { value: 0 });
 		}
 	}
 }
@@ -81,13 +80,13 @@ pub fn add_systems_to_dispatch(
 			"calculate_cooling_forces",
 			&["calculate_doppler_shift", "sample_gaussian_beam_intensity"],
 		)
-		.with(force::CalculateKickSystem,"cal_kick",&["sample_gaussian_beam_intensity"])
-		.with(repump::RepumpSystem,"repump",&["cal_kick"])
 		.with(
-			force::RandomWalkSystem,
-			"random_walk_system",
-			&["cal_kick"],
+			force::CalculateKickSystem,
+			"cal_kick",
+			&["sample_gaussian_beam_intensity"],
 		)
+		.with(repump::RepumpSystem, "repump", &["cal_kick"])
+		.with(force::RandomWalkSystem, "random_walk_system", &["cal_kick"])
 }
 
 /// Registers resources required by magnetics to the ecs world.
@@ -96,4 +95,5 @@ pub fn register_components(world: &mut World) {
 	world.register::<cooling::CoolingLightIndex>();
 	world.register::<sampler::LaserSamplers>();
 	world.register::<gaussian::GaussianBeam>();
+	world.register::<gaussian::CircularMask>();
 }

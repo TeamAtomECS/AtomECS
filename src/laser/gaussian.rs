@@ -1,7 +1,7 @@
 extern crate nalgebra;
 extern crate specs;
 use nalgebra::Vector3;
-use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
+use specs::{Component, Entities, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::sampler::LaserSamplers;
@@ -28,21 +28,41 @@ impl Component for GaussianBeam {
 	type Storage = HashMapStorage<Self>;
 }
 
+/// A component that covers the central portion of a laser beam.
+///
+/// The mask is assumed to be Coaxial to the GaussianBeam.
+pub struct CircularMask {
+	/// Radius of the masked region.
+	pub radius: f64,
+}
+impl Component for CircularMask {
+	type Storage = HashMapStorage<Self>;
+}
+
 /// System that calculates that samples the intensity of `GaussianBeam` entities.
 pub struct SampleGaussianBeamIntensitySystem;
 impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 	type SystemData = (
+		Entities<'a>,
 		ReadStorage<'a, CoolingLight>,
 		ReadStorage<'a, CoolingLightIndex>,
 		ReadStorage<'a, GaussianBeam>,
+		ReadStorage<'a, CircularMask>,
 		WriteStorage<'a, LaserSamplers>,
 		ReadStorage<'a, Position>,
 	);
-	fn run(&mut self, (cooling, indices, gaussian, mut samplers, positions): Self::SystemData) {
-		for (cooling, index, gaussian) in (&cooling, &indices, &gaussian).join() {
+
+	fn run(
+		&mut self,
+		(entities, cooling, indices, gaussian, masks, mut samplers, positions): Self::SystemData,
+	) {
+		for (laser_entity, cooling, index, gaussian) in
+			(&entities, &cooling, &indices, &gaussian).join()
+		{
+			let mask: Option<&CircularMask> = masks.get(laser_entity);
 			for (sampler, pos) in (&mut samplers, &positions).join() {
 				sampler.contents[index.index].intensity =
-					get_gaussian_beam_intensity(&gaussian, &pos);
+					get_gaussian_beam_intensity(&gaussian, &pos, mask);
 				sampler.contents[index.index].polarization = cooling.polarization;
 				sampler.contents[index.index].wavevector =
 					gaussian.direction.normalize() * cooling.wavenumber();
@@ -52,12 +72,24 @@ impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 }
 
 /// Gets the intensity of a gaussian laser beam at the specified position.
-fn get_gaussian_beam_intensity(beam: &GaussianBeam, pos: &Position) -> f64 {
-	beam.power
-		* maths::gaussian_dis(
-			beam.e_radius / 2.0_f64.powf(0.5),
-			maths::get_minimum_distance_line_point(&pos.pos, &beam.intersection, &beam.direction),
-		)
+fn get_gaussian_beam_intensity(
+	beam: &GaussianBeam,
+	pos: &Position,
+	mask: Option<&CircularMask>,
+) -> f64 {
+	let min_dist =
+		maths::get_minimum_distance_line_point(&pos.pos, &beam.intersection, &beam.direction);
+	let power = match mask {
+		Some(mask) => {
+			if min_dist < mask.radius {
+				0.0
+			} else {
+				beam.power
+			}
+		}
+		None => beam.power,
+	};
+	power * maths::gaussian_dis(beam.e_radius / 2.0_f64.powf(0.5), min_dist)
 }
 
 #[cfg(test)]
@@ -87,7 +119,7 @@ pub mod tests {
 		let pos1 = Position { pos: Vector3::x() };
 		assert_approx_eq!(
 			beam.power / (PI.powf(0.5) * beam.e_radius).powf(2.0),
-			get_gaussian_beam_intensity(&beam, &pos1),
+			get_gaussian_beam_intensity(&beam, &pos1, None),
 			1e-6_f64
 		);
 
@@ -95,7 +127,7 @@ pub mod tests {
 		assert_approx_eq!(
 			1.0 / (PI.powf(0.5) * beam.e_radius).powf(2.0)
 				* (-pos2.pos[1] / beam.e_radius.powf(2.0)).exp(),
-			get_gaussian_beam_intensity(&beam, &pos2),
+			get_gaussian_beam_intensity(&beam, &pos2, None),
 			1e-6_f64
 		);
 	}
@@ -108,6 +140,7 @@ pub mod tests {
 		test_world.register::<GaussianBeam>();
 		test_world.register::<Position>();
 		test_world.register::<LaserSamplers>();
+		test_world.register::<CircularMask>();
 
 		let e_radius = 2.0;
 		let power = 1.0;

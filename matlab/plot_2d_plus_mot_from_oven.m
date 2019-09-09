@@ -36,7 +36,7 @@ end
 
 ids = [];
 for frame=output'
-    captured = frame.vec(:,3) > 0.03;
+    captured = frame.vec(:,3) > 0.015;
     ids = unique([ids; frame.id(captured)]);
 end
 
@@ -58,3 +58,9 @@ for trajectory=trajectories'
 end
 
 axis equal;
+
+%% 
+% Close up on the source itself
+xlim([ -0.01 0.01 ]);
+ylim([ -0.01 0.01 ]);
+zlim([ -0.01 0.01 ]);

@@ -1,4 +1,6 @@
 //! Loading a Sr 3D MOT directly from an oven source.
+//! 
+//! One of the beams has a circular mask, which allows atoms to escape on one side.
 
 extern crate magneto_optical_trap as lib;
 extern crate nalgebra;
@@ -9,8 +11,8 @@ use lib::atom_sources::oven::{Oven, OvenAperture};
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
-use lib::laser::cooling::CoolingLight;
-use lib::laser::gaussian::GaussianBeam;
+use lib::laser::cooling::{CoolingLight};
+use lib::laser::gaussian::{GaussianBeam,CircularMask};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
@@ -18,6 +20,7 @@ use lib::sim_region::{Cuboid, VolumeType};
 use nalgebra::Vector3;
 use specs::{Builder, World};
 use std::time::Instant;
+use lib::atom_sources::oven::OvenVelocityCap;
 
 fn main() {
     let now = Instant::now();
@@ -78,6 +81,7 @@ fn main() {
             power: power / 5.0,
             direction: -Vector3::z(),
         })
+        .with(CircularMask { radius: 3.0e-3 })
         .with(CoolingLight::for_species(
             AtomInfo::strontium(),
             detuning,
@@ -145,7 +149,7 @@ fn main() {
 
     // Create an oven.
     // The oven will eject atoms on the first frame and then be deleted.
-    let number_to_emit = 1000000;
+    let number_to_emit = 400000;
     world
         .create_entity()
         .with(Oven {
@@ -173,7 +177,7 @@ fn main() {
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-6 });
 
-    // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
+    // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation.
     world
         .create_entity()
         .with(Position {
@@ -184,6 +188,21 @@ fn main() {
             vol_type: VolumeType::Inclusive,
         })
         .build();
+
+    // The simulation bound also now includes a small pipe to capture the 2D MOT output properly.
+    world
+        .create_entity()
+        .with(Position {
+            pos: Vector3::new(0.0, 0.0, 0.1),
+        })
+        .with(Cuboid {
+            half_width: Vector3::new(0.01, 0.01, 0.1),
+            vol_type: VolumeType::Inclusive,
+        })
+        .build();
+
+    // Also use a velocity cap so that fast atoms are not even simulated.
+    world.add_resource(OvenVelocityCap { cap: 150.0 });
 
     // Run the simulation for a number of steps.
     for _i in 0..10000 {

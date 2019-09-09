@@ -52,8 +52,8 @@ fn main() {
         .build();
 
     // Push beam along z
-    let push_beam_radius = 0.5e-3;
-    let push_beam_power = 0.020;
+    let push_beam_radius = 1e-3;
+    let push_beam_power = 0.010;
     let push_beam_detuning = 0.0;
 
     world
@@ -72,9 +72,9 @@ fn main() {
         .build();
 
     // Create cooling lasers.
-    let detuning = -90.0;
+    let detuning = -45.0;
     let power = 0.23;
-    let radius = 0.0033 / (2.0 * 2.0_f64.sqrt()); // 33mm 1/e^2 diameter
+    let radius = 33.0e-3 / (2.0 * 2.0_f64.sqrt()); // 33mm 1/e^2 diameter
     world
         .create_entity()
         .with(GaussianBeam {
@@ -134,7 +134,7 @@ fn main() {
 
     // Create an oven.
     // The oven will eject atoms on the first frame and then be deleted.
-    let number_to_emit = 100000;
+    let number_to_emit = 400000;
     world
         .create_entity()
         .with(Oven {
