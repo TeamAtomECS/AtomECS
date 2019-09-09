@@ -66,7 +66,7 @@ pub mod tests {
 	use super::*;
 
 	extern crate specs;
-	use crate::constant::PI;
+	use crate::constant::{EXP, PI};
 	use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 	use crate::laser::sampler::{LaserSampler, LaserSamplers};
 	use assert_approx_eq::assert_approx_eq;
@@ -132,7 +132,7 @@ pub mod tests {
 		let sampler1 = test_world
 			.create_entity()
 			.with(Position {
-				pos: Vector3::new(1.0, 0.0, 0.0),
+				pos: Vector3::new(0.0, 0.0, 0.0),
 			})
 			.with(LaserSamplers {
 				contents: vec![LaserSampler::default()],
@@ -142,7 +142,7 @@ pub mod tests {
 		let sampler2 = test_world
 			.create_entity()
 			.with(Position {
-				pos: Vector3::new(1.0, e_radius, 0.0),
+				pos: Vector3::new(0.0, e_radius, 0.0),
 			})
 			.with(LaserSamplers {
 				contents: vec![LaserSampler::default()],
@@ -153,6 +153,8 @@ pub mod tests {
 		system.run_now(&test_world.res);
 		test_world.maintain();
 		let sampler_storage = test_world.read_storage::<LaserSamplers>();
+
+		// Peak intensity
 		assert_approx_eq!(
 			sampler_storage
 				.get(sampler1)
@@ -160,6 +162,16 @@ pub mod tests {
 				.contents[0]
 				.intensity,
 			power / (PI.powf(0.5) * e_radius).powf(2.0)
+		);
+
+		// 1 over e intensity radius
+		assert_approx_eq!(
+			sampler_storage
+				.get(sampler2)
+				.expect("entity not found")
+				.contents[0]
+				.intensity,
+			power / (PI.powf(0.5) * e_radius).powf(2.0) / EXP
 		);
 	}
 }

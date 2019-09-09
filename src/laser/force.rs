@@ -308,7 +308,7 @@ pub mod tests {
         test_world.maintain();
 
         let cooling_light_storage = test_world.read_storage::<CoolingLight>();
-        let cooling_light = cooling_light_storage.get(laser).expect("entity not found");
+        cooling_light_storage.get(laser).expect("entity not found");
 
         let force_storage = test_world.read_storage::<Force>();
         assert_approx_eq!(
