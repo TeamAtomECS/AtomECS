@@ -1,4 +1,3 @@
-use crate::maths;
 extern crate nalgebra;
 
 use super::emit::AtomNumberToEmit;
