@@ -1,4 +1,3 @@
-use crate::constant::BOLTZCONST;
 use crate::constant::EXP;
 use crate::constant::PI;
 extern crate rand;

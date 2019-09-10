@@ -4,7 +4,7 @@ extern crate nalgebra;
 use super::emit::AtomNumberToEmit;
 use super::mass::MassDistribution;
 use crate::constant;
-use crate::constant::{BOLTZCONST, EXP, PI, AMU};
+use crate::constant::{AMU, BOLTZCONST, EXP, PI};
 use crate::initiate::*;
 
 extern crate rand;
@@ -253,11 +253,14 @@ fn create_jtheta_distribution(
 ///
 /// `v`: velocity magnitude, in SI units of m/s.
 ///
-pub fn maxwell_boltzmann_distribution(temperature: f64, mass: f64, v: f64) -> f64 {
-	(mass / (2.0 * PI * BOLTZCONST * temperature)).powf(1.5)
-		* EXP.powf(-mass * v.powf(2.0) / (2.0 * BOLTZCONST * temperature))
-		* 4.0 * PI
-		* v.powf(2.0)
+/// See _Atomic and Molecular Beam Methods_, Scoles, p85
+pub fn probability_v(temperature: f64, mass: f64, v: f64) -> f64 {
+	// (mass / (2.0 * PI * BOLTZCONST * temperature)).powf(1.5)
+	// 	* EXP.powf(-mass * v.powf(2.0) / (2.0 * BOLTZCONST * temperature))
+	// 	* 4.0 * PI
+	// 	* v.powf(2.0)
+	let norm_v = v / (2.0 * BOLTZCONST * temperature / mass).powf(0.5); // (4.2) and (4.4)
+	2.0 * norm_v.powf(3.0) * EXP.powf(-norm_v.powf(2.0))
 }
 
 /// Creates and precalculates a [WeightedProbabilityDistribution](struct.WeightedProbabilityDistribution.html)
@@ -279,7 +282,7 @@ fn create_v_distribution(temperature: f64, mass: f64) -> WeightedProbabilityDist
 	let n = 2000;
 	for i in 0..n {
 		let v = (i as f64 + 0.5) / (n as f64 + 1.0) * max_velocity;
-		let weight = maxwell_boltzmann_distribution(temperature, mass, v);
+		let weight = probability_v(temperature, mass, v);
 		velocities.push(v);
 		weights.push(weight);
 	}
