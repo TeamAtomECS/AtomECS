@@ -31,7 +31,12 @@ pub fn add_systems_to_dispatch(
             "emit_fixed_rate",
             &["emit_number_per_frame"],
         )
-        .with(oven::OvenCreateAtomsSystem, "", &["emit_number_per_frame"])
+        .with(
+            oven::PrecalculateForSpeciesSystem, 
+            "precalculated_oven",
+            deps,
+        )
+        .with(oven::OvenCreateAtomsSystem, "", &["emit_number_per_frame", "precalculated_oven"])
 }
 
 /// Registers resources required by `atom_sources` to the ecs world.
