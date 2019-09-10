@@ -4,13 +4,13 @@ extern crate nalgebra;
 use super::emit::AtomNumberToEmit;
 use super::mass::MassDistribution;
 use crate::constant;
-use crate::constant::PI;
+use crate::constant::{PI,BOLTZCONST,EXP};
 use crate::initiate::*;
 
 extern crate rand;
-use rand::distributions::Distribution;
-use rand::distributions::WeightedIndex;
 use rand::Rng;
+use super::WeightedProbabilityDistribution;
+use rand::distributions::Distribution;
 
 extern crate specs;
 use crate::atom::*;
@@ -51,6 +51,7 @@ pub struct Oven {
 	/// A vector denoting the direction of the oven.
 	pub direction: Vector3<f64>,
 
+	/// Angular distribution for atoms emitted by the oven.
 	theta_distribution: WeightedProbabilityDistribution,
 }
 
@@ -236,22 +237,49 @@ fn create_jtheta_distribution(
 	distribution
 }
 
-/// A simple probability distribution which uses weighted indices to retrieve values.
-struct WeightedProbabilityDistribution {
-	values: Vec<f64>,
-	weighted_index: WeightedIndex<f64>,
+/// The probability distribution `p(v)` that a given `mass` has a velocity magnitude `v`.
+/// 
+/// # Arguments
+/// 
+/// `temperature`: temperature of the gas, in Kelvin.
+/// 
+/// `mass`: particle mass, in SI units of kg. 
+/// 
+/// `v`: velocity magnitude, in SI units of m/s. 
+/// 
+pub fn maxwell_boltzmann_distribution(temperature: f64, mass: f64, v: f64) -> f64 {
+	(mass / (2.0 * PI * BOLTZCONST * temperature)).powf(1.5)
+		* EXP.powf(-mass * v.powf(2.0) / (2.0 * BOLTZCONST * temperature))
+		* 4.0 * PI
+		* v.powf(2.0)
 }
-impl WeightedProbabilityDistribution {
-	pub fn new(values: Vec<f64>, weights: Vec<f64>) -> Self {
-		WeightedProbabilityDistribution {
-			values: values,
-			weighted_index: WeightedIndex::new(&weights).unwrap(),
-		}
+
+/// Creates and precalculates a [WeightedProbabilityDistribution](struct.WeightedProbabilityDistribution.html)
+/// which can be used to sample values of velocity, based on the Maxwell-Boltzmann distribution.
+/// 
+/// # Arguments
+/// 
+/// `temperature`: The temperature of the oven, in units of Kelvin.
+/// 
+/// `mass`: The mass of the particle, in SI units of kg.
+fn create_v_distribution(
+	temperature: f64,
+	mass: f64,
+) -> WeightedProbabilityDistribution {
+	let max_velocity = 5.0 * (2.0 * BOLTZCONST * temperature / mass).powf(0.5);
+
+	// tuple list of (velocity, weight)
+	let mut velocities = Vec::<f64>::new();
+	let mut weights = Vec::<f64>::new();
+
+	// precalculate the discretized distribution.
+	let n = 1000;
+	for i in 0..n {
+		let v = (i as f64 + 0.5) / (n as f64 + 1.0) * max_velocity;
+		let weight = maxwell_boltzmann_distribution(temperature, mass, v);
+		velocities.push(v);
+		weights.push(weight);
 	}
-}
-impl Distribution<f64> for WeightedProbabilityDistribution {
-	fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> f64 {
-		let index = self.weighted_index.sample(rng);
-		self.values[index]
-	}
+
+	WeightedProbabilityDistribution::new(velocities, weights)
 }

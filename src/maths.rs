@@ -30,32 +30,6 @@ pub fn gaussian_dis(std: f64, distance: f64) -> f64 {
 	1.0 / (2.0 * PI * std.powf(2.0)) * EXP.powf(-distance.powf(2.0) / 2.0 / (std).powf(2.0))
 }
 
-pub fn maxwell_dis(_t: f64, _mass: f64, _velocity: f64) -> f64 {
-	(_mass / 2.0 / PI / BOLTZCONST / _t).powf(1.5)
-		* EXP.powf(-_mass * _velocity.powf(2.0) / 2.0 / BOLTZCONST / _t)
-		* 4.0 * PI
-		* _velocity.powf(2.0)
-}
-
-/// a function that generate random velocity according to maxwell distributino
-pub fn maxwell_generate(_t: f64, _mass: f64) -> f64 {
-	// take about 20 times of the variance as range and do random uniform generation
-	// use 1/1000 times of the real PDF so that the maxwell distribution is everywhere lower than the uniform one
-
-	let range = 20.0 * (BOLTZCONST * _t / _mass).powf(0.5);
-	let mut i = 0;
-	loop {
-		let mut rng = rand::thread_rng();
-		i = i + 1;
-
-		let result = rng.gen_range(0.0, range);
-		let height = rng.gen_range(0.0, 1.0 / range);
-		if maxwell_dis(_t, _mass, result) > height * 1000.0 {
-			return result;
-		}
-	}
-}
-
 /// generate a uniform random direction
 pub fn random_direction() -> Vector3<f64> {
 	let mut rng = rand::thread_rng();
@@ -72,13 +46,6 @@ pub fn random_direction() -> Vector3<f64> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-
-	#[test]
-	fn distribution_test() {
-		assert!(
-			maxwell_dis(300., 1e-25, 100.) > 0.000839 && maxwell_dis(300., 1e-25, 100.) < 0.000840
-		);
-	}
 
 	#[test]
 	fn test_minimum_distance_line_point() {
