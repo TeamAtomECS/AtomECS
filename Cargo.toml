@@ -12,7 +12,7 @@ crate-type = ["bin"]
 [dependencies]
 specs="0.14.0"
 specs-derive = "0.4.0"
-rand = "0.4.0"
+rand = "0.6.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.8.9"

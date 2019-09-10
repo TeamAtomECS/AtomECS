@@ -1,7 +1,7 @@
 extern crate nalgebra;
 extern crate rand;
-use crate::integrator::Timestep;
 use rand::Rng;
+use crate::integrator::Timestep;
 
 extern crate specs;
 use serde::{Deserialize, Serialize};
@@ -67,7 +67,7 @@ impl<'a> System<'a> for EmitFixedRateSystem {
             let avg_number_to_emit = rate.rate * timestep.delta;
             let guaranteed_number = avg_number_to_emit.floor();
             let number: i32;
-            if rng.next_f64() < avg_number_to_emit - guaranteed_number {
+            if rng.gen::<f64>() < avg_number_to_emit - guaranteed_number {
                 number = guaranteed_number as i32 + 1;
             } else {
                 number = guaranteed_number as i32;

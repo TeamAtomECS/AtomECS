@@ -112,14 +112,13 @@ fn main() {
     let number_to_emit = 100000;
     world
         .create_entity()
-        .with(Oven {
-            temperature: 600.0,
-            aperture: OvenAperture::Circular {
+        .with(Oven::new(600.0,
+            OvenAperture::Circular {
                 radius: 0.005,
                 thickness: 0.001,
             },
-            direction: Vector3::z(),
-        })
+            Vector3::z(),
+        ))
         .with(Position {
             pos: Vector3::new(0.0, 0.0, -0.05),
         })

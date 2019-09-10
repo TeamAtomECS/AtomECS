@@ -52,14 +52,10 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 	for oven in config.ovens.iter() {
 		world
 			.create_entity()
-			.with(Oven {
-				temperature: oven.temperature,
-				direction: oven.direction.clone(),
-				aperture: OvenAperture::Circular {
+			.with(Oven::new(oven.temperature, OvenAperture::Circular {
 					radius: oven.radius_aperture,
 					thickness: oven.thickness,
-				},
-			})
+				},oven.direction.clone()))
 			.with(AtomNumberToEmit { number: 0 })
 			.with(EmitFixedRate { rate: oven.rate })
 			.with(config.atominfo.clone())
@@ -69,14 +65,10 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 		if oven.instant_emission != 0 {
 			world
 				.create_entity()
-				.with(Oven {
-					temperature: oven.temperature,
-					direction: oven.direction.clone(),
-					aperture: OvenAperture::Circular {
-						radius: oven.radius_aperture,
-						thickness: oven.thickness,
-					},
-				})
+				.with(Oven::new(oven.temperature, OvenAperture::Circular {
+					radius: oven.radius_aperture,
+					thickness: oven.thickness,
+				},oven.direction.clone()))
 				.with(AtomNumberToEmit { number: 0 })
 				.with(EmitNumberPerFrame {
 					number: oven.instant_emission as i32,

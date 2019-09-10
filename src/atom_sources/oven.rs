@@ -1,11 +1,15 @@
 use crate::maths;
 extern crate nalgebra;
-extern crate rand;
+
 use super::emit::AtomNumberToEmit;
 use super::mass::MassDistribution;
 use crate::constant;
 use crate::constant::PI;
 use crate::initiate::*;
+
+extern crate rand;
+use rand::distributions::Distribution;
+use rand::distributions::WeightedIndex;
 use rand::Rng;
 
 extern crate specs;
@@ -14,14 +18,18 @@ use nalgebra::Vector3;
 
 use specs::{Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System};
 
-pub fn velocity_generate(v_mag: f64, new_dir: &Vector3<f64>) -> Vector3<f64> {
+fn velocity_generate(
+	v_mag: f64,
+	new_dir: &Vector3<f64>,
+	theta_distribution: &WeightedProbabilityDistribution,
+) -> Vector3<f64> {
 	let dir = &new_dir.normalize();
 	let dir_1 = new_dir.cross(&Vector3::new(2.0, 1.0, 0.5)).normalize();
 	let dir_2 = new_dir.cross(&dir_1).normalize();
 	let mut rng = rand::thread_rng();
-	let theta = maths::jtheta_gen();
-	let theta2 = rng.gen_range(0.0, 2.0 * PI);
-	let dir_div = dir_1 * theta.sin() * theta2.cos() + dir_2 * theta.sin() * theta2.sin();
+	let theta = theta_distribution.sample(&mut rng);
+	let phi = rng.gen_range(0.0, 2.0 * PI);
+	let dir_div = dir_1 * theta.sin() * phi.cos() + dir_2 * theta.sin() * phi.sin();
 	let dirf = dir * theta.cos() + dir_div;
 	let v_out = dirf * v_mag;
 	v_out
@@ -42,6 +50,8 @@ pub struct Oven {
 
 	/// A vector denoting the direction of the oven.
 	pub direction: Vector3<f64>,
+
+	theta_distribution: WeightedProbabilityDistribution,
 }
 
 impl Component for Oven {
@@ -67,6 +77,15 @@ impl Oven {
 				let h = rng.gen_range(-0.5 * thickness, 0.5 * thickness);
 				dir * h + r * dir_1 * theta.sin() + r * dir_2 * theta.cos()
 			}
+		}
+	}
+
+	pub fn new(temperature: f64, aperture: OvenAperture, direction: Vector3<f64>) -> Self {
+		Oven {
+			temperature: temperature,
+			aperture: aperture,
+			direction: direction.normalize(),
+			theta_distribution: create_jtheta_distribution(0.2e-3, 4.0e-3),
 		}
 	}
 }
@@ -117,7 +136,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				}
 
 				let new_atom = entities.create();
-				let new_vel = velocity_generate(speed, &oven.direction);
+				let new_vel = velocity_generate(speed, &oven.direction, &oven.theta_distribution);
 				let start_position = oven_position.pos + oven.get_random_spawn_position();
 				updater.insert(
 					new_atom,
@@ -139,5 +158,100 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				updater.insert(new_atom, NewlyCreated);
 			}
 		}
+	}
+}
+
+/// The jtheta distribution describes the angular dependence of atoms emitted from an oven.
+/// It describes collision-free flow through a cylindrical channel (transparent mode of
+/// operation).
+///
+/// See the book _Atomic and Molecular Beam Methods_, Vol. I, Scoles et al. The jtheta
+/// distribution is defined on p88 in Section 4.2.2.1. Equation numbers below refer to
+/// those in this reference.
+///
+/// Note that j(theta) is the defined with respect to solid angle, `Omega`. It is independent
+/// of polar coordinate `phi`. The proportion of atoms going into the solid angle `Omega` at polar
+/// coordinates `theta`, `phi` is proportional to `j(theta,phi)`.
+///
+/// The total solid angle presented by polar angle `theta` varies as the Jacobian `2 pi sin(theta)`.
+/// Thus, the proportion of atoms with polar angle between `theta` and `theta + d_theta` is given by
+/// `j(theta) 2 pi sin(theta) d_theta` - this is as above, but having _integrated out_ the coordinate
+/// `phi`.
+///
+/// # Arguments
+///
+/// `theta`: The angle from the direction of the oven nozzle, in radians.
+///
+/// `channel_radius`: The radius of the cylindrical channels in the oven nozzle, m.
+///
+/// `channel_length`: The length of the cylindrical channels in the oven nozzle, m.
+///
+pub fn jtheta(theta: f64, channel_radius: f64, channel_length: f64) -> f64 {
+	let beta = 2.0 * channel_radius / channel_length; // (4.16)
+	let q = theta.tan() / beta; // (4.19)
+	let alpha = 0.5 // (4.16)
+		- 1.0 / (3.0 * beta.powf(2.0))
+			* (1.0 - 2.0 * beta.powf(3.0)
+				+ (2.0 * beta.powf(2.0) - 1.0) * (1.0 + beta.powf(2.0)).powf(0.5))
+			/ ((1.0 + beta.powf(2.0)).powf(0.5) - beta.powf(2.0) * (1.0 / beta).asinh());
+
+	let j_theta;
+	if q <= 1.0 {
+		let r_q = q.acos() - q * (1.0 - q.powf(2.0)).powf(0.5); // (4.23)
+		j_theta = alpha * theta.cos()
+			+ (2.0 / PI)
+				* theta.cos() * ((1.0 - alpha) * r_q
+				+ 2.0 / (3.0 * q) * (1.0 - 2.0 * alpha) * (1.0 - (1.0 - q.powf(2.0)).powf(1.5))) // (4.21)
+	} else {
+		j_theta = alpha * theta.cos() + 4.0 / (3.0 * PI * q) * (1.0 - 2.0 * alpha) * theta.cos(); // (4.22)
+	}
+	j_theta
+}
+
+/// Creates and precalculates a [WeightedIndex](struct.WeightedIndex.html) distribution
+/// which can be used to sample values of theta based on the distribution
+/// `p(theta) = j(theta) * sin(theta) * d_theta`.
+///
+/// The `j(theta)` function is discretised to use the
+/// [WeightedIndex](struct.WeightedIndex.html).
+fn create_jtheta_distribution(
+	channel_radius: f64,
+	channel_length: f64,
+) -> WeightedProbabilityDistribution {
+	// tuple list of (theta, weight)
+	let mut thetas = Vec::<f64>::new();
+	let mut weights = Vec::<f64>::new();
+
+	// precalculate the discretized jtheta distribution.
+	let n = 1000; // resolution over which to discretize `theta`.
+	for i in 0..n {
+		let theta = (i as f64 + 0.5) / (n as f64 + 1.0) * PI / 2.0;
+		let weight = jtheta(theta, channel_radius, channel_length) * theta.sin();
+		thetas.push(theta);
+		weights.push(weight);
+		// Note: we can exclude d_theta because it is constant and the distribution will be normalized.
+	}
+
+	let distribution = WeightedProbabilityDistribution::new(thetas, weights);
+	distribution
+}
+
+/// A simple probability distribution which uses weighted indices to retrieve values.
+struct WeightedProbabilityDistribution {
+	values: Vec<f64>,
+	weighted_index: WeightedIndex<f64>,
+}
+impl WeightedProbabilityDistribution {
+	pub fn new(values: Vec<f64>, weights: Vec<f64>) -> Self {
+		WeightedProbabilityDistribution {
+			values: values,
+			weighted_index: WeightedIndex::new(&weights).unwrap(),
+		}
+	}
+}
+impl Distribution<f64> for WeightedProbabilityDistribution {
+	fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> f64 {
+		let index = self.weighted_index.sample(rng);
+		self.values[index]
 	}
 }
