@@ -17,6 +17,7 @@ pub mod magnetic;
 pub mod maths;
 pub mod optimization;
 pub mod output;
+pub mod shapes;
+pub mod sim_region;
 pub mod simulation_templates;
 pub mod tests;
-pub mod sim_region;
