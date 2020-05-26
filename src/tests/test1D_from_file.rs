@@ -21,7 +21,7 @@ pub mod tests {
 
         let (mut world, mut dispatcher) = create_from_config("test1D.yaml");
         world.register::<NewlyCreated>();
-        world.add_resource(RandomWalkMarker { value: false });
+        //world.add_resource(RandomWalkMarker { value: false });
         world.register::<Dark>();
         world.register::<NumberKick>();
         world.register::<Detected>();
