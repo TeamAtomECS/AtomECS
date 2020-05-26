@@ -1,8 +1,10 @@
 extern crate nalgebra;
+use nalgebra::Vector3;
 
 use super::emit::AtomNumberToEmit;
 extern crate rand;
 use super::VelocityCap;
+use rand::Rng;
 
 use crate::atom::*;
 use crate::initiate::NewlyCreated;
@@ -72,8 +74,27 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
 				// generate a random position on the surface.
 				let (position, normal) = shape.get_random_point_on_surface(&source_position.pos);
 
-				// todo: lambert cosine
+				// lambert cosine emission
 				let direction = -normal.normalize();
+				let random_dir = Vector3::new(
+					rng.gen_range(-1.0, 1.0),
+					rng.gen_range(-1.0, 1.0),
+					rng.gen_range(-1.0, 1.0),
+				)
+				.normalize();
+				let perp_a = direction.cross(&random_dir);
+				let perp_b = direction.cross(&perp_a);
+
+				let domain: bool = rng.gen();
+				let var: f64 = rng.gen_range(0.0, 1.0);
+				let phi: f64 = rng.gen_range(0.0, 2.0*std::f64::consts::PI);
+				let theta: f64;
+				if domain {
+					theta = var.acos()/2.0;
+				} else {
+					theta = var.asin()/2.0 + std::f64::consts::PI/4.0;
+				}
+				let emission_direction = theta.cos() * direction + theta.sin() * (perp_a * phi.cos() + perp_b * phi.sin());
 
 				// todo: generate random speed
 				let speed = 10.0;
@@ -82,7 +103,7 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
 					continue;
 				}
 
-				let velocity = speed * direction;
+				let velocity = speed * emission_direction;
 
 				let new_atom = entities.create();
 				updater.insert(new_atom, Position { pos: position });
