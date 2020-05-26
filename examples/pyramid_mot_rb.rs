@@ -1,28 +1,25 @@
-
 //! Loading a Rb pyramid MOT from vapor
-//! 
+//!
 //! One of the beams has a circular mask, which allows atoms to escape on one side.
 
 extern crate magneto_optical_trap as lib;
 extern crate nalgebra;
-use lib::atom::{AtomInfo, Position, Velocity};
-use lib::atom_sources::emit::AtomNumberToEmit;
-use lib::atom_sources::mass::{MassDistribution, MassRatio};
-use lib::atom_sources::oven::{Oven, OvenAperture};
-use lib::destructor::ToBeDestroyed;
+use lib::atom::{AtomInfo, Mass, Position, Velocity};
+use lib::atom_sources::emit::{AtomNumberToEmit, EmitOnce};
+use lib::atom_sources::oven::OvenVelocityCap;
+use lib::atom_sources::surface::SurfaceSource;
 use lib::ecs;
 use lib::integrator::Timestep;
-use lib::laser::cooling::{CoolingLight};
-use lib::laser::gaussian::{GaussianBeam,CircularMask};
+use lib::laser::cooling::CoolingLight;
+use lib::laser::gaussian::{CircularMask, GaussianBeam};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
-use lib::sim_region::{SimulationVolume, VolumeType};
 use lib::shapes::Cylinder;
+use lib::sim_region::{SimulationVolume, VolumeType};
 use nalgebra::Vector3;
 use specs::{Builder, World};
 use std::time::Instant;
-use lib::atom_sources::oven::OvenVelocityCap;
 
 fn main() {
     let now = Instant::now();
@@ -151,29 +148,30 @@ fn main() {
     world.add_resource(Timestep { delta: 1.0e-6 });
 
     // The simulation bounds consists of a vertical cylinder. It also emits atoms from the surface.
-    let number_to_emit = 400000;
+    let number_to_emit = 5000;
     world
         .create_entity()
         .with(Position {
             pos: Vector3::new(0.0, 0.0, 0.0),
         })
-        .with(Cylinder::new(0.05, 0.3, Vector3::new(0.0,0.0,1.0)))
-        .with(SimulationVolume { volume_type: VolumeType::Inclusive })
-        .with(MassDistribution::new(vec![MassRatio {
-            mass: 87.0,
-            ratio: 1.0,
-        }]))
+        .with(Cylinder::new(0.05, 0.3, Vector3::new(0.0, 0.0, 1.0)))
+        .with(SurfaceSource { temperature: 330.0 })
+        .with(SimulationVolume {
+            volume_type: VolumeType::Inclusive,
+        })
+        .with(Mass { value: 87.0 })
         .with(AtomInfo::rubidium())
         .with(AtomNumberToEmit {
             number: number_to_emit,
         })
+        .with(EmitOnce {})
         .build();
 
     // Also use a velocity cap so that fast atoms are not even simulated.
     world.add_resource(OvenVelocityCap { cap: 150.0 });
 
     // Run the simulation for a number of steps.
-    for _i in 0..10000 {
+    for _i in 0..500 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }

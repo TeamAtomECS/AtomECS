@@ -84,7 +84,7 @@ impl Force {
 /// Inertial and Gravitational mass of an entity
 ///
 /// Mass is specified in atom mass units (amu).
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Mass {
 	pub value: f64,
 }

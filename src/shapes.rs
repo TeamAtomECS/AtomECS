@@ -64,7 +64,7 @@ impl Surface for Cylinder {
     fn get_random_point_on_surface(&self, surface_position: &Vector3<f64>) -> (Vector3<f64>, Vector3<f64>) {
         // Should we spawn a point on the ends or the sleeve?
         let mut rng = rand::thread_rng();
-        let spawn_on_ends = rng.gen_range(0.0, 1.0) > self.length / self.radius;
+        let spawn_on_ends = rng.gen_range(0.0, 1.0) < (self.radius / (self.length + self.radius));
 
         if spawn_on_ends
         {
@@ -75,7 +75,8 @@ impl Surface for Cylinder {
                 false => -1.0
             };
             let angle = rng.gen_range(0.0, 2.0 * std::f64::consts::PI);
-            let radius = rng.gen_range(0.0, &self.radius);
+            let f: f64 = rng.gen_range(0.0, 1.0);
+            let radius = &self.radius * f.sqrt();
             let normal = sign * self.direction;
             let point = surface_position + self.perp_x * radius * angle.cos() + self.perp_y * radius * angle.sin() + normal * self.length / 2.0;
             return (point, normal);

@@ -1,13 +1,19 @@
 pub mod emit;
 pub mod mass;
 pub mod oven;
+pub mod surface;
 
 use specs::{DispatcherBuilder, World};
 
 extern crate rand;
-use rand::Rng;
 use rand::distributions::Distribution;
 use rand::distributions::WeightedIndex;
+use rand::Rng;
+
+pub struct VelocityCap {
+    /// The maximum speed of an atom emitted by an atom source. See [Velocity](struct.Velocity.html) for units.
+    pub value: f64,
+}
 
 /// Adds the systems required by `atom_sources` to the dispatcher.
 ///
@@ -32,11 +38,24 @@ pub fn add_systems_to_dispatch(
             &["emit_number_per_frame"],
         )
         .with(
-            oven::PrecalculateForSpeciesSystem, 
+            oven::PrecalculateForSpeciesSystem,
             "precalculated_oven",
             deps,
         )
-        .with(oven::OvenCreateAtomsSystem, "", &["emit_number_per_frame", "precalculated_oven"])
+        .with(
+            oven::OvenCreateAtomsSystem,
+            "oven_create_atoms",
+            &["emit_number_per_frame", "precalculated_oven"],
+        )
+        .with(
+            surface::CreateAtomsOnSurfaceSystem,
+            "surface_create_atoms",
+            &["emit_number_per_frame"]
+        )
+        .with(
+            emit::EmitOnceSystem,
+            "emit_once_system",
+            &["oven_create_atoms", "surface_create_atoms"])
 }
 
 /// Registers resources required by `atom_sources` to the ecs world.
@@ -45,25 +64,26 @@ pub fn register_components(world: &mut World) {
     world.register::<mass::MassDistribution>();
     world.register::<emit::EmitFixedRate>();
     world.register::<emit::EmitNumberPerFrame>();
+    world.register::<emit::EmitOnce>();
     world.register::<emit::AtomNumberToEmit>();
 }
 
 /// A simple probability distribution which uses weighted indices to retrieve values.
 struct WeightedProbabilityDistribution {
-	values: Vec<f64>,
-	weighted_index: WeightedIndex<f64>,
+    values: Vec<f64>,
+    weighted_index: WeightedIndex<f64>,
 }
 impl WeightedProbabilityDistribution {
-	pub fn new(values: Vec<f64>, weights: Vec<f64>) -> Self {
-		WeightedProbabilityDistribution {
-			values: values,
-			weighted_index: WeightedIndex::new(&weights).unwrap(),
-		}
-	}
+    pub fn new(values: Vec<f64>, weights: Vec<f64>) -> Self {
+        WeightedProbabilityDistribution {
+            values: values,
+            weighted_index: WeightedIndex::new(&weights).unwrap(),
+        }
+    }
 }
 impl Distribution<f64> for WeightedProbabilityDistribution {
-	fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> f64 {
-		let index = self.weighted_index.sample(rng);
-		self.values[index]
-	}
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> f64 {
+        let index = self.weighted_index.sample(rng);
+        self.values[index]
+    }
 }

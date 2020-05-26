@@ -1,7 +1,7 @@
 extern crate nalgebra;
 extern crate rand;
-use rand::Rng;
 use crate::integrator::Timestep;
+use rand::Rng;
 
 extern crate specs;
 use serde::{Deserialize, Serialize};
@@ -23,6 +23,13 @@ pub struct EmitFixedRate {
     pub rate: f64,
 }
 impl Component for EmitFixedRate {
+    type Storage = HashMapStorage<Self>;
+}
+
+/// Component which sets future emission numbers to zero.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EmitOnce {}
+impl Component for EmitOnce {
     type Storage = HashMapStorage<Self>;
 }
 
@@ -73,6 +80,21 @@ impl<'a> System<'a> for EmitFixedRateSystem {
                 number = guaranteed_number as i32;
             }
             emit_numbers.number = number;
+        }
+    }
+}
+
+/// Sets the number of atoms to emit to zero for EmitOnce sources.
+pub struct EmitOnceSystem;
+impl<'a> System<'a> for EmitOnceSystem {
+    type SystemData = (
+        ReadStorage<'a, EmitOnce>,
+        WriteStorage<'a, AtomNumberToEmit>,
+    );
+
+    fn run(&mut self, (emit_onces, mut emit_numbers): Self::SystemData) {
+        for (_, mut emit_numbers) in (&emit_onces, &mut emit_numbers).join() {
+            emit_numbers.number = 0;
         }
     }
 }
