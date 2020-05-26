@@ -9,6 +9,7 @@
 
 use crate::atom::Position;
 use crate::initiate::NewlyCreated;
+use crate::shapes::{Cuboid, Cylinder, Sphere, Volume};
 use nalgebra::Vector3;
 use specs::{
     Component, DispatcherBuilder, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage,
@@ -16,62 +17,11 @@ use specs::{
 };
 use std::marker::PhantomData;
 
-trait Volume {
-    fn contains(&self, volume_position: &Vector3<f64>, entity_position: &Vector3<f64>) -> bool;
-    fn get_type(&self) -> &VolumeType;
-}
-
 pub enum VolumeType {
     /// Entities within the volume are accepted
     Inclusive,
     /// Entities outside the volume are accepted, entities within are rejected.
     Exclusive,
-}
-
-/// A cuboid volume.
-pub struct Cuboid {
-    /// The dimension of the cuboid volume, from center to vertex (1,1,1).
-    pub half_width: Vector3<f64>,
-    /// Whether the volume is `Inclusive` or `Exclusive`.
-    pub vol_type: VolumeType,
-}
-impl Volume for Cuboid {
-    fn contains(&self, volume_position: &Vector3<f64>, entity_position: &Vector3<f64>) -> bool {
-        let delta = entity_position - volume_position;
-        let result = delta[0].abs() < self.half_width[0]
-            && delta[1].abs() < self.half_width[1]
-            && delta[2].abs() < self.half_width[2];
-        result
-    }
-
-    fn get_type(&self) -> &VolumeType {
-        &self.vol_type
-    }
-}
-impl Component for Cuboid {
-    type Storage = HashMapStorage<Self>;
-}
-
-/// A spherical volume.
-pub struct Sphere {
-    /// The radius of the spherical volume.
-    pub radius: f64,
-    /// Whether the volume is `Inclusive` or `Exclusive`.
-    pub vol_type: VolumeType,
-}
-impl Volume for Sphere {
-    fn contains(&self, volume_position: &Vector3<f64>, entity_position: &Vector3<f64>) -> bool {
-        let delta = entity_position - volume_position;
-        let result = delta.norm_squared() < self.radius * self.radius;
-        result
-    }
-
-    fn get_type(&self) -> &VolumeType {
-        &self.vol_type
-    }
-}
-impl Component for Sphere {
-    type Storage = HashMapStorage<Self>;
 }
 
 /// All possible results of region testing.
@@ -94,6 +44,13 @@ impl Component for RegionTest {
     type Storage = VecStorage<Self>;
 }
 
+pub struct SimulationVolume {
+    pub volume_type: VolumeType,
+}
+impl Component for SimulationVolume {
+    type Storage = HashMapStorage<Self>;
+}
+
 /// Performs region tests for the defined volume type `T`.
 ///
 /// For [VolumeType](struct.VolumeType.html)s that are `Inclusive`, the
@@ -111,18 +68,19 @@ where
 {
     type SystemData = (
         ReadStorage<'a, T>,
+        ReadStorage<'a, SimulationVolume>,
         WriteStorage<'a, RegionTest>,
         ReadStorage<'a, Position>,
     );
 
-    fn run(&mut self, (volumes, mut test_results, positions): Self::SystemData) {
-        for (volume, vol_pos) in (&volumes, &positions).join() {
+    fn run(&mut self, (volumes, sim_volumes, mut test_results, positions): Self::SystemData) {
+        for (volume, sim_volume, vol_pos) in (&volumes, &sim_volumes, &positions).join() {
             for (result, pos) in (&mut test_results, &positions).join() {
                 match result.result {
                     Result::Reject => (),
                     _ => {
                         let contained = volume.contains(&vol_pos.pos, &pos.pos);
-                        match volume.get_type() {
+                        match sim_volume.volume_type {
                             VolumeType::Inclusive => {
                                 if contained {
                                     result.result = Result::Accept;
@@ -241,6 +199,8 @@ pub fn add_systems_to_dispatch(
 pub fn register_components(world: &mut World) {
     world.register::<Sphere>();
     world.register::<Cuboid>();
+    world.register::<Cylinder>();
+    world.register::<SimulationVolume>();
     world.register::<RegionTest>();
 }
 
@@ -291,7 +251,9 @@ pub mod tests {
             .with(Position { pos: sphere_pos })
             .with(Sphere {
                 radius: sphere_radius,
-                vol_type: VolumeType::Inclusive,
+            })
+            .with(SimulationVolume {
+                volume_type: VolumeType::Inclusive,
             })
             .build();
 
@@ -349,7 +311,9 @@ pub mod tests {
             .with(Position { pos: cuboid_pos })
             .with(Cuboid {
                 half_width: half_width,
-                vol_type: VolumeType::Inclusive,
+            })
+            .with(SimulationVolume {
+                volume_type: VolumeType::Inclusive,
             })
             .build();
 

@@ -12,7 +12,8 @@ use lib::atom::Position;
 use lib::laser::repump::RepumpLoss;
 
 use lib::atom_sources::oven::OvenVelocityCap;
-use lib::sim_region::{Cuboid, VolumeType};
+use lib::sim_region::{VolumeType, SimulationVolume};
+use lib::shapes::Cuboid;
 
 #[allow(unused_imports)]
 
@@ -35,7 +36,12 @@ fn main() {
     //include random walk(Optional)
     world.add_resource(RandomWalkMarker { value: true });
     
-    world.create_entity().with(Position { pos: Vector3::new(0.0,0.0,0.0)}).with(Cuboid { half_width: Vector3::new(0.1,0.1,0.1), vol_type: VolumeType::Inclusive}).build();
+    world
+        .create_entity()
+        .with(Position { pos: Vector3::new(0.0,0.0,0.0)})
+        .with(Cuboid { half_width: Vector3::new(0.1,0.1,0.1) })
+        .with(SimulationVolume { volume_type: VolumeType::Inclusive })
+        .build();
 
     world.add_resource(OvenVelocityCap { cap: 1000. });
     world.add_resource(RepumpLoss { proportion: 0.0 });

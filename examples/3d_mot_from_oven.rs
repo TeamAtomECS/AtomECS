@@ -14,7 +14,8 @@ use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
-use lib::sim_region::{Cuboid, VolumeType};
+use lib::sim_region::{SimulationVolume, VolumeType};
+use lib::shapes::Cuboid;
 use nalgebra::Vector3;
 use specs::{Builder, World};
 use std::time::Instant;
@@ -180,8 +181,10 @@ fn main() {
             pos: Vector3::new(0.0, 0.0, 0.0),
         })
         .with(Cuboid {
-            half_width: Vector3::new(0.1, 0.01, 0.01),
-            vol_type: VolumeType::Inclusive,
+            half_width: Vector3::new(0.1, 0.01, 0.01)
+        })
+        .with(SimulationVolume {
+            volume_type: VolumeType::Inclusive
         })
         .build();
 
