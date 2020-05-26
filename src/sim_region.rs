@@ -184,9 +184,16 @@ pub fn add_systems_to_dispatch(
             &["region_test_sphere"],
         )
         .with(
+            RegionTestSystem::<Cylinder> {
+                marker: PhantomData,
+            },
+            "region_test_cylinder",
+            &["region_test_cuboid"],
+        )
+        .with(
             DeleteFailedRegionTestsSystem,
             "delete_region_test_failure",
-            &["region_test_cuboid"],
+            &["region_test_cylinder"],
         )
         .with(
             AttachRegionTestsToNewlyCreatedSystem,
