@@ -92,8 +92,7 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
 					rng.gen_range(-1.0, 1.0),
 					rng.gen_range(-1.0, 1.0),
 					rng.gen_range(-1.0, 1.0),
-				)
-				.normalize();
+				).normalize();
 				let perp_a = direction.cross(&random_dir);
 				let perp_b = direction.cross(&perp_a);
 
