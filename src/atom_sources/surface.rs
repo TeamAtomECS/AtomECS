@@ -6,6 +6,7 @@ extern crate rand;
 use super::VelocityCap;
 use rand::Rng;
 
+use super::precalc::{MaxwellBoltzmannSource, PrecalculatedSpeciesInformation};
 use crate::atom::*;
 use crate::initiate::NewlyCreated;
 use crate::shapes::{Cylinder, Surface};
@@ -19,6 +20,11 @@ pub struct SurfaceSource {
 }
 impl Component for SurfaceSource {
 	type Storage = HashMapStorage<Self>;
+}
+impl MaxwellBoltzmannSource for SurfaceSource {
+	fn get_temperature(&self) -> f64 {
+		self.temperature
+	}
 }
 
 /// This system creates atoms from an oven source.
@@ -34,7 +40,7 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
 		ReadStorage<'a, AtomInfo>,
 		ReadStorage<'a, AtomNumberToEmit>,
 		ReadStorage<'a, Position>,
-		ReadStorage<'a, Mass>,
+		ReadStorage<'a, PrecalculatedSpeciesInformation>,
 		Option<Read<'a, VelocityCap>>,
 		Read<'a, LazyUpdate>,
 	);
@@ -48,7 +54,7 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
 			atom_infos,
 			numbers_to_emit,
 			source_positions,
-			masses,
+			species,
 			velocity_cap,
 			updater,
 		): Self::SystemData,
@@ -60,17 +66,23 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
 		};
 
 		let mut rng = rand::thread_rng();
-		for (surface, shape, atom_info, number_to_emit, source_position, mass) in (
+		for (_, shape, atom_info, number_to_emit, source_position, species) in (
 			&surfaces,
 			&shapes,
 			&atom_infos,
 			&numbers_to_emit,
 			&source_positions,
-			&masses,
+			&species,
 		)
 			.join()
 		{
 			for _i in 0..number_to_emit.number {
+				// Get random speed and mass.
+				let (mass, speed) = species.generate_random_mass_v(&mut rng);
+				if speed > max_vel {
+					continue;
+				}
+
 				// generate a random position on the surface.
 				let (position, normal) = shape.get_random_point_on_surface(&source_position.pos);
 
@@ -87,21 +99,15 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
 
 				let domain: bool = rng.gen();
 				let var: f64 = rng.gen_range(0.0, 1.0);
-				let phi: f64 = rng.gen_range(0.0, 2.0*std::f64::consts::PI);
+				let phi: f64 = rng.gen_range(0.0, 2.0 * std::f64::consts::PI);
 				let theta: f64;
 				if domain {
-					theta = var.acos()/2.0;
+					theta = var.acos() / 2.0;
 				} else {
-					theta = var.asin()/2.0 + std::f64::consts::PI/4.0;
+					theta = var.asin() / 2.0 + std::f64::consts::PI / 4.0;
 				}
-				let emission_direction = theta.cos() * direction + theta.sin() * (perp_a * phi.cos() + perp_b * phi.sin());
-
-				// todo: generate random speed
-				let speed = 10.0;
-
-				if speed > max_vel {
-					continue;
-				}
+				let emission_direction = theta.cos() * direction
+					+ theta.sin() * (perp_a * phi.cos() + perp_b * phi.sin());
 
 				let velocity = speed * emission_direction;
 
@@ -109,7 +115,7 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
 				updater.insert(new_atom, Position { pos: position });
 				updater.insert(new_atom, Velocity { vel: velocity });
 				updater.insert(new_atom, Force::new());
-				updater.insert(new_atom, mass.clone());
+				updater.insert(new_atom, Mass { value: mass });
 				updater.insert(new_atom, atom_info.clone());
 				updater.insert(new_atom, Atom);
 				updater.insert(new_atom, InitialVelocity { vel: velocity });

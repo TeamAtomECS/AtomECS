@@ -1,8 +1,8 @@
 pub mod emit;
 pub mod mass;
 pub mod oven;
-pub mod surface;
 pub mod precalc;
+pub mod surface;
 
 use specs::{DispatcherBuilder, World};
 
@@ -40,8 +40,17 @@ pub fn add_systems_to_dispatch(
             &["emit_number_per_frame"],
         )
         .with(
-            precalc::PrecalculateForSpeciesSystem::<oven::Oven> { marker: PhantomData },
+            precalc::PrecalculateForSpeciesSystem::<oven::Oven> {
+                marker: PhantomData,
+            },
             "precalculated_oven",
+            deps,
+        )
+        .with(
+            precalc::PrecalculateForSpeciesSystem::<surface::SurfaceSource> {
+                marker: PhantomData,
+            },
+            "precalculated_surfaces",
             deps,
         )
         .with(
@@ -52,12 +61,13 @@ pub fn add_systems_to_dispatch(
         .with(
             surface::CreateAtomsOnSurfaceSystem,
             "surface_create_atoms",
-            &["emit_number_per_frame"]
+            &["emit_number_per_frame", "precalculated_surfaces"],
         )
         .with(
             emit::EmitOnceSystem,
             "emit_once_system",
-            &["oven_create_atoms", "surface_create_atoms"])
+            &["oven_create_atoms", "surface_create_atoms"],
+        )
 }
 
 /// Registers resources required by `atom_sources` to the ecs world.
@@ -68,6 +78,7 @@ pub fn register_components(world: &mut World) {
     world.register::<emit::EmitNumberPerFrame>();
     world.register::<emit::EmitOnce>();
     world.register::<emit::AtomNumberToEmit>();
+    world.register::<surface::SurfaceSource>();
 }
 
 /// A simple probability distribution which uses weighted indices to retrieve values.

@@ -6,19 +6,18 @@ extern crate specs;
 #[allow(unused_imports)]
 use lib::simulation_templates::loadfromconfig::create_from_config;
 
-use lib::laser::force::RandomWalkMarker;
-use lib::optimization::LargerEarlyTimestepOptimization;
 use lib::atom::Position;
+use lib::laser::force::RandomWalkMarker;
 use lib::laser::repump::RepumpLoss;
+use lib::optimization::LargerEarlyTimestepOptimization;
 
 use lib::atom_sources::VelocityCap;
-use lib::sim_region::{VolumeType, SimulationVolume};
 use lib::shapes::Cuboid;
+use lib::sim_region::{SimulationVolume, VolumeType};
 
 #[allow(unused_imports)]
-
 use nalgebra::Vector3;
-use specs::{RunNow, Builder};
+use specs::{Builder, RunNow};
 #[allow(unused_imports)]
 use std::time::{Duration, Instant};
 
@@ -35,12 +34,17 @@ fn main() {
     world.add_resource(LargerEarlyTimestepOptimization::new(2e-4));
     //include random walk(Optional)
     world.add_resource(RandomWalkMarker { value: true });
-    
     world
         .create_entity()
-        .with(Position { pos: Vector3::new(0.0,0.0,0.0)})
-        .with(Cuboid { half_width: Vector3::new(0.1,0.1,0.1) })
-        .with(SimulationVolume { volume_type: VolumeType::Inclusive })
+        .with(Position {
+            pos: Vector3::new(0.0, 0.0, 0.0),
+        })
+        .with(Cuboid {
+            half_width: Vector3::new(0.1, 0.1, 0.1),
+        })
+        .with(SimulationVolume {
+            volume_type: VolumeType::Inclusive,
+        })
         .build();
 
     world.add_resource(VelocityCap { value: 1000. });
