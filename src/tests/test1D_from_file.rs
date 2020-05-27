@@ -17,7 +17,7 @@ pub mod tests {
         use crate::laser::repump::{Dark, RepumpLoss};
         use specs::{Builder, Join};
 
-        use crate::atom_sources::oven::OvenVelocityCap;
+        use crate::atom_sources::VelocityCap;
 
         let (mut world, mut dispatcher) = create_from_config("test1D.yaml");
         world.register::<NewlyCreated>();
@@ -25,7 +25,7 @@ pub mod tests {
         world.register::<Dark>();
         world.register::<NumberKick>();
         world.register::<Detected>();
-        world.add_resource(OvenVelocityCap { cap: 1000. });
+        world.add_resource(VelocityCap { value: 1000. });
         world.add_resource(RepumpLoss { proportion: 0.0 });
         world
             .create_entity()

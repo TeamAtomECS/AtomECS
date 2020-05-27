@@ -2,6 +2,7 @@ pub mod emit;
 pub mod mass;
 pub mod oven;
 pub mod surface;
+pub mod precalc;
 
 use specs::{DispatcherBuilder, World};
 
@@ -9,6 +10,7 @@ extern crate rand;
 use rand::distributions::Distribution;
 use rand::distributions::WeightedIndex;
 use rand::Rng;
+use std::marker::PhantomData;
 
 pub struct VelocityCap {
     /// The maximum speed of an atom emitted by an atom source. See [Velocity](struct.Velocity.html) for units.
@@ -38,7 +40,7 @@ pub fn add_systems_to_dispatch(
             &["emit_number_per_frame"],
         )
         .with(
-            oven::PrecalculateForSpeciesSystem,
+            precalc::PrecalculateForSpeciesSystem::<oven::Oven> { marker: PhantomData },
             "precalculated_oven",
             deps,
         )

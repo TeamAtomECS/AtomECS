@@ -19,7 +19,7 @@ use lib::shapes::Cuboid;
 use nalgebra::Vector3;
 use specs::{Builder, World};
 use std::time::Instant;
-use lib::atom_sources::oven::OvenVelocityCap;
+use lib::atom_sources::VelocityCap;
 
 fn main() {
     let now = Instant::now();
@@ -191,7 +191,7 @@ fn main() {
         .build();
 
     // Also use a velocity cap so that fast atoms are not even simulated.
-    world.add_resource(OvenVelocityCap { cap: 200.0 });
+    world.add_resource(VelocityCap { value: 200.0 });
 
     // Run the simulation for a number of steps.
     for _i in 0..10000 {

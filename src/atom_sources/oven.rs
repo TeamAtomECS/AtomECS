@@ -1,25 +1,22 @@
 extern crate nalgebra;
 
 use super::emit::AtomNumberToEmit;
-use super::mass::MassDistribution;
+use super::precalc::{MaxwellBoltzmannSource, PrecalculatedSpeciesInformation};
 use crate::constant;
-use crate::constant::{AMU, BOLTZCONST, EXP, PI};
+use crate::constant::PI;
 use crate::initiate::*;
 
 extern crate rand;
 use super::WeightedProbabilityDistribution;
 use rand::distributions::Distribution;
-use rand::distributions::WeightedIndex;
 use rand::Rng;
+use super::VelocityCap;
 
 extern crate specs;
 use crate::atom::*;
 use nalgebra::Vector3;
 
-use specs::{
-	Component, Entities, Entity, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System,
-	WriteStorage,
-};
+use specs::{Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System};
 
 fn velocity_generate(
 	v_mag: f64,
@@ -57,7 +54,11 @@ pub struct Oven {
 	/// Angular distribution for atoms emitted by the oven.
 	theta_distribution: WeightedProbabilityDistribution,
 }
-
+impl MaxwellBoltzmannSource for Oven {
+	fn get_temperature(&self) -> f64 {
+		self.temperature
+	}
+}
 impl Component for Oven {
 	type Storage = HashMapStorage<Self>;
 }
@@ -94,15 +95,6 @@ impl Oven {
 	}
 }
 
-/// Caps the maximum velocity of atoms created by an oven.
-///
-/// This resource indicates that any atoms emitted from an oven with velocity greater than the cap should be destroyed.
-/// To use the cap, add it as a resource to the world.
-pub struct OvenVelocityCap {
-	/// The maximum speed of an atom emitted by an oven. See [Velocity](struct.Velocity.html) for units.
-	pub cap: f64,
-}
-
 /// This system creates atoms from an oven source.
 ///
 /// The oven points in the direction [Oven.direction].
@@ -116,7 +108,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		ReadStorage<'a, AtomNumberToEmit>,
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, PrecalculatedSpeciesInformation>,
-		Option<Read<'a, OvenVelocityCap>>,
+		Option<Read<'a, VelocityCap>>,
 		Read<'a, LazyUpdate>,
 	);
 
@@ -125,7 +117,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 		(entities, oven, atom, numbers_to_emit, pos, precalcs, velocity_cap, updater): Self::SystemData,
 	) {
 		let max_vel = match velocity_cap {
-			Some(cap) => cap.cap,
+			Some(cap) => cap.value,
 			None => std::f64::MAX,
 		};
 
@@ -240,140 +232,4 @@ fn create_jtheta_distribution(
 
 	let distribution = WeightedProbabilityDistribution::new(thetas, weights);
 	distribution
-}
-
-/// The probability distribution `p(v)` that a given `mass` has a velocity magnitude `v`.
-///
-/// # Arguments
-///
-/// `temperature`: temperature of the gas, in Kelvin.
-///
-/// `mass`: particle mass, in SI units of kg.
-///
-/// `v`: velocity magnitude, in SI units of m/s.
-///
-/// See _Atomic and Molecular Beam Methods_, Scoles, p85
-pub fn probability_v(temperature: f64, mass: f64, v: f64) -> f64 {
-	// (mass / (2.0 * PI * BOLTZCONST * temperature)).powf(1.5)
-	// 	* EXP.powf(-mass * v.powf(2.0) / (2.0 * BOLTZCONST * temperature))
-	// 	* 4.0 * PI
-	// 	* v.powf(2.0)
-	let norm_v = v / (2.0 * BOLTZCONST * temperature / mass).powf(0.5); // (4.2) and (4.4)
-	2.0 * norm_v.powf(3.0) * EXP.powf(-norm_v.powf(2.0))
-}
-
-/// Creates and precalculates a [WeightedProbabilityDistribution](struct.WeightedProbabilityDistribution.html)
-/// which can be used to sample values of velocity, based on the Maxwell-Boltzmann distribution.
-///
-/// # Arguments
-///
-/// `temperature`: The temperature of the oven, in units of Kelvin.
-///
-/// `mass`: The mass of the particle, in SI units of kg.
-fn create_v_distribution(temperature: f64, mass: f64) -> WeightedProbabilityDistribution {
-	let max_velocity = 7.0 * (2.0 * BOLTZCONST * temperature / mass).powf(0.5);
-
-	// tuple list of (velocity, weight)
-	let mut velocities = Vec::<f64>::new();
-	let mut weights = Vec::<f64>::new();
-
-	// precalculate the discretized distribution.
-	let n = 2000;
-	for i in 0..n {
-		let v = (i as f64 + 0.5) / (n as f64 + 1.0) * max_velocity;
-		let weight = probability_v(temperature, mass, v);
-		velocities.push(v);
-		weights.push(weight);
-	}
-
-	WeightedProbabilityDistribution::new(velocities, weights)
-}
-
-/// Holds any precalculated information required to generate atoms of the given species.
-struct Species {
-	/// Mass of the species, in atomic mass units
-	mass: f64,
-	/// Distribution that can be used to generate random velocity magnitudes `v`.
-	v_distribution: WeightedProbabilityDistribution,
-}
-impl Species {
-	fn create(mass: f64, temperature: f64) -> Self {
-		Species {
-			mass: mass,
-			v_distribution: create_v_distribution(temperature, mass * AMU),
-		}
-	}
-}
-
-/// Holds all precalculated information required for generating atoms on a per-species basis.
-pub struct PrecalculatedSpeciesInformation {
-	/// All species that can be generated
-	species: Vec<Species>,
-	/// weighted distribution holding the chance to create each species.
-	distribution: WeightedIndex<f64>,
-}
-impl PrecalculatedSpeciesInformation {
-	/// Gets a random mass and velocity from precalculated distributions.
-	///
-	/// The tuple returned is of the form (mass, velocity). The mass is measured
-	/// in atomic mass units, and the velocity magnitude is measured in m/s.
-	fn generate_random_mass_v<R: Rng + ?Sized>(&self, rng: &mut R) -> (f64, f64) {
-		let i = self.distribution.sample(rng);
-		let species = &self.species[i];
-		(species.mass, species.v_distribution.sample(rng))
-	}
-
-	fn create(temperature: f64, mass_distribution: &MassDistribution) -> Self {
-		let mut species = Vec::<Species>::new();
-		let mut ratios = Vec::<f64>::new();
-		for mr in &mass_distribution.distribution {
-			ratios.push(mr.ratio);
-			species.push(Species::create(mr.mass, temperature));
-		}
-		PrecalculatedSpeciesInformation {
-			species: species,
-			distribution: WeightedIndex::new(&ratios).unwrap(),
-		}
-	}
-}
-impl Component for PrecalculatedSpeciesInformation {
-	type Storage = HashMapStorage<Self>;
-}
-
-/// Precalculates different distributions used by the Oven systems.
-///
-/// This system removes the [MassDistribution](struct.MassDistribution.html) component from
-/// the oven and replaces it with a [PrecalculatedForSpeciesSystem] that contains all
-/// precalculated information required to generate atoms from the distribution.
-pub struct PrecalculateForSpeciesSystem;
-
-impl<'a> System<'a> for PrecalculateForSpeciesSystem {
-	type SystemData = (
-		Entities<'a>,
-		ReadStorage<'a, Oven>,
-		WriteStorage<'a, MassDistribution>,
-		WriteStorage<'a, PrecalculatedSpeciesInformation>,
-	);
-
-	fn run(&mut self, (entities, ovens, mut mass_distributions, mut precalcs): Self::SystemData) {
-		// Precalculate for ovens which do not currently have precalculated information.
-		let mut precalculated_data = Vec::<(Entity, PrecalculatedSpeciesInformation)>::new();
-		for (entity, oven, mass_dist, _) in
-			(&entities, &ovens, &mass_distributions, !&precalcs).join()
-		{
-			let precalculated =
-				PrecalculatedSpeciesInformation::create(oven.temperature, mass_dist);
-			//mass_distributions.remove(entity);
-			//precalcs.insert(entity, precalculated);
-			precalculated_data.push((entity, precalculated));
-			println!("Precalculated velocity and mass distributions for an oven.");
-		}
-
-		for (entity, precalculated) in precalculated_data {
-			mass_distributions.remove(entity);
-			precalcs
-				.insert(entity, precalculated)
-				.expect("Could not add precalculated data to oven.");
-		}
-	}
 }

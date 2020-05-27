@@ -11,7 +11,7 @@ use lib::optimization::LargerEarlyTimestepOptimization;
 use lib::atom::Position;
 use lib::laser::repump::RepumpLoss;
 
-use lib::atom_sources::oven::OvenVelocityCap;
+use lib::atom_sources::VelocityCap;
 use lib::sim_region::{VolumeType, SimulationVolume};
 use lib::shapes::Cuboid;
 
@@ -43,7 +43,7 @@ fn main() {
         .with(SimulationVolume { volume_type: VolumeType::Inclusive })
         .build();
 
-    world.add_resource(OvenVelocityCap { cap: 1000. });
+    world.add_resource(VelocityCap { value: 1000. });
     world.add_resource(RepumpLoss { proportion: 0.0 });
     //let (mut world, mut dispatcher) = create();
     for _i in 0..50000 {

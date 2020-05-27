@@ -6,7 +6,7 @@ extern crate magneto_optical_trap as lib;
 extern crate nalgebra;
 use lib::atom::{AtomInfo, Mass, Position, Velocity};
 use lib::atom_sources::emit::{AtomNumberToEmit, EmitOnce};
-use lib::atom_sources::oven::OvenVelocityCap;
+use lib::atom_sources::VelocityCap;
 use lib::atom_sources::surface::SurfaceSource;
 use lib::ecs;
 use lib::integrator::Timestep;
@@ -168,7 +168,7 @@ fn main() {
         .build();
 
     // Also use a velocity cap so that fast atoms are not even simulated.
-    world.add_resource(OvenVelocityCap { cap: 150.0 });
+    world.add_resource(VelocityCap { value: 150.0 });
 
     // Run the simulation for a number of steps.
     for _i in 0..500 {
