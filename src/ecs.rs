@@ -6,8 +6,8 @@
 use crate::atom::ClearForceSystem;
 use crate::atom_sources;
 use crate::destructor::{DeleteToBeDestroyedEntitiesSystem};
-use crate::detector;
-use crate::detector::DetectingInfo;
+//use crate::detector;
+//use crate::detector::DetectingInfo;
 use crate::gravity::ApplyGravitationalForceSystem;
 use crate::initiate::DeflagNewAtomsSystem;
 use crate::integrator::{EulerIntegrationSystem, Step};
@@ -17,7 +17,6 @@ use crate::magnetic;
 use crate::optimization::LargerEarlyTimestepOptimizationSystem;
 use crate::output::console_output::ConsoleOutputSystem;
 use crate::sim_region;
-use nalgebra::Vector3;
 use specs::{Dispatcher, DispatcherBuilder, World};
 
 /// Registers all components used by the modules of the program.
@@ -25,7 +24,7 @@ pub fn register_components(world: &mut World) {
 	magnetic::register_components(world);
 	laser::register_components(world);
 	atom_sources::register_components(world);
-	detector::register_components(world);
+	//detector::register_components(world);
 	sim_region::register_components(world);
 	world.register::<Dark>();
 }
@@ -58,7 +57,7 @@ pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'sta
 			"add_gravity",
 		],
 	);
-	builder = detector::add_systems_to_dispatch(builder, &[]);
+	//builder = detector::add_systems_to_dispatch(builder, &[]);
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
 	builder = builder.with(
 		DeleteToBeDestroyedEntitiesSystem,
@@ -73,8 +72,4 @@ pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'sta
 /// Add required resources to the world
 pub fn register_resources(world: &mut World) {
 	world.add_resource(Step { n: 0 });
-	world.add_resource(DetectingInfo {
-		atom_detected: 0,
-		total_velocity: Vector3::new(0., 0., 0.),
-	});
 }

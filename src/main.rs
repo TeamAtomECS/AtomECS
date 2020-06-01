@@ -1,7 +1,6 @@
 extern crate magneto_optical_trap as lib;
 extern crate nalgebra;
 
-use lib::detector;
 extern crate specs;
 #[allow(unused_imports)]
 use lib::simulation_templates::loadfromconfig::create_from_config;
@@ -17,7 +16,7 @@ use lib::sim_region::{SimulationVolume, VolumeType};
 
 #[allow(unused_imports)]
 use nalgebra::Vector3;
-use specs::{Builder, RunNow};
+use specs::{Builder};
 #[allow(unused_imports)]
 use std::time::{Duration, Instant};
 
@@ -54,8 +53,6 @@ fn main() {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
-    let mut output = detector::PrintDetectResultSystem;
-    output.run_now(&world.res);
     println!("time taken to run in ms{}", now.elapsed().as_millis());
     //write_file_template("example.yml")
 }

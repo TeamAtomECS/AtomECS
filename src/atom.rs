@@ -163,7 +163,7 @@ impl AtomInfo {
 pub struct ClearForceSystem;
 
 impl<'a> System<'a> for ClearForceSystem {
-	type SystemData = (WriteStorage<'a, Force>);
+	type SystemData = WriteStorage<'a, Force>;
 	fn run(&mut self, mut force: Self::SystemData) {
 		for force in (&mut force).join() {
 			force.force = Vector3::new(0.0, 0.0, 0.0);

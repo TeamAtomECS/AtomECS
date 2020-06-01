@@ -3,7 +3,6 @@
 use crate::atom::*;
 use crate::integrator::Step;
 use specs::{Component, Entities, Entity, Join, ReadExpect, ReadStorage, System};
-use std::error::Error;
 use std::fmt::Display;
 use std::fs::File;
 use std::io;
@@ -43,7 +42,7 @@ where
     let path = Path::new(&file_name);
     let display = path.display();
     let file = match File::create(&path) {
-        Err(why) => panic!("couldn't open {}: {}", display, why.description()),
+        Err(why) => panic!("couldn't open {}: {}", display, why.to_string()),
         Ok(file) => file,
     };
     let writer = BufWriter::new(file);

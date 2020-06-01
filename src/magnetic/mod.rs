@@ -45,7 +45,7 @@ impl Default for MagneticFieldSampler {
 pub struct ClearMagneticFieldSamplerSystem;
 
 impl<'a> System<'a> for ClearMagneticFieldSamplerSystem {
-	type SystemData = (WriteStorage<'a, MagneticFieldSampler>);
+	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
 	fn run(&mut self, mut sampler: Self::SystemData) {
 		for sampler in (&mut sampler).join() {
 			sampler.magnitude = 0.;
@@ -61,7 +61,7 @@ impl<'a> System<'a> for ClearMagneticFieldSamplerSystem {
 pub struct CalculateMagneticFieldMagnitudeSystem;
 
 impl<'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
-	type SystemData = (WriteStorage<'a, MagneticFieldSampler>);
+	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
 	fn run(&mut self, mut sampler: Self::SystemData) {
 		for sampler in (&mut sampler).join() {
 			sampler.magnitude = sampler.field.norm();

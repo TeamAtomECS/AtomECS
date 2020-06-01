@@ -10,7 +10,6 @@
 use crate::atom::Position;
 use crate::initiate::NewlyCreated;
 use crate::shapes::{Cuboid, Cylinder, Sphere, Volume};
-use nalgebra::Vector3;
 use specs::{
     Component, DispatcherBuilder, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage,
     System, VecStorage, World, WriteStorage,
@@ -108,7 +107,7 @@ where
 /// to the value `Result::Untested`.
 struct ClearRegionTestSystem;
 impl<'a> System<'a> for ClearRegionTestSystem {
-    type SystemData = (WriteStorage<'a, RegionTest>);
+    type SystemData = WriteStorage<'a, RegionTest>;
 
     fn run(&mut self, mut tests: Self::SystemData) {
         for test in (&mut tests).join() {

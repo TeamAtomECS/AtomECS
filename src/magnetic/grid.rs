@@ -4,22 +4,23 @@ extern crate nalgebra;
 use nalgebra::Vector3;
 use crate::atom::Position;
 use crate::magnetic::MagneticFieldSampler;
-use specs::{Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System, WriteStorage};
-use std::cmp::{max, min};
+use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 extern crate serde;
 use serde::{Deserialize, Serialize};
 
-pub const GRID_SIZE: usize = 256;
-pub const CELL_NUMBER: usize = GRID_SIZE * GRID_SIZE * GRID_SIZE;
-
 /// Defines a magnetic field using a grid-based representation.
 /// 
-/// The grid is ordered with dimensions (x,y,z).
+/// The grid is ordered as a linear array, with elements ordered in priority z,y,x;
+/// items with dz=1 are adjacent in memory.
 /// 
 /// # Fields
+/// 
 /// `extent_spatial`: Size of the grid, in units of m.
+/// 
 /// `position`: Position of the grid center, in units of m.
+/// 
 /// `extent_cells`: Size of the grid in cells, along the (x,y,z) axes.
+/// 
 /// `grid`: `Vec<Vector3<f64>>` containing the field at each grid cell.
 #[derive(Serialize, Deserialize)]
 pub struct PrecalculatedMagneticFieldGrid {

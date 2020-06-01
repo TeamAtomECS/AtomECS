@@ -69,7 +69,7 @@ impl Surface for Cylinder {
         if spawn_on_ends
         {
             //pick a side
-            let sign = match rng.gen::<(bool)>()
+            let sign = match rng.gen::<bool>()
             {
                 true => 1.0,
                 false => -1.0

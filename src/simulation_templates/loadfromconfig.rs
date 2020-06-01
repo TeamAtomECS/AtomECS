@@ -6,7 +6,7 @@ use crate::atom_sources::oven::{Oven, OvenAperture};
 use crate::constant;
 
 use crate::destructor::ToBeDestroyed;
-use crate::detector::{ClearerCSV, Detector};
+//use crate::detector::{ClearerCSV, Detector};
 use crate::ecs;
 use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
@@ -95,25 +95,25 @@ pub fn create_simulation_entity(filename: &str, world: &mut World) {
 			field: config.magnetic.uniform,
 		})
 		.build();
-	world
-		.create_entity()
-		.with(Detector {
-			filename: "detector.csv",
-			direction: config.detector.direction.clone(),
-			radius: config.detector.radius,
-			thickness: config.detector.thickness,
-			trigger_time: config.detector.trigger_time,
-		})
-		.with(Position {
-			pos: config.detector.position.clone(),
-		})
-		.build();
-	world
-		.create_entity()
-		.with(ClearerCSV {
-			filename: "detector.csv",
-		})
-		.build();
+	// world
+	// 	.create_entity()
+	// 	.with(Detector {
+	// 		filename: "detector.csv",
+	// 		direction: config.detector.direction.clone(),
+	// 		radius: config.detector.radius,
+	// 		thickness: config.detector.thickness,
+	// 		trigger_time: config.detector.trigger_time,
+	// 	})
+	// 	.with(Position {
+	// 		pos: config.detector.position.clone(),
+	// 	})
+	// 	.build();
+	// world
+	// 	.create_entity()
+	// 	.with(ClearerCSV {
+	// 		filename: "detector.csv",
+	// 	})
+	// 	.build();
 
 	world.add_resource(Timestep {
 		delta: config.timestep,
