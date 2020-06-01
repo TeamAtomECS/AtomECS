@@ -58,6 +58,9 @@ impl MaxwellBoltzmannSource for Oven {
 	fn get_temperature(&self) -> f64 {
 		self.temperature
 	}
+	fn get_v_dist_power(&self) -> f64 {
+		3.0
+	}
 }
 impl Component for Oven {
 	type Storage = HashMapStorage<Self>;

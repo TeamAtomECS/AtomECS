@@ -25,6 +25,9 @@ impl MaxwellBoltzmannSource for SurfaceSource {
 	fn get_temperature(&self) -> f64 {
 		self.temperature
 	}
+	fn get_v_dist_power(&self) -> f64 {
+		2.0
+	}
 }
 
 /// This system creates atoms from an oven source.

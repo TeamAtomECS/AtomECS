@@ -21,7 +21,7 @@ use specs::{Component, Entities, Entity, HashMapStorage, Join, ReadStorage, Syst
 /// `temperature`: The temperature of the oven, in units of Kelvin.
 ///
 /// `mass`: The mass of the particle, in SI units of kg.
-fn create_v3_distribution(temperature: f64, mass: f64) -> WeightedProbabilityDistribution {
+fn create_v_distribution(temperature: f64, mass: f64, power: f64) -> WeightedProbabilityDistribution {
     let max_velocity = 7.0 * (2.0 * BOLTZCONST * temperature / mass).powf(0.5);
 
     // tuple list of (velocity, weight)
@@ -32,7 +32,7 @@ fn create_v3_distribution(temperature: f64, mass: f64) -> WeightedProbabilityDis
     let n = 2000;
     for i in 0..n {
         let v = (i as f64 + 0.5) / (n as f64 + 1.0) * max_velocity;
-        let weight = probability_v3(temperature, mass, v);
+        let weight = probability_v(temperature, mass, v, power);
         velocities.push(v);
         weights.push(weight);
     }
@@ -52,9 +52,9 @@ fn create_v3_distribution(temperature: f64, mass: f64) -> WeightedProbabilityDis
 /// `v`: velocity magnitude, in SI units of m/s.
 ///
 /// See _Atomic and Molecular Beam Methods_, Scoles, p85
-pub fn probability_v3(temperature: f64, mass: f64, v: f64) -> f64 {
+pub fn probability_v(temperature: f64, mass: f64, v: f64, power: f64) -> f64 {
     let norm_v = v / (2.0 * BOLTZCONST * temperature / mass).powf(0.5); // (4.2) and (4.4)
-    2.0 * norm_v.powf(3.0) * EXP.powf(-norm_v.powf(2.0))
+    2.0 * norm_v.powf(power) * EXP.powf(-norm_v.powf(2.0))
 }
 
 /// Holds any precalculated information required to generate atoms of the given species.
@@ -65,10 +65,10 @@ pub struct Species {
     v_distribution: WeightedProbabilityDistribution,
 }
 impl Species {
-    fn create(mass: f64, temperature: f64) -> Self {
+    fn create(mass: f64, temperature: f64, power: f64) -> Self {
         Species {
             mass: mass,
-            v_distribution: create_v3_distribution(temperature, mass * AMU),
+            v_distribution: create_v_distribution(temperature, mass * AMU, power),
         }
     }
 }
@@ -91,12 +91,12 @@ impl PrecalculatedSpeciesInformation {
         (species.mass, species.v_distribution.sample(rng))
     }
 
-    fn create(temperature: f64, mass_distribution: &MassDistribution) -> Self {
+    fn create(temperature: f64, mass_distribution: &MassDistribution, power: f64) -> Self {
         let mut species = Vec::<Species>::new();
         let mut ratios = Vec::<f64>::new();
         for mr in &mass_distribution.distribution {
             ratios.push(mr.ratio);
-            species.push(Species::create(mr.mass, temperature));
+            species.push(Species::create(mr.mass, temperature, power));
         }
         PrecalculatedSpeciesInformation {
             species: species,
@@ -110,6 +110,7 @@ impl Component for PrecalculatedSpeciesInformation {
 
 pub trait MaxwellBoltzmannSource {
     fn get_temperature(&self) -> f64;
+    fn get_v_dist_power(&self) -> f64;
 }
 
 /// Precalculates different distributions used by the Oven systems.
@@ -139,7 +140,7 @@ where
             (&entities, &sources, &mass_distributions, !&precalcs).join()
         {
             let precalculated =
-                PrecalculatedSpeciesInformation::create(source.get_temperature(), mass_dist);
+                PrecalculatedSpeciesInformation::create(source.get_temperature(), mass_dist, source.get_v_dist_power());
             //mass_distributions.remove(entity);
             //precalcs.insert(entity, precalculated);
             precalculated_data.push((entity, precalculated));
