@@ -11,14 +11,15 @@ impl Component for Dark {
 }
 
 pub struct RepumpLoss {
-    pub proportion: f64,
+    /// Chance in the range [0,1] that an atom is depumped after scattering a photon.
+    pub depump_chance: f64,
 }
 
 impl RepumpLoss {
-    pub fn if_loss(&self) -> bool {
+    pub fn if_loss(&self, number_scattering_events: f64) -> bool {
         let mut rng = rand::thread_rng();
         let result = rng.gen_range(0.0, 1.0);
-        return result < self.proportion;
+        return result < (1.0-self.depump_chance).powf(number_scattering_events);
     }
 }
 
@@ -36,10 +37,8 @@ impl<'a> System<'a> for RepumpSystem {
             None => (),
             Some(repump) => {
                 for (ent, num) in (&ent, &num).join() {
-                    for _i in 0..num.value {
-                        if repump.if_loss() {
-                            lazy.insert(ent, Dark {})
-                        }
+                    if repump.if_loss(num.value) {
+                        lazy.insert(ent, Dark {})
                     }
                 }
             }

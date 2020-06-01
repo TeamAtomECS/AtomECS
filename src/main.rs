@@ -47,7 +47,7 @@ fn main() {
         .build();
 
     world.add_resource(VelocityCap { value: 1000. });
-    world.add_resource(RepumpLoss { proportion: 0.0 });
+    world.add_resource(RepumpLoss { depump_chance: 0.0 });
     //let (mut world, mut dispatcher) = create();
     for _i in 0..50000 {
         dispatcher.dispatch(&mut world.res);

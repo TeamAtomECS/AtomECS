@@ -28,7 +28,7 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 					contents: Vec::new(),
 				},
 			);
-			updater.insert(ent, NumberKick { value: 0 });
+			updater.insert(ent, NumberKick { value: 0.0 });
 		}
 	}
 }

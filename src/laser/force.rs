@@ -1,11 +1,10 @@
 extern crate specs;
 use crate::atom::{Atom, AtomInfo};
 use crate::constant;
-use rand::Rng;
+use rand::distributions::{Normal, Distribution};
 use specs::{Component, Join, Read, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
 extern crate nalgebra;
 use super::sampler::LaserSamplers;
-use crate::maths;
 use nalgebra::Vector3;
 
 use crate::atom::Force;
@@ -89,8 +88,9 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
     }
 }
 
+/// The expected number of times an atom has scattered a photon this timestep.
 pub struct NumberKick {
-    pub value: i32,
+    pub value: f64,
 }
 
 impl Component for NumberKick {
@@ -117,30 +117,13 @@ impl<'a> System<'a> for CalculateKickSystem {
         for (samplers, _, atom_info, (), num) in
             (&samplers, &_atom, &atom_info, !&_dark, &mut number).join()
         {
-            num.value = 0;
             let mut total_force = 0.;
             let omega = 2.0 * constant::PI * atom_info.frequency;
             for sampler in samplers.contents.iter() {
                 total_force = total_force + sampler.force.norm();
             }
             let force_one_atom = constant::HBAR * omega / constant::C / timestep.delta;
-            let mut number_collision = total_force / force_one_atom;
-            //println!("collision{}", number_collision);
-            let mut rng = rand::thread_rng();
-            loop {
-                if number_collision > 1. {
-                    num.value = num.value + 1;
-                    number_collision = number_collision - 1.;
-                } else {
-                    let luck = rng.gen_range(0.0, 1.0);
-                    if luck < number_collision {
-                        num.value = num.value + 1;
-                        break;
-                    } else {
-                        break;
-                    }
-                }
-            }
+            num.value = total_force / force_one_atom;
         }
     }
 }
@@ -160,13 +143,17 @@ impl<'a> System<'a> for RandomWalkSystem {
             None => (),
             Some(_rand) => {
                 for (mut force, atom_info, kick) in (&mut force, &atom_info, &kick).join() {
+                    let normal = Normal::new(0.0, 0.5_f64.powf(0.5));
+                    let mut rng = rand::thread_rng();
                     let omega = 2.0 * constant::PI * atom_info.frequency;
-                    let force_one_atom = constant::HBAR * omega / constant::C / timestep.delta;
-                    let mut force_real = Vector3::new(0., 0., 0.);
-                    for _i in 0..kick.value {
-                        force_real = force_real + force_one_atom * maths::random_direction();
-                    }
-                    force.force = force.force + force_real;
+                    let force_one_kick = constant::HBAR * omega / constant::C / timestep.delta;
+                    let force_n_kicks = force_one_kick * kick.value.powf(0.5) *
+                             Vector3::new(
+                                normal.sample(&mut rng),
+                                normal.sample(&mut rng),
+                                normal.sample(&mut rng)
+                             );
+                    force.force = force.force + force_n_kicks;
                 }
             }
         }
