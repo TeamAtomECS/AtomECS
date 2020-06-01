@@ -7,6 +7,7 @@ use specs::{
 	VecStorage, World, WriteStorage,
 };
 
+pub mod grid;
 pub mod quadrupole;
 pub mod uniform;
 
@@ -109,9 +110,14 @@ pub fn add_systems_to_dispatch(
 			&["magnetics_quadrupole"],
 		)
 		.with(
+			grid::SampleMagneticGridSystem,
+			"magnetics_grid",
+			&["magnetics_uniform"],
+		)
+		.with(
 			CalculateMagneticFieldMagnitudeSystem,
 			"magnetics_magnitude",
-			&["magnetics_uniform"],
+			&["magnetics_grid"],
 		)
 		.with(
 			AttachFieldSamplersToNewlyCreatedAtomsSystem,
