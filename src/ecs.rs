@@ -3,6 +3,7 @@
 //! This module contains a number of helpful methods that are used to setup the `specs::World`
 //! and to create the `specs::Dispatcher` that is used to perform the simulation itself.
 
+use crate::atom;
 use crate::atom::ClearForceSystem;
 use crate::atom_sources;
 use crate::destructor::{DeleteToBeDestroyedEntitiesSystem};
@@ -21,6 +22,7 @@ use specs::{Dispatcher, DispatcherBuilder, World};
 
 /// Registers all components used by the modules of the program.
 pub fn register_components(world: &mut World) {
+	atom::register_components(world);
 	magnetic::register_components(world);
 	laser::register_components(world);
 	atom_sources::register_components(world);
@@ -62,7 +64,7 @@ pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'sta
 	builder = builder.with(
 		DeleteToBeDestroyedEntitiesSystem,
 		"",
-		&["detect_atom", "euler_integrator"],
+		&["euler_integrator"],
 	);
 	builder = sim_region::add_systems_to_dispatch(builder, &[]);
 	builder.add_barrier();

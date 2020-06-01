@@ -3,7 +3,7 @@
 use crate::constant::{BOHRMAG, C};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
-use specs::{Component, Join, NullStorage, System, VecStorage, WriteStorage};
+use specs::{Component, Join, NullStorage, System, VecStorage, WriteStorage, World};
 use crate::output::file::BinaryConversion;
 use std::fmt;
 
@@ -169,4 +169,15 @@ impl<'a> System<'a> for ClearForceSystem {
 			force.force = Vector3::new(0.0, 0.0, 0.0);
 		}
 	}
+}
+
+/// Registers resources required by `atom_sources` to the ecs world.
+pub fn register_components(world: &mut World) {
+    world.register::<Position>();
+    world.register::<Mass>();
+    world.register::<Force>();
+    world.register::<AtomInfo>();
+    world.register::<Atom>();
+    world.register::<InitialVelocity>();
+    world.register::<Velocity>();
 }

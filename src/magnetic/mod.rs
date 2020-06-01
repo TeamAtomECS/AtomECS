@@ -131,6 +131,7 @@ pub fn register_components(world: &mut World) {
 	world.register::<uniform::UniformMagneticField>();
 	world.register::<quadrupole::QuadrupoleField3D>();
 	world.register::<MagneticFieldSampler>();
+	world.register::<grid::PrecalculatedMagneticFieldGrid>();
 }
 
 #[cfg(test)]

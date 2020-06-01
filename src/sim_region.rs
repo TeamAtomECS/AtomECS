@@ -215,6 +215,7 @@ pub mod tests {
     use super::*;
     use crate::atom::Position;
     use specs::{Builder, DispatcherBuilder, RunNow, World};
+    use nalgebra::Vector3;
 
     #[test]
     fn test_clear_region_tests_system() {
