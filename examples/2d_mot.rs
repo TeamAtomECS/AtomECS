@@ -112,7 +112,8 @@ fn main() {
     let number_to_emit = 100000;
     world
         .create_entity()
-        .with(Oven::new(600.0,
+        .with(Oven::new(
+            600.0,
             OvenAperture::Circular {
                 radius: 0.005,
                 thickness: 0.001,
