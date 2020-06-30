@@ -6,7 +6,7 @@ extern crate specs;
 use lib::simulation_templates::loadfromconfig::create_from_config;
 
 use lib::atom::Position;
-use lib::laser::force::RandomWalkMarker;
+use lib::laser::force::RandomScatteringForceOption;
 use lib::laser::repump::RepumpLoss;
 use lib::optimization::LargerEarlyTimestepOptimization;
 
@@ -16,7 +16,7 @@ use lib::sim_region::{SimulationVolume, VolumeType};
 
 #[allow(unused_imports)]
 use nalgebra::Vector3;
-use specs::{Builder};
+use specs::Builder;
 #[allow(unused_imports)]
 use std::time::{Duration, Instant};
 
@@ -32,7 +32,7 @@ fn main() {
     //increase the timestep at the begining of the simulation
     world.add_resource(LargerEarlyTimestepOptimization::new(2e-4));
     //include random walk(Optional)
-    world.add_resource(RandomWalkMarker { value: true });
+    world.add_resource(RandomScatteringForceOption {});
     world
         .create_entity()
         .with(Position {

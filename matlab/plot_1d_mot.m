@@ -33,3 +33,20 @@ set(get(gca, 'XAxis'), 'TickLabelInterpreter', 'latex');
 set(get(gca, 'YAxis'), 'TickLabelInterpreter', 'latex');
 grid on;
 set(gca, 'GridLineStyle', ':');
+
+% Render to file
+set(gcf, 'Units', 'centimeters');
+pos = get(gcf, 'Position');
+set(gcf, 'Position', [ pos(1) pos(2) 9 7.5 ]);
+
+set(gcf, 'Units', 'centimeters');
+pos = get(gcf, 'Position');
+w = pos(3); 
+h = pos(4);
+p = 0.01;
+set(gcf,...
+  'PaperUnits','centimeters',...
+  'PaperPosition',[p*w p*h w h],...
+  'PaperSize',[w*(1+2*p) h*(1+2*p)]);
+set(gcf, 'Renderer', 'painters')
+saveas(gcf, '1dmot.pdf')

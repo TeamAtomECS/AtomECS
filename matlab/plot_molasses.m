@@ -1,33 +1,23 @@
 %%
 % Plots a graph showing the output of the zeeman_slower example.
-system('cargo run --example zeeman_slower --release');
-
-output = read_output('pos.txt');
-position = {output.vec};
+system('cargo run --example molasses_1d --release');
 
 output = read_output('vel.txt');
 velocity = {output.vec};
-
-position = cat(3, position{:});
 velocity = cat(3, velocity{:});
-
-% Plot a graph showing v_z against z.
-z = squeeze(position(:,3,:));
 vz = squeeze(velocity(:,3,:));
 
 % Color code the entries by the initial velocities.
 c1 = [ 0.1608 0.5804 0.6980 ];
 c0 = [ 0.0118 0.0196 0.1176 ];
-c = interp1([0; 50], [ c0; c1 ], vz(:,1), 'linear', 1);
+c = interp1([0; 30], [ c0; c1 ], vz(:,1), 'linear', 1);
 
 clf;
 for i=1:size(vz,1)
-    plot(z(i,:), vz(i,:), 'k', 'Color', c(i,:)); hold on;
+    plot(10*(1:size(vz,2)),vz(i,:), 'k', 'Color', c(i,:)); hold on;
 end
-ylim([ 0 50 ]);
-xlim([ -0.005 0.005 ]);
 set(gcf, 'Color', 'w');
-xlabel('$z$ (m)', 'interpreter', 'latex');
+xlabel('$t$ ($\mu$s)', 'interpreter', 'latex');
 ylabel('$v_z$ (m/s)', 'interpreter', 'latex');
 set(get(gca, 'XAxis'), 'TickLabelInterpreter', 'latex');
 set(get(gca, 'YAxis'), 'TickLabelInterpreter', 'latex');
@@ -49,4 +39,4 @@ set(gcf,...
   'PaperPosition',[p*w p*h w h],...
   'PaperSize',[w*(1+2*p) h*(1+2*p)]);
 set(gcf, 'Renderer', 'painters')
-saveas(gcf, 'zeeman.pdf')
+saveas(gcf, 'molasses.pdf')
