@@ -1,4 +1,5 @@
 pub mod emit;
+pub mod gaussian;
 pub mod mass;
 pub mod oven;
 pub mod precalc;
@@ -54,6 +55,11 @@ pub fn add_systems_to_dispatch(
             deps,
         )
         .with(
+            gaussian::PrecalculateForGaussianSourceSystem,
+            "precalculate_gaussian",
+            deps,
+        )
+        .with(
             oven::OvenCreateAtomsSystem,
             "oven_create_atoms",
             &["emit_number_per_frame", "precalculated_oven"],
@@ -64,9 +70,18 @@ pub fn add_systems_to_dispatch(
             &["emit_number_per_frame", "precalculated_surfaces"],
         )
         .with(
+            gaussian::GaussianCreateAtomsSystem,
+            "gaussian_create_atoms",
+            &["emit_number_per_frame", "precalculate_gaussian"],
+        )
+        .with(
             emit::EmitOnceSystem,
             "emit_once_system",
-            &["oven_create_atoms", "surface_create_atoms"],
+            &[
+                "oven_create_atoms",
+                "surface_create_atoms",
+                "gaussian_create_atoms",
+            ],
         )
 }
 
@@ -79,6 +94,8 @@ pub fn register_components(world: &mut World) {
     world.register::<emit::EmitOnce>();
     world.register::<emit::AtomNumberToEmit>();
     world.register::<surface::SurfaceSource>();
+    world.register::<gaussian::GaussianVelocityDistributionSource>();
+    world.register::<gaussian::GaussianVelocityDistributionSourceDefinition>();
 }
 
 /// A simple probability distribution which uses weighted indices to retrieve values.
