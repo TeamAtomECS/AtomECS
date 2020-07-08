@@ -1,11 +1,13 @@
 extern crate specs;
 use crate::atom::{Atom, AtomInfo};
 use crate::constant;
-use rand::distributions::{Normal, Distribution};
+use crate::maths;
+use rand::distributions::{Distribution, Normal};
 use specs::{Component, Join, Read, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
 extern crate nalgebra;
 use super::sampler::LaserSamplers;
 use nalgebra::Vector3;
+use rand::Rng;
 
 use crate::atom::Force;
 use crate::constant::{HBAR, PI};
@@ -143,17 +145,34 @@ impl<'a> System<'a> for RandomWalkSystem {
             None => (),
             Some(_rand) => {
                 for (mut force, atom_info, kick) in (&mut force, &atom_info, &kick).join() {
-                    let normal = Normal::new(0.0, 0.5_f64.powf(0.5));
                     let mut rng = rand::thread_rng();
                     let omega = 2.0 * constant::PI * atom_info.frequency;
                     let force_one_kick = constant::HBAR * omega / constant::C / timestep.delta;
-                    let force_n_kicks = force_one_kick * kick.value.powf(0.5) *
-                             Vector3::new(
-                                normal.sample(&mut rng),
-                                normal.sample(&mut rng),
-                                normal.sample(&mut rng)
-                             );
-                    force.force = force.force + force_n_kicks;
+                    if kick.value > 5.0 {
+                        // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
+                        //Three-Dimensional Random Walk Processes*
+                        let normal = Normal::new(
+                            0.0,
+                            (kick.value * force_one_kick.powf(2.0) / 3.0).powf(0.5),
+                        );
+
+                        let force_n_kicks = Vector3::new(
+                            normal.sample(&mut rng),
+                            normal.sample(&mut rng),
+                            normal.sample(&mut rng),
+                        );
+                        force.force = force.force + force_n_kicks;
+                    } else {
+                        let numberkick = kick.value as i64;
+                        let residue = kick.value - (numberkick as f64);
+                        for _i in 0..numberkick {
+                            force.force = force.force + force_one_kick * maths::random_direction();
+                        }
+                        if residue > rng.gen_range(0.0, 1.0) {
+                            force.force = force.force + force_one_kick * maths::random_direction();
+                        }
+                    }
+                    //println!("force :  {}", force_n_kicks);
                 }
             }
         }
@@ -368,7 +387,6 @@ pub mod tests {
 
         {
             // Test force calculation detuned by one gamma at Isat
-
         }
 
         {
@@ -434,5 +452,4 @@ pub mod tests {
         let force_storage = test_world.read_storage::<Force>();
         force_storage.get(atom1).expect("entity not found").force
     }
-
 }
