@@ -1,6 +1,6 @@
 extern crate rand;
 extern crate specs;
-use crate::laser::force::NumberKick;
+use crate::laser::force::NumberScattered;
 use rand::Rng;
 use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
@@ -19,7 +19,7 @@ impl RepumpLoss {
     pub fn if_loss(&self, number_scattering_events: f64) -> bool {
         let mut rng = rand::thread_rng();
         let result = rng.gen_range(0.0, 1.0);
-        return result < (1.0-self.depump_chance).powf(number_scattering_events);
+        return result < (1.0 - self.depump_chance).powf(number_scattering_events);
     }
 }
 
@@ -29,7 +29,7 @@ impl<'a> System<'a> for RepumpSystem {
     type SystemData = (
         Option<Read<'a, RepumpLoss>>,
         Read<'a, LazyUpdate>,
-        ReadStorage<'a, NumberKick>,
+        ReadStorage<'a, NumberScattered>,
         Entities<'a>,
     );
     fn run(&mut self, (repump_opt, lazy, num, ent): Self::SystemData) {

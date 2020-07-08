@@ -58,7 +58,11 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                     - laser_sampler.doppler_shift;
                 //println!("laserfre{},atomfre{},shift {}",laser_sampler.wavevector.norm() * constant::C / 2. / PI,atom_info.frequency,laser_sampler.doppler_shift);
                 let wavevector = laser_sampler.wavevector.clone();
-                let costheta = wavevector.normalize().dot(&bfield.field.normalize());
+                let costheta = if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
+                    0.0
+                } else {
+                    wavevector.normalize().dot(&bfield.field.normalize())
+                };
                 let gamma = atom_info.gamma();
                 let scatter1 = 0.25 * (laser_sampler.polarization * costheta + 1.).powf(2.) * gamma
                     / 2.
@@ -91,28 +95,27 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
 }
 
 /// The expected number of times an atom has scattered a photon this timestep.
-pub struct NumberKick {
+pub struct NumberScattered {
     pub value: f64,
 }
 
-impl Component for NumberKick {
+impl Component for NumberScattered {
     type Storage = VecStorage<Self>;
 }
 
-pub struct RandomWalkMarker {
-    pub value: bool,
-}
+/// A resource that indicates that the simulation should apply random forces to simulate fluctuations in the number of scattered photons.
+pub struct RandomScatteringForceOption;
 
-pub struct CalculateKickSystem;
+pub struct CalculateNumberPhotonsScatteredSystem;
 
-impl<'a> System<'a> for CalculateKickSystem {
+impl<'a> System<'a> for CalculateNumberPhotonsScatteredSystem {
     type SystemData = (
         ReadStorage<'a, LaserSamplers>,
         ReadStorage<'a, Atom>,
         ReadStorage<'a, AtomInfo>,
         ReadExpect<'a, Timestep>,
         ReadStorage<'a, Dark>,
-        WriteStorage<'a, NumberKick>,
+        WriteStorage<'a, NumberScattered>,
     );
 
     fn run(&mut self, (samplers, _atom, atom_info, timestep, _dark, mut number): Self::SystemData) {
@@ -129,13 +132,14 @@ impl<'a> System<'a> for CalculateKickSystem {
         }
     }
 }
-pub struct RandomWalkSystem;
 
-impl<'a> System<'a> for RandomWalkSystem {
+pub struct ApplyRandomForceSystem;
+
+impl<'a> System<'a> for ApplyRandomForceSystem {
     type SystemData = (
-        Option<Read<'a, RandomWalkMarker>>,
+        Option<Read<'a, RandomScatteringForceOption>>,
         WriteStorage<'a, Force>,
-        ReadStorage<'a, NumberKick>,
+        ReadStorage<'a, NumberScattered>,
         ReadStorage<'a, AtomInfo>,
         ReadExpect<'a, Timestep>,
     );

@@ -65,6 +65,9 @@ impl<'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
 	fn run(&mut self, mut sampler: Self::SystemData) {
 		for sampler in (&mut sampler).join() {
 			sampler.magnitude = sampler.field.norm();
+			if sampler.magnitude.is_nan() {
+				sampler.magnitude = 0.0;
+			}
 		}
 	}
 }
