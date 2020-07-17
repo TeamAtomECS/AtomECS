@@ -1,58 +1,297 @@
+//! Loading a Rb pyramid MOT from vapor
+//!
+//! One of the beams has a circular mask, which allows atoms to escape on one side.
+
 extern crate magneto_optical_trap as lib;
 extern crate nalgebra;
-
-extern crate specs;
-#[allow(unused_imports)]
-use lib::simulation_templates::loadfromconfig::create_from_config;
-
-use lib::atom::Position;
-use lib::laser::force::RandomScatteringForceOption;
-use lib::laser::repump::RepumpLoss;
-use lib::optimization::LargerEarlyTimestepOptimization;
-
+use lib::atom::{AtomInfo, Position, Velocity};
+use lib::atom_sources::emit::{AtomNumberToEmit, EmitOnce};
+use lib::atom_sources::mass::{MassDistribution, MassRatio};
+use lib::atom_sources::surface::SurfaceSource;
 use lib::atom_sources::VelocityCap;
-use lib::shapes::Cuboid;
+use lib::ecs;
+use lib::integrator::Timestep;
+use lib::laser::cooling::CoolingLight;
+use lib::laser::force::RandomScatteringForceOption;
+use lib::laser::gaussian::{CircularMask, GaussianBeam};
+use lib::magnetic::grid::PrecalculatedMagneticFieldGrid;
+use lib::magnetic::quadrupole::QuadrupoleField3D;
+use lib::output::file;
+use lib::output::file::Text;
+use lib::shapes::Cylinder;
 use lib::sim_region::{SimulationVolume, VolumeType};
-
-#[allow(unused_imports)]
+use lib::{atom_sources, laser, magnetic, sim_region};
+use magneto_optical_trap::atom::ClearForceSystem;
+use magneto_optical_trap::destructor::DeleteToBeDestroyedEntitiesSystem;
+use magneto_optical_trap::gravity::ApplyGravitationalForceSystem;
+use magneto_optical_trap::initiate::DeflagNewAtomsSystem;
+use magneto_optical_trap::integrator::EulerIntegrationSystem;
+use magneto_optical_trap::optimization::LargerEarlyTimestepOptimizationSystem;
+use magneto_optical_trap::output::console_output::ConsoleOutputSystem;
 use nalgebra::Vector3;
-use specs::Builder;
-#[allow(unused_imports)]
-use std::time::{Duration, Instant};
+use serde::Deserialize;
+use specs::{Builder, DispatcherBuilder, RunNow, World};
+use std::fs::read_to_string;
+use std::fs::File;
+use std::io::BufReader;
 
-//use std::io::stdin;
+use std::time::Instant;
+
+#[derive(Deserialize)]
+pub struct SimulationParameters {
+    pub cooling_detuning: f64,
+    pub cooling_power: f64,
+    pub cooling_radius: f64,
+
+    pub beam_x_p_pol: f64,
+    pub beam_x_m_pol: f64,
+    pub beam_y_p_pol: f64,
+    pub beam_y_m_pol: f64,
+    pub beam_z_p_pol: f64,
+    pub beam_z_m_pol: f64,
+
+    pub beam_x_p_dir: Vector3<f64>,
+    pub beam_x_m_dir: Vector3<f64>,
+    pub beam_y_p_dir: Vector3<f64>,
+    pub beam_y_m_dir: Vector3<f64>,
+    pub beam_z_p_dir: Vector3<f64>,
+    pub beam_z_m_dir: Vector3<f64>,
+
+    pub beam_z_mask_radius: f64,
+
+    pub trap_x: f64,
+    pub trap_y: f64,
+    pub trap_z: f64,
+
+    pub quadrupole_gradient: f64,
+    pub quadrupole_x: f64,
+    pub quadrupole_y: f64,
+    pub quadrupole_z: f64,
+
+    pub chamber_length: f64,
+    pub chamber_radius: f64,
+    pub atom_number: i32,
+    pub velocity_cap: f64,
+    pub n_steps: i32,
+
+    pub use_grid_field: bool,
+}
+
 fn main() {
-    //let mut s=String::new();
-    //stdin()
-    //    .read_line(&mut s)
-    //    .expect("Did not enter a correct string");
     let now = Instant::now();
-    let (mut world, mut dispatcher) = create_from_config("example.yaml");
 
-    //increase the timestep at the begining of the simulation
-    world.add_resource(LargerEarlyTimestepOptimization::new(2e-4));
-    //include random walk(Optional)
-    world.add_resource(RandomScatteringForceOption {});
+    let json_str = read_to_string("input.json").expect("Could not open file");
+    println!("Loaded json string: {}", json_str);
+    let parameters: SimulationParameters = serde_json::from_str(&json_str).unwrap();
+
+    // Create the simulation world and builder for the ECS dispatcher.
+    let mut world = World::new();
+    ecs::register_components(&mut world);
+    ecs::register_resources(&mut world);
+
+    // manually create dispatcher because zeroth frame output is needed
+    let mut builder = DispatcherBuilder::new();
+    builder = builder.with(LargerEarlyTimestepOptimizationSystem, "opt", &[]);
+    builder = builder.with(ClearForceSystem, "clear", &[]);
+    builder = builder.with(DeflagNewAtomsSystem, "deflag", &[]);
+    builder.add_barrier();
+    builder = magnetic::add_systems_to_dispatch(builder, &[]);
+    builder.add_barrier();
+    builder = laser::add_systems_to_dispatch(builder, &[]);
+    builder.add_barrier();
+    builder = atom_sources::add_systems_to_dispatch(builder, &[]);
+    builder.add_barrier();
+    builder = builder.with(ApplyGravitationalForceSystem, "add_gravity", &["clear"]);
+    builder = builder.with(
+        file::new::<Velocity, Text>("vel.txt".to_string(), 1000),
+        "output_vel",
+        &["emit_once_system", "emit_fixed_rate"],
+    );
+    builder = builder.with(
+        file::new::<Position, Text>("pos.txt".to_string(), 1000),
+        "output_pos",
+        &["emit_once_system", "emit_fixed_rate"],
+    );
+    builder = builder.with(
+        EulerIntegrationSystem,
+        "euler_integrator",
+        &[
+            "calculate_cooling_forces",
+            "random_walk_system",
+            "add_gravity",
+            "output_vel",
+            "output_pos",
+        ],
+    );
+    builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
+    builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &["euler_integrator"]);
+
+    builder = sim_region::add_systems_to_dispatch(builder, &[]);
+    builder.add_barrier();
+
+    // Configure simulation output.
+
+    let mut dispatcher = builder.build();
+    dispatcher.setup(&mut world.res);
+
+    // Create magnetic field.
+    if parameters.use_grid_field {
+        let f = File::open("field.json").expect("Could not open file.");
+        let reader = BufReader::new(f);
+        let grid: PrecalculatedMagneticFieldGrid = serde_json::from_reader(reader)
+            .expect("Could not load magnetic field grid from json file.");
+        world.create_entity().with(grid).build();
+    } else {
+        let field_centre = Vector3::new(
+            parameters.quadrupole_x,
+            parameters.quadrupole_y,
+            parameters.quadrupole_z,
+        );
+        world
+            .create_entity()
+            .with(QuadrupoleField3D::gauss_per_cm(
+                parameters.quadrupole_gradient,
+                Vector3::z(),
+            ))
+            .with(Position { pos: field_centre })
+            .build();
+    }
+
+    // Create cooling lasers.
+    let detuning = parameters.cooling_detuning;
+    let power = parameters.cooling_power;
+    let radius = parameters.cooling_radius / (2.0_f64.sqrt());
+    let beam_centre = Vector3::new(parameters.trap_x, parameters.trap_y, parameters.trap_z);
+
+    // Horizontal beams along z
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: beam_centre.clone(),
+            e_radius: radius,
+            power: power,
+            direction: parameters.beam_z_p_dir,
+        })
+        .with(CoolingLight::for_species(
+            AtomInfo::rubidium(),
+            detuning,
+            parameters.beam_z_p_pol,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: beam_centre.clone(),
+            e_radius: radius,
+            power: power,
+            direction: parameters.beam_z_m_dir,
+        })
+        .with(CircularMask {
+            radius: parameters.beam_z_mask_radius,
+        })
+        .with(CoolingLight::for_species(
+            AtomInfo::rubidium(),
+            detuning,
+            parameters.beam_z_m_pol,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: beam_centre.clone(),
+            e_radius: radius,
+            power: power,
+            direction: parameters.beam_x_p_dir,
+        })
+        .with(CoolingLight::for_species(
+            AtomInfo::rubidium(),
+            detuning,
+            parameters.beam_x_p_pol,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: beam_centre.clone(),
+            e_radius: radius,
+            power: power,
+            direction: parameters.beam_x_m_dir,
+        })
+        .with(CoolingLight::for_species(
+            AtomInfo::rubidium(),
+            detuning,
+            parameters.beam_x_m_pol,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: beam_centre.clone(),
+            e_radius: radius,
+            power: power,
+            direction: parameters.beam_y_p_dir,
+        })
+        .with(CoolingLight::for_species(
+            AtomInfo::rubidium(),
+            detuning,
+            parameters.beam_y_p_pol,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: beam_centre.clone(),
+            e_radius: radius,
+            power: power,
+            direction: parameters.beam_y_m_dir,
+        })
+        .with(CoolingLight::for_species(
+            AtomInfo::rubidium(),
+            detuning,
+            parameters.beam_y_m_pol,
+        ))
+        .build();
+
+    // Define timestep
+    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.add_resource(RandomScatteringForceOption);
+
+    // The simulation bounds consists of a vertical cylinder. It also emits atoms from the surface.
+    let number_to_emit = parameters.atom_number;
     world
         .create_entity()
         .with(Position {
             pos: Vector3::new(0.0, 0.0, 0.0),
         })
-        .with(Cuboid {
-            half_width: Vector3::new(0.1, 0.1, 0.1),
-        })
+        .with(Cylinder::new(
+            parameters.chamber_radius,
+            parameters.chamber_length,
+            Vector3::new(0.0, 0.0, 1.0),
+        ))
+        .with(SurfaceSource { temperature: 300.0 })
         .with(SimulationVolume {
             volume_type: VolumeType::Inclusive,
         })
+        .with(MassDistribution::new(vec![MassRatio {
+            mass: 87.0,
+            ratio: 1.0,
+        }]))
+        .with(AtomInfo::rubidium())
+        .with(AtomNumberToEmit {
+            number: number_to_emit,
+        })
+        .with(EmitOnce {})
         .build();
 
-    world.add_resource(VelocityCap { value: 1000. });
-    world.add_resource(RepumpLoss { depump_chance: 0.0 });
-    //let (mut world, mut dispatcher) = create();
-    for _i in 0..50000 {
+    // Also use a velocity cap so that fast atoms are not even simulated.
+    world.add_resource(VelocityCap {
+        value: parameters.velocity_cap,
+    });
+    // Run the simulation for a number of steps.
+    for _i in 0..parameters.n_steps {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
-    println!("time taken to run in ms{}", now.elapsed().as_millis());
-    //write_file_template("example.yml")
+
+    println!("Simulation completed in {} ms.", now.elapsed().as_millis());
 }
