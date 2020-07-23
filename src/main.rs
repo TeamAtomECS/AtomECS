@@ -30,7 +30,7 @@ use magneto_optical_trap::optimization::LargerEarlyTimestepOptimizationSystem;
 use magneto_optical_trap::output::console_output::ConsoleOutputSystem;
 use nalgebra::Vector3;
 use serde::Deserialize;
-use specs::{Builder, DispatcherBuilder, RunNow, World};
+use specs::{Builder, DispatcherBuilder, World};
 use std::fs::read_to_string;
 use std::fs::File;
 use std::io::BufReader;

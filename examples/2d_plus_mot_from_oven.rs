@@ -5,7 +5,7 @@ extern crate nalgebra;
 use lib::atom::{AtomInfo, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
-use lib::atom_sources::oven::{Oven, OvenAperture};
+use lib::atom_sources::oven::{OvenAperture, OvenBuilder};
 use lib::atom_sources::VelocityCap;
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
@@ -138,14 +138,14 @@ fn main() {
     let number_to_emit = 400000;
     world
         .create_entity()
-        .with(Oven::new(
-            776.0,
-            OvenAperture::Circular {
-                radius: 0.005,
-                thickness: 0.001,
-            },
-            Vector3::x(),
-        ))
+        .with(
+            OvenBuilder::new(776.0, Vector3::z())
+                .with_aperture(OvenAperture::Circular {
+                    radius: 0.005,
+                    thickness: 0.001,
+                })
+                .build(),
+        )
         .with(Position {
             pos: Vector3::new(-0.083, 0.0, 0.0),
         })

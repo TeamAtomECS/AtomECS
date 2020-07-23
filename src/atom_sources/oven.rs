@@ -35,12 +35,88 @@ fn velocity_generate(
 	(v_out, theta)
 }
 
+#[derive(Copy, Clone)]
 pub enum OvenAperture {
 	Cubic { size: [f64; 3] },
 	Circular { radius: f64, thickness: f64 },
 }
 
+pub struct Lip {
+	pub length: f64,
+	pub aperture_radius: f64,
+}
+
+/// Builder struct for creating Ovens.
+pub struct OvenBuilder {
+	temperature: f64,
+	aperture: OvenAperture,
+	direction: Vector3<f64>,
+	microchannel_radius: f64,
+	microchannel_length: f64,
+	max_theta: f64,
+}
+impl OvenBuilder {
+	pub fn new(temperature_kelvin: f64, direction: Vector3<f64>) -> Self {
+		Self {
+			temperature: temperature_kelvin,
+			aperture: OvenAperture::Circular {
+				radius: 3.0e-3,
+				thickness: 1.0e-3,
+			},
+			direction: direction.normalize(),
+			microchannel_length: 4e-3,
+			microchannel_radius: 0.2e-3,
+			max_theta: PI / 2.0,
+		}
+	}
+
+	pub fn with_microchannels(
+		&mut self,
+		microchannel_length: f64,
+		microchannel_radius: f64,
+	) -> &mut Self {
+		self.microchannel_length = microchannel_length;
+		self.microchannel_radius = microchannel_radius;
+		return self;
+	}
+
+	pub fn with_lip(&mut self, lip_length: f64, lip_radius: f64) -> &mut Self {
+		self.max_theta = (lip_radius / lip_length).atan();
+		return self;
+	}
+
+	pub fn with_aperture(&mut self, aperture: OvenAperture) -> &mut Self {
+		self.aperture = aperture;
+		return self;
+	}
+
+	pub fn build(&self) -> Oven {
+		Oven {
+			temperature: self.temperature,
+			aperture: self.aperture,
+			direction: self.direction.normalize(),
+			theta_distribution: create_jtheta_distribution(
+				self.microchannel_radius,
+				self.microchannel_length,
+			),
+			max_theta: self.max_theta,
+		}
+	}
+}
+
 /// Component representing an oven, which is a source of hot atoms.
+///
+/// # The structure of the oven:
+/// The oven consists of
+/// * An oven aperture, within which atoms are spawned.
+/// * A direction, which defines the axis of the oven.
+/// * A temperature, which characterises the outgoing velocity distribution
+///
+/// Atoms are emitted from the oven according to an angular distribution in the polar angle theta, where theta=0 coincides with the direction of the oven.
+/// The angular distribution follows the j(theta) distribution, and is determined by the geometry of microchannels in the oven aperture.
+/// Additionally, any atom spawned with an angle greater than `max_theta` is ignored.
+/// For real ovens, the maximum theta is determined by geometric constraints, for example the presence of a 'lip' of given length and
+/// aperture radius.
 pub struct Oven {
 	/// Temperature of the oven, in Kelvin
 	pub temperature: f64,
@@ -90,47 +166,6 @@ impl Oven {
 			}
 		}
 	}
-
-	pub fn new(
-		temperature: f64,
-		aperture: OvenAperture,
-		direction: Vector3<f64>,
-		microchannel_radius: f64,
-		microchannel_length: f64,
-		hot_lip_length: f64,
-		hot_lip_radius: f64,
-	) -> Self {
-		Oven {
-			temperature: temperature,
-			aperture: aperture,
-			direction: direction.normalize(),
-			theta_distribution: create_jtheta_distribution(
-				microchannel_radius,
-				microchannel_length,
-			),
-			max_theta: (hot_lip_radius / hot_lip_length).atan(),
-		}
-	}
-}
-
-pub fn new(
-		temperature: f64,
-		aperture: OvenAperture,
-		direction: Vector3<f64>,
-		microchannel_radius: f64,
-		microchannel_length: f64,
-	) -> Self {
-		Oven {
-			temperature: temperature,
-			aperture: aperture,
-			direction: direction.normalize(),
-			theta_distribution: create_jtheta_distribution(
-				microchannel_radius,
-				microchannel_length,
-			),
-			max_theta: PI/2.0,
-		}
-	}
 }
 
 /// This system creates atoms from an oven source.
@@ -164,8 +199,6 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 			(&oven, &atom, &numbers_to_emit, &pos, &precalcs).join()
 		{
 			for _i in 0..number_to_emit.number {
-				//let mass = mass_dist.draw_random_mass().value;
-				//let speed = maths::maxwell_generate(oven.temperature, constant::AMU * mass);
 				let (mass, speed) = precalcs.generate_random_mass_v(&mut rng);
 				if speed > max_vel {
 					continue;

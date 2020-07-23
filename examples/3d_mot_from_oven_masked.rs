@@ -1,5 +1,5 @@
 //! Loading a Sr 3D MOT directly from an oven source.
-//! 
+//!
 //! One of the beams has a circular mask, which allows atoms to escape on one side.
 
 extern crate magneto_optical_trap as lib;
@@ -7,21 +7,21 @@ extern crate nalgebra;
 use lib::atom::{AtomInfo, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
-use lib::atom_sources::oven::{Oven, OvenAperture};
+use lib::atom_sources::oven::{OvenAperture, OvenBuilder};
+use lib::atom_sources::VelocityCap;
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
-use lib::laser::cooling::{CoolingLight};
-use lib::laser::gaussian::{GaussianBeam,CircularMask};
+use lib::laser::cooling::CoolingLight;
+use lib::laser::gaussian::{CircularMask, GaussianBeam};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
-use lib::sim_region::{SimulationVolume, VolumeType};
 use lib::shapes::Cuboid;
+use lib::sim_region::{SimulationVolume, VolumeType};
 use nalgebra::Vector3;
 use specs::{Builder, World};
 use std::time::Instant;
-use lib::atom_sources::VelocityCap;
 
 fn main() {
     let now = Instant::now();
@@ -153,14 +153,14 @@ fn main() {
     let number_to_emit = 400000;
     world
         .create_entity()
-        .with(Oven::new(
-            776.0,
-            OvenAperture::Circular {
-                radius: 0.005,
-                thickness: 0.001,
-            },
-            Vector3::x(),
-        ))
+        .with(
+            OvenBuilder::new(776.0, Vector3::z())
+                .with_aperture(OvenAperture::Circular {
+                    radius: 0.005,
+                    thickness: 0.001,
+                })
+                .build(),
+        )
         .with(Position {
             pos: Vector3::new(-0.083, 0.0, 0.0),
         })
@@ -187,7 +187,9 @@ fn main() {
         .with(Cuboid {
             half_width: Vector3::new(0.1, 0.01, 0.01),
         })
-        .with(SimulationVolume { volume_type: VolumeType::Inclusive })
+        .with(SimulationVolume {
+            volume_type: VolumeType::Inclusive,
+        })
         .build();
 
     // The simulation bound also now includes a small pipe to capture the 2D MOT output properly.
@@ -199,7 +201,9 @@ fn main() {
         .with(Cuboid {
             half_width: Vector3::new(0.01, 0.01, 0.1),
         })
-        .with(SimulationVolume { volume_type: VolumeType::Inclusive })
+        .with(SimulationVolume {
+            volume_type: VolumeType::Inclusive,
+        })
         .build();
 
     // Also use a velocity cap so that fast atoms are not even simulated.
