@@ -41,11 +41,6 @@ pub enum OvenAperture {
 	Circular { radius: f64, thickness: f64 },
 }
 
-pub struct Lip {
-	pub length: f64,
-	pub aperture_radius: f64,
-}
-
 /// Builder struct for creating Ovens.
 pub struct OvenBuilder {
 	temperature: f64,

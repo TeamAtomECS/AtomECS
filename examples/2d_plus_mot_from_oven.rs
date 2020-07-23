@@ -139,7 +139,7 @@ fn main() {
     world
         .create_entity()
         .with(
-            OvenBuilder::new(776.0, Vector3::z())
+            OvenBuilder::new(776.0, Vector3::x())
                 .with_aperture(OvenAperture::Circular {
                     radius: 0.005,
                     thickness: 0.001,
