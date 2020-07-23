@@ -7,10 +7,10 @@ use crate::constant::PI;
 use crate::initiate::*;
 
 extern crate rand;
+use super::VelocityCap;
 use super::WeightedProbabilityDistribution;
 use rand::distributions::Distribution;
 use rand::Rng;
-use super::VelocityCap;
 
 extern crate specs;
 use crate::atom::*;
@@ -22,7 +22,7 @@ fn velocity_generate(
 	v_mag: f64,
 	new_dir: &Vector3<f64>,
 	theta_distribution: &WeightedProbabilityDistribution,
-) -> Vector3<f64> {
+) -> (Vector3<f64>, f64) {
 	let dir = &new_dir.normalize();
 	let dir_1 = new_dir.cross(&Vector3::new(2.0, 1.0, 0.5)).normalize();
 	let dir_2 = new_dir.cross(&dir_1).normalize();
@@ -32,15 +32,86 @@ fn velocity_generate(
 	let dir_div = dir_1 * theta.sin() * phi.cos() + dir_2 * theta.sin() * phi.sin();
 	let dirf = dir * theta.cos() + dir_div;
 	let v_out = dirf * v_mag;
-	v_out
+	(v_out, theta)
 }
 
+#[derive(Copy, Clone)]
 pub enum OvenAperture {
 	Cubic { size: [f64; 3] },
 	Circular { radius: f64, thickness: f64 },
 }
 
+/// Builder struct for creating Ovens.
+pub struct OvenBuilder {
+	temperature: f64,
+	aperture: OvenAperture,
+	direction: Vector3<f64>,
+	microchannel_radius: f64,
+	microchannel_length: f64,
+	max_theta: f64,
+}
+impl OvenBuilder {
+	pub fn new(temperature_kelvin: f64, direction: Vector3<f64>) -> Self {
+		Self {
+			temperature: temperature_kelvin,
+			aperture: OvenAperture::Circular {
+				radius: 3.0e-3,
+				thickness: 1.0e-3,
+			},
+			direction: direction.normalize(),
+			microchannel_length: 4e-3,
+			microchannel_radius: 0.2e-3,
+			max_theta: PI / 2.0,
+		}
+	}
+
+	pub fn with_microchannels(
+		&mut self,
+		microchannel_length: f64,
+		microchannel_radius: f64,
+	) -> &mut Self {
+		self.microchannel_length = microchannel_length;
+		self.microchannel_radius = microchannel_radius;
+		return self;
+	}
+
+	pub fn with_lip(&mut self, lip_length: f64, lip_radius: f64) -> &mut Self {
+		self.max_theta = (lip_radius / lip_length).atan();
+		return self;
+	}
+
+	pub fn with_aperture(&mut self, aperture: OvenAperture) -> &mut Self {
+		self.aperture = aperture;
+		return self;
+	}
+
+	pub fn build(&self) -> Oven {
+		Oven {
+			temperature: self.temperature,
+			aperture: self.aperture,
+			direction: self.direction.normalize(),
+			theta_distribution: create_jtheta_distribution(
+				self.microchannel_radius,
+				self.microchannel_length,
+			),
+			max_theta: self.max_theta,
+		}
+	}
+}
+
 /// Component representing an oven, which is a source of hot atoms.
+///
+/// # The structure of the oven:
+/// The oven consists of
+/// * An oven aperture, within which atoms are spawned.
+/// * A direction, which defines the axis of the oven.
+/// * A temperature, which characterises the outgoing velocity distribution
+///
+/// Atoms are emitted from the oven according to an angular distribution in the polar angle theta, where theta=0 coincides with the direction of the oven.
+/// The angular distribution follows the j(theta) distribution, and is determined by the geometry of microchannels in the oven aperture.
+/// Additionally, any atom spawned with an angle greater than `max_theta` is ignored.
+/// For real ovens, the maximum theta is determined by geometric constraints, for example the presence of a 'lip' of given length and
+/// aperture radius.
 pub struct Oven {
 	/// Temperature of the oven, in Kelvin
 	pub temperature: f64,
@@ -53,6 +124,9 @@ pub struct Oven {
 
 	/// Angular distribution for atoms emitted by the oven.
 	theta_distribution: WeightedProbabilityDistribution,
+
+	/// The maximum angle theta at which atoms can be emitted from the oven. This can be constricted eg by a heat shield, or 'hot lip'.
+	pub max_theta: f64,
 }
 impl MaxwellBoltzmannSource for Oven {
 	fn get_temperature(&self) -> f64 {
@@ -87,15 +161,6 @@ impl Oven {
 			}
 		}
 	}
-
-	pub fn new(temperature: f64, aperture: OvenAperture, direction: Vector3<f64>) -> Self {
-		Oven {
-			temperature: temperature,
-			aperture: aperture,
-			direction: direction.normalize(),
-			theta_distribution: create_jtheta_distribution(0.2e-3, 4.0e-3),
-		}
-	}
 }
 
 /// This system creates atoms from an oven source.
@@ -107,7 +172,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 	type SystemData = (
 		Entities<'a>,
 		ReadStorage<'a, Oven>,
-		ReadStorage<'a, AtomInfo>,
+		ReadStorage<'a, AtomicTransition>,
 		ReadStorage<'a, AtomNumberToEmit>,
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, PrecalculatedSpeciesInformation>,
@@ -129,15 +194,18 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 			(&oven, &atom, &numbers_to_emit, &pos, &precalcs).join()
 		{
 			for _i in 0..number_to_emit.number {
-				//let mass = mass_dist.draw_random_mass().value;
-				//let speed = maths::maxwell_generate(oven.temperature, constant::AMU * mass);
 				let (mass, speed) = precalcs.generate_random_mass_v(&mut rng);
 				if speed > max_vel {
 					continue;
 				}
 
 				let new_atom = entities.create();
-				let new_vel = velocity_generate(speed, &oven.direction, &oven.theta_distribution);
+				let (new_vel, theta) =
+					velocity_generate(speed, &oven.direction, &oven.theta_distribution);
+
+				if theta > oven.max_theta {
+					continue;
+				}
 				let start_position = oven_position.pos + oven.get_random_spawn_position();
 				updater.insert(
 					new_atom,
@@ -202,9 +270,11 @@ pub fn jtheta(theta: f64, channel_radius: f64, channel_length: f64) -> f64 {
 		j_theta = alpha * theta.cos()
 			+ (2.0 / PI)
 				* theta.cos() * ((1.0 - alpha) * r_q
-				+ 2.0 / (3.0 * q) * (1.0 - 2.0 * alpha) * (1.0 - (1.0 - q.powf(2.0)).powf(1.5))) // (4.21)
+				+ 2.0 / (3.0 * q) * (1.0 - 2.0 * alpha) * (1.0 - (1.0 - q.powf(2.0)).powf(1.5)))
+	// (4.21)
 	} else {
-		j_theta = alpha * theta.cos() + 4.0 / (3.0 * PI * q) * (1.0 - 2.0 * alpha) * theta.cos(); // (4.22)
+		j_theta = alpha * theta.cos() + 4.0 / (3.0 * PI * q) * (1.0 - 2.0 * alpha) * theta.cos();
+		// (4.22)
 	}
 	j_theta
 }
