@@ -7,10 +7,10 @@ use crate::constant::PI;
 use crate::initiate::*;
 
 extern crate rand;
+use super::VelocityCap;
 use super::WeightedProbabilityDistribution;
 use rand::distributions::Distribution;
 use rand::Rng;
-use super::VelocityCap;
 
 extern crate specs;
 use crate::atom::*;
@@ -22,7 +22,7 @@ fn velocity_generate(
 	v_mag: f64,
 	new_dir: &Vector3<f64>,
 	theta_distribution: &WeightedProbabilityDistribution,
-) -> Vector3<f64> {
+) -> (Vector3<f64>, f64) {
 	let dir = &new_dir.normalize();
 	let dir_1 = new_dir.cross(&Vector3::new(2.0, 1.0, 0.5)).normalize();
 	let dir_2 = new_dir.cross(&dir_1).normalize();
@@ -32,7 +32,7 @@ fn velocity_generate(
 	let dir_div = dir_1 * theta.sin() * phi.cos() + dir_2 * theta.sin() * phi.sin();
 	let dirf = dir * theta.cos() + dir_div;
 	let v_out = dirf * v_mag;
-	v_out
+	(v_out, theta)
 }
 
 pub enum OvenAperture {
@@ -53,6 +53,9 @@ pub struct Oven {
 
 	/// Angular distribution for atoms emitted by the oven.
 	theta_distribution: WeightedProbabilityDistribution,
+
+	/// The maximum angle theta at which atoms can be emitted from the oven. This can be constricted eg by a heat shield, or 'hot lip'.
+	pub max_theta: f64,
 }
 impl MaxwellBoltzmannSource for Oven {
 	fn get_temperature(&self) -> f64 {
@@ -88,12 +91,44 @@ impl Oven {
 		}
 	}
 
-	pub fn new(temperature: f64, aperture: OvenAperture, direction: Vector3<f64>) -> Self {
+	pub fn new(
+		temperature: f64,
+		aperture: OvenAperture,
+		direction: Vector3<f64>,
+		microchannel_radius: f64,
+		microchannel_length: f64,
+		hot_lip_length: f64,
+		hot_lip_radius: f64,
+	) -> Self {
 		Oven {
 			temperature: temperature,
 			aperture: aperture,
 			direction: direction.normalize(),
-			theta_distribution: create_jtheta_distribution(0.2e-3, 4.0e-3),
+			theta_distribution: create_jtheta_distribution(
+				microchannel_radius,
+				microchannel_length,
+			),
+			max_theta: (hot_lip_radius / hot_lip_length).atan(),
+		}
+	}
+}
+
+pub fn new(
+		temperature: f64,
+		aperture: OvenAperture,
+		direction: Vector3<f64>,
+		microchannel_radius: f64,
+		microchannel_length: f64,
+	) -> Self {
+		Oven {
+			temperature: temperature,
+			aperture: aperture,
+			direction: direction.normalize(),
+			theta_distribution: create_jtheta_distribution(
+				microchannel_radius,
+				microchannel_length,
+			),
+			max_theta: PI/2.0,
 		}
 	}
 }
@@ -137,7 +172,12 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				}
 
 				let new_atom = entities.create();
-				let new_vel = velocity_generate(speed, &oven.direction, &oven.theta_distribution);
+				let (new_vel, theta) =
+					velocity_generate(speed, &oven.direction, &oven.theta_distribution);
+
+				if theta > oven.max_theta {
+					continue;
+				}
 				let start_position = oven_position.pos + oven.get_random_spawn_position();
 				updater.insert(
 					new_atom,
@@ -202,9 +242,11 @@ pub fn jtheta(theta: f64, channel_radius: f64, channel_length: f64) -> f64 {
 		j_theta = alpha * theta.cos()
 			+ (2.0 / PI)
 				* theta.cos() * ((1.0 - alpha) * r_q
-				+ 2.0 / (3.0 * q) * (1.0 - 2.0 * alpha) * (1.0 - (1.0 - q.powf(2.0)).powf(1.5))) // (4.21)
+				+ 2.0 / (3.0 * q) * (1.0 - 2.0 * alpha) * (1.0 - (1.0 - q.powf(2.0)).powf(1.5)))
+	// (4.21)
 	} else {
-		j_theta = alpha * theta.cos() + 4.0 / (3.0 * PI * q) * (1.0 - 2.0 * alpha) * theta.cos(); // (4.22)
+		j_theta = alpha * theta.cos() + 4.0 / (3.0 * PI * q) * (1.0 - 2.0 * alpha) * theta.cos();
+		// (4.22)
 	}
 	j_theta
 }
