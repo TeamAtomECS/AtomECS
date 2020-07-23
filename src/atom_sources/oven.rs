@@ -172,7 +172,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 	type SystemData = (
 		Entities<'a>,
 		ReadStorage<'a, Oven>,
-		ReadStorage<'a, AtomInfo>,
+		ReadStorage<'a, AtomicTransition>,
 		ReadStorage<'a, AtomNumberToEmit>,
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, PrecalculatedSpeciesInformation>,

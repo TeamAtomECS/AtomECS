@@ -1,12 +1,11 @@
 extern crate magneto_optical_trap as lib;
 extern crate nalgebra;
-use lib::atom::{Atom, AtomInfo, Force, Mass, Position, Velocity};
+use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
 use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
-use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;
@@ -50,7 +49,7 @@ fn main() {
                 vel: Vector3::new(0.0, 0.0, 10.0 + (i as f64) * 1.0),
             })
             .with(NewlyCreated)
-            .with(AtomInfo::rubidium())
+            .with(AtomicTransition::rubidium())
             .with(Mass { value: 87.0 })
             .build();
     }
@@ -64,7 +63,11 @@ fn main() {
             power: 0.1,
             direction: -Vector3::z(),
         })
-        .with(CoolingLight::for_species(AtomInfo::rubidium(), -6.0, -1.0))
+        .with(CoolingLight::for_species(
+            AtomicTransition::rubidium(),
+            -6.0,
+            -1.0,
+        ))
         .build();
     world
         .create_entity()
@@ -74,7 +77,11 @@ fn main() {
             power: 0.1,
             direction: Vector3::z(),
         })
-        .with(CoolingLight::for_species(AtomInfo::rubidium(), -6.0, -1.0))
+        .with(CoolingLight::for_species(
+            AtomicTransition::rubidium(),
+            -6.0,
+            -1.0,
+        ))
         .build();
 
     // Define timestep

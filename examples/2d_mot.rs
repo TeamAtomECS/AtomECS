@@ -2,7 +2,7 @@
 
 extern crate magneto_optical_trap as lib;
 extern crate nalgebra;
-use lib::atom::{AtomInfo, Position, Velocity};
+use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
 use lib::atom_sources::oven::{OvenAperture, OvenBuilder};
@@ -59,7 +59,7 @@ fn main() {
             direction: -Vector3::y(),
         })
         .with(CoolingLight::for_species(
-            AtomInfo::strontium(),
+            AtomicTransition::strontium(),
             detuning,
             1.0,
         ))
@@ -73,7 +73,7 @@ fn main() {
             direction: Vector3::y(),
         })
         .with(CoolingLight::for_species(
-            AtomInfo::strontium(),
+            AtomicTransition::strontium(),
             detuning,
             1.0,
         ))
@@ -87,7 +87,7 @@ fn main() {
             direction: -Vector3::x(),
         })
         .with(CoolingLight::for_species(
-            AtomInfo::strontium(),
+            AtomicTransition::strontium(),
             detuning,
             1.0,
         ))
@@ -101,7 +101,7 @@ fn main() {
             direction: Vector3::x(),
         })
         .with(CoolingLight::for_species(
-            AtomInfo::strontium(),
+            AtomicTransition::strontium(),
             detuning,
             1.0,
         ))
@@ -127,7 +127,7 @@ fn main() {
             mass: 88.0,
             ratio: 1.0,
         }]))
-        .with(AtomInfo::strontium())
+        .with(AtomicTransition::strontium())
         .with(AtomNumberToEmit {
             number: number_to_emit,
         })

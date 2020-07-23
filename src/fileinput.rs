@@ -1,5 +1,5 @@
 //! Functionality for serializing/deserializing simulations to file.
-//! 
+//!
 //! The module uses `serde` to deserialize Archetype structs that describe
 //! different facets of the simulation.
 
@@ -8,7 +8,7 @@ use std::io::prelude::*;
 extern crate serde;
 extern crate serde_json;
 extern crate serde_yaml;
-use crate::atom::AtomInfo;
+use crate::atom::AtomicTransition;
 use crate::atom_sources::mass::{MassDistribution, MassRatio};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
@@ -51,7 +51,7 @@ pub fn write_file_template(file: &str) {
 		centre: Vector3::new(1., 0., 0.),
 		gradient: 0.011,
 		uniform: Vector3::new(0., 0., 2.),
-		direction_quadru: Vector3::new(0.,0.,1.0),
+		direction_quadru: Vector3::new(0., 0., 1.0),
 	};
 	let massrubidium = MassDistribution::new(vec![
 		MassRatio {
@@ -75,7 +75,7 @@ pub fn write_file_template(file: &str) {
 		ovens,
 		magnetic: mag,
 		mass: massrubidium,
-		atominfo: AtomInfo::rubidium(),
+		atominfo: AtomicTransition::rubidium(),
 		detector,
 		timestep: 1e-6,
 	};
@@ -117,15 +117,15 @@ pub struct MagArchetype {
 }
 
 /// Archetype describing a complete simulation.
-/// 
-/// This includes arrays of other archetypes also present in the simulation, 
-/// see _eg_ [OvenArchetype](struct.OvenArchetype.html) and 
+///
+/// This includes arrays of other archetypes also present in the simulation,
+/// see _eg_ [OvenArchetype](struct.OvenArchetype.html) and
 /// [LaserArchetype](struct.LaserArchetype.html).
 #[derive(Deserialize, Serialize)]
 pub struct SimArchetype {
 	pub lasers: Vec<LaserArchetype>,
 	pub ovens: Vec<OvenArchetype>,
-	pub atominfo: AtomInfo,
+	pub atominfo: AtomicTransition,
 	pub mass: MassDistribution,
 	pub magnetic: MagArchetype,
 	pub detector: DetectorArchetype,

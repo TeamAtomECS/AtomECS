@@ -113,7 +113,7 @@ impl<'a> System<'a> for GaussianCreateAtomsSystem {
     type SystemData = (
         Entities<'a>,
         ReadStorage<'a, GaussianVelocityDistributionSource>,
-        ReadStorage<'a, AtomInfo>,
+        ReadStorage<'a, AtomicTransition>,
         ReadStorage<'a, AtomNumberToEmit>,
         ReadStorage<'a, Position>,
         ReadStorage<'a, Mass>,
