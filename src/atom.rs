@@ -1,16 +1,16 @@
 //! Common atom components and systems.
 
 use crate::constant::{BOHRMAG, C};
+use crate::output::file::BinaryConversion;
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
-use specs::{Component, Join, NullStorage, System, VecStorage, WriteStorage, World};
-use crate::output::file::BinaryConversion;
+use specs::{Component, Join, NullStorage, System, VecStorage, World, WriteStorage};
 use std::fmt;
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
 ///
 /// SI units (metres)
-#[derive(Deserialize,Serialize,Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Position {
 	pub pos: Vector3<f64>,
 }
@@ -31,7 +31,9 @@ impl fmt::Display for Position {
 	}
 }
 impl BinaryConversion for Position {
-	fn data(&self) -> Vec<f64> { vec!{self.pos[0], self.pos[1], self.pos[2]} }
+	fn data(&self) -> Vec<f64> {
+		vec![self.pos[0], self.pos[1], self.pos[2]]
+	}
 }
 
 /// Velocity of an entity in space, with respect to cartesian x,y,z axes.
@@ -47,7 +49,9 @@ impl fmt::Display for Velocity {
 	}
 }
 impl BinaryConversion for Velocity {
-	fn data(&self) -> Vec<f64> { vec!{self.vel[0], self.vel[1], self.vel[2]} }
+	fn data(&self) -> Vec<f64> {
+		vec![self.vel[0], self.vel[1], self.vel[2]]
+	}
 }
 
 impl Component for Velocity {
@@ -154,6 +158,28 @@ impl AtomInfo {
 		}
 	}
 
+	pub fn erbiurm() -> Self {
+		AtomInfo {
+			mup: BOHRMAG,
+			mum: -BOHRMAG,
+			muz: 0.0,
+			frequency: 5.142e14,
+			linewidth: 190e3,
+			saturation_intensity: 0.13,
+		}
+	}
+
+	pub fn erbium_401() -> Self {
+		AtomInfo {
+			mup: BOHRMAG,
+			mum: -BOHRMAG,
+			muz: 0.0,
+			frequency: 7.476e14,
+			linewidth: 30e6,
+			saturation_intensity: 56.0,
+		}
+	}
+
 	pub fn gamma(&self) -> f64 {
 		self.linewidth * 2.0 * std::f64::consts::PI
 	}
@@ -173,11 +199,11 @@ impl<'a> System<'a> for ClearForceSystem {
 
 /// Registers resources required by `atom_sources` to the ecs world.
 pub fn register_components(world: &mut World) {
-    world.register::<Position>();
-    world.register::<Mass>();
-    world.register::<Force>();
-    world.register::<AtomInfo>();
-    world.register::<Atom>();
-    world.register::<InitialVelocity>();
-    world.register::<Velocity>();
+	world.register::<Position>();
+	world.register::<Mass>();
+	world.register::<Force>();
+	world.register::<AtomInfo>();
+	world.register::<Atom>();
+	world.register::<InitialVelocity>();
+	world.register::<Velocity>();
 }
