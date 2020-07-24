@@ -171,8 +171,8 @@ impl AtomicTransition {
 
 	pub fn erbium_401() -> Self {
 		AtomicTransition {
-			mup: BOHRMAG,
-			mum: -BOHRMAG,
+			mup: 1.1372*BOHRMAG,
+			mum: 1.1372*-BOHRMAG,
 			muz: 0.0,
 			frequency: 7.476e14,
 			linewidth: 30e6,

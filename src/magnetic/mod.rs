@@ -10,6 +10,7 @@ use specs::{
 pub mod grid;
 pub mod quadrupole;
 pub mod uniform;
+use std::fmt;
 
 /// A component that stores the magnetic field at an entity's location.
 #[derive(Copy, Clone)]
@@ -30,6 +31,15 @@ impl MagneticFieldSampler {
 }
 impl Component for MagneticFieldSampler {
 	type Storage = VecStorage<Self>;
+}
+impl fmt::Display for MagneticFieldSampler {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(
+			f,
+			"({:?},{:?},{:?})",
+			self.field[0], self.field[1], self.field[2]
+		)
+	}
 }
 
 impl Default for MagneticFieldSampler {
