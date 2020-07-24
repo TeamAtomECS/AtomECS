@@ -1,5 +1,7 @@
 //! Calculations of the Doppler shift.
 extern crate specs;
+extern crate rayon;
+
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::gaussian::GaussianBeam;
 use super::sampler::LaserSamplers;
@@ -16,13 +18,18 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
         WriteStorage<'a, LaserSamplers>,
         ReadStorage<'a, Velocity>,
     );
+
     fn run(&mut self, (cooling, indices, gaussian, mut samplers, velocities): Self::SystemData) {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
         for (cooling, index, gaussian) in (&cooling, &indices, &gaussian).join() {
-            for (sampler, vel) in (&mut samplers, &velocities).join() {
+            (&mut samplers, &velocities).par_join().for_each(|(sampler, vel)| {
                 sampler.contents[index.index].doppler_shift = vel
                     .vel
                     .dot(&(gaussian.direction.normalize() * cooling.wavenumber()));
-            }
+					}
+					)
         }
     }
 }

@@ -1,5 +1,6 @@
 extern crate nalgebra;
 extern crate specs;
+extern crate rayon;
 use nalgebra::Vector3;
 use specs::{Component, Entities, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 
@@ -56,17 +57,21 @@ impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 		&mut self,
 		(entities, cooling, indices, gaussian, masks, mut samplers, positions): Self::SystemData,
 	) {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
 		for (laser_entity, cooling, index, gaussian) in
 			(&entities, &cooling, &indices, &gaussian).join()
 		{
 			let mask: Option<&CircularMask> = masks.get(laser_entity);
-			for (sampler, pos) in (&mut samplers, &positions).join() {
+			//for (sampler, pos) in (&mut samplers, &positions).join() {
+			(&mut samplers, &positions).par_join().for_each(|(sampler, pos)| {
 				sampler.contents[index.index].intensity =
 					get_gaussian_beam_intensity(&gaussian, &pos, mask);
 				sampler.contents[index.index].polarization = cooling.polarization;
 				sampler.contents[index.index].wavevector =
 					gaussian.direction.normalize() * cooling.wavenumber();
-			}
+			});
 		}
 	}
 }

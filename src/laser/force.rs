@@ -1,4 +1,5 @@
 extern crate specs;
+extern crate rayon;
 use crate::atom::{Atom, AtomicTransition};
 use crate::constant;
 use crate::maths;
@@ -36,16 +37,16 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
         &mut self,
         (magnetic_samplers, mut laser_samplers, atom_info, mut forces, _dark): Self::SystemData,
     ) {
-        // Outer loop over atoms
-        for (atom_info, bfield, laser_samplers, mut force, ()) in (
-            &atom_info,
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
+		(
+			&atom_info,
             &magnetic_samplers,
             &mut laser_samplers,
             &mut forces,
-            !&_dark,
-        )
-            .join()
-        {
+            !&_dark
+		).par_join().for_each(|(atom_info, bfield, laser_samplers, mut force, ())| {
             // Inner loop over cooling lasers
             for mut laser_sampler in &mut laser_samplers.contents {
                 //let s0 = 1.0;
@@ -91,6 +92,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                 force.force = force.force + cooling_force;
             }
         }
+		);
     }
 }
 
