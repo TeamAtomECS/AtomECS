@@ -6,6 +6,7 @@ use specs::{Component, Entities, HashMapStorage, Join, ReadStorage, System, Writ
 
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::sampler::LaserSamplers;
+use crate::atom::AtomicTransition;
 use crate::atom::Position;
 use crate::maths;
 use serde::{Deserialize, Serialize};
@@ -48,6 +49,24 @@ struct LaserData {
 	pub index: CoolingLightIndex,
 	pub gaussian: GaussianBeam,
 	pub mask: Option<CircularMask>,
+}
+impl Default for LaserData {
+	fn default() -> Self {
+		LaserData {
+			cooling: CoolingLight::for_species(AtomicTransition::rubidium(), 0.0, 1.0),
+			index: CoolingLightIndex {
+				index: 0,
+				initiated: false,
+			},
+			gaussian: GaussianBeam {
+				intersection: Vector3::x(),
+				direction: Vector3::x(),
+				power: 0.0,
+				e_radius: 1.0,
+			},
+			mask: None,
+		}
+	}
 }
 
 /// System that calculates that samples the intensity of `GaussianBeam` entities.
@@ -99,17 +118,24 @@ impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 			})
 			.collect();
 
-		for laser in lasers {
-			(&mut samplers, &positions)
-				.par_join()
-				.for_each(|(sampler, pos)| {
+		let mut laservec = vec![Default::default(); 10];
+		let laserveclen = lasers.len();
+		for i in 0..lasers.len() {
+			laservec[i] = lasers[i].clone();
+		}
+
+		(&mut samplers, &positions)
+			.par_join()
+			.for_each(|(sampler, pos)| {
+				for i in 0..laserveclen {
+					let laser = laservec[i];
 					sampler.contents[laser.index.index].intensity =
 						get_gaussian_beam_intensity(&laser.gaussian, &pos, laser.mask.as_ref());
 					sampler.contents[laser.index.index].polarization = laser.cooling.polarization;
 					sampler.contents[laser.index.index].wavevector =
 						laser.gaussian.direction.normalize() * laser.cooling.wavenumber();
-				});
-		}
+				}
+			});
 	}
 }
 
