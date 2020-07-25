@@ -8,7 +8,7 @@ use specs::{
 use crate::constant;
 
 /// A component representing light used for laser cooling.
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct CoolingLight {
 	/// Polarisation of the laser light, 1. for +, -1. for -,
 	pub polarization: f64,
@@ -54,6 +54,7 @@ impl Component for CoolingLight {
 /// Default `CoolingLightIndex`s are created with `initiated: false`.
 /// Once the index is set, initiated is set to true.
 /// This is used to detect if all lasers in the simulation are correctly indexed, incase new lasers are added.
+#[derive(Clone, Copy)]
 pub struct CoolingLightIndex {
 	pub index: usize,
 	pub initiated: bool,

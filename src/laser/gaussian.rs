@@ -1,6 +1,6 @@
 extern crate nalgebra;
-extern crate specs;
 extern crate rayon;
+extern crate specs;
 use nalgebra::Vector3;
 use specs::{Component, Entities, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 
@@ -11,7 +11,7 @@ use crate::maths;
 use serde::{Deserialize, Serialize};
 
 /// A component representing a beam with a gaussian intensity profile.
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct GaussianBeam {
 	/// A point that the laser beam intersects
 	pub intersection: Vector3<f64>,
@@ -32,12 +32,22 @@ impl Component for GaussianBeam {
 /// A component that covers the central portion of a laser beam.
 ///
 /// The mask is assumed to be Coaxial to the GaussianBeam.
+#[derive(Clone, Copy)]
 pub struct CircularMask {
 	/// Radius of the masked region.
 	pub radius: f64,
 }
 impl Component for CircularMask {
 	type Storage = HashMapStorage<Self>;
+}
+
+/// Cached laser data which may be copied.
+#[derive(Copy, Clone)]
+struct LaserData {
+	pub cooling: CoolingLight,
+	pub index: CoolingLightIndex,
+	pub gaussian: GaussianBeam,
+	pub mask: Option<CircularMask>,
 }
 
 /// System that calculates that samples the intensity of `GaussianBeam` entities.
@@ -60,18 +70,45 @@ impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 		use rayon::prelude::*;
 		use specs::ParJoin;
 
-		for (laser_entity, cooling, index, gaussian) in
-			(&entities, &cooling, &indices, &gaussian).join()
-		{
-			let mask: Option<&CircularMask> = masks.get(laser_entity);
-			//for (sampler, pos) in (&mut samplers, &positions).join() {
-			(&mut samplers, &positions).par_join().for_each(|(sampler, pos)| {
-				sampler.contents[index.index].intensity =
-					get_gaussian_beam_intensity(&gaussian, &pos, mask);
-				sampler.contents[index.index].polarization = cooling.polarization;
-				sampler.contents[index.index].wavevector =
-					gaussian.direction.normalize() * cooling.wavenumber();
-			});
+		// Cache immutable laser components into thread.
+		// type Lasers = (
+		// 	CoolingLight,
+		// 	CoolingLightIndex,
+		// 	GaussianBeam,
+		// 	Option<CircularMask>,
+		// );
+		// let lasers: Lasers = (&entities, &cooling, &indices, &gaussian)
+		// 	.join()
+		// 	.map(|(laser_entity, cooling, index, gaussian)| {
+		// 		(cooling, index, gaussian, masks.get(laser_entity))
+		// 	})
+		// 	.collect();
+		let lasers: Vec<LaserData> = (&entities, &cooling, &indices, &gaussian)
+			.join()
+			.map(|(laser_entity, cooling, index, gaussian)| -> LaserData {
+				let mask: Option<CircularMask> = match masks.get(laser_entity) {
+					Some(value) => Some(value.clone()),
+					None => None,
+				};
+				LaserData {
+					cooling: cooling.clone(),
+					index: index.clone(),
+					gaussian: gaussian.clone(),
+					mask: mask,
+				}
+			})
+			.collect();
+
+		for laser in lasers {
+			(&mut samplers, &positions)
+				.par_join()
+				.for_each(|(sampler, pos)| {
+					sampler.contents[laser.index.index].intensity =
+						get_gaussian_beam_intensity(&laser.gaussian, &pos, laser.mask.as_ref());
+					sampler.contents[laser.index.index].polarization = laser.cooling.polarization;
+					sampler.contents[laser.index.index].wavevector =
+						laser.gaussian.direction.normalize() * laser.cooling.wavenumber();
+				});
 		}
 	}
 }
