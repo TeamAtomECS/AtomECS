@@ -1,12 +1,14 @@
 //! Calculations of the Doppler shift.
-extern crate specs;
 extern crate rayon;
+extern crate specs;
 
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::gaussian::GaussianBeam;
 use super::sampler::LaserSamplers;
 use crate::atom::Velocity;
 use specs::{Join, ReadStorage, System, WriteStorage};
+
+const LASER_CACHE_SIZE: usize = 16;
 
 /// This system calculates the Doppler shift for each atom in each cooling beam.
 pub struct CalculateDopplerShiftSystem;
@@ -20,16 +22,36 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
     );
 
     fn run(&mut self, (cooling, indices, gaussian, mut samplers, velocities): Self::SystemData) {
-		use rayon::prelude::*;
-		use specs::ParJoin;
+        use rayon::prelude::*;
+        use specs::ParJoin;
 
-        for (cooling, index, gaussian) in (&cooling, &indices, &gaussian).join() {
-            (&mut samplers, &velocities).par_join().for_each(|(sampler, vel)| {
-                sampler.contents[index.index].doppler_shift = vel
-                    .vel
-                    .dot(&(gaussian.direction.normalize() * cooling.wavenumber()));
-					}
-					)
+        // There are typically only a small number of lasers in a simulation.
+        // For a speedup, cache the required components into thread memory,
+        // so they can be distributed to parallel workers during the atom loop.
+        type CachedLaser = (CoolingLight, CoolingLightIndex, GaussianBeam);
+        let laser_cache: Vec<CachedLaser> = (&cooling, &indices, &gaussian)
+            .join()
+            .map(|(cooling, index, gaussian)| (cooling.clone(), index.clone(), gaussian.clone()))
+            .collect();
+
+        // Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
+        for base_index in (0..laser_cache.len()).step_by(LASER_CACHE_SIZE) {
+            let max_index = laser_cache.len().min(base_index + LASER_CACHE_SIZE);
+            let slice = &laser_cache[base_index..max_index];
+            let mut laser_array = vec![laser_cache[0]; LASER_CACHE_SIZE];
+            laser_array[..max_index].copy_from_slice(slice);
+            let number_in_iteration = slice.len();
+
+            (&mut samplers, &velocities)
+                .par_join()
+                .for_each(|(sampler, vel)| {
+                    for i in 0..number_in_iteration {
+                        let (cooling, index, gaussian) = laser_array[i];
+                        sampler.contents[index.index].doppler_shift = vel
+                            .vel
+                            .dot(&(gaussian.direction.normalize() * cooling.wavenumber()));
+                    }
+                })
         }
     }
 }
