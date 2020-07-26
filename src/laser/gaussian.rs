@@ -6,7 +6,6 @@ use specs::{Component, Entities, HashMapStorage, Join, ReadStorage, System, Writ
 
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::sampler::LaserSamplers;
-use crate::atom::AtomicTransition;
 use crate::atom::Position;
 use crate::maths;
 use serde::{Deserialize, Serialize};
@@ -42,32 +41,7 @@ impl Component for CircularMask {
 	type Storage = HashMapStorage<Self>;
 }
 
-/// Cached laser data which may be copied.
-#[derive(Copy, Clone)]
-struct LaserData {
-	pub cooling: CoolingLight,
-	pub index: CoolingLightIndex,
-	pub gaussian: GaussianBeam,
-	pub mask: Option<CircularMask>,
-}
-impl Default for LaserData {
-	fn default() -> Self {
-		LaserData {
-			cooling: CoolingLight::for_species(AtomicTransition::rubidium(), 0.0, 1.0),
-			index: CoolingLightIndex {
-				index: 0,
-				initiated: false,
-			},
-			gaussian: GaussianBeam {
-				intersection: Vector3::x(),
-				direction: Vector3::x(),
-				power: 0.0,
-				e_radius: 1.0,
-			},
-			mask: None,
-		}
-	}
-}
+const LASER_CACHE_SIZE: usize = 16;
 
 /// System that calculates that samples the intensity of `GaussianBeam` entities.
 pub struct SampleGaussianBeamIntensitySystem;
@@ -89,53 +63,48 @@ impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 		use rayon::prelude::*;
 		use specs::ParJoin;
 
-		// Cache immutable laser components into thread.
-		// type Lasers = (
-		// 	CoolingLight,
-		// 	CoolingLightIndex,
-		// 	GaussianBeam,
-		// 	Option<CircularMask>,
-		// );
-		// let lasers: Lasers = (&entities, &cooling, &indices, &gaussian)
-		// 	.join()
-		// 	.map(|(laser_entity, cooling, index, gaussian)| {
-		// 		(cooling, index, gaussian, masks.get(laser_entity))
-		// 	})
-		// 	.collect();
-		let lasers: Vec<LaserData> = (&entities, &cooling, &indices, &gaussian)
+		// There are typically only a small number of lasers in a simulation.
+		// For a speedup, cache the required components into thread memory,
+		// so they can be distributed to parallel workers during the atom loop.
+		type CachedLaser = (
+			CoolingLight,
+			CoolingLightIndex,
+			GaussianBeam,
+			Option<CircularMask>,
+		);
+		let laser_cache: Vec<CachedLaser> = (&entities, &cooling, &indices, &gaussian)
 			.join()
-			.map(|(laser_entity, cooling, index, gaussian)| -> LaserData {
-				let mask: Option<CircularMask> = match masks.get(laser_entity) {
-					Some(value) => Some(value.clone()),
-					None => None,
-				};
-				LaserData {
-					cooling: cooling.clone(),
-					index: index.clone(),
-					gaussian: gaussian.clone(),
-					mask: mask,
-				}
+			.map(|(laser_entity, cooling, index, gaussian)| {
+				(
+					cooling.clone(),
+					index.clone(),
+					gaussian.clone(),
+					masks.get(laser_entity).cloned(),
+				)
 			})
 			.collect();
 
-		let mut laservec = vec![Default::default(); 10];
-		let laserveclen = lasers.len();
-		for i in 0..lasers.len() {
-			laservec[i] = lasers[i].clone();
-		}
+		// Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
+		for base_index in (0..laser_cache.len()).step_by(LASER_CACHE_SIZE) {
+			let max_index = laser_cache.len().min(base_index + LASER_CACHE_SIZE);
+			let slice = &laser_cache[base_index..max_index];
+			let mut laser_array = vec![laser_cache[0]; LASER_CACHE_SIZE];
+			laser_array[..max_index].copy_from_slice(slice);
+			let number_in_iteration = slice.len();
 
-		(&mut samplers, &positions)
-			.par_join()
-			.for_each(|(sampler, pos)| {
-				for i in 0..laserveclen {
-					let laser = laservec[i];
-					sampler.contents[laser.index.index].intensity =
-						get_gaussian_beam_intensity(&laser.gaussian, &pos, laser.mask.as_ref());
-					sampler.contents[laser.index.index].polarization = laser.cooling.polarization;
-					sampler.contents[laser.index.index].wavevector =
-						laser.gaussian.direction.normalize() * laser.cooling.wavenumber();
-				}
-			});
+			(&mut samplers, &positions)
+				.par_join()
+				.for_each(|(sampler, pos)| {
+					for i in 0..number_in_iteration {
+						let (cooling, index, gaussian, mask) = laser_array[i];
+						sampler.contents[index.index].intensity =
+							get_gaussian_beam_intensity(&gaussian, &pos, mask.as_ref());
+						sampler.contents[index.index].polarization = cooling.polarization;
+						sampler.contents[index.index].wavevector =
+							gaussian.direction.normalize() * cooling.wavenumber();
+					}
+				});
+		}
 	}
 }
 
