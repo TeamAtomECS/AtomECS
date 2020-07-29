@@ -40,7 +40,7 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
 		Entities<'a>,
 		ReadStorage<'a, SurfaceSource>,
 		ReadStorage<'a, Cylinder>,
-		ReadStorage<'a, AtomInfo>,
+		ReadStorage<'a, AtomicTransition>,
 		ReadStorage<'a, AtomNumberToEmit>,
 		ReadStorage<'a, Position>,
 		ReadStorage<'a, PrecalculatedSpeciesInformation>,
@@ -95,7 +95,8 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
 					rng.gen_range(-1.0, 1.0),
 					rng.gen_range(-1.0, 1.0),
 					rng.gen_range(-1.0, 1.0),
-				).normalize();
+				)
+				.normalize();
 				let perp_a = direction.cross(&random_dir);
 				let perp_b = direction.cross(&perp_a);
 

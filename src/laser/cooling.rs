@@ -1,14 +1,14 @@
 extern crate specs;
-use crate::atom::AtomInfo;
+use crate::atom::AtomicTransition;
+use serde::{Deserialize, Serialize};
 use specs::{
 	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System, WriteStorage,
 };
-use serde::{Deserialize,Serialize};
 
 use crate::constant;
 
 /// A component representing light used for laser cooling.
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct CoolingLight {
 	/// Polarisation of the laser light, 1. for +, -1. for -,
 	pub polarization: f64,
@@ -36,7 +36,7 @@ impl CoolingLight {
 	/// `detuning`: Detuning from the transition, specified in MHz. Red-detuned is negative.
 	///
 	/// `polarization`: Polarization of the cooling beam.
-	pub fn for_species(species: AtomInfo, detuning: f64, polarization: f64) -> Self {
+	pub fn for_species(species: AtomicTransition, detuning: f64, polarization: f64) -> Self {
 		let freq = species.frequency + detuning * 1.0e6;
 		CoolingLight {
 			wavelength: constant::C / freq,
@@ -50,20 +50,24 @@ impl Component for CoolingLight {
 
 /// An index that uniquely identifies this cooling light in the interaction list for each atom.
 /// The index value corresponds to the position of each cooling light in the per-atom interaction list array.
-/// 
-/// Default `CoolingLightIndex`s are created with `initiated: false`. 
+///
+/// Default `CoolingLightIndex`s are created with `initiated: false`.
 /// Once the index is set, initiated is set to true.
 /// This is used to detect if all lasers in the simulation are correctly indexed, incase new lasers are added.
+#[derive(Clone, Copy)]
 pub struct CoolingLightIndex {
 	pub index: usize,
-	pub initiated: bool
+	pub initiated: bool,
 }
 impl Component for CoolingLightIndex {
 	type Storage = HashMapStorage<Self>;
 }
 impl Default for CoolingLightIndex {
 	fn default() -> Self {
-		CoolingLightIndex { index: 0, initiated: false }
+		CoolingLightIndex {
+			index: 0,
+			initiated: false,
+		}
 	}
 }
 
@@ -188,10 +192,10 @@ pub mod tests {
 	#[test]
 	fn test_for_species() {
 		let detuning = 12.0;
-		let light = CoolingLight::for_species(AtomInfo::rubidium(), detuning, 1.0);
+		let light = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1.0);
 		assert_approx_eq!(
 			light.frequency(),
-			AtomInfo::rubidium().frequency + 1.0e6 * detuning
+			AtomicTransition::rubidium().frequency + 1.0e6 * detuning
 		);
 	}
 }

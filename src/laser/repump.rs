@@ -37,7 +37,7 @@ impl<'a> System<'a> for RepumpSystem {
             None => (),
             Some(repump) => {
                 for (ent, num) in (&ent, &num).join() {
-                    if repump.if_loss(num.value as f64) {
+                    if repump.if_loss(num.value) {
                         lazy.insert(ent, Dark {})
                     }
                 }

@@ -25,9 +25,6 @@ pub struct LaserSampler {
 
     /// Doppler shift with respect to laser beam, in SI units of Hz.
     pub doppler_shift: f64,
-
-    /// number of photon scattered within a timestep, with no unit
-    pub scatter_num: i64,
 }
 impl Default for LaserSampler {
     fn default() -> Self {
@@ -38,7 +35,6 @@ impl Default for LaserSampler {
             intensity: f64::NAN,
             doppler_shift: f64::NAN,
             scattering_rate: f64::NAN,
-            scatter_num: 0,
         }
     }
 }
