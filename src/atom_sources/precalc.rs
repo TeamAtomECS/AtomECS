@@ -1,4 +1,5 @@
-//! Utilities for precalculating quantities such as mass and velocity distributions.
+//! Utilities for precalculating quantities
+//!
 
 use super::mass::MassDistribution;
 use super::WeightedProbabilityDistribution;
@@ -20,11 +21,7 @@ use specs::{Component, Entities, Entity, HashMapStorage, Join, ReadStorage, Syst
 /// `temperature`: The temperature of the oven, in units of Kelvin.
 ///
 /// `mass`: The mass of the particle, in SI units of kg.
-fn create_v_distribution(
-    temperature: f64,
-    mass: f64,
-    power: f64,
-) -> WeightedProbabilityDistribution {
+fn create_v_distribution(temperature: f64, mass: f64, power: f64) -> WeightedProbabilityDistribution {
     let max_velocity = 7.0 * (2.0 * BOLTZCONST * temperature / mass).powf(0.5);
 
     // tuple list of (velocity, weight)
@@ -142,11 +139,8 @@ where
         for (entity, source, mass_dist, _) in
             (&entities, &sources, &mass_distributions, !&precalcs).join()
         {
-            let precalculated = PrecalculatedSpeciesInformation::create(
-                source.get_temperature(),
-                mass_dist,
-                source.get_v_dist_power(),
-            );
+            let precalculated =
+                PrecalculatedSpeciesInformation::create(source.get_temperature(), mass_dist, source.get_v_dist_power());
             //mass_distributions.remove(entity);
             //precalcs.insert(entity, precalculated);
             precalculated_data.push((entity, precalculated));

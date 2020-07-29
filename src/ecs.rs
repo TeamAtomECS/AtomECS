@@ -6,7 +6,7 @@
 use crate::atom;
 use crate::atom::ClearForceSystem;
 use crate::atom_sources;
-use crate::destructor::DeleteToBeDestroyedEntitiesSystem;
+use crate::destructor::{DeleteToBeDestroyedEntitiesSystem};
 //use crate::detector;
 //use crate::detector::DetectingInfo;
 use crate::gravity::ApplyGravitationalForceSystem;
@@ -61,7 +61,11 @@ pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'sta
 	);
 	//builder = detector::add_systems_to_dispatch(builder, &[]);
 	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
-	builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &["euler_integrator"]);
+	builder = builder.with(
+		DeleteToBeDestroyedEntitiesSystem,
+		"",
+		&["euler_integrator"],
+	);
 	builder = sim_region::add_systems_to_dispatch(builder, &[]);
 	builder.add_barrier();
 	builder

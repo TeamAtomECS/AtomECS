@@ -1,9 +1,12 @@
 pub mod cooling;
+pub mod densitymatrix;
 pub mod doppler;
+pub mod energylevel;
 pub mod force;
 pub mod gaussian;
 pub mod repump;
 pub mod sampler;
+pub mod transitionrate;
 
 extern crate specs;
 use crate::initiate::NewlyCreated;
@@ -28,7 +31,7 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 					contents: Vec::new(),
 				},
 			);
-			updater.insert(ent, NumberScattered { value: 0.0 });
+			updater.insert(ent, NumberScattered { value: 0 });
 		}
 	}
 }

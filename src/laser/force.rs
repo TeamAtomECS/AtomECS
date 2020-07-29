@@ -1,9 +1,8 @@
 extern crate specs;
-extern crate rayon;
-use crate::atom::{Atom, AtomicTransition};
+use crate::atom::{Atom, AtomInfo};
 use crate::constant;
 use crate::maths;
-use rand::distributions::{Distribution, Normal};
+use rand::distributions::{Distribution, Normal, Poisson};
 use specs::{Component, Join, Read, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
 extern crate nalgebra;
 use super::sampler::LaserSamplers;
@@ -28,25 +27,42 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
     type SystemData = (
         ReadStorage<'a, MagneticFieldSampler>,
         WriteStorage<'a, LaserSamplers>,
-        ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, AtomInfo>,
         WriteStorage<'a, Force>,
         ReadStorage<'a, Dark>,
+        ReadExpect<'a, Timestep>,
+        Option<Read<'a, RandomScatteringForceOption>>,
     );
 
     fn run(
         &mut self,
-        (magnetic_samplers, mut laser_samplers, atom_info, mut forces, _dark): Self::SystemData,
+        (
+            magnetic_samplers,
+            mut laser_samplers,
+            atom_info,
+            mut forces,
+            _dark,
+            timestep,
+            rand_opt,
+        ): Self::SystemData,
     ) {
-		use rayon::prelude::*;
-		use specs::ParJoin;
-
-		(
-			&atom_info,
+        let mut random_option = false;
+        match rand_opt {
+            None => (),
+            Some(_rand) => {
+                random_option = true;
+            }
+        }
+        // Outer loop over atoms
+        for (atom_info, bfield, laser_samplers, mut force, ()) in (
+            &atom_info,
             &magnetic_samplers,
             &mut laser_samplers,
             &mut forces,
-            !&_dark
-		).par_join().for_each(|(atom_info, bfield, laser_samplers, mut force, ())| {
+            !&_dark,
+        )
+            .join()
+        {
             // Inner loop over cooling lasers
             for mut laser_sampler in &mut laser_samplers.contents {
                 //let s0 = 1.0;
@@ -86,19 +102,31 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                         + 4. * (angular_detuning - atom_info.muz / HBAR * bfield.magnitude)
                             .powf(2.)
                             / gamma.powf(2.));
-                let cooling_force = wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);
+                let mut cooling_force = Vector3::new(0., 0., 0.);
+                if random_option {
+                    let scatter_number = s0 * (scatter1 + scatter2 + scatter3) * timestep.delta;
+                    let poi_scatter = Poisson::new(scatter_number);
+                    laser_sampler.scatter_num = poi_scatter.sample(&mut rand::thread_rng()) as i64;
+                    //println!(
+                    //    "theory: {}, actual: {}",
+                    //    scatter_number, laser_sampler.scatter_num
+                    //);
+                    cooling_force =
+                        wavevector * HBAR * laser_sampler.scatter_num as f64 / timestep.delta;
+                } else {
+                    cooling_force = wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);
+                }
                 laser_sampler.force = cooling_force.clone();
                 //println!("detuning{}", angular_detuning / gamma);
                 force.force = force.force + cooling_force;
             }
         }
-		);
     }
 }
 
 /// The expected number of times an atom has scattered a photon this timestep.
 pub struct NumberScattered {
-    pub value: f64,
+    pub value: i64,
 }
 
 impl Component for NumberScattered {
@@ -114,7 +142,7 @@ impl<'a> System<'a> for CalculateNumberPhotonsScatteredSystem {
     type SystemData = (
         ReadStorage<'a, LaserSamplers>,
         ReadStorage<'a, Atom>,
-        ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, AtomInfo>,
         ReadExpect<'a, Timestep>,
         ReadStorage<'a, Dark>,
         WriteStorage<'a, NumberScattered>,
@@ -124,13 +152,13 @@ impl<'a> System<'a> for CalculateNumberPhotonsScatteredSystem {
         for (samplers, _, atom_info, (), num) in
             (&samplers, &_atom, &atom_info, !&_dark, &mut number).join()
         {
-            let mut total_force = 0.;
-            let omega = 2.0 * constant::PI * atom_info.frequency;
+            let mut total_num = 0;
+            //let omega = 2.0 * constant::PI * atom_info.frequency;
             for sampler in samplers.contents.iter() {
-                total_force = total_force + sampler.force.norm();
+                total_num = total_num + sampler.scatter_num;
             }
-            let force_one_atom = constant::HBAR * omega / constant::C / timestep.delta;
-            num.value = total_force / force_one_atom;
+            //let force_one_atom = constant::HBAR * omega / constant::C / timestep.delta;
+            num.value = total_num;
         }
     }
 }
@@ -142,7 +170,7 @@ impl<'a> System<'a> for ApplyRandomForceSystem {
         Option<Read<'a, RandomScatteringForceOption>>,
         WriteStorage<'a, Force>,
         ReadStorage<'a, NumberScattered>,
-        ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, AtomInfo>,
         ReadExpect<'a, Timestep>,
     );
 
@@ -154,12 +182,12 @@ impl<'a> System<'a> for ApplyRandomForceSystem {
                     let mut rng = rand::thread_rng();
                     let omega = 2.0 * constant::PI * atom_info.frequency;
                     let force_one_kick = constant::HBAR * omega / constant::C / timestep.delta;
-                    if kick.value > 5.0 {
+                    if kick.value > 5 {
                         // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
                         //Three-Dimensional Random Walk Processes*
                         let normal = Normal::new(
                             0.0,
-                            (kick.value * force_one_kick.powf(2.0) / 3.0).powf(0.5),
+                            (kick.value as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
                         );
 
                         let force_n_kicks = Vector3::new(
@@ -170,13 +198,12 @@ impl<'a> System<'a> for ApplyRandomForceSystem {
                         force.force = force.force + force_n_kicks;
                     } else {
                         let numberkick = kick.value as i64;
-                        let residue = kick.value - (numberkick as f64);
                         for _i in 0..numberkick {
                             force.force = force.force + force_one_kick * maths::random_direction();
                         }
-                        if residue > rng.gen_range(0.0, 1.0) {
-                            force.force = force.force + force_one_kick * maths::random_direction();
-                        }
+                        //if residue > rng.gen_range(0.0, 1.0) {
+                        //    force.force = force.force + force_one_kick * maths::random_direction();
+                        //}
                     }
                     //println!("force :  {}", force_n_kicks);
                 }
@@ -205,7 +232,7 @@ pub mod tests {
         test_world.register::<CoolingLightIndex>();
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
-        test_world.register::<AtomicTransition>();
+        test_world.register::<AtomInfo>();
         test_world.register::<MagneticFieldSampler>();
         test_world.register::<Force>();
         test_world.register::<LaserSamplers>();
@@ -233,7 +260,7 @@ pub mod tests {
     fn test_calculate_cooling_force_system() {
         let detuning = 0.0;
         let intensity = 1.0;
-        let cooling = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1.0);
+        let cooling = CoolingLight::for_species(AtomInfo::rubidium(), detuning, 1.0);
         let wavenumber = cooling.wavenumber();
         let (mut test_world, laser) = create_world_for_tests(cooling);
         test_world.register::<Dark>();
@@ -248,13 +275,14 @@ pub mod tests {
                     wavevector: wavenumber * Vector3::new(1.0, 0.0, 0.0),
                     intensity: intensity,
                     doppler_shift: 0.0,
+                    scatter_num: 0,
                 }],
             })
             .with(MagneticFieldSampler {
                 field: Vector3::new(1e-8, 0.0, 0.0),
                 magnitude: 1e-8,
             })
-            .with(AtomicTransition::rubidium())
+            .with(AtomInfo::rubidium())
             .build();
 
         let mut system = CalculateCoolingForcesSystem {};
@@ -265,11 +293,9 @@ pub mod tests {
         let cooling_light_storage = test_world.read_storage::<CoolingLight>();
         let cooling_light = cooling_light_storage.get(laser).expect("entity not found");
         let photon_momentum = constant::HBAR * cooling_light.wavenumber();
-        let i_norm = intensity / AtomicTransition::rubidium().saturation_intensity;
-        let scattering_rate = (AtomicTransition::rubidium().gamma() / 2.0) * i_norm
-            / (1.0
-                + i_norm
-                + 4.0 * (detuning * 1e6 / AtomicTransition::rubidium().linewidth).powf(2.0));
+        let i_norm = intensity / AtomInfo::rubidium().saturation_intensity;
+        let scattering_rate = (AtomInfo::rubidium().gamma() / 2.0) * i_norm
+            / (1.0 + i_norm + 4.0 * (detuning * 1e6 / AtomInfo::rubidium().linewidth).powf(2.0));
         let f_scatt = photon_momentum * scattering_rate;
 
         let force_storage = test_world.read_storage::<Force>();
@@ -292,7 +318,7 @@ pub mod tests {
     fn test_dark() {
         let detuning = 0.0;
         let intensity = 1.0;
-        let cooling = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1.0);
+        let cooling = CoolingLight::for_species(AtomInfo::rubidium(), detuning, 1.0);
         let wavenumber = cooling.wavenumber();
         let (mut test_world, laser) = create_world_for_tests(cooling);
         test_world.register::<Dark>();
@@ -308,13 +334,14 @@ pub mod tests {
                     wavevector: wavenumber * Vector3::new(1.0, 0.0, 0.0),
                     intensity: intensity,
                     doppler_shift: 0.0,
+                    scatter_num: 0,
                 }],
             })
             .with(MagneticFieldSampler {
                 field: Vector3::new(1e-8, 0.0, 0.0),
                 magnitude: 1e-8,
             })
-            .with(AtomicTransition::rubidium())
+            .with(AtomInfo::rubidium())
             .build();
 
         let mut system = CalculateCoolingForcesSystem {};
@@ -341,7 +368,7 @@ pub mod tests {
     }
     #[test]
     fn test_cooling_force() {
-        let rb = AtomicTransition::rubidium();
+        let rb = AtomInfo::rubidium();
 
         let lambda = constant::C / rb.frequency;
         let wavevector = Vector3::new(1.0, 0.0, 0.0) * 2.0 * constant::PI / lambda;
@@ -384,8 +411,7 @@ pub mod tests {
 
             let photon_momentum = constant::HBAR * wavevector;
             let i_norm = 1.0;
-            let scattering_rate =
-                (AtomicTransition::rubidium().gamma() / 2.0) * i_norm / (1.0 + i_norm);
+            let scattering_rate = (AtomInfo::rubidium().gamma() / 2.0) * i_norm / (1.0 + i_norm);
             let f_scatt = photon_momentum * scattering_rate;
 
             let force = calculate_cooling_force(wavevector, intensity, doppler_shift, 1.0, b_field);
@@ -432,7 +458,7 @@ pub mod tests {
     ) -> Vector3<f64> {
         let mut test_world = World::new();
         test_world.register::<Dark>();
-        test_world.register::<AtomicTransition>();
+        test_world.register::<AtomInfo>();
         test_world.register::<MagneticFieldSampler>();
         test_world.register::<Force>();
         test_world.register::<LaserSamplers>();
@@ -448,10 +474,11 @@ pub mod tests {
                     intensity: intensity,
                     doppler_shift: doppler_shift,
                     scattering_rate: 0.0,
+                    scatter_num: 0,
                 }],
             })
             .with(b_field)
-            .with(AtomicTransition::rubidium())
+            .with(AtomInfo::rubidium())
             .build();
 
         let mut system = CalculateCoolingForcesSystem {};

@@ -68,7 +68,8 @@ where
     );
 
     fn run(&mut self, (entities, data, atoms, step): Self::SystemData) {
-        if step.n % self.interval == 0 {
+        if step.n % self.interval == 0 || step.n == 0 {
+            println!("step{}", step.n);
             let atom_number = (&atoms).join().count();
             F::write_frame_header(&mut self.stream, step.n, atom_number).expect("Could not write.");
 
