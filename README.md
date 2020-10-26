@@ -1,6 +1,6 @@
-# rustmot
+# AtomECS
 
-`rustmot` is a crate that simulates the laser-cooling of atoms, and supports numerous features:
+`atomecs` is a crate that simulates the laser-cooling of atoms, and supports numerous features:
 * Doppler forces on atoms that scatter light, including (optionally) the random fluctuations that give rise to the Doppler temperature limit.
 * Magnetic fields, implemented on a grid or through simple analytical models.
 * Atoms generated on the surface of a chamber.
@@ -12,14 +12,25 @@
 
 Additionally, simulations may be wrapped using python/matlab, as shown in the [optimot](https://bitbucket.org/footgroup/optimot) repo.
 
+## Getting Started
+
 If you would like to get started, try some examples with `cargo run --release --example 1d_mot`, then use the scripts in the Matlab directory to plot the results.
 You can also use `cargo doc` to explore the documentation, which has more detail on the structure of the program.
 
-`rustmot` is written in the Entity-Component-System (ECS) pattern, implemented using [specs](https://github.com/slide-rs/specs).
-If you are unfamiliar with this pattern, it is thoroughly recommended that you read about it before diving into the code.
+## Development notes
 
-`rustmot` is written by Xuhui Chen & Elliot Bentine.
+`atomecs` is written in the Entity-Component-System (ECS) pattern, implemented using [specs](https://github.com/slide-rs/specs) for rust.
+ECS is a data-oriented pattern that is well suited to high performance simulations, and is flexible enough to accomodate changing design goals.
+For these reasons, ECS has become established in the video game industry, and since 2018 Unity (one of the market leaders) has embraced the pattern.
+_If you are unfamiliar with this pattern, it is thoroughly recommended that you read about it before diving into the code._
+Some useful links are:
+* Although written for Unity/C#, the concepts in the [Unity Entities Package Documentation](https://docs.unity3d.com/Packages/com.unity.entities@0.14/manual/ecs_core.html) are very useful to understand.
+* For technical performance details, see Mike Acton's [GDC talk](https://www.youtube.com/watch?v=p65Yt20pw0g)
 
 ### Current Limitations
 
 * atom-atom interactions are not implemented. Most of our work deals with atom sources, which have low steady-state number densities, so we haven't implemented this. Results for steady-state 3D MOTs should be interpreted carefully.
+
+## Credits
+
+`atomecs` is written by Xuhui Chen & [Elliot Bentine](https://github.com/ElliotB256).
