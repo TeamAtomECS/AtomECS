@@ -104,7 +104,7 @@ impl QuadrupoleField2D {
                 - axis.into_inner() * axis.dot(&out_direction))
             .normalize(),
             direction_in: axis.cross(out_direction.as_ref()),
-            gradient: gradient,
+            gradient: gradient * 0.01,
         }
     }
 }
