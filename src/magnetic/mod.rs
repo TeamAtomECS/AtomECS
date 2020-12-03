@@ -114,13 +114,18 @@ pub fn add_systems_to_dispatch(
 		.with(ClearMagneticFieldSamplerSystem, "magnetics_clear", deps)
 		.with(
 			quadrupole::Sample3DQuadrupoleFieldSystem,
-			"magnetics_quadrupole",
+			"magnetics_3dquadrupole",
 			&["magnetics_clear"],
+		)
+		.with(
+			quadrupole::Sample2DQuadrupoleFieldSystem,
+			"magnetics_2dquadrupole",
+			&["magnetics_3dquadrupole"],
 		)
 		.with(
 			uniform::UniformMagneticFieldSystem,
 			"magnetics_uniform",
-			&["magnetics_quadrupole"],
+			&["magnetics_2dquadrupole"],
 		)
 		.with(
 			grid::SampleMagneticGridSystem,
@@ -143,6 +148,7 @@ pub fn add_systems_to_dispatch(
 pub fn register_components(world: &mut World) {
 	world.register::<uniform::UniformMagneticField>();
 	world.register::<quadrupole::QuadrupoleField3D>();
+	world.register::<quadrupole::QuadrupoleField2D>();
 	world.register::<MagneticFieldSampler>();
 	world.register::<grid::PrecalculatedMagneticFieldGrid>();
 }
