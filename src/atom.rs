@@ -149,12 +149,25 @@ impl AtomicTransition {
 	/// The parameters are taken from doi:10.1103/PhysRevA.97.039901 [Nosske 2017].
 	pub fn strontium() -> Self {
 		AtomicTransition {
-			mup: BOHRMAG,  // to check
+			mup: BOHRMAG,  // to check, should be correct
 			mum: -BOHRMAG, // to check
 			muz: 0.0,
-			frequency: 650759219088937.,
+			frequency: 650_759_219_088_937.,
 			linewidth: 32e6,             // [Nosske2017]
 			saturation_intensity: 430.0, // [Nosske2017, 43mW/cm^2]
+		}
+	}
+
+	/// Creates an `AtomicTransition` component populated with parameters for red Strontium transition.
+	/// The parameters are taken from NIST, doi:10.1063/1.344917 and Schreck2013.
+	pub fn strontium_red() -> Self {
+		AtomicTransition {
+			mup: 3. / 2. * BOHRMAG,  // to check, yes seriously, I think it's 3/2*BOHRMAG!
+			mum: -3. / 2. * BOHRMAG, // to check
+			muz: 0.0,
+			frequency: 434_829_121_311_000., // NIST, doi:10.1063/1.344917
+			linewidth: 7_400.,               // [Schreck2013]
+			saturation_intensity: 0.0295,    // [SChreck2013, 3 µW/cm^2]
 		}
 	}
 
@@ -171,8 +184,8 @@ impl AtomicTransition {
 
 	pub fn erbium_401() -> Self {
 		AtomicTransition {
-			mup: 1.1372*BOHRMAG,
-			mum: 1.1372*-BOHRMAG,
+			mup: 1.1372 * BOHRMAG,
+			mum: 1.1372 * -BOHRMAG,
 			muz: 0.0,
 			frequency: 7.476e14,
 			linewidth: 30e6,

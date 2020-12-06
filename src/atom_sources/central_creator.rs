@@ -5,6 +5,13 @@ extern crate nalgebra;
 use rand::Rng;
 extern crate specs;
 use nalgebra::Vector3;
+use specs::{Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System};
+
+use super::emit::AtomNumberToEmit;
+use super::mass::MassDistribution;
+use super::VelocityCap;
+use crate::atom::*;
+use crate::initiate::*;
 
 // Define some distributions that are necessary to custom-create the initial
 // conditions of the atoms created
@@ -78,7 +85,7 @@ impl CentralCreator {
         }
     }
 
-    // sample frome the oven and get random position and velocity vectors
+    // sample frome the central_creator and get random position and velocity vectors
     pub fn get_random_spawn_condition(&self) -> (Vector3<f64>, Vector3<f64>) {
         let mut rng = rand::thread_rng();
 
@@ -134,5 +141,89 @@ impl CentralCreator {
         };
 
         (pos_vector, speed * vector)
+    }
+}
+
+impl Component for CentralCreator {
+    type Storage = HashMapStorage<Self>;
+}
+
+/// This system creates atoms from an central source.
+///
+/// .
+pub struct CentralCreatorCreateAtomsSystem;
+
+impl<'a> System<'a> for CentralCreatorCreateAtomsSystem {
+    type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a, CentralCreator>,
+        ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, AtomNumberToEmit>,
+        ReadStorage<'a, Position>,
+        ReadStorage<'a, MassDistribution>,
+        Option<Read<'a, VelocityCap>>,
+        Read<'a, LazyUpdate>,
+    );
+    fn run(
+        &mut self,
+        (
+            entities,
+            central_creator,
+            atom,
+            numbers_to_emit,
+            pos,
+            mass_distribution,
+            velocity_cap,
+            updater,
+        ): Self::SystemData,
+    ) {
+        let max_vel = match velocity_cap {
+            Some(cap) => cap.value,
+            None => std::f64::MAX,
+        };
+
+        for (central_creator, atom, number_to_emit, _creator_position, mass_distribution) in (
+            &central_creator,
+            &atom,
+            &numbers_to_emit,
+            &pos,
+            &mass_distribution,
+        )
+            .join()
+        {
+            for _i in 0..number_to_emit.number {
+                let mass = mass_distribution.draw_random_mass();
+                let (start_position, start_velocity) = central_creator.get_random_spawn_condition();
+
+                if start_velocity.norm() > max_vel {
+                    continue;
+                }
+
+                let new_atom = entities.create();
+                updater.insert(
+                    new_atom,
+                    Position {
+                        pos: start_position,
+                    },
+                );
+                updater.insert(
+                    new_atom,
+                    Velocity {
+                        vel: start_velocity.clone(),
+                    },
+                );
+                updater.insert(new_atom, Force::new());
+                updater.insert(new_atom, mass);
+                updater.insert(new_atom, atom.clone());
+                updater.insert(new_atom, Atom);
+                updater.insert(
+                    new_atom,
+                    InitialVelocity {
+                        vel: start_velocity,
+                    },
+                );
+                updater.insert(new_atom, NewlyCreated);
+            }
+        }
     }
 }

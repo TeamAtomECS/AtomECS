@@ -84,6 +84,11 @@ pub fn add_systems_to_dispatch(
                 "gaussian_create_atoms",
             ],
         )
+        .with(
+            central_creator::CentralCreatorCreateAtomsSystem,
+            "central_create_system",
+            &[],
+        )
 }
 
 /// Registers resources required by `atom_sources` to the ecs world.
@@ -97,6 +102,7 @@ pub fn register_components(world: &mut World) {
     world.register::<surface::SurfaceSource>();
     world.register::<gaussian::GaussianVelocityDistributionSource>();
     world.register::<gaussian::GaussianVelocityDistributionSourceDefinition>();
+    world.register::<central_creator::CentralCreator>();
 }
 
 /// A simple probability distribution which uses weighted indices to retrieve values.
