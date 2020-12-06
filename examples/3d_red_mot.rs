@@ -5,7 +5,6 @@ extern crate nalgebra;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
-use lib::atom_sources::oven::{OvenAperture, OvenBuilder};
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
@@ -46,11 +45,111 @@ fn main() {
     let mut dispatcher = builder.build();
     dispatcher.setup(&mut world.res);
 
+    // Create magnetic field.
+    world
+        .create_entity()
+        .with(QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
+        .with(Position::new())
+        .build();
+
+    // Create cooling lasers.
+    let detuning = -0.3; // MHz
+    let power = 0.01; //W total power of all Lasers together
+    let radius = 5.0e-3 / (2.0 * 2.0_f64.sqrt()); // 5mm 1/e^2 diameter
+
+    // Horizontal beams along z
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power / 6.0,
+            direction: Vector3::z(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::strontium_red(),
+            detuning,
+            -1.0,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power / 6.0,
+            direction: -Vector3::z(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::strontium_red(),
+            detuning,
+            -1.0,
+        ))
+        .build();
+
+    // Angled vertical beams
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power / 6.,
+            direction: Vector3::new(1.0, 1.0, 0.0).normalize(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::strontium_red(),
+            detuning,
+            1.0,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power / 6.,
+            direction: Vector3::new(1.0, -1.0, 0.0).normalize(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::strontium_red(),
+            detuning,
+            1.0,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power / 6.,
+            direction: Vector3::new(-1.0, 1.0, 0.0).normalize(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::strontium_red(),
+            detuning,
+            1.0,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power / 6.,
+            direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::strontium_red(),
+            detuning,
+            1.0,
+        ))
+        .build();
+
     // creating the entity that represents the source
     //
     // contains a central creator
-    let number_to_emit = 1000000;
-    let size_of_cube = 1e-4;
+    let number_to_emit = 1_000;
+    let size_of_cube = 1e-3;
     let speed = 1.0; // m/s
 
     world
@@ -69,4 +168,28 @@ fn main() {
         })
         .with(ToBeDestroyed)
         .build();
+    // Define timestep
+    world.add_resource(Timestep { delta: 1.0e-6 });
+
+    // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
+    world
+        .create_entity()
+        .with(Position {
+            pos: Vector3::new(0.0, 0.0, 0.0),
+        })
+        .with(Cuboid {
+            half_width: Vector3::new(0.01, 0.01, 0.01),
+        })
+        .with(SimulationVolume {
+            volume_type: VolumeType::Inclusive,
+        })
+        .build();
+
+    // Run the simulation for a number of steps.
+    for _i in 0..10000 {
+        dispatcher.dispatch(&mut world.res);
+        world.maintain();
+    }
+
+    println!("Simulation completed in {} ms.", now.elapsed().as_millis());
 }
