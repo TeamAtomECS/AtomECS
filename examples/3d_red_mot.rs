@@ -54,8 +54,8 @@ fn main() {
 
     // Create cooling lasers.
     let detuning = -0.3; // MHz
-    let power = 0.01; //W total power of all Lasers together
-    let radius = 5.0e-3 / (2.0 * 2.0_f64.sqrt()); // 5mm 1/e^2 diameter
+    let power = 1.1; //W total power of all Lasers together
+    let radius = 1.0e-2 / (2.0 * 2.0_f64.sqrt()); // 10mm 1/e^2 diameter
 
     // Horizontal beams along z
     world
@@ -149,7 +149,7 @@ fn main() {
     //
     // contains a central creator
     let number_to_emit = 1_000;
-    let size_of_cube = 1e-3;
+    let size_of_cube = 1.0e-4;
     let speed = 1.0; // m/s
 
     world
@@ -186,7 +186,7 @@ fn main() {
         .build();
 
     // Run the simulation for a number of steps.
-    for _i in 0..10000 {
+    for _i in 0..100000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }

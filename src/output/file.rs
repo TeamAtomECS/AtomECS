@@ -108,7 +108,7 @@ where
     W: Write,
 {
     fn write_frame_header(writer: &mut W, step: u64, atom_number: usize) -> Result<(), io::Error> {
-        write!(writer, "step {:?}, {:?}\n", step, atom_number)?;
+        write!(writer, "step: {:?}, {:?}\n", step, atom_number)?;
         Ok(())
     }
 
