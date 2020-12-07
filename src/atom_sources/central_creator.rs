@@ -79,7 +79,9 @@ impl CentralCreator {
                 size: [size_of_cube, size_of_cube, size_of_cube],
             },
             spatial_speed_distribution: SpatialSpeedDistribution::Uniform { speed: speed },
-            speed_density_distribution: SpeedDensityDistribution::UniformCentral { width: 0.0 },
+            speed_density_distribution: SpeedDensityDistribution::UniformCentral {
+                width: 0.5 * speed,
+            },
             spatial_vector_distribution: SpatialVectorDistribution::Uniform {},
             vector_density_distribution: VectorDensityDistribution::Uniform {},
         }
@@ -120,7 +122,7 @@ impl CentralCreator {
 
         let speed: f64 = match self.speed_density_distribution {
             SpeedDensityDistribution::UniformCentral { width } => {
-                let min: f64 = (0.0f64).min(characteristic_speed - width);
+                let min: f64 = (0.0f64).max(characteristic_speed - width);
                 rng.gen_range(min, characteristic_speed + width)
             }
         };

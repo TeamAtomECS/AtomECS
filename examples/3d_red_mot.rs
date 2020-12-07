@@ -19,7 +19,8 @@ use nalgebra::Vector3;
 use specs::{Builder, World};
 use std::time::Instant;
 
-fn main() {
+fn run_with_parameter(parameter_name: &str, iterator: usize) {
+    let detuning_values: Vec<f64> = vec![-0.1, -0.3, -0.7, -1.5, -3.0];
     let now = Instant::now();
 
     // Create the simulation world and builder for the ECS dispatcher.
@@ -32,12 +33,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos.txt".to_string(), 100),
+        file::new::<Position, Text>(format!("pos_{}_{}.txt", parameter_name, iterator), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 100),
+        file::new::<Velocity, Text>(format!("vel_{}_{}.txt", parameter_name, iterator), 100),
         "",
         &[],
     );
@@ -53,8 +54,11 @@ fn main() {
         .build();
 
     // Create cooling lasers.
-    let detuning = -0.3; // MHz
-    let power = 1.1; //W total power of all Lasers together
+    let detuning = match detuning_values.get(iterator) {
+        Some(v) => v,
+        None => panic!("parameter value did not exist!"),
+    }; // MHz
+    let power = 0.1; //W total power of all Lasers together
     let radius = 1.0e-2 / (2.0 * 2.0_f64.sqrt()); // 10mm 1/e^2 diameter
 
     // Horizontal beams along z
@@ -68,7 +72,7 @@ fn main() {
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
-            detuning,
+            *detuning,
             -1.0,
         ))
         .build();
@@ -82,7 +86,7 @@ fn main() {
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
-            detuning,
+            *detuning,
             -1.0,
         ))
         .build();
@@ -98,7 +102,7 @@ fn main() {
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
-            detuning,
+            *detuning,
             1.0,
         ))
         .build();
@@ -112,7 +116,7 @@ fn main() {
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
-            detuning,
+            *detuning,
             1.0,
         ))
         .build();
@@ -126,7 +130,7 @@ fn main() {
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
-            detuning,
+            *detuning,
             1.0,
         ))
         .build();
@@ -140,7 +144,7 @@ fn main() {
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
-            detuning,
+            *detuning,
             1.0,
         ))
         .build();
@@ -192,4 +196,10 @@ fn main() {
     }
 
     println!("Simulation completed in {} ms.", now.elapsed().as_millis());
+}
+
+fn main() {
+    for i in 0..5 {
+        run_with_parameter("detuning", i);
+    }
 }

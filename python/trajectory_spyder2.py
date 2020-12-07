@@ -12,8 +12,8 @@ import pandas as pd
 
 name = ""
 
-data = pd.read_csv('D:\\AION_Git\\AtomECS\\pos'+name+ '.txt', sep=": ", header=None)
-N = 400
+data = pd.read_csv('D:\\AION_Git\\AtomECS\\pos'+name+ '.txt', sep=" ", header=None)
+N = 100
 list_of_survivors =  np.array(data.iloc[data.shape[0]-N:data.shape[0],0])
 
 #print(list_of_survivors)
@@ -25,7 +25,7 @@ array =  np.array(df.loc[list_of_survivors,1])
 
 #####################
 
-vel_data = pd.read_csv('D:\AION_Git\\AtomECS\\vel'+name+ '.txt', sep=": ", header=None)
+vel_data = pd.read_csv('D:\AION_Git\\AtomECS\\vel'+name+ '.txt', sep=" ", header=None)
 vel_df = vel_data.set_index(0)
 
 vel_array =  np.array(vel_df.loc[list_of_survivors,1])
@@ -101,6 +101,6 @@ ani = matplotlib.animation.FuncAnimation(fig, update_graph, 999,
 Writer = matplotlib.animation.writers['ffmpeg']
 writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
 
-ani.save('red_MOT_standard_approach.mp4', writer=writer, dpi=300)
+#ani.save('red_MOT_standard_approach.mp4', writer=writer, dpi=300)
 
 plt.show()
