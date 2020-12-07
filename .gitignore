@@ -9,3 +9,4 @@
 **/__pycache*
 **/*.json
 **/*.mp4
+*.ipynb
