@@ -10,10 +10,15 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation
 import pandas as pd
 
-name = ""
+name = "_detuning_3"
+max_steps = 100000;
 
-data = pd.read_csv('D:\\AION_Git\\AtomECS\\pos'+name+ '.txt', sep=" ", header=None)
-N = 100
+
+data = pd.read_csv('D:\\AION_Git\\AtomECS\\output\\pos'+name+ '.txt', sep=" ", header=None)
+N=len(data.set_index(0).loc["step-"+str(max_steps)+",":,1])-1
+
+print("simulation of " + str(N) + " survivors")
+
 list_of_survivors =  np.array(data.iloc[data.shape[0]-N:data.shape[0],0])
 
 #print(list_of_survivors)
@@ -25,11 +30,10 @@ array =  np.array(df.loc[list_of_survivors,1])
 
 #####################
 
-vel_data = pd.read_csv('D:\AION_Git\\AtomECS\\vel'+name+ '.txt', sep=" ", header=None)
+vel_data = pd.read_csv('D:\AION_Git\\AtomECS\\output\\vel'+name+ '.txt', sep=" ", header=None)
 vel_df = vel_data.set_index(0)
 
 vel_array =  np.array(vel_df.loc[list_of_survivors,1])
-
 
 #######################
 
@@ -82,25 +86,27 @@ fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 title = ax.set_title('3D Test')
 
+
+
 # Setthe axes properties
-ax.set_xlim3d([-0.01, 0.01])
+ax.set_xlim3d([-0.005, 0.005])
 ax.set_xlabel('X')
 
-ax.set_ylim3d([-0.01, 0.01])
+ax.set_ylim3d([-0.005, 0.005])
 ax.set_ylabel('Y')
 
-ax.set_zlim3d([-0.01, 0.01])
+ax.set_zlim3d([-0.005, 0.005])
 ax.set_zlabel('Z')
 
 
 graph = ax.scatter(traj_data[0:3, 0:0+N][0],traj_data[0:3, 0:0+N][1], traj_data[0:3, 0:0+N][2], s=10, c=initial_speeds, cmap="plasma")
-fig.colorbar(graph)
+fig.colorbar(graph).ax.set_ylabel("initial speed in m/s")
 ani = matplotlib.animation.FuncAnimation(fig, update_graph, 999, 
                                interval=1, blit=False)
 
 Writer = matplotlib.animation.writers['ffmpeg']
 writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
 
-#ani.save('red_MOT_standard_approach.mp4', writer=writer, dpi=300)
+ani.save('red_MOT_large_detuning.mp4', writer=writer, dpi=300)
 
 plt.show()

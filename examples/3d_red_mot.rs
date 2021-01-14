@@ -21,6 +21,7 @@ use std::time::Instant;
 
 fn run_with_parameter(parameter_name: &str, iterator: usize) {
     let detuning_values: Vec<f64> = vec![-0.1, -0.3, -0.7, -1.5, -3.0];
+    let power_values: Vec<f64> = vec![0.0001, 0.001, 0.01, 0.1, 1.0];
     let now = Instant::now();
 
     // Create the simulation world and builder for the ECS dispatcher.
@@ -54,11 +55,16 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         .build();
 
     // Create cooling lasers.
-    let detuning = match detuning_values.get(iterator) {
+    //let detuning = match detuning_values.get(iterator) {
+    //    Some(v) => v,
+    //    None => panic!("parameter value did not exist!"),
+    //}; // MHz
+
+    let detuning = -0.7;
+    let power = match power_values.get(iterator) {
         Some(v) => v,
         None => panic!("parameter value did not exist!"),
-    }; // MHz
-    let power = 0.1; //W total power of all Lasers together
+    }; //W total power of all Lasers together
     let radius = 1.0e-2 / (2.0 * 2.0_f64.sqrt()); // 10mm 1/e^2 diameter
 
     // Horizontal beams along z
@@ -72,7 +78,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
-            *detuning,
+            detuning,
             -1.0,
         ))
         .build();
@@ -86,7 +92,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
-            *detuning,
+            detuning,
             -1.0,
         ))
         .build();
@@ -102,7 +108,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
-            *detuning,
+            detuning,
             1.0,
         ))
         .build();
@@ -116,7 +122,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
-            *detuning,
+            detuning,
             1.0,
         ))
         .build();
@@ -130,7 +136,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
-            *detuning,
+            detuning,
             1.0,
         ))
         .build();
@@ -144,7 +150,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
-            *detuning,
+            detuning,
             1.0,
         ))
         .build();
@@ -190,7 +196,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         .build();
 
     // Run the simulation for a number of steps.
-    for _i in 0..100000 {
+    for _i in 0..100_000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
@@ -200,6 +206,6 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
 
 fn main() {
     for i in 0..5 {
-        run_with_parameter("detuning", i);
+        run_with_parameter("power", i);
     }
 }

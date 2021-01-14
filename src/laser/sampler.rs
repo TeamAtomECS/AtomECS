@@ -1,5 +1,6 @@
 extern crate specs;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+use crate::laser::doppler::{DopplerShiftSampler, DopplerShiftSamplers};
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 use std::f64;
 extern crate nalgebra;
@@ -22,9 +23,6 @@ pub struct LaserSampler {
 
     /// Polarization of the cooling laser. See [CoolingLight](crate::laser::cooling::CoolingLight) for more info.
     pub polarization: f64,
-
-    /// Doppler shift with respect to laser beam, in SI units of Hz.
-    pub doppler_shift: f64,
 }
 impl Default for LaserSampler {
     fn default() -> Self {
@@ -33,7 +31,6 @@ impl Default for LaserSampler {
             polarization: f64::NAN,
             wavevector: Vector3::new(0., 0., 0.),
             intensity: f64::NAN,
-            doppler_shift: f64::NAN,
             scattering_rate: f64::NAN,
         }
     }
@@ -57,15 +54,25 @@ impl<'a> System<'a> for InitialiseLaserSamplersSystem {
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, CoolingLightIndex>,
         WriteStorage<'a, LaserSamplers>,
+        WriteStorage<'a, DopplerShiftSamplers>,
     );
-    fn run(&mut self, (cooling, cooling_index, mut intensity_samplers): Self::SystemData) {
+    fn run(
+        &mut self,
+        (cooling, cooling_index, mut intensity_samplers, mut doppler_samplers): Self::SystemData,
+    ) {
         let mut content = Vec::new();
+        let mut doppler_content = Vec::new();
         for (_, _) in (&cooling, &cooling_index).join() {
             content.push(LaserSampler::default());
+            doppler_content.push(DopplerShiftSampler::default());
         }
 
         for mut intensity_sampler in (&mut intensity_samplers).join() {
             intensity_sampler.contents = content.clone();
+        }
+
+        for mut doppler_sampler in (&mut doppler_samplers).join() {
+            doppler_sampler.contents = doppler_content.clone();
         }
     }
 }
@@ -118,7 +125,5 @@ pub mod tests {
         assert_eq!(samplers.contents.len(), 2);
         assert_eq!(samplers.contents[0].intensity.is_nan(), true);
         assert_eq!(samplers.contents[1].intensity.is_nan(), true);
-        assert_eq!(samplers.contents[0].doppler_shift.is_nan(), true);
-        assert_eq!(samplers.contents[1].doppler_shift.is_nan(), true);
     }
 }

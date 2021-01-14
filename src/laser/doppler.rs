@@ -4,11 +4,25 @@ extern crate specs;
 
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use super::gaussian::GaussianBeam;
-use super::sampler::LaserSamplers;
 use crate::atom::Velocity;
-use specs::{Join, ReadStorage, System, WriteStorage};
+use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 const LASER_CACHE_SIZE: usize = 16;
+
+/// Represents the Dopplershift of the atom with respect to each beam due to the atom veloocity
+#[derive(Clone)]
+pub struct DopplerShiftSampler {
+    pub doppler_shift: f64,
+}
+
+impl Default for DopplerShiftSampler {
+    fn default() -> Self {
+        DopplerShiftSampler {
+            /// Doppler shift with respect to laser beam, in SI units of Hz.
+            doppler_shift: f64::NAN,
+        }
+    }
+}
 
 /// This system calculates the Doppler shift for each atom in each cooling beam.
 pub struct CalculateDopplerShiftSystem;
@@ -17,7 +31,7 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, CoolingLightIndex>,
         ReadStorage<'a, GaussianBeam>,
-        WriteStorage<'a, LaserSamplers>,
+        WriteStorage<'a, DopplerShiftSamplers>,
         ReadStorage<'a, Velocity>,
     );
 
@@ -56,6 +70,37 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
     }
 }
 
+/// Component that holds a list of doppler shift samplers
+pub struct DopplerShiftSamplers {
+    /// List of laser samplers
+    pub contents: Vec<DopplerShiftSampler>,
+}
+impl Component for DopplerShiftSamplers {
+    type Storage = VecStorage<Self>;
+}
+
+/// This system initialises all DopplerShiftSamplers to a NAN value.
+///
+/// It also ensures that the size of the DopplerShiftSamplers components match the number of CoolingLight entities in the world.
+pub struct InitialiseDopplerShiftSamplersSystem;
+impl<'a> System<'a> for InitialiseDopplerShiftSamplersSystem {
+    type SystemData = (
+        ReadStorage<'a, CoolingLight>,
+        ReadStorage<'a, CoolingLightIndex>,
+        WriteStorage<'a, DopplerShiftSamplers>,
+    );
+    fn run(&mut self, (cooling, cooling_index, mut samplers): Self::SystemData) {
+        let mut content = Vec::new();
+        for (_, _) in (&cooling, &cooling_index).join() {
+            content.push(DopplerShiftSampler::default());
+        }
+
+        for mut sampler in (&mut samplers).join() {
+            sampler.contents = content.clone();
+        }
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
 
@@ -64,7 +109,6 @@ pub mod tests {
     extern crate specs;
     use crate::constant::PI;
     use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
-    use crate::laser::sampler::{LaserSampler, LaserSamplers};
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;
@@ -77,7 +121,7 @@ pub mod tests {
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
         test_world.register::<Velocity>();
-        test_world.register::<LaserSamplers>();
+        test_world.register::<DopplerShiftSamplers>();
 
         let wavelength = 780e-9;
         test_world
@@ -104,15 +148,15 @@ pub mod tests {
             .with(Velocity {
                 vel: Vector3::new(atom_velocity, 0.0, 0.0),
             })
-            .with(LaserSamplers {
-                contents: vec![LaserSampler::default()],
+            .with(DopplerShiftSamplers {
+                contents: vec![DopplerShiftSampler::default()],
             })
             .build();
 
         let mut system = CalculateDopplerShiftSystem;
         system.run_now(&test_world.res);
         test_world.maintain();
-        let sampler_storage = test_world.read_storage::<LaserSamplers>();
+        let sampler_storage = test_world.read_storage::<DopplerShiftSamplers>();
 
         assert_approx_eq!(
             sampler_storage

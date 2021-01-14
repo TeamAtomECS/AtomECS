@@ -53,7 +53,7 @@ impl Component for CoolingLight {
 ///
 /// Default `CoolingLightIndex`s are created with `initiated: false`.
 /// Once the index is set, initiated is set to true.
-/// This is used to detect if all lasers in the simulation are correctly indexed, incase new lasers are added.
+/// This is used to detect if all lasers in the simulation are correctly indexed, in case new lasers are added.
 #[derive(Clone, Copy)]
 pub struct CoolingLightIndex {
 	pub index: usize,

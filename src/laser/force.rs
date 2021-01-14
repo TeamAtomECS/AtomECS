@@ -1,5 +1,5 @@
-extern crate specs;
 extern crate rayon;
+extern crate specs;
 use crate::atom::{Atom, AtomicTransition};
 use crate::constant;
 use crate::maths;
@@ -10,6 +10,7 @@ use super::sampler::LaserSamplers;
 use nalgebra::Vector3;
 use rand::Rng;
 
+use super::doppler::{DopplerShiftSampler, DopplerShiftSamplers};
 use crate::atom::Force;
 use crate::constant::{HBAR, PI};
 use crate::integrator::Timestep;
@@ -26,6 +27,7 @@ use crate::laser::repump::*;
 pub struct CalculateCoolingForcesSystem;
 impl<'a> System<'a> for CalculateCoolingForcesSystem {
     type SystemData = (
+        ReadStorage<'a, DopplerShiftSamplers>,
         ReadStorage<'a, MagneticFieldSampler>,
         WriteStorage<'a, LaserSamplers>,
         ReadStorage<'a, AtomicTransition>,
@@ -35,64 +37,89 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
 
     fn run(
         &mut self,
-        (magnetic_samplers, mut laser_samplers, atom_info, mut forces, _dark): Self::SystemData,
+        (
+            doppler_shift_samplers,
+            magnetic_samplers,
+            mut laser_samplers,
+            atom_info,
+            mut forces,
+            _dark,
+        ): Self::SystemData,
     ) {
-		use rayon::prelude::*;
-		use specs::ParJoin;
+        use rayon::prelude::*;
+        use specs::ParJoin;
 
-		(
-			&atom_info,
+        (
+            &doppler_shift_samplers,
+            &atom_info,
             &magnetic_samplers,
             &mut laser_samplers,
             &mut forces,
-            !&_dark
-		).par_join().for_each(|(atom_info, bfield, laser_samplers, mut force, ())| {
-            // Inner loop over cooling lasers
-            for mut laser_sampler in &mut laser_samplers.contents {
-                //let s0 = 1.0;
-                let s0 = laser_sampler.intensity / atom_info.saturation_intensity;
-                //println!("s0 : {}", s0);
-                let angular_detuning = (laser_sampler.wavevector.norm() * constant::C / 2. / PI
-                    - atom_info.frequency)
-                    * 2.0
-                    * PI
-                    - laser_sampler.doppler_shift;
-                //println!("laserfre{},atomfre{},shift {}",laser_sampler.wavevector.norm() * constant::C / 2. / PI,atom_info.frequency,laser_sampler.doppler_shift);
-                let wavevector = laser_sampler.wavevector.clone();
-                let costheta = if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
-                    0.0
-                } else {
-                    wavevector.normalize().dot(&bfield.field.normalize())
-                };
-                let gamma = atom_info.gamma();
-                let scatter1 = 0.25 * (laser_sampler.polarization * costheta + 1.).powf(2.) * gamma
-                    / 2.
-                    / (1.
-                        + s0
-                        + 4. * (angular_detuning - atom_info.mup / HBAR * bfield.magnitude)
-                            .powf(2.)
-                            / gamma.powf(2.));
-                let scatter2 = 0.25 * (laser_sampler.polarization * costheta - 1.).powf(2.) * gamma
-                    / 2.
-                    / (1.
-                        + s0
-                        + 4. * (angular_detuning - atom_info.mum / HBAR * bfield.magnitude)
-                            .powf(2.)
-                            / gamma.powf(2.));
-                let scatter3 = 0.5 * (1. - costheta.powf(2.)) * gamma
-                    / 2.
-                    / (1.
-                        + s0
-                        + 4. * (angular_detuning - atom_info.muz / HBAR * bfield.magnitude)
-                            .powf(2.)
-                            / gamma.powf(2.));
-                let cooling_force = wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);
-                laser_sampler.force = cooling_force.clone();
-                //println!("detuning{}", angular_detuning / gamma);
-                force.force = force.force + cooling_force;
-            }
-        }
-		);
+            !&_dark,
+        )
+            .par_join()
+            .for_each(
+                |(doppler_shift_samplers, atom_info, bfield, laser_samplers, mut force, ())| {
+                    // Inner loop over cooling lasers
+                    for count in 0..laser_samplers.contents.len() {
+                        //let s0 = 1.0;
+                        let s0 = laser_samplers.contents[count].intensity
+                            / atom_info.saturation_intensity;
+                        //println!("s0 : {}", s0);
+                        let angular_detuning = (laser_samplers.contents[count].wavevector.norm()
+                            * constant::C
+                            / 2.
+                            / PI
+                            - atom_info.frequency)
+                            * 2.0
+                            * PI
+                            - doppler_shift_samplers.contents[count].doppler_shift;
+                        //println!("laserfre{},atomfre{},shift {}",laser_sampler.wavevector.norm() * constant::C / 2. / PI,atom_info.frequency,laser_sampler.doppler_shift);
+                        let wavevector = laser_samplers.contents[count].wavevector.clone();
+                        let costheta = if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
+                            0.0
+                        } else {
+                            wavevector.normalize().dot(&bfield.field.normalize())
+                        };
+                        let gamma = atom_info.gamma();
+                        let scatter1 = 0.25
+                            * (laser_samplers.contents[count].polarization * costheta + 1.)
+                                .powf(2.)
+                            * gamma
+                            / 2.
+                            / (1.
+                                + s0
+                                + 4. * (angular_detuning
+                                    - atom_info.mup / HBAR * bfield.magnitude)
+                                    .powf(2.)
+                                    / gamma.powf(2.));
+                        let scatter2 = 0.25
+                            * (laser_samplers.contents[count].polarization * costheta - 1.)
+                                .powf(2.)
+                            * gamma
+                            / 2.
+                            / (1.
+                                + s0
+                                + 4. * (angular_detuning
+                                    - atom_info.mum / HBAR * bfield.magnitude)
+                                    .powf(2.)
+                                    / gamma.powf(2.));
+                        let scatter3 = 0.5 * (1. - costheta.powf(2.)) * gamma
+                            / 2.
+                            / (1.
+                                + s0
+                                + 4. * (angular_detuning
+                                    - atom_info.muz / HBAR * bfield.magnitude)
+                                    .powf(2.)
+                                    / gamma.powf(2.));
+                        let cooling_force =
+                            wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);
+                        laser_samplers.contents[count].force = cooling_force.clone();
+                        //println!("detuning{}", angular_detuning / gamma);
+                        force.force = force.force + cooling_force;
+                    }
+                },
+            );
     }
 }
 
@@ -247,8 +274,10 @@ pub mod tests {
                     polarization: 1.0,
                     wavevector: wavenumber * Vector3::new(1.0, 0.0, 0.0),
                     intensity: intensity,
-                    doppler_shift: 0.0,
                 }],
+            })
+            .with(DopplerShiftSamplers {
+                contents: vec![DopplerShiftSampler { doppler_shift: 0.0 }],
             })
             .with(MagneticFieldSampler {
                 field: Vector3::new(1e-8, 0.0, 0.0),
@@ -307,8 +336,10 @@ pub mod tests {
                     polarization: 1.0,
                     wavevector: wavenumber * Vector3::new(1.0, 0.0, 0.0),
                     intensity: intensity,
-                    doppler_shift: 0.0,
                 }],
+            })
+            .with(DopplerShiftSamplers {
+                contents: vec![DopplerShiftSampler { doppler_shift: 0.0 }],
             })
             .with(MagneticFieldSampler {
                 field: Vector3::new(1e-8, 0.0, 0.0),
@@ -423,6 +454,8 @@ pub mod tests {
     }
 
     /// Uses the `CalculateCoolingForcesSystem` to calculate the force exerted on an atom.
+    ///
+    /// Temporarily removed doppler_shift
     fn calculate_cooling_force(
         wavevector: Vector3<f64>,
         intensity: f64,
@@ -436,6 +469,7 @@ pub mod tests {
         test_world.register::<MagneticFieldSampler>();
         test_world.register::<Force>();
         test_world.register::<LaserSamplers>();
+        test_world.register::<DopplerShiftSamplers>();
 
         let atom1 = test_world
             .create_entity()
@@ -446,8 +480,12 @@ pub mod tests {
                     polarization: polarization,
                     wavevector: wavevector,
                     intensity: intensity,
-                    doppler_shift: doppler_shift,
                     scattering_rate: 0.0,
+                }],
+            })
+            .with(DopplerShiftSamplers {
+                contents: vec![DopplerShiftSampler {
+                    doppler_shift: doppler_shift,
                 }],
             })
             .with(b_field)

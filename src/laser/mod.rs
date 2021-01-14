@@ -28,6 +28,12 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 					contents: Vec::new(),
 				},
 			);
+			updater.insert(
+				ent,
+				doppler::DopplerShiftSamplers {
+					contents: Vec::new(),
+				},
+			);
 			updater.insert(ent, NumberScattered { value: 0.0 });
 		}
 	}
@@ -66,9 +72,14 @@ pub fn add_systems_to_dispatch(
 			&["index_cooling_lights"],
 		)
 		.with(
+			doppler::InitialiseDopplerShiftSamplersSystem,
+			"initialise_doppler_shift",
+			&["initialise_laser_intensity"],
+		)
+		.with(
 			gaussian::SampleGaussianBeamIntensitySystem,
 			"sample_gaussian_beam_intensity",
-			&["initialise_laser_intensity"],
+			&["initialise_doppler_shift"],
 		)
 		.with(
 			doppler::CalculateDopplerShiftSystem,
