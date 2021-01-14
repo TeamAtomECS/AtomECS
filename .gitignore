@@ -10,4 +10,4 @@
 **/*.json
 **/*.mp4
 *.ipynb
-output/detuning_capture_100mW.pdf
+**/*.pdf

@@ -2,6 +2,7 @@ pub mod cooling;
 pub mod doppler;
 pub mod force;
 pub mod gaussian;
+pub mod intensity;
 pub mod repump;
 pub mod sampler;
 
@@ -31,6 +32,12 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 			updater.insert(
 				ent,
 				doppler::DopplerShiftSamplers {
+					contents: Vec::new(),
+				},
+			);
+			updater.insert(
+				ent,
+				intensity::LaserIntensitySamplers {
 					contents: Vec::new(),
 				},
 			);
@@ -67,9 +74,14 @@ pub fn add_systems_to_dispatch(
 			&["attach_cooling_index"],
 		)
 		.with(
-			sampler::InitialiseLaserSamplersSystem,
-			"initialise_laser_intensity",
+			sampler::InitialiseLaserSamplersSystem, // will become unneccessary/changed
+			"initialise_laser_sampler",
 			&["index_cooling_lights"],
+		)
+		.with(
+			intensity::InitialiseLaserIntensitySamplersSystem,
+			"initialise_laser_intensity",
+			&["initialise_laser_sampler"],
 		)
 		.with(
 			doppler::InitialiseDopplerShiftSamplersSystem,
@@ -77,9 +89,14 @@ pub fn add_systems_to_dispatch(
 			&["initialise_laser_intensity"],
 		)
 		.with(
-			gaussian::SampleGaussianBeamIntensitySystem,
-			"sample_gaussian_beam_intensity",
+			intensity::SampleLaserIntensitySystem,
+			"sample_laser_intensity",
 			&["initialise_doppler_shift"],
+		)
+		.with(
+			gaussian::SampleGaussianBeamIntensitySystem, // delete later, currently only doing the polarization and wave-vector, intensity redundant
+			"sample_gaussian_beam_intensity",
+			&["sample_laser_intensity"],
 		)
 		.with(
 			doppler::CalculateDopplerShiftSystem,
@@ -87,7 +104,7 @@ pub fn add_systems_to_dispatch(
 			&["sample_gaussian_beam_intensity"],
 		)
 		.with(
-			force::CalculateCoolingForcesSystem,
+			force::CalculateCoolingForcesSystem, //to be superseeded
 			"calculate_cooling_forces",
 			&["calculate_doppler_shift", "sample_gaussian_beam_intensity"],
 		)

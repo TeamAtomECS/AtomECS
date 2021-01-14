@@ -6,6 +6,7 @@ use crate::maths;
 use rand::distributions::{Distribution, Normal};
 use specs::{Component, Join, Read, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
 extern crate nalgebra;
+use super::intensity::LaserIntensitySamplers;
 use super::sampler::LaserSamplers;
 use nalgebra::Vector3;
 use rand::Rng;
@@ -31,6 +32,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
         ReadStorage<'a, DopplerShiftSamplers>,
         ReadStorage<'a, ZeemanShiftSampler>,
         ReadStorage<'a, MagneticFieldSampler>,
+        ReadStorage<'a, LaserIntensitySamplers>,
         WriteStorage<'a, LaserSamplers>,
         ReadStorage<'a, AtomicTransition>,
         WriteStorage<'a, Force>,
@@ -43,6 +45,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
             doppler_shift_samplers,
             zeeman_sampler,
             magnetic_samplers,
+            intensity_samplers,
             mut laser_samplers,
             atom_info,
             mut forces,
@@ -57,6 +60,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
             &zeeman_sampler,
             &atom_info,
             &magnetic_samplers,
+            &intensity_samplers,
             &mut laser_samplers,
             &mut forces,
             !&_dark,
@@ -68,6 +72,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                     zeeman_sampler,
                     atom_info,
                     bfield,
+                    intensity_samplers,
                     laser_samplers,
                     mut force,
                     (),
@@ -75,7 +80,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                     // Inner loop over cooling lasers
                     for count in 0..laser_samplers.contents.len() {
                         //let s0 = 1.0;
-                        let s0 = laser_samplers.contents[count].intensity
+                        let s0 = intensity_samplers.contents[count].intensity
                             / atom_info.saturation_intensity;
                         //println!("s0 : {}", s0);
                         let angular_detuning = (laser_samplers.contents[count].wavevector.norm()

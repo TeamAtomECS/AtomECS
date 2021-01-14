@@ -109,7 +109,7 @@ impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 }
 
 /// Gets the intensity of a gaussian laser beam at the specified position.
-fn get_gaussian_beam_intensity(
+pub fn get_gaussian_beam_intensity(
 	beam: &GaussianBeam,
 	pos: &Position,
 	mask: Option<&CircularMask>,
