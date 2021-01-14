@@ -10,6 +10,7 @@ use specs::{
 pub mod grid;
 pub mod quadrupole;
 pub mod uniform;
+pub mod zeeman;
 use std::fmt;
 
 /// A component that stores the magnetic field at an entity's location.
@@ -136,6 +137,16 @@ pub fn add_systems_to_dispatch(
 			AttachFieldSamplersToNewlyCreatedAtomsSystem,
 			"add_magnetic_field_samplers",
 			&[],
+		)
+		.with(
+			zeeman::AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem,
+			"attach_zeeman_shift_samplers",
+			&["add_magnetic_field_samplers"],
+		)
+		.with(
+			zeeman::CalculateZeemanShiftSystem,
+			"zeeman_shift",
+			&["attach_zeeman_shift_samplers"],
 		)
 }
 

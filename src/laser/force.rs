@@ -14,6 +14,7 @@ use super::doppler::{DopplerShiftSampler, DopplerShiftSamplers};
 use crate::atom::Force;
 use crate::constant::{HBAR, PI};
 use crate::integrator::Timestep;
+use crate::magnetic::zeeman::ZeemanShiftSampler;
 use crate::magnetic::MagneticFieldSampler;
 
 use crate::laser::repump::*;
@@ -28,6 +29,7 @@ pub struct CalculateCoolingForcesSystem;
 impl<'a> System<'a> for CalculateCoolingForcesSystem {
     type SystemData = (
         ReadStorage<'a, DopplerShiftSamplers>,
+        ReadStorage<'a, ZeemanShiftSampler>,
         ReadStorage<'a, MagneticFieldSampler>,
         WriteStorage<'a, LaserSamplers>,
         ReadStorage<'a, AtomicTransition>,
@@ -39,6 +41,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
         &mut self,
         (
             doppler_shift_samplers,
+            zeeman_sampler,
             magnetic_samplers,
             mut laser_samplers,
             atom_info,
@@ -51,6 +54,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
 
         (
             &doppler_shift_samplers,
+            &zeeman_sampler,
             &atom_info,
             &magnetic_samplers,
             &mut laser_samplers,
@@ -59,7 +63,15 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
         )
             .par_join()
             .for_each(
-                |(doppler_shift_samplers, atom_info, bfield, laser_samplers, mut force, ())| {
+                |(
+                    doppler_shift_samplers,
+                    zeeman_sampler,
+                    atom_info,
+                    bfield,
+                    laser_samplers,
+                    mut force,
+                    (),
+                )| {
                     // Inner loop over cooling lasers
                     for count in 0..laser_samplers.contents.len() {
                         //let s0 = 1.0;
@@ -89,9 +101,7 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                             / 2.
                             / (1.
                                 + s0
-                                + 4. * (angular_detuning
-                                    - atom_info.mup / HBAR * bfield.magnitude)
-                                    .powf(2.)
+                                + 4. * (angular_detuning - zeeman_sampler.sigma_plus).powf(2.)
                                     / gamma.powf(2.));
                         let scatter2 = 0.25
                             * (laser_samplers.contents[count].polarization * costheta - 1.)
@@ -100,17 +110,13 @@ impl<'a> System<'a> for CalculateCoolingForcesSystem {
                             / 2.
                             / (1.
                                 + s0
-                                + 4. * (angular_detuning
-                                    - atom_info.mum / HBAR * bfield.magnitude)
-                                    .powf(2.)
+                                + 4. * (angular_detuning - zeeman_sampler.sigma_minus).powf(2.)
                                     / gamma.powf(2.));
                         let scatter3 = 0.5 * (1. - costheta.powf(2.)) * gamma
                             / 2.
                             / (1.
                                 + s0
-                                + 4. * (angular_detuning
-                                    - atom_info.muz / HBAR * bfield.magnitude)
-                                    .powf(2.)
+                                + 4. * (angular_detuning - zeeman_sampler.sigma_pi).powf(2.)
                                     / gamma.powf(2.));
                         let cooling_force =
                             wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);

@@ -1,6 +1,5 @@
 extern crate specs;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
-use crate::laser::doppler::{DopplerShiftSampler, DopplerShiftSamplers};
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 use std::f64;
 extern crate nalgebra;
@@ -54,25 +53,18 @@ impl<'a> System<'a> for InitialiseLaserSamplersSystem {
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, CoolingLightIndex>,
         WriteStorage<'a, LaserSamplers>,
-        WriteStorage<'a, DopplerShiftSamplers>,
     );
     fn run(
         &mut self,
-        (cooling, cooling_index, mut intensity_samplers, mut doppler_samplers): Self::SystemData,
+        (cooling, cooling_index, mut intensity_samplers): Self::SystemData,
     ) {
         let mut content = Vec::new();
-        let mut doppler_content = Vec::new();
         for (_, _) in (&cooling, &cooling_index).join() {
             content.push(LaserSampler::default());
-            doppler_content.push(DopplerShiftSampler::default());
         }
 
         for mut intensity_sampler in (&mut intensity_samplers).join() {
             intensity_sampler.contents = content.clone();
-        }
-
-        for mut doppler_sampler in (&mut doppler_samplers).join() {
-            doppler_sampler.contents = doppler_content.clone();
         }
     }
 }
