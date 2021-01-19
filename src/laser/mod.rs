@@ -41,6 +41,12 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 					contents: Vec::new(),
 				},
 			);
+			updater.insert(
+				ent,
+				sampler::LaserDetuningSamplers {
+					contents: Vec::new(),
+				},
+			);
 			updater.insert(ent, NumberScattered { value: 0.0 });
 		}
 	}
@@ -89,9 +95,14 @@ pub fn add_systems_to_dispatch(
 			&["initialise_laser_intensity"],
 		)
 		.with(
+			sampler::InitialiseLaserDetuningSamplersSystem,
+			"initialise_laser_detuning",
+			&["initialise_doppler_shift"],
+		)
+		.with(
 			intensity::SampleLaserIntensitySystem,
 			"sample_laser_intensity",
-			&["initialise_doppler_shift"],
+			&["initialise_laser_intensity"],
 		)
 		.with(
 			gaussian::SampleGaussianBeamIntensitySystem, // delete later, currently only doing the polarization and wave-vector, intensity redundant
@@ -104,9 +115,14 @@ pub fn add_systems_to_dispatch(
 			&["sample_gaussian_beam_intensity"],
 		)
 		.with(
+			sampler::CalculateLaserDetuningSystem,
+			"calculate_laser_detuning",
+			&["calculate_doppler_shift"],
+		)
+		.with(
 			force::CalculateCoolingForcesSystem, //to be superseeded
 			"calculate_cooling_forces",
-			&["calculate_doppler_shift", "sample_gaussian_beam_intensity"],
+			&["calculate_laser_detuning", "sample_gaussian_beam_intensity"],
 		)
 		.with(
 			force::CalculateNumberPhotonsScatteredSystem,
