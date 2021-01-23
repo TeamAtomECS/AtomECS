@@ -3,6 +3,7 @@ pub mod doppler;
 pub mod force;
 pub mod gaussian;
 pub mod intensity;
+pub mod photons_scattered;
 pub mod rate;
 pub mod repump;
 pub mod sampler;
@@ -55,13 +56,8 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 					contents: Vec::new(),
 				},
 			);
-			updater.insert(
-				ent,
-				twolevel::TwoLevelPopulation {
-					ground: f64::NAN,
-					excited: f64::NAN,
-				},
-			);
+			updater.insert(ent, twolevel::TwoLevelPopulation::default());
+			updater.insert(ent, photons_scattered::TotalPhotonsScattered::default());
 			updater.insert(ent, NumberScattered { value: 0.0 });
 		}
 	}
@@ -145,14 +141,19 @@ pub fn add_systems_to_dispatch(
 			&["calculate_laser_detuning"],
 		)
 		.with(
-			twolevel::CalculateTwoLevelPopulation,
+			twolevel::CalculateTwoLevelPopulationSystem,
 			"calculate_twolevel",
 			&["calculate_rate_coefficients"],
 		)
 		.with(
+			photons_scattered::CalculateMeanTotalPhotonsScatteredSystem,
+			"calculate_total_photons",
+			&["calculate_twolevel"],
+		)
+		.with(
 			force::CalculateCoolingForcesSystem, //to be superseeded
 			"calculate_cooling_forces",
-			&["calculate_twolevel", "sample_gaussian_beam_intensity"],
+			&["calculate_total_photons", "sample_gaussian_beam_intensity"],
 		)
 		.with(
 			force::CalculateNumberPhotonsScatteredSystem,

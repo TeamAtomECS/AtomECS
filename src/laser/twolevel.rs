@@ -38,8 +38,8 @@ impl Component for TwoLevelPopulation {
 }
 
 /// Calculates the TwoLevelPopulation from the natural linewidth and the rate coefficients
-pub struct CalculateTwoLevelPopulation;
-impl<'a> System<'a> for CalculateTwoLevelPopulation {
+pub struct CalculateTwoLevelPopulationSystem;
+impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
     type SystemData = (
         ReadStorage<'a, AtomicTransition>,
         ReadStorage<'a, RateCoefficients>,
@@ -48,7 +48,7 @@ impl<'a> System<'a> for CalculateTwoLevelPopulation {
 
     fn run(
         &mut self,
-        (atomic_transition, rate_coefficients, twolevel_population): Self::SystemData,
+        (atomic_transition, rate_coefficients, mut twolevel_population): Self::SystemData,
     ) {
         for (atominfo, rates, twolevel) in (
             &atomic_transition,
