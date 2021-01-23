@@ -264,7 +264,7 @@ pub mod tests {
     fn test_calculate_cooling_force_system() {
         let detuning = 0.0;
         let intensity = 1.0;
-        let cooling = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1.0);
+        let cooling = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1);
         let wavenumber = cooling.wavenumber();
         let (mut test_world, laser) = create_world_for_tests(cooling);
         test_world.register::<Dark>();
@@ -325,7 +325,7 @@ pub mod tests {
     fn test_dark() {
         let detuning = 0.0;
         let intensity = 1.0;
-        let cooling = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1.0);
+        let cooling = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1);
         let wavenumber = cooling.wavenumber();
         let (mut test_world, laser) = create_world_for_tests(cooling);
         test_world.register::<Dark>();

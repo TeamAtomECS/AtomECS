@@ -223,7 +223,7 @@ pub mod tests {
             .create_entity()
             .with(CoolingLightIndex::default())
             .with(CoolingLight {
-                polarization: 1.0,
+                polarization: 1,
                 wavelength: 780e-9,
             })
             .build();
@@ -231,7 +231,7 @@ pub mod tests {
             .create_entity()
             .with(CoolingLightIndex::default())
             .with(CoolingLight {
-                polarization: 1.0,
+                polarization: 1,
                 wavelength: 780e-9,
             })
             .build();

@@ -10,8 +10,8 @@ use crate::constant;
 /// A component representing light used for laser cooling.
 #[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct CoolingLight {
-	/// Polarisation of the laser light, 1. for +, -1. for -,
-	pub polarization: f64,
+	/// Polarisation of the laser light, 1 for +, -1 for -,
+	pub polarization: i32,
 
 	/// wavelength of the laser light, in SI units of m.
 	pub wavelength: f64,
@@ -36,7 +36,7 @@ impl CoolingLight {
 	/// `detuning`: Detuning from the transition, specified in MHz. Red-detuned is negative.
 	///
 	/// `polarization`: Polarization of the cooling beam.
-	pub fn for_species(species: AtomicTransition, detuning: f64, polarization: f64) -> Self {
+	pub fn for_species(species: AtomicTransition, detuning: f64, polarization: i32) -> Self {
 		let freq = species.frequency + detuning * 1.0e6;
 		CoolingLight {
 			wavelength: constant::C / freq,
@@ -134,7 +134,7 @@ pub mod tests {
 			.create_entity()
 			.with(CoolingLightIndex::default())
 			.with(CoolingLight {
-				polarization: 1.0,
+				polarization: 1,
 				wavelength: 780e-9,
 			})
 			.build();
@@ -142,7 +142,7 @@ pub mod tests {
 			.create_entity()
 			.with(CoolingLightIndex::default())
 			.with(CoolingLight {
-				polarization: 1.0,
+				polarization: 1,
 				wavelength: 780e-9,
 			})
 			.build();
@@ -171,7 +171,7 @@ pub mod tests {
 		let test_entity = test_world
 			.create_entity()
 			.with(CoolingLight {
-				polarization: 1.0,
+				polarization: 1,
 				wavelength: 780e-9,
 			})
 			.build();
@@ -192,7 +192,7 @@ pub mod tests {
 	#[test]
 	fn test_for_species() {
 		let detuning = 12.0;
-		let light = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1.0);
+		let light = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1);
 		assert_approx_eq!(
 			light.frequency(),
 			AtomicTransition::rubidium().frequency + 1.0e6 * detuning

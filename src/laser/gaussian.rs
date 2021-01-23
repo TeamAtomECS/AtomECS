@@ -99,7 +99,7 @@ impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
 						let (cooling, index, gaussian, mask) = laser_array[i];
 						sampler.contents[index.index].intensity =
 							get_gaussian_beam_intensity(&gaussian, &pos, mask.as_ref());
-						sampler.contents[index.index].polarization = cooling.polarization;
+						sampler.contents[index.index].polarization = cooling.polarization.into();
 						sampler.contents[index.index].wavevector =
 							gaussian.direction.normalize() * cooling.wavenumber();
 					}
@@ -184,7 +184,7 @@ pub mod tests {
 		test_world
 			.create_entity()
 			.with(CoolingLight {
-				polarization: 1.0,
+				polarization: 1,
 				wavelength: 780e-9,
 			})
 			.with(CoolingLightIndex {
