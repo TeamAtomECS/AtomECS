@@ -6,6 +6,7 @@ pub mod intensity;
 pub mod rate;
 pub mod repump;
 pub mod sampler;
+pub mod twolevel;
 
 extern crate specs;
 use crate::initiate::NewlyCreated;
@@ -52,6 +53,13 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 				ent,
 				rate::RateCoefficients {
 					contents: Vec::new(),
+				},
+			);
+			updater.insert(
+				ent,
+				twolevel::TwoLevelPopulation {
+					ground: f64::NAN,
+					excited: f64::NAN,
 				},
 			);
 			updater.insert(ent, NumberScattered { value: 0.0 });
@@ -137,12 +145,14 @@ pub fn add_systems_to_dispatch(
 			&["calculate_laser_detuning"],
 		)
 		.with(
+			twolevel::CalculateTwoLevelPopulation,
+			"calculate_twolevel",
+			&["calculate_rate_coefficients"],
+		)
+		.with(
 			force::CalculateCoolingForcesSystem, //to be superseeded
 			"calculate_cooling_forces",
-			&[
-				"calculate_rate_coefficients",
-				"sample_gaussian_beam_intensity",
-			],
+			&["calculate_twolevel", "sample_gaussian_beam_intensity"],
 		)
 		.with(
 			force::CalculateNumberPhotonsScatteredSystem,

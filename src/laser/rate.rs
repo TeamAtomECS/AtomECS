@@ -5,7 +5,7 @@ use super::cooling::{CoolingLight, CoolingLightIndex};
 use crate::atom::AtomicTransition;
 use crate::laser::intensity::LaserIntensitySamplers;
 use crate::laser::sampler::LaserDetuningSamplers;
-use specs::{Component, Entities, Join, ReadStorage, System, VecStorage, WriteStorage};
+use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 use crate::constant::{C, HBAR, PI};
 

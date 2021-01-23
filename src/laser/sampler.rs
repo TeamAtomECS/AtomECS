@@ -75,18 +75,14 @@ impl<'a> System<'a> for InitialiseLaserSamplersSystem {
 /// Represents total detuning of the atom with respect to each beam
 #[derive(Clone)]
 pub struct LaserDetuningSampler {
-    pub detuning_sigma_plus: f64,
-    pub detuning_sigma_minus: f64,
-    pub detuning_sigma_pi: f64,
+    pub detuning: f64,
 }
 
 impl Default for LaserDetuningSampler {
     fn default() -> Self {
         LaserDetuningSampler {
             /// Laser detuning of all transitions with respect to laser beam, in SI units of Hz.
-            detuning_sigma_plus: f64::NAN,
-            detuning_sigma_minus: f64::NAN,
-            detuning_sigma_pi: f64::NAN,
+            detuning: f64::NAN,
         }
     }
 }
@@ -128,6 +124,7 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
     type SystemData = (
         ReadStorage<'a, AtomicTransition>,
         ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, LaserSamplers>,
         ReadStorage<'a, DopplerShiftSamplers>,
         ReadStorage<'a, ZeemanShiftSampler>,
@@ -139,6 +136,7 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
         (
             atom_info,
             indices,
+            cooling_light,
             laser_samplers,
             doppler_samplers,
             zeeman_sampler,
@@ -151,8 +149,8 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
         // There are typically only a small number of lasers in a simulation.
         // For a speedup, cache the required components into thread memory,
         // so they can be distributed to parallel workers during the atom loop.
-        type CachedLaser = CoolingLightIndex;
-        let laser_cache: Vec<CachedLaser> = indices.join().map(|index| index.clone()).collect();
+        type CachedLaser = (CoolingLightIndex, CoolingLight);
+        let laser_cache: Vec<CachedLaser> = (&indices, &cooling_light).join().map(|(index, cooling)| (index.clone(), cooling.clone())).collect();
 
         // Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
         for base_index in (0..laser_cache.len()).step_by(LASER_CACHE_SIZE) {
@@ -179,7 +177,7 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
                         laser_samplers,
                     )| {
                         for i in 0..number_in_iteration {
-                            let index = laser_array[i];
+                            let (index, cooling) = laser_array[i];
                             let without_zeeman =
                                 (laser_samplers.contents[index.index].wavevector.norm()
                                     * constant::C
@@ -190,12 +188,13 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
                                     * constant::PI
                                     - doppler_samplers.contents[index.index].doppler_shift;
 
-                            detuning_sampler.contents[index.index].detuning_sigma_plus =
-                                without_zeeman.clone() - zeeman_sampler.sigma_plus;
-                            detuning_sampler.contents[index.index].detuning_sigma_minus =
-                                without_zeeman.clone() - zeeman_sampler.sigma_minus;
-                            detuning_sampler.contents[index.index].detuning_sigma_pi =
-                                without_zeeman.clone() - zeeman_sampler.sigma_pi;
+                            
+                            detuning_sampler.contents[index.index].detuning = without_zeeman.clone() - match cooling.polarization {
+                                1 => zeeman_sampler.sigma_plus,
+                                -1 => zeeman_sampler.sigma_minus,
+                                0 => zeeman_sampler.sigma_pi,
+                                _ => panic!("The polarization provided did not match any of the accepted cases (CalculateLaserDetuningSystem)"),
+                            };
                         }
                     },
                 )
