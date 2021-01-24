@@ -58,6 +58,12 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 			);
 			updater.insert(ent, twolevel::TwoLevelPopulation::default());
 			updater.insert(ent, photons_scattered::TotalPhotonsScattered::default());
+			updater.insert(
+				ent,
+				photons_scattered::ExpectedPhotonsScatteredVector {
+					contents: Vec::new(),
+				},
+			);
 			updater.insert(ent, NumberScattered { value: 0.0 });
 		}
 	}
@@ -151,9 +157,17 @@ pub fn add_systems_to_dispatch(
 			&["calculate_twolevel"],
 		)
 		.with(
+			photons_scattered::CalculateExpectedPhotonsScatteredSystem,
+			"calculate_expected_photons",
+			&["calculate_total_photons"],
+		)
+		.with(
 			force::CalculateCoolingForcesSystem, //to be superseeded
 			"calculate_cooling_forces",
-			&["calculate_total_photons", "sample_gaussian_beam_intensity"],
+			&[
+				"calculate_expected_photons",
+				"sample_gaussian_beam_intensity",
+			],
 		)
 		.with(
 			force::CalculateNumberPhotonsScatteredSystem,

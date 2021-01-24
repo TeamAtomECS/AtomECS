@@ -3,11 +3,15 @@ extern crate specs;
 
 use crate::atom::AtomicTransition;
 use crate::integrator::Timestep;
+use crate::laser::cooling::CoolingLight;
+use crate::laser::cooling::CoolingLightIndex;
+use crate::laser::rate::RateCoefficients;
 use crate::laser::twolevel::TwoLevelPopulation;
 use specs::{Component, Join, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
 
 use crate::constant::PI;
 
+#[derive(Clone)]
 pub struct TotalPhotonsScattered {
     pub total: f64,
 }
@@ -44,6 +48,85 @@ impl<'a> System<'a> for CalculateMeanTotalPhotonsScatteredSystem {
             .join()
         {
             total.total = timestep.delta * (2. * PI * atominfo.linewidth) * twolevel.excited;
+        }
+    }
+}
+
+/// The number of photons scattered by the atom from a single, specific beam
+#[derive(Clone)]
+pub struct ExpectedPhotonsScattered {
+    scattered: f64,
+}
+
+impl Default for ExpectedPhotonsScattered {
+    fn default() -> Self {
+        ExpectedPhotonsScattered {
+            scattered: f64::NAN,
+        }
+    }
+}
+
+/// The List that holds a ExpectedPhotonsScattered for each laser
+pub struct ExpectedPhotonsScatteredVector {
+    pub contents: Vec<ExpectedPhotonsScattered>,
+}
+
+impl Component for ExpectedPhotonsScatteredVector {
+    type Storage = VecStorage<Self>;
+}
+
+/// This system initialises all ExpectedPhotonsScatteredVector to a NAN value.
+///
+/// It also ensures that the size of the ExpectedPhotonsScatteredVector components match the number of CoolingLight entities in the world.
+pub struct InitialiseExpectedPhotonsScatteredVectorSystem;
+impl<'a> System<'a> for InitialiseExpectedPhotonsScatteredVectorSystem {
+    type SystemData = (
+        ReadStorage<'a, CoolingLight>,
+        ReadStorage<'a, CoolingLightIndex>,
+        WriteStorage<'a, ExpectedPhotonsScatteredVector>,
+    );
+    fn run(&mut self, (cooling, cooling_index, mut expected_photons): Self::SystemData) {
+        let mut content = Vec::new();
+        for (_, _) in (&cooling, &cooling_index).join() {
+            content.push(ExpectedPhotonsScattered::default());
+        }
+
+        for mut expected in (&mut expected_photons).join() {
+            expected.contents = content.clone();
+        }
+    }
+}
+
+/// Calcutates the expected number of Photons scattered by each laser in one iteration step
+pub struct CalculateExpectedPhotonsScatteredSystem;
+impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
+    type SystemData = (
+        ReadStorage<'a, RateCoefficients>,
+        ReadStorage<'a, TotalPhotonsScattered>,
+        WriteStorage<'a, ExpectedPhotonsScatteredVector>,
+    );
+
+    fn run(
+        &mut self,
+        (rate_coefficients, total_photons_scattered, mut expected_photons_vector): Self::SystemData,
+    ) {
+        for (rates, total, expected) in (
+            &rate_coefficients,
+            &total_photons_scattered,
+            &mut expected_photons_vector,
+        )
+            .join()
+        {
+            let mut sum_rates: f64 = 0.;
+
+            for count in 0..rates.contents.len() {
+                sum_rates = sum_rates + rates.contents[count].rate;
+            }
+
+            for index in 0..expected.contents.len() {
+                expected.contents[index].scattered =
+                    rates.contents[index].rate / sum_rates * total.total;
+            }
         }
     }
 }
