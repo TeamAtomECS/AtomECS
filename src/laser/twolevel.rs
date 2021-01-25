@@ -24,11 +24,11 @@ impl Default for TwoLevelPopulation {
 
 impl TwoLevelPopulation {
     /// Calculate the ground state population from excited state population
-    pub fn calculate_ground_state(&self) {
+    pub fn calculate_ground_state(&mut self) {
         self.ground = 1. - self.excited;
     }
     /// Calculate the excited state population from ground state population
-    pub fn calculate_excited_state(&self) {
+    pub fn calculate_excited_state(&mut self) {
         self.excited = 1. - self.ground;
     }
 }

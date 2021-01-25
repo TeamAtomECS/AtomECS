@@ -7,7 +7,7 @@ use crate::maths;
 use rand::distributions::{Distribution, Normal};
 use specs::{Join, Read, ReadExpect, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
-use super::sampler::LaserSamplers;
+use super::sampler::LightWavePropertiesSamplers;
 use nalgebra::Vector3;
 
 use crate::atom::Force;
@@ -25,7 +25,7 @@ use crate::laser::repump::*;
 pub struct CalculateAbsorptionForcesSystem;
 impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
     type SystemData = (
-        ReadStorage<'a, LaserSamplers>,
+        ReadStorage<'a, LightWavePropertiesSamplers>,
         ReadStorage<'a, ActualPhotonsScatteredVector>,
         WriteStorage<'a, Force>,
         ReadExpect<'a, Timestep>,

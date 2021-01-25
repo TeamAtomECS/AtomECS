@@ -68,7 +68,7 @@ pub mod tests {
 	extern crate specs;
 	use crate::constant::PI;
 	use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
-	use crate::laser::sampler::{LaserSampler, LaserSamplers};
+	use crate::laser::sampler::{LightWavePropertiesSampler, LightWavePropertiesSamplers};
 	use assert_approx_eq::assert_approx_eq;
 	use specs::{Builder, World};
 
@@ -107,7 +107,7 @@ pub mod tests {
 		test_world.register::<CoolingLight>();
 		test_world.register::<GaussianBeam>();
 		test_world.register::<Position>();
-		test_world.register::<LaserSamplers>();
+		test_world.register::<LightWavePropertiesSamplers>();
 		test_world.register::<CircularMask>();
 
 		let e_radius = 2.0;
@@ -135,8 +135,8 @@ pub mod tests {
 			.with(Position {
 				pos: Vector3::new(0.0, 0.0, 0.0),
 			})
-			.with(LaserSamplers {
-				contents: vec![LaserSampler::default()],
+			.with(LightWavePropertiesSamplers {
+				contents: vec![LightWavePropertiesSampler::default()],
 			})
 			.build();
 
@@ -145,15 +145,15 @@ pub mod tests {
 			.with(Position {
 				pos: Vector3::new(0.0, e_radius, 0.0),
 			})
-			.with(LaserSamplers {
-				contents: vec![LaserSampler::default()],
+			.with(LightWavePropertiesSamplers {
+				contents: vec![LightWavePropertiesSampler::default()],
 			})
 			.build();
 
 		//let mut system = SampleGaussianBeamIntensitySystem;
 		//system.run_now(&test_world.res);
 		test_world.maintain();
-		let _sampler_storage = test_world.read_storage::<LaserSamplers>();
+		let _sampler_storage = test_world.read_storage::<LightWavePropertiesSamplers>();
 
 		// Peak intensity
 		/*

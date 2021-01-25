@@ -20,7 +20,7 @@ pub struct LaserIntensitySampler {
 impl Default for LaserIntensitySampler {
     fn default() -> Self {
         LaserIntensitySampler {
-            /// Doppler shift with respect to laser beam, in SI units of Hz.
+            /// intensity in W/m^2.
             intensity: f64::NAN,
         }
     }
