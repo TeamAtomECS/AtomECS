@@ -64,6 +64,12 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 					contents: Vec::new(),
 				},
 			);
+			updater.insert(
+				ent,
+				photons_scattered::ActualPhotonsScatteredVector {
+					contents: Vec::new(),
+				},
+			);
 			updater.insert(ent, NumberScattered { value: 0.0 });
 		}
 	}
@@ -122,9 +128,19 @@ pub fn add_systems_to_dispatch(
 			&["initialise_laser_detuning"],
 		)
 		.with(
+			photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem,
+			"initialise_expected_photons",
+			&["initialise_rate_coefficient"],
+		)
+		.with(
+			photons_scattered::InitialiseActualPhotonsScatteredVectorSystem,
+			"initialise_actual_photons",
+			&["initialise_expected_photons"],
+		)
+		.with(
 			intensity::SampleLaserIntensitySystem,
 			"sample_laser_intensity",
-			&["initialise_rate_coefficient"],
+			&["initialise_actual_photons"],
 		)
 		.with(
 			gaussian::SampleGaussianBeamIntensitySystem, // delete later, currently only doing the polarization and wave-vector, intensity redundant
@@ -162,12 +178,14 @@ pub fn add_systems_to_dispatch(
 			&["calculate_total_photons"],
 		)
 		.with(
+			photons_scattered::CalculateActualPhotonsScatteredSystem,
+			"calculate_actual_photons",
+			&["calculate_expected_photons"],
+		)
+		.with(
 			force::CalculateCoolingForcesSystem, //to be superseeded
 			"calculate_cooling_forces",
-			&[
-				"calculate_expected_photons",
-				"sample_gaussian_beam_intensity",
-			],
+			&["calculate_actual_photons", "sample_gaussian_beam_intensity"],
 		)
 		.with(
 			force::CalculateNumberPhotonsScatteredSystem,
