@@ -137,7 +137,7 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
 /// The number of photons actually scattered by the atom from a single, specific beam
 #[derive(Clone)]
 pub struct ActualPhotonsScattered {
-    scattered: u64,
+    pub scattered: u64,
 }
 
 impl Default for ActualPhotonsScattered {

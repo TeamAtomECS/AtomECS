@@ -3,19 +3,16 @@ extern crate specs;
 use crate::atom::AtomicTransition;
 use crate::constant;
 use crate::laser::photons_scattered::ActualPhotonsScatteredVector;
-use crate::laser::sampler::LaserDetuningSamplers;
 use crate::maths;
 use rand::distributions::{Distribution, Normal};
 use specs::{Join, Read, ReadExpect, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
-use super::intensity::LaserIntensitySamplers;
 use super::sampler::LaserSamplers;
 use nalgebra::Vector3;
 
 use crate::atom::Force;
 use crate::constant::HBAR;
 use crate::integrator::Timestep;
-use crate::magnetic::MagneticFieldSampler;
 
 use crate::laser::repump::*;
 
@@ -25,115 +22,45 @@ use crate::laser::repump::*;
 /// are already populated with the correct terms. Furthermore, it is assumed that a
 /// `CoolingLightIndex` is present and assigned for all cooling lasers, with an index
 /// corresponding to the entries in the `LaserSamplers` vector.
-pub struct CalculateCoolingForcesSystem;
-impl<'a> System<'a> for CalculateCoolingForcesSystem {
+pub struct CalculateAbsorptionForcesSystem;
+impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
     type SystemData = (
-        ReadStorage<'a, LaserDetuningSamplers>,
-        ReadStorage<'a, MagneticFieldSampler>,
-        ReadStorage<'a, LaserIntensitySamplers>,
-        WriteStorage<'a, LaserSamplers>,
-        ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, LaserSamplers>,
+        ReadStorage<'a, ActualPhotonsScatteredVector>,
         WriteStorage<'a, Force>,
+        ReadExpect<'a, Timestep>,
         ReadStorage<'a, Dark>,
     );
 
     fn run(
         &mut self,
-        (
-            laser_detuning_samplers,
-            magnetic_samplers,
-            intensity_samplers,
-            mut laser_samplers,
-            atom_info,
-            mut forces,
-            _dark,
-        ): Self::SystemData,
+        (laser_samplers, actual_scattered_vector, mut forces, timestep, _dark): Self::SystemData,
     ) {
-        use rayon::prelude::*;
-        use specs::ParJoin;
-
-        (
-            &laser_detuning_samplers,
-            &atom_info,
-            &magnetic_samplers,
-            &intensity_samplers,
-            &mut laser_samplers,
+        for (samplers, scattered, mut force, _dark) in (
+            &laser_samplers,
+            &actual_scattered_vector,
             &mut forces,
             !&_dark,
         )
-            .par_join()
-            .for_each(
-                |(
-                    laser_detuning_samplers,
-                    atom_info,
-                    bfield,
-                    intensity_samplers,
-                    laser_samplers,
-                    mut force,
-                    (),
-                )| {
-                    // Inner loop over cooling lasers
-                    for count in 0..laser_samplers.contents.len() {
-                        //let s0 = 1.0;
-                        let s0 = intensity_samplers.contents[count].intensity
-                            / atom_info.saturation_intensity;
-                        //println!("s0 : {}", s0);
-                        //println!("laserfre{},atomfre{},shift {}",laser_sampler.wavevector.norm() * constant::C / 2. / PI,atom_info.frequency,laser_sampler.doppler_shift);
-                        let wavevector = laser_samplers.contents[count].wavevector.clone();
-                        let costheta = if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
-                            0.0
-                        } else {
-                            wavevector.normalize().dot(&bfield.field.normalize())
-                        };
-                        let gamma = atom_info.gamma();
-                        let scatter1 = 0.25
-                            * (laser_samplers.contents[count].polarization * costheta + 1.)
-                                .powf(2.)
-                            * gamma
-                            / 2.
-                            / (1.
-                                + s0
-                                + 4. * (laser_detuning_samplers.contents[count]
-                                    .detuning_sigma_plus)
-                                    .powf(2.)
-                                    / gamma.powf(2.));
-                        let scatter2 = 0.25
-                            * (laser_samplers.contents[count].polarization * costheta - 1.)
-                                .powf(2.)
-                            * gamma
-                            / 2.
-                            / (1.
-                                + s0
-                                + 4. * (laser_detuning_samplers.contents[count]
-                                    .detuning_sigma_minus)
-                                    .powf(2.)
-                                    / gamma.powf(2.));
-                        let scatter3 = 0.5 * (1. - costheta.powf(2.)) * gamma
-                            / 2.
-                            / (1.
-                                + s0
-                                + 4. * (laser_detuning_samplers.contents[count].detuning_sigma_pi)
-                                    .powf(2.)
-                                    / gamma.powf(2.));
-                        let cooling_force =
-                            wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);
-                        laser_samplers.contents[count].force = cooling_force.clone();
-                        //println!("detuning{}", angular_detuning / gamma);
-                        force.force = force.force + cooling_force;
-                    }
-                },
-            );
+            .join()
+        {
+            for count in 0..samplers.contents.len() {
+                force.force = force.force
+                    + scattered.contents[count].scattered as f64 * HBAR / timestep.delta
+                        * samplers.contents[count].wavevector;
+            }
+        }
     }
 }
 
 /// A resource that indicates that the simulation should apply random forces to simulate fluctuations in the number of scattered photons.
-pub struct RandomScatteringForceOption;
+pub struct ApplyEmissionForceOption;
 
 pub struct ApplyEmissionForceSystem;
 
 impl<'a> System<'a> for ApplyEmissionForceSystem {
     type SystemData = (
-        Option<Read<'a, RandomScatteringForceOption>>,
+        Option<Read<'a, ApplyEmissionForceOption>>,
         WriteStorage<'a, Force>,
         ReadStorage<'a, ActualPhotonsScatteredVector>,
         ReadStorage<'a, AtomicTransition>,

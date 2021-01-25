@@ -181,8 +181,8 @@ pub fn add_systems_to_dispatch(
 			&["calculate_expected_photons"],
 		)
 		.with(
-			force::CalculateCoolingForcesSystem, //to be superseeded
-			"calculate_cooling_forces",
+			force::CalculateAbsorptionForcesSystem,
+			"calculate_absorption_forces",
 			&["calculate_actual_photons", "sample_gaussian_beam_intensity"],
 		)
 		.with(repump::RepumpSystem, "repump", &["cal_kick"])
