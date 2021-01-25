@@ -11,7 +11,6 @@ pub mod twolevel;
 
 extern crate specs;
 use crate::initiate::NewlyCreated;
-use crate::laser::force::NumberScattered;
 use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System, World};
 
 /// Attachs components used for optical force calculation to newly created atoms.
@@ -70,7 +69,6 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 					contents: Vec::new(),
 				},
 			);
-			updater.insert(ent, NumberScattered { value: 0.0 });
 		}
 	}
 }
@@ -186,11 +184,6 @@ pub fn add_systems_to_dispatch(
 			force::CalculateCoolingForcesSystem, //to be superseeded
 			"calculate_cooling_forces",
 			&["calculate_actual_photons", "sample_gaussian_beam_intensity"],
-		)
-		.with(
-			force::CalculateNumberPhotonsScatteredSystem,
-			"cal_kick",
-			&["sample_gaussian_beam_intensity"],
 		)
 		.with(repump::RepumpSystem, "repump", &["cal_kick"])
 		.with(

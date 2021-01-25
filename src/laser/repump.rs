@@ -1,6 +1,6 @@
 extern crate rand;
 extern crate specs;
-use crate::laser::force::NumberScattered;
+use crate::laser::photons_scattered::TotalPhotonsScattered;
 use rand::Rng;
 use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
@@ -29,7 +29,7 @@ impl<'a> System<'a> for RepumpSystem {
     type SystemData = (
         Option<Read<'a, RepumpLoss>>,
         Read<'a, LazyUpdate>,
-        ReadStorage<'a, NumberScattered>,
+        ReadStorage<'a, TotalPhotonsScattered>,
         Entities<'a>,
     );
     fn run(&mut self, (repump_opt, lazy, num, ent): Self::SystemData) {
@@ -37,7 +37,7 @@ impl<'a> System<'a> for RepumpSystem {
             None => (),
             Some(repump) => {
                 for (ent, num) in (&ent, &num).join() {
-                    if repump.if_loss(num.value) {
+                    if repump.if_loss(num.total) {
                         lazy.insert(ent, Dark {})
                     }
                 }
