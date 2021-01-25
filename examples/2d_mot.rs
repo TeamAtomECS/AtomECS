@@ -61,7 +61,7 @@ fn main() {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
             detuning,
-            1.0,
+            1,
         ))
         .build();
     world
@@ -75,7 +75,7 @@ fn main() {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
             detuning,
-            1.0,
+            1,
         ))
         .build();
     world
@@ -89,7 +89,7 @@ fn main() {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
             detuning,
-            1.0,
+            1,
         ))
         .build();
     world
@@ -103,7 +103,7 @@ fn main() {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
             detuning,
-            1.0,
+            1,
         ))
         .build();
 

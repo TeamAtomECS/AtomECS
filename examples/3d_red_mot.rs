@@ -20,7 +20,7 @@ use specs::{Builder, World};
 use std::time::Instant;
 
 fn run_with_parameter(parameter_name: &str, iterator: usize) {
-    let detuning_values: Vec<f64> = vec![-0.1, -0.3, -0.7, -1.5, -3.0];
+    let _detuning_values: Vec<f64> = vec![-0.1, -0.3, -0.7, -1.5, -3.0];
     let power_values: Vec<f64> = vec![0.0001, 0.001, 0.01, 0.1, 1.0];
     let now = Instant::now();
 
@@ -79,7 +79,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
             detuning,
-            -1.0,
+            -1,
         ))
         .build();
     world
@@ -93,7 +93,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
             detuning,
-            -1.0,
+            -1,
         ))
         .build();
 
@@ -109,7 +109,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
             detuning,
-            1.0,
+            1,
         ))
         .build();
     world
@@ -123,7 +123,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
             detuning,
-            1.0,
+            1,
         ))
         .build();
     world
@@ -137,7 +137,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
             detuning,
-            1.0,
+            1,
         ))
         .build();
     world
@@ -151,7 +151,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
             detuning,
-            1.0,
+            1,
         ))
         .build();
 
