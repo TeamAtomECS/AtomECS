@@ -33,4 +33,10 @@ Some useful links are:
 
 ## Credits
 
-`atomecs` is written by Xuhui Chen & [Elliot Bentine](https://github.com/ElliotB256).
+* [Xuhui Chen](https://github.com/Pi-sun), Oxford
+
+* [Elliot Bentine](https://github.com/ElliotB256), Oxford
+
+* [Maurice Zeuner](https://github.com/MauriceZeuner), Cambridge
+
+* [Tiffany Harte](https://github.com/tiffanyharte), Cambridge
