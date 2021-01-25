@@ -1,9 +1,6 @@
 extern crate rayon;
 extern crate specs;
 
-extern crate rand;
-use rand::distributions::{Distribution, Poisson};
-
 use crate::atom::AtomicTransition;
 use crate::integrator::Timestep;
 use crate::laser::cooling::CoolingLight;
@@ -100,7 +97,7 @@ impl<'a> System<'a> for InitialiseExpectedPhotonsScatteredVectorSystem {
     }
 }
 
-/// Calcutates the expected mean number of Photons scattered by each laser in one iteration step
+/// Calcutates the expected number of Photons scattered by each laser in one iteration step
 pub struct CalculateExpectedPhotonsScatteredSystem;
 impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
     type SystemData = (
@@ -129,70 +126,6 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
             for index in 0..expected.contents.len() {
                 expected.contents[index].scattered =
                     rates.contents[index].rate / sum_rates * total.total;
-            }
-        }
-    }
-}
-
-/// The number of photons actually scattered by the atom from a single, specific beam
-#[derive(Clone)]
-pub struct ActualPhotonsScattered {
-    scattered: u64,
-}
-
-impl Default for ActualPhotonsScattered {
-    fn default() -> Self {
-        ActualPhotonsScattered {
-            scattered: u64::MIN,
-        }
-    }
-}
-
-/// The List that holds a ExpectedPhotonsScattered for each laser
-pub struct ActualPhotonsScatteredVector {
-    pub contents: Vec<ActualPhotonsScattered>,
-}
-
-impl Component for ActualPhotonsScatteredVector {
-    type Storage = VecStorage<Self>;
-}
-
-/// This system initialises all ActualPhotonsScatteredVector to a NAN value.
-///
-/// It also ensures that the size of the ActualPhotonsScatteredVector components match the number of CoolingLight entities in the world.
-pub struct InitialiseActualPhotonsScatteredVectorSystem;
-impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
-    type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
-        WriteStorage<'a, ActualPhotonsScatteredVector>,
-    );
-    fn run(&mut self, (cooling, cooling_index, mut actual_photons): Self::SystemData) {
-        let mut content = Vec::new();
-        for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(ActualPhotonsScattered::default());
-        }
-
-        for mut actual in (&mut actual_photons).join() {
-            actual.contents = content.clone();
-        }
-    }
-}
-
-/// Calcutates the actual number of Photons scattered by each laser in one iteration step
-/// by drawing from a Poisson Distribution
-pub struct CalculateActualPhotonsScatteredSystem;
-impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
-    type SystemData = (
-        ReadStorage<'a, ExpectedPhotonsScatteredVector>,
-        WriteStorage<'a, ActualPhotonsScatteredVector>,
-    );
-
-    fn run(&mut self, (expected_photons_vector, mut actual_photons_vector): Self::SystemData) {
-        for (expected, actual) in (&expected_photons_vector, &mut actual_photons_vector).join() {
-            for index in 0..expected.contents.len() {
-                let poisson = Poisson::new(expected.contents[index].scattered);
-                actual.contents[index].scattered = poisson.sample(&mut rand::thread_rng());
             }
         }
     }
