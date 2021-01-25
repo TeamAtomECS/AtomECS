@@ -84,7 +84,7 @@ pub fn add_systems_to_dispatch(
 	builder: DispatcherBuilder<'static, 'static>,
 	deps: &[&str],
 ) -> DispatcherBuilder<'static, 'static> {
-	builder
+	let mut builder = builder
 		.with(
 			AttachLaserComponentsToNewlyCreatedAtomsSystem,
 			"attach_atom_laser_components",
@@ -101,40 +101,42 @@ pub fn add_systems_to_dispatch(
 			&["attach_cooling_index"],
 		)
 		.with(
-			sampler::InitialiseLightWavePropertiesSamplersSystem, // will become unneccessary/changed
-			"initialise_laser_sampler",
+			sampler::InitialiseLightWavePropertiesSamplersSystem,
+			"initialise_light_properties_sampler",
 			&["index_cooling_lights"],
 		)
 		.with(
 			intensity::InitialiseLaserIntensitySamplersSystem,
 			"initialise_laser_intensity",
-			&["initialise_laser_sampler"],
+			&["index_cooling_lights"],
 		)
 		.with(
 			doppler::InitialiseDopplerShiftSamplersSystem,
 			"initialise_doppler_shift",
-			&["initialise_laser_intensity"],
+			&["index_cooling_lights"],
 		)
 		.with(
 			sampler::InitialiseLaserDetuningSamplersSystem,
 			"initialise_laser_detuning",
-			&["initialise_doppler_shift"],
+			&["index_cooling_lights"],
 		)
 		.with(
 			rate::InitialiseRateCoefficientsSystem,
 			"initialise_rate_coefficient",
-			&["initialise_laser_detuning"],
+			&["index_cooling_lights"],
 		)
 		.with(
 			photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem,
 			"initialise_expected_photons",
-			&["initialise_rate_coefficient"],
+			&["index_cooling_lights"],
 		)
 		.with(
 			photons_scattered::InitialiseActualPhotonsScatteredVectorSystem,
 			"initialise_actual_photons",
-			&["initialise_expected_photons"],
-		)
+			&["index_cooling_lights"],
+		);
+	builder.add_barrier();
+	builder = builder
 		.with(
 			intensity::SampleLaserIntensitySystem,
 			"sample_laser_intensity",
@@ -143,12 +145,12 @@ pub fn add_systems_to_dispatch(
 		.with(
 			doppler::CalculateDopplerShiftSystem,
 			"calculate_doppler_shift",
-			&["sample_laser_intensity"],
+			&["initialise_actual_photons"],
 		)
 		.with(
 			sampler::CalculateLaserDetuningSystem,
 			"calculate_laser_detuning",
-			&["calculate_doppler_shift"],
+			&["calculate_doppler_shift", "zeeman_shift"],
 		)
 		.with(
 			rate::CalculateRateCoefficientsSystem,
@@ -178,14 +180,19 @@ pub fn add_systems_to_dispatch(
 		.with(
 			force::CalculateAbsorptionForcesSystem,
 			"calculate_absorption_forces",
-			&["calculate_actual_photons", "sample_gaussian_beam_intensity"],
+			&["calculate_actual_photons"],
 		)
-		.with(repump::RepumpSystem, "repump", &["cal_kick"])
+		.with(
+			repump::RepumpSystem,
+			"repump",
+			&["calculate_absorption_forces"],
+		)
 		.with(
 			force::ApplyEmissionForceSystem,
-			"random_walk_system",
-			&["cal_kick"],
-		)
+			"calculate_emission_forces",
+			&["calculate_absorption_forces"],
+		);
+	builder
 }
 
 /// Registers resources required by magnetics to the ecs world.

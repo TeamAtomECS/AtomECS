@@ -54,8 +54,8 @@ pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'sta
 		EulerIntegrationSystem,
 		"euler_integrator",
 		&[
-			"calculate_cooling_forces",
-			"random_walk_system",
+			"calculate_absorption_forces",
+			"calculate_emission_forces",
 			"add_gravity",
 		],
 	);
