@@ -141,14 +141,9 @@ pub fn add_systems_to_dispatch(
 			&["initialise_actual_photons"],
 		)
 		.with(
-			gaussian::SampleGaussianBeamIntensitySystem, // delete later, currently only doing the polarization and wave-vector, intensity redundant
-			"sample_gaussian_beam_intensity",
-			&["sample_laser_intensity"],
-		)
-		.with(
 			doppler::CalculateDopplerShiftSystem,
 			"calculate_doppler_shift",
-			&["sample_gaussian_beam_intensity"],
+			&["sample_laser_intensity"],
 		)
 		.with(
 			sampler::CalculateLaserDetuningSystem,

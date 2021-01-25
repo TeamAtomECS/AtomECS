@@ -2,10 +2,8 @@ extern crate nalgebra;
 extern crate rayon;
 extern crate specs;
 use nalgebra::Vector3;
-use specs::{Component, Entities, HashMapStorage, Join, ReadStorage, System, WriteStorage};
+use specs::{Component, HashMapStorage};
 
-use super::cooling::{CoolingLight, CoolingLightIndex};
-use super::sampler::LaserSamplers;
 use crate::atom::Position;
 use crate::maths;
 use serde::{Deserialize, Serialize};
@@ -41,73 +39,6 @@ impl Component for CircularMask {
 	type Storage = HashMapStorage<Self>;
 }
 
-const LASER_CACHE_SIZE: usize = 16;
-
-/// System that calculates that samples the intensity of `GaussianBeam` entities.
-pub struct SampleGaussianBeamIntensitySystem;
-impl<'a> System<'a> for SampleGaussianBeamIntensitySystem {
-	type SystemData = (
-		Entities<'a>,
-		ReadStorage<'a, CoolingLight>,
-		ReadStorage<'a, CoolingLightIndex>,
-		ReadStorage<'a, GaussianBeam>,
-		ReadStorage<'a, CircularMask>,
-		WriteStorage<'a, LaserSamplers>,
-		ReadStorage<'a, Position>,
-	);
-
-	fn run(
-		&mut self,
-		(entities, cooling, indices, gaussian, masks, mut samplers, positions): Self::SystemData,
-	) {
-		use rayon::prelude::*;
-		use specs::ParJoin;
-
-		// There are typically only a small number of lasers in a simulation.
-		// For a speedup, cache the required components into thread memory,
-		// so they can be distributed to parallel workers during the atom loop.
-		type CachedLaser = (
-			CoolingLight,
-			CoolingLightIndex,
-			GaussianBeam,
-			Option<CircularMask>,
-		);
-		let laser_cache: Vec<CachedLaser> = (&entities, &cooling, &indices, &gaussian)
-			.join()
-			.map(|(laser_entity, cooling, index, gaussian)| {
-				(
-					cooling.clone(),
-					index.clone(),
-					gaussian.clone(),
-					masks.get(laser_entity).cloned(),
-				)
-			})
-			.collect();
-
-		// Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
-		for base_index in (0..laser_cache.len()).step_by(LASER_CACHE_SIZE) {
-			let max_index = laser_cache.len().min(base_index + LASER_CACHE_SIZE);
-			let slice = &laser_cache[base_index..max_index];
-			let mut laser_array = vec![laser_cache[0]; LASER_CACHE_SIZE];
-			laser_array[..max_index].copy_from_slice(slice);
-			let number_in_iteration = slice.len();
-
-			(&mut samplers, &positions)
-				.par_join()
-				.for_each(|(sampler, pos)| {
-					for i in 0..number_in_iteration {
-						let (cooling, index, gaussian, mask) = laser_array[i];
-						sampler.contents[index.index].intensity =
-							get_gaussian_beam_intensity(&gaussian, &pos, mask.as_ref());
-						sampler.contents[index.index].polarization = cooling.polarization.into();
-						sampler.contents[index.index].wavevector =
-							gaussian.direction.normalize() * cooling.wavenumber();
-					}
-				});
-		}
-	}
-}
-
 /// Gets the intensity of a gaussian laser beam at the specified position.
 pub fn get_gaussian_beam_intensity(
 	beam: &GaussianBeam,
@@ -135,11 +66,11 @@ pub mod tests {
 	use super::*;
 
 	extern crate specs;
-	use crate::constant::{EXP, PI};
+	use crate::constant::PI;
 	use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 	use crate::laser::sampler::{LaserSampler, LaserSamplers};
 	use assert_approx_eq::assert_approx_eq;
-	use specs::{Builder, RunNow, World};
+	use specs::{Builder, World};
 
 	extern crate nalgebra;
 	use nalgebra::Vector3;
@@ -199,7 +130,7 @@ pub mod tests {
 			})
 			.build();
 
-		let sampler1 = test_world
+		let _sampler1 = test_world
 			.create_entity()
 			.with(Position {
 				pos: Vector3::new(0.0, 0.0, 0.0),
@@ -209,7 +140,7 @@ pub mod tests {
 			})
 			.build();
 
-		let sampler2 = test_world
+		let _sampler2 = test_world
 			.create_entity()
 			.with(Position {
 				pos: Vector3::new(0.0, e_radius, 0.0),
@@ -219,10 +150,10 @@ pub mod tests {
 			})
 			.build();
 
-		let mut system = SampleGaussianBeamIntensitySystem;
-		system.run_now(&test_world.res);
+		//let mut system = SampleGaussianBeamIntensitySystem;
+		//system.run_now(&test_world.res);
 		test_world.maintain();
-		let sampler_storage = test_world.read_storage::<LaserSamplers>();
+		let _sampler_storage = test_world.read_storage::<LaserSamplers>();
 
 		// Peak intensity
 		/*

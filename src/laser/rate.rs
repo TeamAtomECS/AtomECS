@@ -76,7 +76,7 @@ impl<'a> System<'a> for CalculateRateCoefficientsSystem {
             mut rate_coefficients,
         ): Self::SystemData,
     ) {
-        for (cooling, index) in (&cooling_light, &cooling_index).join() {
+        for (_cooling, index) in (&cooling_light, &cooling_index).join() {
             for (detunings, intensities, atominfo, rates) in (
                 &laser_detunings,
                 &laser_intensities,
