@@ -187,7 +187,7 @@ pub fn add_systems_to_dispatch(
 		)
 		.with(repump::RepumpSystem, "repump", &["cal_kick"])
 		.with(
-			force::ApplyRandomForceSystem,
+			force::ApplyEmissionForceSystem,
 			"random_walk_system",
 			&["cal_kick"],
 		)

@@ -153,6 +153,17 @@ pub struct ActualPhotonsScatteredVector {
     pub contents: Vec<ActualPhotonsScattered>,
 }
 
+impl ActualPhotonsScatteredVector {
+    /// Calculate the sum of all entries
+    pub fn calculate_total_scattered(&self) -> u64 {
+        let mut sum: u64 = 0;
+        for i in 0..self.contents.len() {
+            sum = sum + self.contents[i].scattered;
+        }
+        sum
+    }
+}
+
 impl Component for ActualPhotonsScatteredVector {
     type Storage = VecStorage<Self>;
 }
