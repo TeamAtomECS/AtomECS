@@ -27,7 +27,7 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 		for (ent, _) in (&ent, &newly_created).join() {
 			updater.insert(
 				ent,
-				sampler::LaserSamplers {
+				sampler::LightWavePropertiesSamplers {
 					contents: Vec::new(),
 				},
 			);
@@ -101,7 +101,7 @@ pub fn add_systems_to_dispatch(
 			&["attach_cooling_index"],
 		)
 		.with(
-			sampler::InitialiseLaserSamplersSystem, // will become unneccessary/changed
+			sampler::InitialiseLightWavePropertiesSamplersSystem, // will become unneccessary/changed
 			"initialise_laser_sampler",
 			&["index_cooling_lights"],
 		)
@@ -192,7 +192,7 @@ pub fn add_systems_to_dispatch(
 pub fn register_components(world: &mut World) {
 	world.register::<cooling::CoolingLight>();
 	world.register::<cooling::CoolingLightIndex>();
-	world.register::<sampler::LaserSamplers>();
+	world.register::<sampler::LightWavePropertiesSamplers>();
 	world.register::<gaussian::GaussianBeam>();
 	world.register::<gaussian::CircularMask>();
 }

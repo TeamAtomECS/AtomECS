@@ -7,7 +7,7 @@ use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
-use lib::laser::force::RandomScatteringForceOption;
+use lib::laser::force::ApplyEmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
@@ -138,7 +138,7 @@ fn main() {
 
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-6 });
-    world.add_resource(RandomScatteringForceOption {});
+    world.add_resource(ApplyEmissionForceOption {});
 
     let normal = Normal::new(0.0, 0.2);
     let mut rng = rand::thread_rng();
