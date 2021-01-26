@@ -2,12 +2,13 @@ extern crate rayon;
 extern crate specs;
 use crate::atom::AtomicTransition;
 use crate::constant;
+use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+use crate::laser::gaussian::GaussianBeam;
 use crate::laser::photons_scattered::ActualPhotonsScatteredVector;
 use crate::maths;
 use rand::distributions::{Distribution, Normal};
 use specs::{Join, Read, ReadExpect, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
-use super::sampler::LightWavePropertiesSamplers;
 use nalgebra::Vector3;
 
 use crate::atom::Force;
@@ -25,7 +26,9 @@ use crate::laser::repump::*;
 pub struct CalculateAbsorptionForcesSystem;
 impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
     type SystemData = (
-        ReadStorage<'a, LightWavePropertiesSamplers>,
+        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, CoolingLight>,
+        ReadStorage<'a, GaussianBeam>,
         ReadStorage<'a, ActualPhotonsScatteredVector>,
         WriteStorage<'a, Force>,
         ReadExpect<'a, Timestep>,
@@ -34,20 +37,26 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
 
     fn run(
         &mut self,
-        (laser_samplers, actual_scattered_vector, mut forces, timestep, _dark): Self::SystemData,
+        (
+            cooling_index,
+            cooling_light,
+            gaussian_beam,
+            actual_scattered_vector,
+            mut forces,
+            timestep,
+            _dark,
+        ): Self::SystemData,
     ) {
-        for (samplers, scattered, mut force, _dark) in (
-            &laser_samplers,
-            &actual_scattered_vector,
-            &mut forces,
-            !&_dark,
-        )
-            .join()
+        for (scattered, mut force, _dark) in (&actual_scattered_vector, &mut forces, !&_dark).join()
         {
-            for count in 0..samplers.contents.len() {
-                force.force = force.force
-                    + scattered.contents[count].scattered as f64 * HBAR / timestep.delta
-                        * samplers.contents[count].wavevector;
+            for (index, cooling, gaussian) in
+                (&cooling_index, &cooling_light, &gaussian_beam).join()
+            {
+                let new_force = scattered.contents[index.index].scattered as f64 * HBAR
+                    / timestep.delta
+                    * gaussian.direction.normalize()
+                    * cooling.wavenumber();
+                force.force = force.force + new_force;
             }
         }
     }

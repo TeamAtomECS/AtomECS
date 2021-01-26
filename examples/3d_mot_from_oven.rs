@@ -10,6 +10,7 @@ use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
+use lib::laser::force::ApplyEmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
@@ -173,6 +174,8 @@ fn main() {
 
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-6 });
+    // enable the usage of the emission system
+    //world.add_resource(ApplyEmissionForceOption {});
 
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world

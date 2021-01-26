@@ -67,10 +67,7 @@ pub mod tests {
 
 	extern crate specs;
 	use crate::constant::PI;
-	use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
-	use crate::laser::sampler::{LightWavePropertiesSampler, LightWavePropertiesSamplers};
 	use assert_approx_eq::assert_approx_eq;
-	use specs::{Builder, World};
 
 	extern crate nalgebra;
 	use nalgebra::Vector3;
@@ -98,85 +95,5 @@ pub mod tests {
 			get_gaussian_beam_intensity(&beam, &pos2, None),
 			1e-6_f64
 		);
-	}
-
-	#[test]
-	fn test_sample_gaussian_beam_system() {
-		let mut test_world = World::new();
-		test_world.register::<CoolingLightIndex>();
-		test_world.register::<CoolingLight>();
-		test_world.register::<GaussianBeam>();
-		test_world.register::<Position>();
-		test_world.register::<LightWavePropertiesSamplers>();
-		test_world.register::<CircularMask>();
-
-		let e_radius = 2.0;
-		let power = 1.0;
-		test_world
-			.create_entity()
-			.with(CoolingLight {
-				polarization: 1,
-				wavelength: 780e-9,
-			})
-			.with(CoolingLightIndex {
-				index: 0,
-				initiated: true,
-			})
-			.with(GaussianBeam {
-				direction: Vector3::x(),
-				intersection: Vector3::new(0.0, 0.0, 0.0),
-				e_radius: e_radius,
-				power: power,
-			})
-			.build();
-
-		let _sampler1 = test_world
-			.create_entity()
-			.with(Position {
-				pos: Vector3::new(0.0, 0.0, 0.0),
-			})
-			.with(LightWavePropertiesSamplers {
-				contents: vec![LightWavePropertiesSampler::default()],
-			})
-			.build();
-
-		let _sampler2 = test_world
-			.create_entity()
-			.with(Position {
-				pos: Vector3::new(0.0, e_radius, 0.0),
-			})
-			.with(LightWavePropertiesSamplers {
-				contents: vec![LightWavePropertiesSampler::default()],
-			})
-			.build();
-
-		//let mut system = SampleGaussianBeamIntensitySystem;
-		//system.run_now(&test_world.res);
-		test_world.maintain();
-		let _sampler_storage = test_world.read_storage::<LightWavePropertiesSamplers>();
-
-		// Peak intensity
-		/*
-		assert_approx_eq!(
-			sampler_storage
-				.get(sampler1)
-				.expect("entity not found")
-				.contents[0]
-				.intensity,
-			power / (PI.powf(0.5) * e_radius).powf(2.0)
-		);
-		*/
-
-		// 1 over e intensity radius
-		/*
-		assert_approx_eq!(
-			sampler_storage
-				.get(sampler2)
-				.expect("entity not found")
-				.contents[0]
-				.intensity,
-			power / (PI.powf(0.5) * e_radius).powf(2.0) / EXP
-		);
-		*/
 	}
 }
