@@ -202,6 +202,10 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
     fn run(&mut self, (expected_photons_vector, mut actual_photons_vector): Self::SystemData) {
         for (expected, actual) in (&expected_photons_vector, &mut actual_photons_vector).join() {
             for index in 0..expected.contents.len() {
+                /*println!(
+                    "expected photons scattered: {}",
+                    expected.contents[index].scattered
+                );*/
                 let poisson = Poisson::new(expected.contents[index].scattered);
                 actual.contents[index].scattered = poisson.sample(&mut rand::thread_rng());
             }

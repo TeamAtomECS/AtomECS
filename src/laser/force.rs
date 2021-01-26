@@ -57,6 +57,10 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
                     * gaussian.direction.normalize()
                     * cooling.wavenumber();
                 force.force = force.force + new_force;
+                /*println!(
+                    "the actual scattering rate is: {}",
+                    scattered.contents[index.index].scattered
+                );*/
             }
         }
     }

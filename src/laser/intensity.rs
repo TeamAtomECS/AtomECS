@@ -106,6 +106,7 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
                         let (index, gaussian, mask) = laser_array[i];
                         samplers.contents[index.index].intensity =
                             get_gaussian_beam_intensity(&gaussian, &pos, mask.as_ref());
+                        //println!("position: {} ", &pos.pos,);
                     }
                 });
         }

@@ -88,11 +88,13 @@ impl<'a> System<'a> for CalculateRateCoefficientsSystem {
                 let prefactor = 3. / 4. * C.powf(2.) / HBAR
                     * (atominfo.frequency).powf(-3.)
                     * atominfo.linewidth;
-
-                rates.contents[index.index].rate =
-                    prefactor * intensities.contents[index.index].intensity * atominfo.linewidth
-                        / (detunings.contents[index.index].detuning.powf(2.)
-                            + (PI * atominfo.linewidth).powf(2.));
+                rates.contents[index.index].rate = prefactor
+                    * intensities.contents[index.index].intensity
+                    * 2.
+                    * PI
+                    * atominfo.linewidth
+                    / (detunings.contents[index.index].detuning.powf(2.)
+                        + (PI * atominfo.linewidth).powf(2.));
             }
         }
     }
