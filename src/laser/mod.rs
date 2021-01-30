@@ -41,56 +41,55 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 ///
 /// `deps`: any dependencies that must be completed before the systems run.
 pub fn add_systems_to_dispatch(
-	builder: DispatcherBuilder<'static, 'static>,
+	builder: &mut DispatcherBuilder<'static, 'static>,
 	deps: &[&str],
-) -> DispatcherBuilder<'static, 'static> {
-	builder
-		.with(
-			AttachLaserComponentsToNewlyCreatedAtomsSystem,
-			"attach_atom_laser_components",
-			deps,
-		)
-		.with(
-			cooling::AttachIndexToCoolingLightSystem,
-			"attach_cooling_index",
-			deps,
-		)
-		.with(
-			cooling::IndexCoolingLightsSystem,
-			"index_cooling_lights",
-			&["attach_cooling_index"],
-		)
-		.with(
-			sampler::InitialiseLaserSamplersSystem,
-			"initialise_laser_intensity",
-			&["index_cooling_lights"],
-		)
-		.with(
-			gaussian::SampleGaussianBeamIntensitySystem,
-			"sample_gaussian_beam_intensity",
-			&["initialise_laser_intensity"],
-		)
-		.with(
-			doppler::CalculateDopplerShiftSystem,
-			"calculate_doppler_shift",
-			&["sample_gaussian_beam_intensity"],
-		)
-		.with(
-			force::CalculateCoolingForcesSystem,
-			"calculate_cooling_forces",
-			&["calculate_doppler_shift", "sample_gaussian_beam_intensity"],
-		)
-		.with(
-			force::CalculateNumberPhotonsScatteredSystem,
-			"cal_kick",
-			&["sample_gaussian_beam_intensity"],
-		)
-		.with(repump::RepumpSystem, "repump", &["cal_kick"])
-		.with(
-			force::ApplyRandomForceSystem,
-			"random_walk_system",
-			&["cal_kick"],
-		)
+) -> () {
+	builder.add(
+		AttachLaserComponentsToNewlyCreatedAtomsSystem,
+		"attach_atom_laser_components",
+		deps,
+	);
+	builder.add(
+		cooling::AttachIndexToCoolingLightSystem,
+		"attach_cooling_index",
+		deps,
+	);
+	builder.add(
+		cooling::IndexCoolingLightsSystem,
+		"index_cooling_lights",
+		&["attach_cooling_index"],
+	);
+	builder.add(
+		sampler::InitialiseLaserSamplersSystem,
+		"initialise_laser_intensity",
+		&["index_cooling_lights"],
+	);
+	builder.add(
+		gaussian::SampleGaussianBeamIntensitySystem,
+		"sample_gaussian_beam_intensity",
+		&["initialise_laser_intensity"],
+	);
+	builder.add(
+		doppler::CalculateDopplerShiftSystem,
+		"calculate_doppler_shift",
+		&["sample_gaussian_beam_intensity"],
+	);
+	builder.add(
+		force::CalculateCoolingForcesSystem,
+		"calculate_cooling_forces",
+		&["calculate_doppler_shift", "sample_gaussian_beam_intensity"],
+	);
+	builder.add(
+		force::CalculateNumberPhotonsScatteredSystem,
+		"cal_kick",
+		&["sample_gaussian_beam_intensity"],
+	);
+	builder.add(repump::RepumpSystem, "repump", &["cal_kick"]);
+	builder.add(
+		force::ApplyRandomForceSystem,
+		"random_walk_system",
+		&["cal_kick"],
+	);
 }
 
 /// Registers resources required by magnetics to the ecs world.

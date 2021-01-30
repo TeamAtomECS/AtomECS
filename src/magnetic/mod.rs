@@ -107,36 +107,35 @@ impl<'a> System<'a> for AttachFieldSamplersToNewlyCreatedAtomsSystem {
 ///
 /// `deps`: any dependencies that must be completed before the magnetics systems run.
 pub fn add_systems_to_dispatch(
-	builder: DispatcherBuilder<'static, 'static>,
+	builder: &mut DispatcherBuilder<'static, 'static>,
 	deps: &[&str],
-) -> DispatcherBuilder<'static, 'static> {
-	builder
-		.with(ClearMagneticFieldSamplerSystem, "magnetics_clear", deps)
-		.with(
-			quadrupole::Sample3DQuadrupoleFieldSystem,
-			"magnetics_quadrupole",
-			&["magnetics_clear"],
-		)
-		.with(
-			uniform::UniformMagneticFieldSystem,
-			"magnetics_uniform",
-			&["magnetics_quadrupole"],
-		)
-		.with(
-			grid::SampleMagneticGridSystem,
-			"magnetics_grid",
-			&["magnetics_uniform"],
-		)
-		.with(
-			CalculateMagneticFieldMagnitudeSystem,
-			"magnetics_magnitude",
-			&["magnetics_grid"],
-		)
-		.with(
-			AttachFieldSamplersToNewlyCreatedAtomsSystem,
-			"add_magnetic_field_samplers",
-			&[],
-		)
+) -> () {
+	builder.add(ClearMagneticFieldSamplerSystem, "magnetics_clear", deps);
+	builder.add(
+		quadrupole::Sample3DQuadrupoleFieldSystem,
+		"magnetics_quadrupole",
+		&["magnetics_clear"],
+	);
+	builder.add(
+		uniform::UniformMagneticFieldSystem,
+		"magnetics_uniform",
+		&["magnetics_quadrupole"],
+	);
+	builder.add(
+		grid::SampleMagneticGridSystem,
+		"magnetics_grid",
+		&["magnetics_uniform"],
+	);
+	builder.add(
+		CalculateMagneticFieldMagnitudeSystem,
+		"magnetics_magnitude",
+		&["magnetics_grid"],
+	);
+	builder.add(
+		AttachFieldSamplersToNewlyCreatedAtomsSystem,
+		"add_magnetic_field_samplers",
+		&[],
+	);
 }
 
 /// Registers resources required by magnetics to the ecs world.
@@ -162,9 +161,9 @@ pub mod tests {
 		let mut test_world = World::new();
 		register_components(&mut test_world);
 		test_world.register::<Position>();
-		let builder = DispatcherBuilder::new();
-		let configured_builder = add_systems_to_dispatch(builder, &[]);
-		let mut dispatcher = configured_builder.build();
+		let mut builder = DispatcherBuilder::new();
+		add_systems_to_dispatch(&mut builder, &[]);
+		let mut dispatcher = builder.build();
 		dispatcher.setup(&mut test_world.res);
 
 		test_world
@@ -205,9 +204,9 @@ pub mod tests {
 		let mut test_world = World::new();
 		register_components(&mut test_world);
 		test_world.register::<NewlyCreated>();
-		let builder = DispatcherBuilder::new();
-		let configured_builder = add_systems_to_dispatch(builder, &[]);
-		let mut dispatcher = configured_builder.build();
+		let mut builder = DispatcherBuilder::new();
+		add_systems_to_dispatch(&mut builder, &[]);
+		let mut dispatcher = builder.build();
 		dispatcher.setup(&mut test_world.res);
 
 		let sampler_entity = test_world.create_entity().with(NewlyCreated).build();
