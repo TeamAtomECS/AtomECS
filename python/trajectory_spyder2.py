@@ -14,7 +14,7 @@ name = ""
 max_steps = 10000;
 
 
-data = pd.read_csv('D:\\AION_Git\\AtomECS\\output\\pos'+name+ '.txt', sep=" ", header=None)
+data = pd.read_csv('D:\\AION_Git\\AtomECS\\pos'+name+ '.txt', sep=" ", header=None)
 N=len(data.set_index(0).loc["step-"+str(max_steps)+",":,1])-1
 
 print("simulation of " + str(N) + " survivors")
@@ -30,7 +30,7 @@ array =  np.array(df.loc[list_of_survivors,1])
 
 #####################
 
-vel_data = pd.read_csv('D:\AION_Git\\AtomECS\\output\\vel'+name+ '.txt', sep=" ", header=None)
+vel_data = pd.read_csv('D:\AION_Git\\AtomECS\\vel'+name+ '.txt', sep=" ", header=None)
 vel_df = vel_data.set_index(0)
 
 vel_array =  np.array(vel_df.loc[list_of_survivors,1])
@@ -102,11 +102,11 @@ ax.set_zlabel('Z')
 graph = ax.scatter(traj_data[0:3, 0:0+N][0],traj_data[0:3, 0:0+N][1], traj_data[0:3, 0:0+N][2], s=20, c=initial_speeds, cmap="plasma")
 fig.colorbar(graph).ax.set_ylabel("initial speed in m/s")
 ani = matplotlib.animation.FuncAnimation(fig, update_graph, 99, 
-                               interval=10, blit=False)
+                               interval=1, blit=False)
 
 Writer = matplotlib.animation.writers['ffmpeg']
 writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
 
-ani.save('first_test_rate_equation.mp4', writer=writer, dpi=300)
+#ani.save('first_full_rate_equation.mp4', writer=writer, dpi=300)
 
 plt.show()

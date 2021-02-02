@@ -142,9 +142,7 @@ pub struct ActualPhotonsScattered {
 
 impl Default for ActualPhotonsScattered {
     fn default() -> Self {
-        ActualPhotonsScattered {
-            scattered: u64::MIN,
-        }
+        ActualPhotonsScattered { scattered: 0 }
     }
 }
 
@@ -202,12 +200,17 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
     fn run(&mut self, (expected_photons_vector, mut actual_photons_vector): Self::SystemData) {
         for (expected, actual) in (&expected_photons_vector, &mut actual_photons_vector).join() {
             for index in 0..expected.contents.len() {
-                /*println!(
-                    "expected photons scattered: {}",
-                    expected.contents[index].scattered
-                );*/
                 let poisson = Poisson::new(expected.contents[index].scattered);
-                actual.contents[index].scattered = poisson.sample(&mut rand::thread_rng());
+                let drawn_number = poisson.sample(&mut rand::thread_rng());
+
+                // I have not clue why it is necessary but it appears that for
+                // very small expected photon numbers, the poisson distribution
+                // returns u64::MAX which destroys the Simulation
+                actual.contents[index].scattered = if drawn_number == u64::MAX {
+                    0
+                } else {
+                    drawn_number
+                };
             }
         }
     }

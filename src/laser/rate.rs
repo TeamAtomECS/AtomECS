@@ -3,8 +3,10 @@ extern crate specs;
 
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use crate::atom::AtomicTransition;
+use crate::laser::gaussian::GaussianBeam;
 use crate::laser::intensity::LaserIntensitySamplers;
 use crate::laser::sampler::LaserDetuningSamplers;
+use crate::magnetic::MagneticFieldSampler;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 use crate::constant::{C, HBAR, PI};
@@ -63,6 +65,8 @@ impl<'a> System<'a> for CalculateRateCoefficientsSystem {
         ReadStorage<'a, LaserDetuningSamplers>,
         ReadStorage<'a, LaserIntensitySamplers>,
         ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, GaussianBeam>,
+        ReadStorage<'a, MagneticFieldSampler>,
         WriteStorage<'a, RateCoefficients>,
     );
     fn run(
@@ -73,28 +77,54 @@ impl<'a> System<'a> for CalculateRateCoefficientsSystem {
             laser_detunings,
             laser_intensities,
             atomic_transition,
+            gaussian_beam,
+            magnetic_field_sampler,
             mut rate_coefficients,
         ): Self::SystemData,
     ) {
-        for (_cooling, index) in (&cooling_light, &cooling_index).join() {
-            for (detunings, intensities, atominfo, rates) in (
+        for (cooling, index, gaussian) in (&cooling_light, &cooling_index, &gaussian_beam).join() {
+            for (detunings, intensities, atominfo, bfield, rates) in (
                 &laser_detunings,
                 &laser_intensities,
                 &atomic_transition,
+                &magnetic_field_sampler,
                 &mut rate_coefficients,
             )
                 .join()
             {
+                let beam_direction_vector = gaussian.direction.normalize();
+                let costheta = if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
+                    0.0
+                } else {
+                    beam_direction_vector
+                        .normalize()
+                        .dot(&bfield.field.normalize())
+                };
+
                 let prefactor = 3. / 4. * C.powf(2.) / HBAR
                     * (atominfo.frequency).powf(-3.)
-                    * atominfo.linewidth;
-                rates.contents[index.index].rate = prefactor
-                    * intensities.contents[index.index].intensity
-                    * 2.
-                    * PI
                     * atominfo.linewidth
-                    / (detunings.contents[index.index].detuning.powf(2.)
+                    * intensities.contents[index.index].intensity
+                    / 2.
+                    / PI
+                    * atominfo.linewidth;
+
+                let scatter1 =
+                    0.25 * (cooling.polarization as f64 * costheta + 1.).powf(2.) * prefactor
+                        / (detunings.contents[index.index].detuning_sigma_plus.powf(2.)
+                            + (PI * atominfo.linewidth).powf(2.));
+
+                let scatter2 =
+                    0.25 * (cooling.polarization as f64 * costheta - 1.).powf(2.) * prefactor
+                        / (detunings.contents[index.index]
+                            .detuning_sigma_minus
+                            .powf(2.)
+                            + (PI * atominfo.linewidth).powf(2.));
+
+                let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor
+                    / (detunings.contents[index.index].detuning_pi.powf(2.)
                         + (PI * atominfo.linewidth).powf(2.));
+                rates.contents[index.index].rate = scatter1 + scatter2 + scatter3;
             }
         }
     }

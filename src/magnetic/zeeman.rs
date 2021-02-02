@@ -51,7 +51,7 @@ impl<'a> System<'a> for AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem {
 
 /// This system calculates the Zeeman shift for each atom in each cooling beam.
 ///
-/// Could we optimize this the same way we did with CalculateDopplerShiftSystem?
+///
 pub struct CalculateZeemanShiftSystem;
 impl<'a> System<'a> for CalculateZeemanShiftSystem {
     type SystemData = (

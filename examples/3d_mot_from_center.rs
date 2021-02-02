@@ -1,8 +1,9 @@
-//! Loading a Sr 3D MOT directly from an oven source.
+//! Loading a Sr 3D MOT directly from the center
 
 extern crate magneto_optical_trap as lib;
 extern crate nalgebra;
 use lib::atom::{AtomicTransition, Position, Velocity};
+use lib::atom_sources::central_creator::CentralCreator;
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
 use lib::atom_sources::oven::{OvenAperture, OvenBuilder};
@@ -32,12 +33,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos.txt".to_string(), 20),
+        file::new::<Position, Text>("pos.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 20),
+        file::new::<Velocity, Text>("vel.txt".to_string(), 100),
         "",
         &[],
     );
@@ -54,7 +55,7 @@ fn main() {
 
     // Create cooling lasers.
     let detuning = -90.0;
-    let power = 2.23; //original: 0.23
+    let power = 0.23; //original: 0.23
     let radius = 33.0e-3 / (2.0 * 2.0_f64.sqrt()); // 33mm 1/e^2 diameter
 
     // Horizontal beams along z
@@ -145,21 +146,18 @@ fn main() {
         ))
         .build();
 
-    // Create an oven.
-    // The oven will eject atoms on the first frame and then be deleted.
-    let number_to_emit = 1000000;
+    // creating the entity that represents the source
+    //
+    // contains a central creator
+    let number_to_emit = 1_000;
+    let size_of_cube = 1.0e-3;
+    let speed = 1.0; // m/s
+
     world
         .create_entity()
-        .with(
-            OvenBuilder::new(776.0, Vector3::x())
-                .with_aperture(OvenAperture::Circular {
-                    radius: 0.005,
-                    thickness: 0.001,
-                })
-                .build(),
-        )
+        .with(CentralCreator::new_uniform_cubic(size_of_cube, speed))
         .with(Position {
-            pos: Vector3::new(-0.083, 0.0, 0.0),
+            pos: Vector3::new(0.0, 0.0, 0.0),
         })
         .with(MassDistribution::new(vec![MassRatio {
             mass: 88.0,
@@ -184,7 +182,7 @@ fn main() {
             pos: Vector3::new(0.0, 0.0, 0.0),
         })
         .with(Cuboid {
-            half_width: Vector3::new(0.1, 0.01, 0.01), //(0.1, 0.01, 0.01)
+            half_width: Vector3::new(0.2, 0.03, 0.03), //(0.1, 0.01, 0.01)
         })
         .with(SimulationVolume {
             volume_type: VolumeType::Inclusive,

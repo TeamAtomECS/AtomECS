@@ -1,4 +1,5 @@
 extern crate magneto_optical_trap as lib;
+use crate::lib::laser::force::ApplyEmissionForceOption;
 use lib::atom_sources::central_creator::CentralCreator;
 
 extern crate nalgebra;
@@ -21,7 +22,7 @@ use std::time::Instant;
 
 fn run_with_parameter(parameter_name: &str, iterator: usize) {
     let _detuning_values: Vec<f64> = vec![-0.1, -0.3, -0.7, -1.5, -3.0];
-    let power_values: Vec<f64> = vec![0.0001, 0.001, 0.01, 0.1, 1.0];
+    let power_values: Vec<f64> = vec![0.01, 0.1, 1.0];
     let now = Instant::now();
 
     // Create the simulation world and builder for the ECS dispatcher.
@@ -50,7 +51,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
     // Create magnetic field.
     world
         .create_entity()
-        .with(QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
+        .with(QuadrupoleField3D::gauss_per_cm(10.0, Vector3::z()))
         .with(Position::new())
         .build();
 
@@ -160,7 +161,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
     // contains a central creator
     let number_to_emit = 1_000;
     let size_of_cube = 1.0e-4;
-    let speed = 1.0; // m/s
+    let speed = 0.1; // m/s
 
     world
         .create_entity()
@@ -180,7 +181,8 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
         .build();
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-6 });
-
+    // enable the usage of the emission system
+    world.add_resource(ApplyEmissionForceOption {});
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
         .create_entity()
@@ -205,7 +207,5 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
 }
 
 fn main() {
-    for i in 0..5 {
-        run_with_parameter("power", i);
-    }
+    run_with_parameter("power", 0);
 }

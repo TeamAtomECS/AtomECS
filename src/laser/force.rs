@@ -91,7 +91,6 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
                     (&mut force, &atom_info, &actual_scattered_vector).join()
                 {
                     let total: u64 = kick.calculate_total_scattered();
-
                     let mut rng = rand::thread_rng();
                     let omega = 2.0 * constant::PI * atom_info.frequency;
                     let force_one_kick = constant::HBAR * omega / constant::C / timestep.delta;
