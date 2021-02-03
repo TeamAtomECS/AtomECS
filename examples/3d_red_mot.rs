@@ -20,9 +20,9 @@ use nalgebra::Vector3;
 use specs::{Builder, World};
 use std::time::Instant;
 
-fn run_with_parameter(parameter_name: &str, iterator: usize) {
+fn run_with_parameter(_parameter_name: &str, iterator: usize) {
     let _detuning_values: Vec<f64> = vec![-0.1, -0.3, -0.7, -1.5, -3.0];
-    let power_values: Vec<f64> = vec![0.01, 0.1, 1.0];
+    let power_values: Vec<f64> = vec![0.1, 0.1, 1.0];
     let now = Instant::now();
 
     // Create the simulation world and builder for the ECS dispatcher.
@@ -35,12 +35,12 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>(format!("pos_{}_{}.txt", parameter_name, iterator), 100),
+        file::new::<Position, Text>(format!("pos.txt"), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>(format!("vel_{}_{}.txt", parameter_name, iterator), 100),
+        file::new::<Velocity, Text>(format!("vel.txt"), 100),
         "",
         &[],
     );
@@ -51,7 +51,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
     // Create magnetic field.
     world
         .create_entity()
-        .with(QuadrupoleField3D::gauss_per_cm(10.0, Vector3::z()))
+        .with(QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
         .with(Position::new())
         .build();
 
@@ -61,7 +61,7 @@ fn run_with_parameter(parameter_name: &str, iterator: usize) {
     //    None => panic!("parameter value did not exist!"),
     //}; // MHz
 
-    let detuning = -0.7;
+    let detuning = -0.5;
     let power = match power_values.get(iterator) {
         Some(v) => v,
         None => panic!("parameter value did not exist!"),

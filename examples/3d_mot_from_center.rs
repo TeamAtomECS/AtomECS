@@ -6,13 +6,13 @@ use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::central_creator::CentralCreator;
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
-use lib::atom_sources::oven::{OvenAperture, OvenBuilder};
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::force::ApplyEmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
+use lib::laser::photons_scattered::EnableScatteringFluctuations;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
@@ -174,6 +174,8 @@ fn main() {
     world.add_resource(Timestep { delta: 1.0e-6 });
     // enable the usage of the emission system
     world.add_resource(ApplyEmissionForceOption {});
+    // enable that the number of actually scattered photons is drawn from a poisson distribution
+    world.add_resource(EnableScatteringFluctuations {});
 
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world

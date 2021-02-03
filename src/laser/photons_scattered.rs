@@ -3,6 +3,7 @@ extern crate specs;
 
 extern crate rand;
 use rand::distributions::{Distribution, Poisson};
+use specs::Read;
 
 use crate::atom::AtomicTransition;
 use crate::integrator::Timestep;
@@ -188,29 +189,52 @@ impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
     }
 }
 
+// If this is added as a ressource, the number of actual photons will be drawn from a poisson distribution
+pub struct EnableScatteringFluctuations;
+
 /// Calcutates the actual number of Photons scattered by each laser in one iteration step
 /// by drawing from a Poisson Distribution
 pub struct CalculateActualPhotonsScatteredSystem;
 impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
     type SystemData = (
+        Option<Read<'a, EnableScatteringFluctuations>>,
         ReadStorage<'a, ExpectedPhotonsScatteredVector>,
         WriteStorage<'a, ActualPhotonsScatteredVector>,
     );
 
-    fn run(&mut self, (expected_photons_vector, mut actual_photons_vector): Self::SystemData) {
-        for (expected, actual) in (&expected_photons_vector, &mut actual_photons_vector).join() {
-            for index in 0..expected.contents.len() {
-                let poisson = Poisson::new(expected.contents[index].scattered);
-                let drawn_number = poisson.sample(&mut rand::thread_rng());
+    fn run(
+        &mut self,
+        (fluctuations_option, expected_photons_vector, mut actual_photons_vector): Self::SystemData,
+    ) {
+        match fluctuations_option {
+            None => {
+                for (expected, actual) in
+                    (&expected_photons_vector, &mut actual_photons_vector).join()
+                {
+                    for index in 0..expected.contents.len() {
+                        actual.contents[index].scattered =
+                            expected.contents[index].scattered as u64;
+                    }
+                }
+            }
+            Some(_rand) => {
+                for (expected, actual) in
+                    (&expected_photons_vector, &mut actual_photons_vector).join()
+                {
+                    for index in 0..expected.contents.len() {
+                        let poisson = Poisson::new(expected.contents[index].scattered);
+                        let drawn_number = poisson.sample(&mut rand::thread_rng());
 
-                // I have not clue why it is necessary but it appears that for
-                // very small expected photon numbers, the poisson distribution
-                // returns u64::MAX which destroys the Simulation
-                actual.contents[index].scattered = if drawn_number == u64::MAX {
-                    0
-                } else {
-                    drawn_number
-                };
+                        // I have no clue why it is necessary but it appears that for
+                        // very small expected photon numbers, the poisson distribution
+                        // returns u64::MAX which destroys the Simulation
+                        actual.contents[index].scattered = if drawn_number == u64::MAX {
+                            0
+                        } else {
+                            drawn_number
+                        };
+                    }
+                }
             }
         }
     }

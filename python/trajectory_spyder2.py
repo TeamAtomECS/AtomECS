@@ -11,7 +11,7 @@ import matplotlib.animation
 import pandas as pd
 
 name = ""
-max_steps = 10000;
+max_steps = 100000;
 
 
 data = pd.read_csv('D:\\AION_Git\\AtomECS\\pos'+name+ '.txt', sep=" ", header=None)
@@ -89,24 +89,24 @@ title = ax.set_title('3D Test')
 
 
 # Setthe axes properties
-ax.set_xlim3d([-0.005, 0.005])
+ax.set_xlim3d([-0.0005, 0.0005])
 ax.set_xlabel('X')
 
-ax.set_ylim3d([-0.005, 0.005])
+ax.set_ylim3d([-0.0005, 0.0005])
 ax.set_ylabel('Y')
 
-ax.set_zlim3d([-0.005, 0.005])
+ax.set_zlim3d([-0.0005, 0.0005])
 ax.set_zlabel('Z')
 
 
 graph = ax.scatter(traj_data[0:3, 0:0+N][0],traj_data[0:3, 0:0+N][1], traj_data[0:3, 0:0+N][2], s=20, c=initial_speeds, cmap="plasma")
 fig.colorbar(graph).ax.set_ylabel("initial speed in m/s")
-ani = matplotlib.animation.FuncAnimation(fig, update_graph, 99, 
+ani = matplotlib.animation.FuncAnimation(fig, update_graph, 999, 
                                interval=1, blit=False)
 
 Writer = matplotlib.animation.writers['ffmpeg']
 writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
 
-#ani.save('first_full_rate_equation.mp4', writer=writer, dpi=300)
+ani.save('red_mot_steady_state.mp4', writer=writer, dpi=400)
 
 plt.show()

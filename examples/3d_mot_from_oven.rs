@@ -32,12 +32,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos.txt".to_string(), 20),
+        file::new::<Position, Text>("pos.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 20),
+        file::new::<Velocity, Text>("vel.txt".to_string(), 100),
         "",
         &[],
     );
