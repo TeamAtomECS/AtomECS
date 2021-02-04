@@ -6,6 +6,7 @@ output = read_output('vel.txt');
 velocity = {output.vec};
 velocity = cat(3, velocity{:});
 vz = squeeze(velocity(:,3,:));
+t = (1:size(vz,2)); %1us timestep
 
 % Color code the entries by the initial velocities.
 c1 = [ 0.1608 0.5804 0.6980 ];
@@ -14,7 +15,7 @@ c = interp1([0; 30], [ c0; c1 ], vz(:,1), 'linear', 1);
 
 clf;
 for i=1:size(vz,1)
-    plot(10*(1:size(vz,2)),vz(i,:), 'k', 'Color', c(i,:)); hold on;
+    plot(t,vz(i,:), 'k', 'Color', c(i,:)); hold on;
 end
 set(gcf, 'Color', 'w');
 xlabel('$t$ ($\mu$s)', 'interpreter', 'latex');

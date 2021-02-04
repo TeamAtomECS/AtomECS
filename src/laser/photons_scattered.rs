@@ -138,12 +138,12 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
 /// The number of photons actually scattered by the atom from a single, specific beam
 #[derive(Clone)]
 pub struct ActualPhotonsScattered {
-    pub scattered: u64,
+    pub scattered: f64,
 }
 
 impl Default for ActualPhotonsScattered {
     fn default() -> Self {
-        ActualPhotonsScattered { scattered: 0 }
+        ActualPhotonsScattered { scattered: 0.0 }
     }
 }
 
@@ -155,11 +155,11 @@ pub struct ActualPhotonsScatteredVector {
 impl ActualPhotonsScatteredVector {
     /// Calculate the sum of all entries
     pub fn calculate_total_scattered(&self) -> u64 {
-        let mut sum: u64 = 0;
+        let mut sum: f64 = 0.0;
         for i in 0..self.contents.len() {
             sum = sum + self.contents[i].scattered;
         }
-        sum
+        sum as u64
     }
 }
 
@@ -212,8 +212,7 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
                     (&expected_photons_vector, &mut actual_photons_vector).join()
                 {
                     for index in 0..expected.contents.len() {
-                        actual.contents[index].scattered =
-                            expected.contents[index].scattered as u64;
+                        actual.contents[index].scattered = expected.contents[index].scattered;
                     }
                 }
             }
@@ -229,9 +228,9 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
                         // very small expected photon numbers, the poisson distribution
                         // returns u64::MAX which destroys the Simulation
                         actual.contents[index].scattered = if drawn_number == u64::MAX {
-                            0
+                            0.0
                         } else {
-                            drawn_number
+                            drawn_number as f64
                         };
                     }
                 }
