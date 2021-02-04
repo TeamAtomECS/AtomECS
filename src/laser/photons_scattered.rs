@@ -11,7 +11,9 @@ use crate::laser::cooling::CoolingLight;
 use crate::laser::cooling::CoolingLightIndex;
 use crate::laser::rate::RateCoefficients;
 use crate::laser::twolevel::TwoLevelPopulation;
+use serde::{Deserialize, Serialize};
 use specs::{Component, Join, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
+use std::fmt;
 
 use crate::constant::PI;
 
@@ -136,7 +138,7 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
 }
 
 /// The number of photons actually scattered by the atom from a single, specific beam
-#[derive(Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct ActualPhotonsScattered {
     pub scattered: f64,
 }
@@ -148,6 +150,7 @@ impl Default for ActualPhotonsScattered {
 }
 
 /// The List that holds a ExpectedPhotonsScattered for each laser
+#[derive(Deserialize, Serialize, Clone)]
 pub struct ActualPhotonsScatteredVector {
     pub contents: Vec<ActualPhotonsScattered>,
 }
@@ -160,6 +163,17 @@ impl ActualPhotonsScatteredVector {
             sum = sum + self.contents[i].scattered;
         }
         sum as u64
+    }
+}
+
+impl fmt::Display for ActualPhotonsScatteredVector {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut result = f.write_str("");
+        for aps in &self.contents {
+            result = f.write_fmt(format_args!("{},", aps.scattered));
+        }
+        result
+        //f.debug_list().entries(self.contents.iter()).finish()
     }
 }
 
