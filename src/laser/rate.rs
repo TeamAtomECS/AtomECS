@@ -11,32 +11,34 @@ use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 use crate::constant::{C, HBAR, PI};
 
-/// Represents the Rate Coefficient of the atom with respect to a certain laser beam
+/// Represents the rate coefficient of the atom with respect to a specific CoolingLight entity
 #[derive(Clone)]
 pub struct RateCoefficient {
-    pub rate: f64, // in Hz
+    /// rate coefficient in Hz
+    pub rate: f64,
 }
 
 impl Default for RateCoefficient {
     fn default() -> Self {
         RateCoefficient {
-            rate: f64::NAN, // in Hz
+            /// rate coefficient in Hz
+            rate: f64::NAN,
         }
     }
 }
 
-/// Component that holds a list of laser intensity samplers
+/// Component that holds a Vector of `RateCoefficient`
 pub struct RateCoefficients {
-    /// List of laser samplers
+    /// Vector of `RateCoefficient` where each entry corresponds to a different CoolingLight entity
     pub contents: Vec<RateCoefficient>,
 }
 impl Component for RateCoefficients {
     type Storage = VecStorage<Self>;
 }
 
-/// This system initialises all RateCoefficient to a NAN value.
+/// This system initialises all `RateCoefficient` to a NAN value.
 ///
-/// It also ensures that the size of the RateCoefficient components match the number of CoolingLight entities in the world.
+/// It also ensures that the size of the `RateCoefficient` components match the number of CoolingLight entities in the world.
 pub struct InitialiseRateCoefficientsSystem;
 impl<'a> System<'a> for InitialiseRateCoefficientsSystem {
     type SystemData = (
@@ -56,6 +58,14 @@ impl<'a> System<'a> for InitialiseRateCoefficientsSystem {
     }
 }
 
+/// Calculates the TwoLevel approach rate coefficients for all atoms for all
+/// CoolingLight entities
+///
+/// The Rate can be calculated by: Intensity * Absorption_Cross_Section / Photon_Energy
+///
+/// This is also the System that currently takes care of handling the polarizations correctly.
+/// The polarization is projected onto the quantization axis given by the local magnetic
+/// field vector. For fully polarized CoolingLight all projection pre-factors add up to 1.
 pub struct CalculateRateCoefficientsSystem;
 
 impl<'a> System<'a> for CalculateRateCoefficientsSystem {

@@ -13,7 +13,10 @@ extern crate specs;
 use crate::initiate::NewlyCreated;
 use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System, World};
 
-/// Attachs components used for optical force calculation to newly created atoms.
+/// Attaches components used for optical force calculation to newly created atoms.
+///
+/// They are recognized as newly created if they are associated with
+/// the `NewlyCreated` component.
 pub struct AttachLaserComponentsToNewlyCreatedAtomsSystem;
 
 impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
@@ -124,6 +127,7 @@ pub fn add_systems_to_dispatch(
 			"initialise_actual_photons",
 			&["index_cooling_lights"],
 		);
+	// We add a barrier here because the calculations should only start once all components are initialized.
 	builder.add_barrier();
 	builder = builder
 		.with(

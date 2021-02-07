@@ -17,12 +17,12 @@ use crate::integrator::Timestep;
 
 use crate::laser::repump::*;
 
-/// This sytem calculates the forces exerted by `CoolingLight` on entities.
+/// This sytem calculates the forces from absorbing photons from the CoolingLight entities.
 ///
-/// The system assumes that the `LaserSamplers` and `MagneticFieldSampler` for each atom
-/// are already populated with the correct terms. Furthermore, it is assumed that a
+/// The system assumes that the `ActualPhotonsScatteredVector` for each atom
+/// s already populated with the correct terms. Furthermore, it is assumed that a
 /// `CoolingLightIndex` is present and assigned for all cooling lasers, with an index
-/// corresponding to the entries in the `LaserSamplers` vector.
+/// corresponding to the entries in the `ActualPhotonsScatteredVector` vector.
 pub struct CalculateAbsorptionForcesSystem;
 impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
     type SystemData = (
@@ -57,16 +57,14 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
                     * gaussian.direction.normalize()
                     * cooling.wavenumber();
                 force.force = force.force + new_force;
-                /*println!(
-                    "the actual scattering rate is: {}",
-                    scattered.contents[index.index].scattered
-                );*/
             }
         }
     }
 }
 
-/// A resource that indicates that the simulation should apply random forces to simulate fluctuations in the number of scattered photons.
+/// A resource that indicates that the simulation should apply random forces
+/// to simulate the random walk fluctuations due to spontaneous
+/// emission.
 pub struct ApplyEmissionForceOption;
 
 pub struct ApplyEmissionForceSystem;

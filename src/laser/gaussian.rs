@@ -8,7 +8,13 @@ use crate::atom::Position;
 use crate::maths;
 use serde::{Deserialize, Serialize};
 
-/// A component representing a beam with a gaussian intensity profile.
+/// A component representing an intensity distribution with a gaussian profile.
+///
+/// The beam will propagate in vacuum. Inhomogenous media, gravitational lensing, refractions and
+/// reflections (other than through a `CircularMask` are not implemented.
+///
+/// Also, attenuation effects are not yet implemented but they might come in a version
+/// that accounts for atom-atom intereactions in the future.
 #[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct GaussianBeam {
 	/// A point that the laser beam intersects
@@ -29,17 +35,17 @@ impl Component for GaussianBeam {
 
 /// A component that covers the central portion of a laser beam.
 ///
-/// The mask is assumed to be Coaxial to the GaussianBeam.
+/// The mask is assumed to be coaxial to the GaussianBeam.
 #[derive(Clone, Copy)]
 pub struct CircularMask {
-	/// Radius of the masked region.
+	/// Radius of the masked region in units of m.
 	pub radius: f64,
 }
 impl Component for CircularMask {
 	type Storage = HashMapStorage<Self>;
 }
 
-/// Gets the intensity of a gaussian laser beam at the specified position.
+/// Returns the intensity of a gaussian laser beam at the specified position.
 pub fn get_gaussian_beam_intensity(
 	beam: &GaussianBeam,
 	pos: &Position,

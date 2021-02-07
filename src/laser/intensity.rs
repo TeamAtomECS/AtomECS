@@ -11,22 +11,23 @@ use specs::{Component, Entities, Join, ReadStorage, System, VecStorage, WriteSto
 
 const LASER_CACHE_SIZE: usize = 16;
 
-/// Represents the Laser intensity at the position of the atom with respect to a certain laser beam
+/// Represents the laser intensity at the position of the atom with respect to a certain laser beam
 #[derive(Clone)]
 pub struct LaserIntensitySampler {
+    /// Intensity in SI units of W/m^2
     pub intensity: f64,
 }
 
 impl Default for LaserIntensitySampler {
     fn default() -> Self {
         LaserIntensitySampler {
-            /// intensity in W/m^2.
+            /// Intensity in SI units of W/m^2
             intensity: f64::NAN,
         }
     }
 }
 
-/// Component that holds a list of laser intensity samplers
+/// Component that holds a list of `LaserIntensitySamplers`
 pub struct LaserIntensitySamplers {
     /// List of laser samplers
     pub contents: Vec<LaserIntensitySampler>,
@@ -35,9 +36,9 @@ impl Component for LaserIntensitySamplers {
     type Storage = VecStorage<Self>;
 }
 
-/// This system initialises all LaserIntensitySamplers to a NAN value.
+/// This system initialises all `LaserIntensitySamplers` to a NAN value.
 ///
-/// It also ensures that the size of the LaserIntensitySamplers components match the number of CoolingLight entities in the world.
+/// It also ensures that the size of the `LaserIntensitySamplers` components match the number of CoolingLight entities in the world.
 pub struct InitialiseLaserIntensitySamplersSystem;
 impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
     type SystemData = (
@@ -57,7 +58,12 @@ impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
     }
 }
 
-/// System that calculates that samples the intensity of Beam entities, for example `GaussianBeam` entities.
+/// System that calculates the intensity of CoolingLight entities, for example those with `GaussianBeam` components.
+///
+/// So far, the only intensity distribution implemented as a component for the use
+/// along with `CoolingLight` is `GaussianBeam`.
+/// However, in the future, other components will be implemented and this System can then be expanded
+/// to handle them as well.
 pub struct SampleLaserIntensitySystem;
 impl<'a> System<'a> for SampleLaserIntensitySystem {
     type SystemData = (

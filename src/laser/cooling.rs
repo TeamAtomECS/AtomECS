@@ -7,10 +7,22 @@ use specs::{
 
 use crate::constant;
 
-/// A component representing light used for laser cooling.
+/// A component representing light properties used for laser cooling.
+///
+/// Currently only holds the information about polarization and wavelength
+/// and works as a marker for all laser cooling processes. This will be
+/// split into different components in a future version.
 #[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct CoolingLight {
 	/// Polarisation of the laser light, 1 for +, -1 for -,
+	///
+	/// Note that the polarization is defined by the quantization vector (e.g. magnetic field)
+	/// and not (always) in direction of the wavevector. Look at the given examples of 3D-MOT
+	/// simulations to see a working example if unsure.
+	///
+	/// Currently this is an integer value since every partial polarization can be expressed
+	/// as a superposition of fully polarized beams. It  is possible that this will be
+	/// changed to a non-integer value in the future.
 	pub polarization: i32,
 
 	/// wavelength of the laser light, in SI units of m.
@@ -27,13 +39,11 @@ impl CoolingLight {
 		2.0 * constant::PI / self.wavelength
 	}
 
-	/// Creates a `CoolingLight` component with the specified detuning from the desired atomic species.
+	/// Creates a `CoolingLight` component from the desired atomic species.
 	///
 	/// # Arguments
 	///
-	/// `species`: The atomic species to detune from.
-	///
-	/// `detuning`: Detuning from the transition, specified in MHz. Red-detuned is negative.
+	/// `species`: The atomic species to take the base wavelength from.
 	///
 	/// `polarization`: Polarization of the cooling beam.
 	pub fn for_species(species: AtomicTransition, detuning: f64, polarization: i32) -> Self {

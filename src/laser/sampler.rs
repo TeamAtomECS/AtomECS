@@ -10,37 +10,42 @@ extern crate nalgebra;
 
 const LASER_CACHE_SIZE: usize = 16;
 
-/// Represents total detuning of the atom with respect to each beam
+/// Represents total detuning of the atom's transition with respect to each beam
 #[derive(Clone)]
 pub struct LaserDetuningSampler {
+    /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of Hz
     pub detuning_sigma_plus: f64,
+    /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of Hz
     pub detuning_sigma_minus: f64,
+    /// Laser detuning of the pi transition with respect to laser beam, in SI units of Hz
     pub detuning_pi: f64,
 }
 
 impl Default for LaserDetuningSampler {
     fn default() -> Self {
         LaserDetuningSampler {
-            /// Laser detuning of all transitions with respect to laser beam, in SI units of Hz.
+            /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of Hz
             detuning_sigma_plus: f64::NAN,
+            /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of Hz
             detuning_sigma_minus: f64::NAN,
+            /// Laser detuning of the pi transition with respect to laser beam, in SI units of Hz
             detuning_pi: f64::NAN,
         }
     }
 }
 
-/// Component that holds a list of laser detuning samplers
+/// Component that holds a vector of `LaserDetuningSampler`
 pub struct LaserDetuningSamplers {
-    /// List of laser samplers
+    /// List of `LaserDetuningSampler`s
     pub contents: Vec<LaserDetuningSampler>,
 }
 impl Component for LaserDetuningSamplers {
     type Storage = VecStorage<Self>;
 }
 
-/// This system initialises all LaserDetuningSamplers to a NAN value.
+/// This system initialises all `LaserDetuningSamplers` to a NAN value.
 ///
-/// It also ensures that the size of the LaserDetuningSamplers components match the number of CoolingLight entities in the world.
+/// It also ensures that the size of the `LaserDetuningSamplers` components match the number of CoolingLight entities in the world.
 pub struct InitialiseLaserDetuningSamplersSystem;
 impl<'a> System<'a> for InitialiseLaserDetuningSamplersSystem {
     type SystemData = (
@@ -60,7 +65,8 @@ impl<'a> System<'a> for InitialiseLaserDetuningSamplersSystem {
     }
 }
 
-/// This system calculates the total Laser Detuning for each atom in each cooling beam.
+/// This system calculates the total Laser Detuning for each atom with respect to
+/// each CoolingLight entities.
 pub struct CalculateLaserDetuningSystem;
 impl<'a> System<'a> for CalculateLaserDetuningSystem {
     type SystemData = (

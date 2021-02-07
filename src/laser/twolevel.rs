@@ -9,14 +9,18 @@ use crate::constant::PI;
 
 /// Represents the steady-state population density of the excited state and ground state
 pub struct TwoLevelPopulation {
+    /// steady-state population density of the ground state, a number in [0,1]
     pub ground: f64,
+    /// steady-state population density of the excited state, a number in [0,1]
     pub excited: f64,
 }
 
 impl Default for TwoLevelPopulation {
     fn default() -> Self {
         TwoLevelPopulation {
+            /// steady-state population density of the ground state, a number in [0,1]
             ground: f64::NAN,
+            /// steady-state population density of the excited state, a number in [0,1]
             excited: f64::NAN,
         }
     }
@@ -37,7 +41,7 @@ impl Component for TwoLevelPopulation {
     type Storage = VecStorage<Self>;
 }
 
-/// Calculates the TwoLevelPopulation from the natural linewidth and the rate coefficients
+/// Calculates the TwoLevelPopulation from the natural linewidth and the `RateCoefficients`
 pub struct CalculateTwoLevelPopulationSystem;
 impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
     type SystemData = (
@@ -62,7 +66,6 @@ impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
             for count in 0..rates.contents.len() {
                 sum_rates = sum_rates + rates.contents[count].rate;
             }
-            // corresponds to equation 4 of paper draft
             twolevel.excited = sum_rates / (atominfo.linewidth * 2. * PI + 2. * sum_rates);
 
             // not currently used

@@ -4,12 +4,14 @@ use crate::laser::photons_scattered::TotalPhotonsScattered;
 use rand::Rng;
 use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
+/// Marks an atom as being in a dark state
 pub struct Dark;
 
 impl Component for Dark {
     type Storage = VecStorage<Self>;
 }
 
+/// Enables the possiblity to loose atoms into dark states
 pub struct RepumpLoss {
     /// Chance in the range [0,1] that an atom is depumped after scattering a photon.
     pub depump_chance: f64,
@@ -23,6 +25,8 @@ impl RepumpLoss {
     }
 }
 
+/// Checks if an atom transitions into a dark state during the current
+/// simulation step if a `RepumpLoss` component has been initialized.
 pub struct RepumpSystem;
 
 impl<'a> System<'a> for RepumpSystem {

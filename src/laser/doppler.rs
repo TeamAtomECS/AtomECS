@@ -9,22 +9,25 @@ use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 const LASER_CACHE_SIZE: usize = 16;
 
-/// Represents the Dopplershift of the atom with respect to each beam due to the atom veloocity
+/// Represents the Dopplershift of the atom with respect to each beam due to the atom velocity
 #[derive(Clone)]
 pub struct DopplerShiftSampler {
+    /// detuning value in rad/s
     pub doppler_shift: f64,
 }
 
 impl Default for DopplerShiftSampler {
     fn default() -> Self {
         DopplerShiftSampler {
-            /// Doppler shift with respect to laser beam, in SI units of Hz.
+            /// Doppler shift with respect to laser beam, in SI units of rad/s.
             doppler_shift: f64::NAN,
         }
     }
 }
 
 /// This system calculates the Doppler shift for each atom in each cooling beam.
+///
+/// The result is stored in `DopplerShiftSamplers`
 pub struct CalculateDopplerShiftSystem;
 impl<'a> System<'a> for CalculateDopplerShiftSystem {
     type SystemData = (
@@ -70,18 +73,21 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
     }
 }
 
-/// Component that holds a list of doppler shift samplers
+/// Component that holds a list of `DopplerShiftSampler`s
+///
+/// Each list entry corresponds to the detuning with respect to a CoolingLight entity
+/// and is indext via `CoolingLightIndex`
 pub struct DopplerShiftSamplers {
-    /// List of laser samplers
+    /// List of all `DopplerShiftSampler`s
     pub contents: Vec<DopplerShiftSampler>,
 }
 impl Component for DopplerShiftSamplers {
     type Storage = VecStorage<Self>;
 }
 
-/// This system initialises all DopplerShiftSamplers to a NAN value.
+/// This system initialises all `DopplerShiftSamplers` to a NAN value.
 ///
-/// It also ensures that the size of the DopplerShiftSamplers components match the number of CoolingLight entities in the world.
+/// It also ensures that the size of the `DopplerShiftSamplers` components match the number of CoolingLight entities in the world.
 pub struct InitialiseDopplerShiftSamplersSystem;
 impl<'a> System<'a> for InitialiseDopplerShiftSamplersSystem {
     type SystemData = (

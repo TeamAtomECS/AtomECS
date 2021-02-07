@@ -17,14 +17,23 @@ use std::fmt;
 
 use crate::constant::PI;
 
+/// Holds the total number of photons that the atom is expected to scatter
+/// in the current simulation step from all beams.
+///
+/// This is an early estimation used to determine the more precise `ExpectedPhotonsScattered`
+/// afterwards.
 #[derive(Clone)]
 pub struct TotalPhotonsScattered {
+    /// Number of photons scattered from all beams
     pub total: f64,
 }
 
 impl Default for TotalPhotonsScattered {
     fn default() -> Self {
-        TotalPhotonsScattered { total: f64::NAN }
+        TotalPhotonsScattered {
+            /// Number of photons scattered from all beams
+            total: f64::NAN,
+        }
     }
 }
 
@@ -32,7 +41,9 @@ impl Component for TotalPhotonsScattered {
     type Storage = VecStorage<Self>;
 }
 
-/// Calcutates the total numer of Photons scattered in one iteration step
+/// Calcutates the total number of photons scattered in one iteration step
+///
+/// This can be calculated by: Timestep * TwolevelPopulation * Linewidth
 pub struct CalculateMeanTotalPhotonsScatteredSystem;
 impl<'a> System<'a> for CalculateMeanTotalPhotonsScatteredSystem {
     type SystemData = (
@@ -53,6 +64,7 @@ impl<'a> System<'a> for CalculateMeanTotalPhotonsScatteredSystem {
         )
             .join()
         {
+            // DEFINITELY CHECK the 2pi!!!
             total.total = timestep.delta * (2. * PI * atominfo.linewidth) * twolevel.excited;
         }
     }
@@ -61,18 +73,20 @@ impl<'a> System<'a> for CalculateMeanTotalPhotonsScatteredSystem {
 /// The number of photons scattered by the atom from a single, specific beam
 #[derive(Clone)]
 pub struct ExpectedPhotonsScattered {
+    ///photons scattered by the atom from a specific beam
     scattered: f64,
 }
 
 impl Default for ExpectedPhotonsScattered {
     fn default() -> Self {
         ExpectedPhotonsScattered {
+            ///photons scattered by the atom from a specific beam
             scattered: f64::NAN,
         }
     }
 }
 
-/// The List that holds a ExpectedPhotonsScattered for each laser
+/// The List that holds an `ExpectedPhotonsScattered` for each laser
 pub struct ExpectedPhotonsScatteredVector {
     pub contents: Vec<ExpectedPhotonsScattered>,
 }
@@ -81,9 +95,9 @@ impl Component for ExpectedPhotonsScatteredVector {
     type Storage = VecStorage<Self>;
 }
 
-/// This system initialises all ExpectedPhotonsScatteredVector to a NAN value.
+/// This system initialises all ´ExpectedPhotonsScatteredVector´ to a NAN value.
 ///
-/// It also ensures that the size of the ExpectedPhotonsScatteredVector components match the number of CoolingLight entities in the world.
+/// It also ensures that the size of the ´ExpectedPhotonsScatteredVector´ components match the number of CoolingLight entities in the world.
 pub struct InitialiseExpectedPhotonsScatteredVectorSystem;
 impl<'a> System<'a> for InitialiseExpectedPhotonsScatteredVectorSystem {
     type SystemData = (
@@ -104,6 +118,9 @@ impl<'a> System<'a> for InitialiseExpectedPhotonsScatteredVectorSystem {
 }
 
 /// Calcutates the expected mean number of Photons scattered by each laser in one iteration step
+///
+/// It is required that the `TotalPhotonsScattered` is already updated since this System divides
+/// them between the CoolingLight entities.
 pub struct CalculateExpectedPhotonsScatteredSystem;
 impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
     type SystemData = (
@@ -138,18 +155,30 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
 }
 
 /// The number of photons actually scattered by the atom from a single, specific beam
+///
+/// If `EnableScatteringFluctuations` is not activated, this will be the same as
+/// `ExpectedPhotonsScattered`.
+///
+/// If `EnableScatteringFluctuations` is activated, this number represents the outcome
+/// of a sampling process from a poisson distribution where the lambda parameter is
+/// `ExpectedPhotonsScattered`. This adds an additional degree of randomness to
+/// the simulation that helps to recreate the recoil limit.  
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ActualPhotonsScattered {
+    ///  number of photons actually scattered by the atom from a specific beam
     pub scattered: f64,
 }
 
 impl Default for ActualPhotonsScattered {
     fn default() -> Self {
-        ActualPhotonsScattered { scattered: 0.0 }
+        ActualPhotonsScattered {
+            ///  number of photons actually scattered by the atom from a specific beam
+            scattered: 0.0,
+        }
     }
 }
 
-/// The List that holds a ExpectedPhotonsScattered for each laser
+/// The ist that holds an `ActualPhotonsScattered` for each CoolingLight entity
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ActualPhotonsScatteredVector {
     pub contents: Vec<ActualPhotonsScattered>,
@@ -181,9 +210,9 @@ impl Component for ActualPhotonsScatteredVector {
     type Storage = VecStorage<Self>;
 }
 
-/// This system initialises all ActualPhotonsScatteredVector to a NAN value.
+/// This system initialises all `ActualPhotonsScatteredVector` to a NAN value.
 ///
-/// It also ensures that the size of the ActualPhotonsScatteredVector components match the number of CoolingLight entities in the world.
+/// It also ensures that the size of the `ActualPhotonsScatteredVector` components match the number of CoolingLight entities in the world.
 pub struct InitialiseActualPhotonsScatteredVectorSystem;
 impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
     type SystemData = (
@@ -203,11 +232,14 @@ impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
     }
 }
 
-// If this is added as a ressource, the number of actual photons will be drawn from a poisson distribution
+/// If this is added as a ressource, the number of actual photons will be drawn from a poisson distribution.
+///
+/// Otherwise, the entries of `ActualPhotonsScatteredVector` will be identical with those of
+/// `ExpectedPhotonsScatteredVector`.
 pub struct EnableScatteringFluctuations;
 
-/// Calcutates the actual number of Photons scattered by each laser in one iteration step
-/// by drawing from a Poisson Distribution
+/// Calcutates the actual number of photons scattered by each CoolingLight entity in one iteration step
+/// by drawing from a Poisson Distribution that has `ExpectedPhotonsScattered` as the lambda parameter.
 pub struct CalculateActualPhotonsScatteredSystem;
 impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
     type SystemData = (
