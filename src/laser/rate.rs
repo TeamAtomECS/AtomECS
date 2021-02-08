@@ -1,3 +1,5 @@
+//! Calculation of RateCoefficients for the rate equation approach
+
 extern crate rayon;
 extern crate specs;
 

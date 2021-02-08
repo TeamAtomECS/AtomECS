@@ -1,3 +1,5 @@
+//! Handling of dark states and repumping
+
 extern crate rand;
 extern crate specs;
 use crate::laser::photons_scattered::TotalPhotonsScattered;

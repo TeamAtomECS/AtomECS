@@ -1,3 +1,5 @@
+//! Calculation of the steady-state twolevel populations
+
 extern crate rayon;
 extern crate specs;
 

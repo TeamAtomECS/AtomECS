@@ -1,4 +1,7 @@
-// !This file exists because - in the spirit of keeping things general - I thought that the intensity sampler should not be in
+//! Calculation of the intensity of CoolingLight entities at a specific position
+//!
+
+// This file exists because - in the spirit of keeping things general - I thought that the intensity sampler should not be in
 // gaussian.rs since other beam profiles (although they're less common) should not be excluded.
 
 extern crate rayon;

@@ -1,3 +1,5 @@
+//! Components for the CoolingLight entities and their initilization
+
 extern crate specs;
 use crate::atom::AtomicTransition;
 use serde::{Deserialize, Serialize};

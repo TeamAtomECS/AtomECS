@@ -1,3 +1,5 @@
+//! Gaussian beam intensity distribution
+
 extern crate nalgebra;
 extern crate rayon;
 extern crate specs;

@@ -1,3 +1,5 @@
+//! Calculation of the forces exerted on the atom by the CoolingLight entities
+
 extern crate rayon;
 extern crate specs;
 use crate::atom::AtomicTransition;
@@ -67,6 +69,13 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
 /// emission.
 pub struct ApplyEmissionForceOption;
 
+/// Calculates the force vector due to the spontaneous emissions in this
+/// simulation step.
+///
+/// Only runs if `ApplyEmissionForceOption` is initialized.
+///
+/// Uses an internal threshold of 5 to decide if the random vektor is iteratively
+/// produced or derived by random-walk formula and a single random unit vector.
 pub struct ApplyEmissionForceSystem;
 
 impl<'a> System<'a> for ApplyEmissionForceSystem {

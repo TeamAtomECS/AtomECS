@@ -1,3 +1,5 @@
+//! Calculation of the total detuning for specific atoms and CoolingLight entities
+
 extern crate specs;
 use crate::atom::AtomicTransition;
 use crate::constant;

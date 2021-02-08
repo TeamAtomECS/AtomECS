@@ -1,3 +1,5 @@
+//! Calculation of scattering events of photons with atoms
+
 extern crate rayon;
 extern crate specs;
 
