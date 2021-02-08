@@ -1,3 +1,5 @@
+//! Creation of atoms in a controlled manner and realease into the simulation
+
 pub mod central_creator;
 pub mod emit;
 pub mod gaussian;
