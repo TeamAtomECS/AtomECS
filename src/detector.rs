@@ -1,3 +1,5 @@
+//! Detection of particles in regions
+
 use crate::atom::{Atom, InitialVelocity, Position, Velocity};
 use crate::integrator::{Step, Timestep};
 extern crate specs;
@@ -22,7 +24,7 @@ impl Component for ClearerCSV {
     type Storage = HashMapStorage<Self>;
 }
 
-/// system that clear the csv.file, by default detector.csv
+/// system that clears the csv.file, by default detector.csv
 pub struct ClearCSVSystem;
 
 impl<'a> System<'a> for ClearCSVSystem {

@@ -1,3 +1,5 @@
+//! Mathematical utilities
+
 use crate::constant::EXP;
 use crate::constant::PI;
 extern crate rand;

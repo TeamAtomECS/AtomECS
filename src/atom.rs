@@ -12,11 +12,13 @@ use std::fmt;
 /// SI units (metres)
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Position {
+	/// position in 3D in units of m
 	pub pos: Vector3<f64>,
 }
 impl Position {
 	pub fn new() -> Self {
 		Position {
+			/// position in 3D in units of m
 			pos: Vector3::new(0.0, 0.0, 0.0),
 		}
 	}
@@ -41,6 +43,7 @@ impl BinaryConversion for Position {
 /// SI units (metres/second)
 #[derive(Clone)]
 pub struct Velocity {
+	/// velocity vector in 3D in units of m/s
 	pub vel: Vector3<f64>,
 }
 impl fmt::Display for Velocity {
@@ -62,6 +65,7 @@ impl Component for Velocity {
 ///
 /// See [Velocity](struct.Velocity.html).
 pub struct InitialVelocity {
+	/// velocity vector in 3D in units of m/s
 	pub vel: Vector3<f64>,
 }
 impl Component for InitialVelocity {
@@ -72,6 +76,7 @@ impl Component for InitialVelocity {
 ///
 /// SI units (Newtons)
 pub struct Force {
+	/// force vector in 3D in units of N
 	pub force: Vector3<f64>,
 }
 impl Component for Force {
@@ -90,6 +95,7 @@ impl Force {
 /// Mass is specified in atom mass units (amu).
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Mass {
+	/// mass value in atom mass units
 	pub value: f64,
 }
 
@@ -171,6 +177,7 @@ impl AtomicTransition {
 		}
 	}
 
+	/// Creates an `AtomicTransition` component populated with parameters for Erbium.
 	pub fn erbiurm() -> Self {
 		AtomicTransition {
 			mup: BOHRMAG,
@@ -181,7 +188,7 @@ impl AtomicTransition {
 			saturation_intensity: 0.13,
 		}
 	}
-
+	/// Creates an `AtomicTransition` component populated with parameters for Erbium 401 .
 	pub fn erbium_401() -> Self {
 		AtomicTransition {
 			mup: 1.1372 * BOHRMAG,
