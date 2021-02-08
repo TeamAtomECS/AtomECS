@@ -1,3 +1,5 @@
+//! Magnetic quadrupole fields
+
 extern crate nalgebra;
 extern crate specs;
 use crate::atom::Position;

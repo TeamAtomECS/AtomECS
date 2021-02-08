@@ -1,3 +1,5 @@
+//! Shift in an atom's transition frequency due to a magnetic field (zeeman effect)
+
 use specs::{
     Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage, WriteStorage,
 };
@@ -10,19 +12,22 @@ use crate::initiate::NewlyCreated;
 /// Represents the (angular) Zeemanshift of the atom depending on the magnetic field it experiences
 #[derive(Clone)]
 pub struct ZeemanShiftSampler {
-    pub sigma_plus: f64, // in 1/s (angular detuning)
-
+    /// Zeemanshift for sigma plus transition in rad/s
+    pub sigma_plus: f64,
+    /// Zeemanshift for sigma minus transition in rad/s
     pub sigma_minus: f64,
-
+    /// Zeemanshift for pi transition in rad/s
     pub sigma_pi: f64,
 }
 
 impl Default for ZeemanShiftSampler {
     fn default() -> Self {
         ZeemanShiftSampler {
-            /// Zeeman shifts with respect to laser beam, in SI units of 1/s (angular).
+            /// Zeemanshift for sigma plus transition in rad/s
             sigma_plus: f64::NAN,
+            /// Zeemanshift for sigma minus transition in rad/s
             sigma_minus: f64::NAN,
+            /// Zeemanshift for pi transition in rad/s
             sigma_pi: f64::NAN,
         }
     }
@@ -49,9 +54,7 @@ impl<'a> System<'a> for AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem {
     }
 }
 
-/// This system calculates the Zeeman shift for each atom in each cooling beam.
-///
-///
+/// Calculates the Zeeman shift for each atom in each cooling beam.
 pub struct CalculateZeemanShiftSystem;
 impl<'a> System<'a> for CalculateZeemanShiftSystem {
     type SystemData = (

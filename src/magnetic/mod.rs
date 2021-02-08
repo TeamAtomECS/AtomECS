@@ -1,3 +1,5 @@
+//! Magnetic fields and zeeman shift
+
 extern crate nalgebra;
 extern crate specs;
 use crate::initiate::NewlyCreated;
