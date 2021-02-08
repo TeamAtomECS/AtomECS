@@ -9,6 +9,7 @@ use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::force::ApplyEmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
+use lib::laser::photons_scattered::EnableScatteringFluctuations;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
@@ -138,9 +139,9 @@ fn main() {
 
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-6 });
-    world.add_resource(ApplyEmissionForceOption {});
 
-    let normal = Normal::new(0.0, 0.2);
+    let vel_dist = Normal::new(0.0, 0.22);
+    let pos_dist = Normal::new(0.0, 1.2e-4);
     let mut rng = rand::thread_rng();
 
     // Add atoms
@@ -148,13 +149,17 @@ fn main() {
         world
             .create_entity()
             .with(Position {
-                pos: Vector3::new(0.0, 0.0, 0.0),
+                pos: Vector3::new(
+                    pos_dist.sample(&mut rng),
+                    pos_dist.sample(&mut rng),
+                    pos_dist.sample(&mut rng),
+                ),
             })
             .with(Velocity {
                 vel: Vector3::new(
-                    normal.sample(&mut rng),
-                    normal.sample(&mut rng),
-                    normal.sample(&mut rng),
+                    vel_dist.sample(&mut rng),
+                    vel_dist.sample(&mut rng),
+                    vel_dist.sample(&mut rng),
                 ),
             })
             .with(Force::new())
@@ -165,8 +170,14 @@ fn main() {
             .build();
     }
 
+    // Enable fluctuation options
+    //  * Allow photon numbers to fluctuate.
+    //  * Allow random force from emission of photons.
+    world.add_resource(ApplyEmissionForceOption {});
+    world.add_resource(EnableScatteringFluctuations {});
+
     // Run the simulation for a number of steps.
-    for _i in 0..1000 {
+    for _i in 0..5000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
