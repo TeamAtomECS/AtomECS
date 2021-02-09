@@ -48,10 +48,15 @@ impl<'a> System<'a> for EulerIntegrationSystem {
 	);
 
 	fn run(&mut self, (mut pos, mut vel, t, mut step, force, mass): Self::SystemData) {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
 		step.n = step.n + 1;
-		for (mut vel, mut pos, force, mass) in (&mut vel, &mut pos, &force, &mass).join() {
-			euler_update(&mut vel, &mut pos, &force, &mass, t.delta);
-		}
+		(&mut vel, &mut pos, &force, &mass).par_join().for_each(
+			|(mut vel, mut pos, force, mass)| {
+				euler_update(&mut vel, &mut pos, &force, &mass, t.delta);
+			},
+		);
 	}
 }
 

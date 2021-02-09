@@ -33,7 +33,7 @@ impl Default for LaserIntensitySampler {
 /// Component that holds a list of `LaserIntensitySamplers`
 pub struct LaserIntensitySamplers {
     /// List of laser samplers
-    pub contents: Vec<LaserIntensitySampler>,
+    pub contents: [LaserIntensitySampler; crate::laser::COOLING_BEAM_LIMIT],
 }
 impl Component for LaserIntensitySamplers {
     type Storage = VecStorage<Self>;
@@ -53,13 +53,8 @@ impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
         use rayon::prelude::*;
         use specs::ParJoin;
 
-        let mut content = Vec::new();
-        for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(LaserIntensitySampler::default());
-        }
-
         (&mut samplers).par_join().for_each(|mut sampler| {
-            sampler.contents = content.to_vec();
+            sampler.contents = [LaserIntensitySampler::default(); crate::laser::COOLING_BEAM_LIMIT];
         });
     }
 }
@@ -118,7 +113,6 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
                         let (index, gaussian, mask) = laser_array[i];
                         samplers.contents[index.index].intensity =
                             get_gaussian_beam_intensity(&gaussian, &pos, mask.as_ref());
-                        //println!("position: {} ", &pos.pos,);
                     }
                 });
         }

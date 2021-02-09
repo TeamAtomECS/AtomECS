@@ -14,7 +14,7 @@ use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 use crate::constant::PI;
 
 /// Represents the rate coefficient of the atom with respect to a specific CoolingLight entity
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct RateCoefficient {
     /// rate coefficient in Hz
     pub rate: f64,
@@ -32,7 +32,7 @@ impl Default for RateCoefficient {
 /// Component that holds a Vector of `RateCoefficient`
 pub struct RateCoefficients {
     /// Vector of `RateCoefficient` where each entry corresponds to a different CoolingLight entity
-    pub contents: Vec<RateCoefficient>,
+    pub contents: [RateCoefficient; crate::laser::COOLING_BEAM_LIMIT],
 }
 impl Component for RateCoefficients {
     type Storage = VecStorage<Self>;
@@ -49,14 +49,15 @@ impl<'a> System<'a> for InitialiseRateCoefficientsSystem {
         WriteStorage<'a, RateCoefficients>,
     );
     fn run(&mut self, (cooling, cooling_index, mut rate_coefficients): Self::SystemData) {
-        let mut content = Vec::new();
-        for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(RateCoefficient::default());
-        }
+        use rayon::prelude::*;
+        use specs::ParJoin;
 
-        for mut rate_coefficient in (&mut rate_coefficients).join() {
-            rate_coefficient.contents = content.clone();
-        }
+        (&mut rate_coefficients)
+            .par_join()
+            .for_each(|mut rate_coefficient| {
+                rate_coefficient.contents =
+                    [RateCoefficient::default(); crate::laser::COOLING_BEAM_LIMIT];
+            });
     }
 }
 

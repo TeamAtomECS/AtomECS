@@ -59,21 +59,24 @@ impl<'a> System<'a> for CalculateMeanTotalPhotonsScatteredSystem {
         &mut self,
         (timestep, atomic_transition, twolevel_population, mut total_photons_scattered): Self::SystemData,
     ) {
-        for (atominfo, twolevel, total) in (
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
+        (
             &atomic_transition,
             &twolevel_population,
             &mut total_photons_scattered,
         )
-            .join()
-        {
-            // DEFINITELY CHECK the 2pi!!!
-            total.total = timestep.delta * (2. * PI * atominfo.linewidth) * twolevel.excited;
-        }
+            .par_join()
+            .for_each(|(atominfo, twolevel, total)| {
+                // DEFINITELY CHECK the 2pi!!!
+                total.total = timestep.delta * (2. * PI * atominfo.linewidth) * twolevel.excited;
+            });
     }
 }
 
 /// The number of photons scattered by the atom from a single, specific beam
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct ExpectedPhotonsScattered {
     ///photons scattered by the atom from a specific beam
     scattered: f64,
@@ -90,7 +93,7 @@ impl Default for ExpectedPhotonsScattered {
 
 /// The List that holds an `ExpectedPhotonsScattered` for each laser
 pub struct ExpectedPhotonsScatteredVector {
-    pub contents: Vec<ExpectedPhotonsScattered>,
+    pub contents: [ExpectedPhotonsScattered; crate::laser::COOLING_BEAM_LIMIT],
 }
 
 impl Component for ExpectedPhotonsScatteredVector {
@@ -111,13 +114,9 @@ impl<'a> System<'a> for InitialiseExpectedPhotonsScatteredVectorSystem {
         use rayon::prelude::*;
         use specs::ParJoin;
 
-        let mut content = Vec::new();
-        for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(ExpectedPhotonsScattered::default());
-        }
-
         (&mut expected_photons).par_join().for_each(|mut expected| {
-            expected.contents = content.to_vec();
+            expected.contents =
+                [ExpectedPhotonsScattered::default(); crate::laser::COOLING_BEAM_LIMIT];
         });
     }
 }
@@ -171,7 +170,7 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
 /// of a sampling process from a poisson distribution where the lambda parameter is
 /// `ExpectedPhotonsScattered`. This adds an additional degree of randomness to
 /// the simulation that helps to recreate the recoil limit.  
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct ActualPhotonsScattered {
     ///  number of photons actually scattered by the atom from a specific beam
     pub scattered: f64,
@@ -189,7 +188,7 @@ impl Default for ActualPhotonsScattered {
 /// The ist that holds an `ActualPhotonsScattered` for each CoolingLight entity
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ActualPhotonsScatteredVector {
-    pub contents: Vec<ActualPhotonsScattered>,
+    pub contents: [ActualPhotonsScattered; crate::laser::COOLING_BEAM_LIMIT],
 }
 
 impl ActualPhotonsScatteredVector {
@@ -232,13 +231,8 @@ impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
         use rayon::prelude::*;
         use specs::ParJoin;
 
-        let mut content = Vec::new();
-        for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(ActualPhotonsScattered::default());
-        }
-
         (&mut actual_photons).par_join().for_each(|mut actual| {
-            actual.contents = content.to_vec();
+            actual.contents = [ActualPhotonsScattered::default(); crate::laser::COOLING_BEAM_LIMIT];
         });
     }
 }
@@ -281,7 +275,11 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
                     .par_join()
                     .for_each(|(expected, actual)| {
                         for index in 0..expected.contents.len() {
-                            let poisson = Poisson::new(expected.contents[index].scattered);
+                            let lambda = expected.contents[index].scattered;
+                            if lambda <= 1.0e-5 || lambda.is_nan() {
+                                continue;
+                            }
+                            let poisson = Poisson::new(lambda);
                             let drawn_number = poisson.sample(&mut rand::thread_rng());
 
                             // I have no clue why it is necessary but it appears that for

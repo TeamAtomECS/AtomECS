@@ -15,6 +15,8 @@ extern crate specs;
 use crate::initiate::NewlyCreated;
 use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System, World};
 
+pub const COOLING_BEAM_LIMIT: usize = 16;
+
 /// Attaches components used for optical force calculation to newly created atoms.
 ///
 /// They are recognized as newly created if they are associated with
@@ -33,25 +35,25 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 			updater.insert(
 				ent,
 				doppler::DopplerShiftSamplers {
-					contents: Vec::new(),
+					contents: [doppler::DopplerShiftSampler::default(); COOLING_BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				intensity::LaserIntensitySamplers {
-					contents: Vec::new(),
+					contents: [intensity::LaserIntensitySampler::default(); COOLING_BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				sampler::LaserDetuningSamplers {
-					contents: Vec::new(),
+					contents: [sampler::LaserDetuningSampler::default(); COOLING_BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				rate::RateCoefficients {
-					contents: Vec::new(),
+					contents: [rate::RateCoefficient::default(); COOLING_BEAM_LIMIT],
 				},
 			);
 			updater.insert(ent, twolevel::TwoLevelPopulation::default());
@@ -59,13 +61,15 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 			updater.insert(
 				ent,
 				photons_scattered::ExpectedPhotonsScatteredVector {
-					contents: Vec::new(),
+					contents: [photons_scattered::ExpectedPhotonsScattered::default();
+						COOLING_BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				photons_scattered::ActualPhotonsScatteredVector {
-					contents: Vec::new(),
+					contents: [photons_scattered::ActualPhotonsScattered::default();
+						COOLING_BEAM_LIMIT],
 				},
 			);
 		}

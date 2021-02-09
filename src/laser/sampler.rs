@@ -13,7 +13,7 @@ extern crate nalgebra;
 const LASER_CACHE_SIZE: usize = 16;
 
 /// Represents total detuning of the atom's transition with respect to each beam
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct LaserDetuningSampler {
     /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of Hz
     pub detuning_sigma_plus: f64,
@@ -39,7 +39,7 @@ impl Default for LaserDetuningSampler {
 /// Component that holds a vector of `LaserDetuningSampler`
 pub struct LaserDetuningSamplers {
     /// List of `LaserDetuningSampler`s
-    pub contents: Vec<LaserDetuningSampler>,
+    pub contents: [LaserDetuningSampler; crate::laser::COOLING_BEAM_LIMIT],
 }
 impl Component for LaserDetuningSamplers {
     type Storage = VecStorage<Self>;
@@ -56,14 +56,12 @@ impl<'a> System<'a> for InitialiseLaserDetuningSamplersSystem {
         WriteStorage<'a, LaserDetuningSamplers>,
     );
     fn run(&mut self, (cooling, cooling_index, mut samplers): Self::SystemData) {
-        let mut content = Vec::new();
-        for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(LaserDetuningSampler::default());
-        }
+        use rayon::prelude::*;
+        use specs::ParJoin;
 
-        for mut sampler in (&mut samplers).join() {
-            sampler.contents = content.to_vec();
-        }
+        (&mut samplers).par_join().for_each(|mut sampler| {
+            sampler.contents = [LaserDetuningSampler::default(); crate::laser::COOLING_BEAM_LIMIT];
+        });
     }
 }
 

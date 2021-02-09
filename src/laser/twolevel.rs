@@ -56,22 +56,23 @@ impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
         &mut self,
         (atomic_transition, rate_coefficients, mut twolevel_population): Self::SystemData,
     ) {
-        for (atominfo, rates, twolevel) in (
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
+        (
             &atomic_transition,
             &rate_coefficients,
             &mut twolevel_population,
         )
-            .join()
-        {
-            let mut sum_rates: f64 = 0.;
+            .par_join()
+            .for_each(|(atominfo, rates, twolevel)| {
+                let mut sum_rates: f64 = 0.;
 
-            for count in 0..rates.contents.len() {
-                sum_rates = sum_rates + rates.contents[count].rate;
-            }
-            twolevel.excited = sum_rates / (atominfo.linewidth * 2. * PI + 2. * sum_rates);
-
-            // not currently used
-            twolevel.calculate_ground_state();
-        }
+                for count in 0..rates.contents.len() {
+                    sum_rates = sum_rates + rates.contents[count].rate;
+                }
+                twolevel.excited = sum_rates / (atominfo.linewidth * 2. * PI + 2. * sum_rates);
+                twolevel.calculate_ground_state();
+            });
     }
 }

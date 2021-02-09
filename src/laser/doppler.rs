@@ -10,7 +10,7 @@ use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 const LASER_CACHE_SIZE: usize = 16;
 
 /// Represents the Dopplershift of the atom with respect to each beam due to the atom velocity
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct DopplerShiftSampler {
     /// detuning value in rad/s
     pub doppler_shift: f64,
@@ -79,7 +79,7 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
 /// and is indext via `CoolingLightIndex`
 pub struct DopplerShiftSamplers {
     /// List of all `DopplerShiftSampler`s
-    pub contents: Vec<DopplerShiftSampler>,
+    pub contents: [DopplerShiftSampler; crate::laser::COOLING_BEAM_LIMIT],
 }
 impl Component for DopplerShiftSamplers {
     type Storage = VecStorage<Self>;
@@ -99,13 +99,8 @@ impl<'a> System<'a> for InitialiseDopplerShiftSamplersSystem {
         use rayon::prelude::*;
         use specs::ParJoin;
 
-        let mut content = Vec::new();
-        for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(DopplerShiftSampler::default());
-        }
-
         (&mut samplers).par_join().for_each(|mut sampler| {
-            sampler.contents = content.to_vec();
+            sampler.contents = [DopplerShiftSampler::default(); crate::laser::COOLING_BEAM_LIMIT];
         });
     }
 }
