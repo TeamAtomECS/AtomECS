@@ -28,7 +28,7 @@ pub fn get_minimum_distance_line_point(
 
 pub fn gaussian_dis(std: f64, distance: f64) -> f64 {
 	//checked
-	1.0 / (2.0 * PI * std.powf(2.0)) * EXP.powf(-distance.powf(2.0) / 2.0 / (std).powf(2.0))
+	1.0 / (2.0 * PI * std * std) * EXP.powf(-distance * distance / 2.0 / (std * std))
 }
 
 /// generate a uniform random direction

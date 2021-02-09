@@ -42,13 +42,13 @@ pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'sta
 	builder = builder.with(LargerEarlyTimestepOptimizationSystem, "opt", &[]);
 	builder = builder.with(ClearForceSystem, "clear", &[]);
 	builder = builder.with(DeflagNewAtomsSystem, "deflag", &[]);
-	builder.add_barrier();
+	//builder.add_barrier();
 	builder = magnetic::add_systems_to_dispatch(builder, &[]);
-	builder.add_barrier();
+	//builder.add_barrier();
 	builder = laser::add_systems_to_dispatch(builder, &[]);
-	builder.add_barrier();
+	//builder.add_barrier();
 	builder = atom_sources::add_systems_to_dispatch(builder, &[]);
-	builder.add_barrier();
+	//builder.add_barrier();
 	builder = builder.with(ApplyGravitationalForceSystem, "add_gravity", &["clear"]);
 	builder = builder.with(
 		EulerIntegrationSystem,

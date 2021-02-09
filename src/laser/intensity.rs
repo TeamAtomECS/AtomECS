@@ -15,7 +15,7 @@ use specs::{Component, Entities, Join, ReadStorage, System, VecStorage, WriteSto
 const LASER_CACHE_SIZE: usize = 16;
 
 /// Represents the laser intensity at the position of the atom with respect to a certain laser beam
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct LaserIntensitySampler {
     /// Intensity in SI units of W/m^2
     pub intensity: f64,
@@ -50,14 +50,17 @@ impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
         WriteStorage<'a, LaserIntensitySamplers>,
     );
     fn run(&mut self, (cooling, cooling_index, mut samplers): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         let mut content = Vec::new();
         for (_, _) in (&cooling, &cooling_index).join() {
             content.push(LaserIntensitySampler::default());
         }
 
-        for mut sampler in (&mut samplers).join() {
-            sampler.contents = content.clone();
-        }
+        (&mut samplers).par_join().for_each(|mut sampler| {
+            sampler.contents = content.to_vec();
+        });
     }
 }
 

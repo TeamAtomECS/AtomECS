@@ -1,6 +1,6 @@
 //! Common atom components and systems.
 
-use crate::constant::{BOHRMAG, C};
+use crate::constant::{BOHRMAG, C, HBAR, PI};
 use crate::output::file::BinaryConversion;
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
@@ -132,12 +132,21 @@ pub struct AtomicTransition {
 	pub linewidth: f64,
 	/// Saturation intensity, in units of W/m^2.
 	pub saturation_intensity: f64,
+	/// Precalculate prefactor used in the determination of rate coefficients.
+	pub rate_prefactor: f64,
 }
 
 impl Component for AtomicTransition {
 	type Storage = VecStorage<Self>;
 }
 impl AtomicTransition {
+	pub fn calculate(mut self) -> Self {
+		self.rate_prefactor =
+			3. / 4. * C * C / HBAR * (self.frequency).powf(-3.) * self.linewidth * self.linewidth
+				/ 2. / PI;
+		self
+	}
+
 	/// Creates an `AtomicTransition` component populated with parameters for Rubidium.
 	/// The parameters are taken from Daniel Steck's Data sheet on Rubidium-87.
 	pub fn rubidium() -> Self {
@@ -148,7 +157,9 @@ impl AtomicTransition {
 			frequency: C / 780.0e-9,
 			linewidth: 6.065e6,          // [Steck, Rubidium87]
 			saturation_intensity: 16.69, // [Steck, Rubidium 87, D2 cycling transition]
+			rate_prefactor: 0.0,         // set in calculate
 		}
+		.calculate()
 	}
 
 	/// Creates an `AtomicTransition` component populated with parameters for Strontium.
@@ -161,7 +172,9 @@ impl AtomicTransition {
 			frequency: 650_759_219_088_937.,
 			linewidth: 32e6,             // [Nosske2017]
 			saturation_intensity: 430.0, // [Nosske2017, 43mW/cm^2]
+			rate_prefactor: 0.0,         // set in calculate
 		}
+		.calculate()
 	}
 
 	/// Creates an `AtomicTransition` component populated with parameters for red Strontium transition.
@@ -174,7 +187,9 @@ impl AtomicTransition {
 			frequency: 434_829_121_311_000., // NIST, doi:10.1063/1.344917
 			linewidth: 7_400.,               // [Schreck2013]
 			saturation_intensity: 0.0295,    // [SChreck2013, 3 µW/cm^2]
+			rate_prefactor: 0.0,             // set in calculate
 		}
+		.calculate()
 	}
 
 	/// Creates an `AtomicTransition` component populated with parameters for Erbium.
@@ -186,7 +201,9 @@ impl AtomicTransition {
 			frequency: 5.142e14,
 			linewidth: 190e3,
 			saturation_intensity: 0.13,
+			rate_prefactor: 0.0, // set in calculate
 		}
+		.calculate()
 	}
 	/// Creates an `AtomicTransition` component populated with parameters for Erbium 401 .
 	pub fn erbium_401() -> Self {
@@ -197,7 +214,9 @@ impl AtomicTransition {
 			frequency: 7.476e14,
 			linewidth: 30e6,
 			saturation_intensity: 56.0,
+			rate_prefactor: 0.0, // set in calculate
 		}
+		.calculate()
 	}
 
 	pub fn gamma(&self) -> f64 {

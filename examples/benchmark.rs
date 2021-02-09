@@ -27,12 +27,13 @@ fn main() {
     ecs::register_resources(&mut world);
     let mut builder = ecs::create_simulation_dispatcher_builder();
 
-    // Configure simulation output.
-    builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 10),
-        "",
-        &[],
-    );
+    // Configure thread pool.
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(12)
+        .build()
+        .unwrap();
+
+    builder.add_pool(::std::sync::Arc::new(pool));
 
     let mut dispatcher = builder.build();
     dispatcher.setup(&mut world.res);
@@ -145,7 +146,7 @@ fn main() {
     let mut rng = rand::thread_rng();
 
     // Add atoms
-    for _ in 0..1000 {
+    for _ in 0..10000 {
         world
             .create_entity()
             .with(Position {

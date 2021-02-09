@@ -108,18 +108,21 @@ impl<'a> System<'a> for InitialiseExpectedPhotonsScatteredVectorSystem {
         WriteStorage<'a, ExpectedPhotonsScatteredVector>,
     );
     fn run(&mut self, (cooling, cooling_index, mut expected_photons): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         let mut content = Vec::new();
         for (_, _) in (&cooling, &cooling_index).join() {
             content.push(ExpectedPhotonsScattered::default());
         }
 
-        for mut expected in (&mut expected_photons).join() {
-            expected.contents = content.clone();
-        }
+        (&mut expected_photons).par_join().for_each(|mut expected| {
+            expected.contents = content.to_vec();
+        });
     }
 }
 
-/// Calcutates the expected mean number of Photons scattered by each laser in one iteration step
+/// Calculates the expected mean number of Photons scattered by each laser in one iteration step
 ///
 /// It is required that the `TotalPhotonsScattered` is already updated since this System divides
 /// them between the CoolingLight entities.
@@ -135,24 +138,27 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
         &mut self,
         (rate_coefficients, total_photons_scattered, mut expected_photons_vector): Self::SystemData,
     ) {
-        for (rates, total, expected) in (
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
+        (
             &rate_coefficients,
             &total_photons_scattered,
             &mut expected_photons_vector,
         )
-            .join()
-        {
-            let mut sum_rates: f64 = 0.;
+            .par_join()
+            .for_each(|(rates, total, expected)| {
+                let mut sum_rates: f64 = 0.;
 
-            for count in 0..rates.contents.len() {
-                sum_rates = sum_rates + rates.contents[count].rate;
-            }
+                for count in 0..rates.contents.len() {
+                    sum_rates = sum_rates + rates.contents[count].rate;
+                }
 
-            for index in 0..expected.contents.len() {
-                expected.contents[index].scattered =
-                    rates.contents[index].rate / sum_rates * total.total;
-            }
-        }
+                for index in 0..expected.contents.len() {
+                    expected.contents[index].scattered =
+                        rates.contents[index].rate / sum_rates * total.total;
+                }
+            });
     }
 }
 
@@ -223,14 +229,17 @@ impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
         WriteStorage<'a, ActualPhotonsScatteredVector>,
     );
     fn run(&mut self, (cooling, cooling_index, mut actual_photons): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         let mut content = Vec::new();
         for (_, _) in (&cooling, &cooling_index).join() {
             content.push(ActualPhotonsScattered::default());
         }
 
-        for mut actual in (&mut actual_photons).join() {
-            actual.contents = content.clone();
-        }
+        (&mut actual_photons).par_join().for_each(|mut actual| {
+            actual.contents = content.to_vec();
+        });
     }
 }
 
@@ -254,6 +263,9 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
         &mut self,
         (fluctuations_option, expected_photons_vector, mut actual_photons_vector): Self::SystemData,
     ) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         match fluctuations_option {
             None => {
                 for (expected, actual) in
@@ -265,23 +277,23 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
                 }
             }
             Some(_rand) => {
-                for (expected, actual) in
-                    (&expected_photons_vector, &mut actual_photons_vector).join()
-                {
-                    for index in 0..expected.contents.len() {
-                        let poisson = Poisson::new(expected.contents[index].scattered);
-                        let drawn_number = poisson.sample(&mut rand::thread_rng());
+                (&expected_photons_vector, &mut actual_photons_vector)
+                    .par_join()
+                    .for_each(|(expected, actual)| {
+                        for index in 0..expected.contents.len() {
+                            let poisson = Poisson::new(expected.contents[index].scattered);
+                            let drawn_number = poisson.sample(&mut rand::thread_rng());
 
-                        // I have no clue why it is necessary but it appears that for
-                        // very small expected photon numbers, the poisson distribution
-                        // returns u64::MAX which destroys the Simulation
-                        actual.contents[index].scattered = if drawn_number == u64::MAX {
-                            0.0
-                        } else {
-                            drawn_number as f64
-                        };
-                    }
-                }
+                            // I have no clue why it is necessary but it appears that for
+                            // very small expected photon numbers, the poisson distribution
+                            // returns u64::MAX which destroys the Simulation
+                            actual.contents[index].scattered = if drawn_number == u64::MAX {
+                                0.0
+                            } else {
+                                drawn_number as f64
+                            };
+                        }
+                    });
             }
         }
     }

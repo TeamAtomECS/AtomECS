@@ -96,14 +96,17 @@ impl<'a> System<'a> for InitialiseDopplerShiftSamplersSystem {
         WriteStorage<'a, DopplerShiftSamplers>,
     );
     fn run(&mut self, (cooling, cooling_index, mut samplers): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         let mut content = Vec::new();
         for (_, _) in (&cooling, &cooling_index).join() {
             content.push(DopplerShiftSampler::default());
         }
 
-        for mut sampler in (&mut samplers).join() {
-            sampler.contents = content.clone();
-        }
+        (&mut samplers).par_join().for_each(|mut sampler| {
+            sampler.contents = content.to_vec();
+        });
     }
 }
 

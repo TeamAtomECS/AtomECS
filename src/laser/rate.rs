@@ -11,7 +11,7 @@ use crate::laser::sampler::LaserDetuningSamplers;
 use crate::magnetic::MagneticFieldSampler;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
-use crate::constant::{C, HBAR, PI};
+use crate::constant::PI;
 
 /// Represents the rate coefficient of the atom with respect to a specific CoolingLight entity
 #[derive(Clone)]
@@ -94,50 +94,48 @@ impl<'a> System<'a> for CalculateRateCoefficientsSystem {
             mut rate_coefficients,
         ): Self::SystemData,
     ) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         for (cooling, index, gaussian) in (&cooling_light, &cooling_index, &gaussian_beam).join() {
-            for (detunings, intensities, atominfo, bfield, rates) in (
+            (
                 &laser_detunings,
                 &laser_intensities,
                 &atomic_transition,
                 &magnetic_field_sampler,
                 &mut rate_coefficients,
             )
-                .join()
-            {
-                let beam_direction_vector = gaussian.direction.normalize();
-                let costheta = if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
-                    0.0
-                } else {
-                    beam_direction_vector
-                        .normalize()
-                        .dot(&bfield.field.normalize())
-                };
+                .par_join()
+                .for_each(|(detunings, intensities, atominfo, bfield, rates)| {
+                    let beam_direction_vector = gaussian.direction.normalize();
+                    let costheta = if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
+                        0.0
+                    } else {
+                        beam_direction_vector
+                            .normalize()
+                            .dot(&bfield.field.normalize())
+                    };
 
-                let prefactor = 3. / 4. * C.powf(2.) / HBAR
-                    * (atominfo.frequency).powf(-3.)
-                    * atominfo.linewidth
-                    * intensities.contents[index.index].intensity
-                    / 2.
-                    / PI
-                    * atominfo.linewidth;
+                    let prefactor =
+                        atominfo.rate_prefactor * intensities.contents[index.index].intensity;
 
-                let scatter1 =
-                    0.25 * (cooling.polarization as f64 * costheta + 1.).powf(2.) * prefactor
-                        / (detunings.contents[index.index].detuning_sigma_plus.powf(2.)
+                    let scatter1 =
+                        0.25 * (cooling.polarization as f64 * costheta + 1.).powf(2.) * prefactor
+                            / (detunings.contents[index.index].detuning_sigma_plus.powf(2.)
+                                + (PI * atominfo.linewidth).powf(2.));
+
+                    let scatter2 =
+                        0.25 * (cooling.polarization as f64 * costheta - 1.).powf(2.) * prefactor
+                            / (detunings.contents[index.index]
+                                .detuning_sigma_minus
+                                .powf(2.)
+                                + (PI * atominfo.linewidth).powf(2.));
+
+                    let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor
+                        / (detunings.contents[index.index].detuning_pi.powf(2.)
                             + (PI * atominfo.linewidth).powf(2.));
-
-                let scatter2 =
-                    0.25 * (cooling.polarization as f64 * costheta - 1.).powf(2.) * prefactor
-                        / (detunings.contents[index.index]
-                            .detuning_sigma_minus
-                            .powf(2.)
-                            + (PI * atominfo.linewidth).powf(2.));
-
-                let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor
-                    / (detunings.contents[index.index].detuning_pi.powf(2.)
-                        + (PI * atominfo.linewidth).powf(2.));
-                rates.contents[index.index].rate = scatter1 + scatter2 + scatter3;
-            }
+                    rates.contents[index.index].rate = scatter1 + scatter2 + scatter3;
+                });
         }
     }
 }

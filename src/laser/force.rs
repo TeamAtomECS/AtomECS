@@ -19,6 +19,8 @@ use crate::integrator::Timestep;
 
 use crate::laser::repump::*;
 
+const LASER_CACHE_SIZE: usize = 16;
+
 /// This sytem calculates the forces from absorbing photons from the CoolingLight entities.
 ///
 /// The system assumes that the `ActualPhotonsScatteredVector` for each atom
@@ -49,18 +51,52 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
             _dark,
         ): Self::SystemData,
     ) {
-        for (scattered, mut force, _dark) in (&actual_scattered_vector, &mut forces, !&_dark).join()
-        {
-            for (index, cooling, gaussian) in
-                (&cooling_index, &cooling_light, &gaussian_beam).join()
-            {
-                let new_force = scattered.contents[index.index].scattered as f64 * HBAR
-                    / timestep.delta
-                    * gaussian.direction.normalize()
-                    * cooling.wavenumber();
-                force.force = force.force + new_force;
-            }
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
+        // There are typically only a small number of lasers in a simulation.
+        // For a speedup, cache the required components into thread memory,
+        // so they can be distributed to parallel workers during the atom loop.
+        type CachedLaser = (CoolingLight, CoolingLightIndex, GaussianBeam);
+        let laser_cache: Vec<CachedLaser> = (&cooling_light, &cooling_index, &gaussian_beam)
+            .join()
+            .map(|(cooling, index, gaussian)| (cooling.clone(), index.clone(), gaussian.clone()))
+            .collect();
+
+        // Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
+        for base_index in (0..laser_cache.len()).step_by(LASER_CACHE_SIZE) {
+            let max_index = laser_cache.len().min(base_index + LASER_CACHE_SIZE);
+            let slice = &laser_cache[base_index..max_index];
+            let mut laser_array = vec![laser_cache[0]; LASER_CACHE_SIZE];
+            laser_array[..max_index].copy_from_slice(slice);
+            let number_in_iteration = slice.len();
+
+            (&actual_scattered_vector, &mut forces, !&_dark)
+                .par_join()
+                .for_each(|(scattered, mut force, _)| {
+                    for i in 0..number_in_iteration {
+                        let (cooling, index, gaussian) = laser_array[i];
+                        let new_force = scattered.contents[index.index].scattered as f64 * HBAR
+                            / timestep.delta
+                            * gaussian.direction.normalize()
+                            * cooling.wavenumber();
+                        force.force = force.force + new_force;
+                    }
+                })
         }
+
+        // for (scattered, mut force, _dark) in (&actual_scattered_vector, &mut forces, !&_dark).join()
+        // {
+        //     for (index, cooling, gaussian) in
+        //         (&cooling_index, &cooling_light, &gaussian_beam).join()
+        //     {
+        //         let new_force = scattered.contents[index.index].scattered as f64 * HBAR
+        //             / timestep.delta
+        //             * gaussian.direction.normalize()
+        //             * cooling.wavenumber();
+        //         force.force = force.force + new_force;
+        //     }
+        // }
     }
 }
 

@@ -62,7 +62,7 @@ impl<'a> System<'a> for InitialiseLaserDetuningSamplersSystem {
         }
 
         for mut sampler in (&mut samplers).join() {
-            sampler.contents = content.clone();
+            sampler.contents = content.to_vec();
         }
     }
 }
