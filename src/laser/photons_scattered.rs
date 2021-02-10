@@ -9,9 +9,8 @@ use specs::Read;
 
 use crate::atom::AtomicTransition;
 use crate::integrator::Timestep;
-use crate::laser::cooling::CoolingLight;
-use crate::laser::cooling::CoolingLightIndex;
 use crate::laser::rate::RateCoefficients;
+use crate::laser::sampler::LaserSamplerMasks;
 use crate::laser::twolevel::TwoLevelPopulation;
 use serde::{Deserialize, Serialize};
 use specs::{Component, Join, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
@@ -105,12 +104,8 @@ impl Component for ExpectedPhotonsScatteredVector {
 /// It also ensures that the size of the ´ExpectedPhotonsScatteredVector´ components match the number of CoolingLight entities in the world.
 pub struct InitialiseExpectedPhotonsScatteredVectorSystem;
 impl<'a> System<'a> for InitialiseExpectedPhotonsScatteredVectorSystem {
-    type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
-        WriteStorage<'a, ExpectedPhotonsScatteredVector>,
-    );
-    fn run(&mut self, (cooling, cooling_index, mut expected_photons): Self::SystemData) {
+    type SystemData = (WriteStorage<'a, ExpectedPhotonsScatteredVector>,);
+    fn run(&mut self, (mut expected_photons,): Self::SystemData) {
         use rayon::prelude::*;
         use specs::ParJoin;
 
@@ -130,12 +125,13 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
     type SystemData = (
         ReadStorage<'a, RateCoefficients>,
         ReadStorage<'a, TotalPhotonsScattered>,
+        ReadStorage<'a, LaserSamplerMasks>,
         WriteStorage<'a, ExpectedPhotonsScatteredVector>,
     );
 
     fn run(
         &mut self,
-        (rate_coefficients, total_photons_scattered, mut expected_photons_vector): Self::SystemData,
+        (rate_coefficients, total_photons_scattered, masks, mut expected_photons_vector): Self::SystemData,
     ) {
         use rayon::prelude::*;
         use specs::ParJoin;
@@ -143,19 +139,24 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
         (
             &rate_coefficients,
             &total_photons_scattered,
+            &masks,
             &mut expected_photons_vector,
         )
             .par_join()
-            .for_each(|(rates, total, expected)| {
+            .for_each(|(rates, total, mask, expected)| {
                 let mut sum_rates: f64 = 0.;
 
-                for count in 0..rates.contents.len() {
-                    sum_rates = sum_rates + rates.contents[count].rate;
+                for index in 0..rates.contents.len() {
+                    if mask.contents[index].filled {
+                        sum_rates = sum_rates + rates.contents[index].rate;
+                    }
                 }
 
                 for index in 0..expected.contents.len() {
-                    expected.contents[index].scattered =
-                        rates.contents[index].rate / sum_rates * total.total;
+                    if mask.contents[index].filled {
+                        expected.contents[index].scattered =
+                            rates.contents[index].rate / sum_rates * total.total;
+                    }
                 }
             });
     }
@@ -222,12 +223,8 @@ impl Component for ActualPhotonsScatteredVector {
 /// It also ensures that the size of the `ActualPhotonsScatteredVector` components match the number of CoolingLight entities in the world.
 pub struct InitialiseActualPhotonsScatteredVectorSystem;
 impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
-    type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
-        WriteStorage<'a, ActualPhotonsScatteredVector>,
-    );
-    fn run(&mut self, (cooling, cooling_index, mut actual_photons): Self::SystemData) {
+    type SystemData = (WriteStorage<'a, ActualPhotonsScatteredVector>,);
+    fn run(&mut self, (mut actual_photons,): Self::SystemData) {
         use rayon::prelude::*;
         use specs::ParJoin;
 

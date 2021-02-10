@@ -34,6 +34,12 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 		for (ent, _) in (&ent, &newly_created).join() {
 			updater.insert(
 				ent,
+				sampler::LaserSamplerMasks {
+					contents: [sampler::LaserSamplerMask::default(); COOLING_BEAM_LIMIT],
+				},
+			);
+			updater.insert(
+				ent,
 				doppler::DopplerShiftSamplers {
 					contents: [doppler::DopplerShiftSampler::default(); COOLING_BEAM_LIMIT],
 				},
@@ -101,7 +107,12 @@ pub fn add_systems_to_dispatch(
 		.with(
 			cooling::IndexCoolingLightsSystem,
 			"index_cooling_lights",
-			&["attach_cooling_index"],
+			deps,
+		)
+		.with(
+			sampler::InitialiseLaserSamplerMasksSystem,
+			"initialise_laser_sampler_masks",
+			&["index_cooling_lights"],
 		)
 		.with(
 			intensity::InitialiseLaserIntensitySamplersSystem,
@@ -137,6 +148,11 @@ pub fn add_systems_to_dispatch(
 	builder.add_barrier();
 	builder = builder
 		.with(
+			sampler::FillLaserSamplerMasksSystem,
+			"fill_laser_sampler_masks",
+			&["index_cooling_lights", "initialise_laser_sampler_masks"],
+		)
+		.with(
 			intensity::SampleLaserIntensitySystem,
 			"sample_laser_intensity",
 			&["initialise_actual_photons"],
@@ -159,7 +175,7 @@ pub fn add_systems_to_dispatch(
 		.with(
 			twolevel::CalculateTwoLevelPopulationSystem,
 			"calculate_twolevel",
-			&["calculate_rate_coefficients"],
+			&["calculate_rate_coefficients", "fill_laser_sampler_masks"],
 		)
 		.with(
 			photons_scattered::CalculateMeanTotalPhotonsScatteredSystem,
@@ -169,7 +185,7 @@ pub fn add_systems_to_dispatch(
 		.with(
 			photons_scattered::CalculateExpectedPhotonsScatteredSystem,
 			"calculate_expected_photons",
-			&["calculate_total_photons"],
+			&["calculate_total_photons", "fill_laser_sampler_masks"],
 		)
 		.with(
 			photons_scattered::CalculateActualPhotonsScatteredSystem,

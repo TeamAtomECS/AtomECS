@@ -43,12 +43,8 @@ impl Component for RateCoefficients {
 /// It also ensures that the size of the `RateCoefficient` components match the number of CoolingLight entities in the world.
 pub struct InitialiseRateCoefficientsSystem;
 impl<'a> System<'a> for InitialiseRateCoefficientsSystem {
-    type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
-        WriteStorage<'a, RateCoefficients>,
-    );
-    fn run(&mut self, (cooling, cooling_index, mut rate_coefficients): Self::SystemData) {
+    type SystemData = (WriteStorage<'a, RateCoefficients>,);
+    fn run(&mut self, (mut rate_coefficients,): Self::SystemData) {
         use rayon::prelude::*;
         use specs::ParJoin;
 

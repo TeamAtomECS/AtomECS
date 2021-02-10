@@ -11,8 +11,6 @@ use lib::laser::force::ApplyEmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser::photons_scattered::EnableScatteringFluctuations;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use lib::output::file;
-use lib::output::file::Text;
 use nalgebra::Vector3;
 use rand::distributions::{Distribution, Normal};
 use specs::{Builder, World};

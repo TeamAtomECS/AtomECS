@@ -9,7 +9,7 @@ extern crate specs;
 
 use crate::atom::*;
 use crate::constant;
-use specs::{Join, ReadExpect, ReadStorage, System, WriteExpect, WriteStorage};
+use specs::{ReadExpect, ReadStorage, System, WriteExpect, WriteStorage};
 
 /// Tracks the number of the current integration step.
 pub struct Step {

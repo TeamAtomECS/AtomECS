@@ -7,7 +7,7 @@
 extern crate rayon;
 extern crate specs;
 
-use super::cooling::{CoolingLight, CoolingLightIndex};
+use super::cooling::CoolingLightIndex;
 use super::gaussian::{get_gaussian_beam_intensity, CircularMask, GaussianBeam};
 use crate::atom::Position;
 use specs::{Component, Entities, Join, ReadStorage, System, VecStorage, WriteStorage};
@@ -44,12 +44,8 @@ impl Component for LaserIntensitySamplers {
 /// It also ensures that the size of the `LaserIntensitySamplers` components match the number of CoolingLight entities in the world.
 pub struct InitialiseLaserIntensitySamplersSystem;
 impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
-    type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
-        WriteStorage<'a, LaserIntensitySamplers>,
-    );
-    fn run(&mut self, (cooling, cooling_index, mut samplers): Self::SystemData) {
+    type SystemData = (WriteStorage<'a, LaserIntensitySamplers>,);
+    fn run(&mut self, (mut samplers,): Self::SystemData) {
         use rayon::prelude::*;
         use specs::ParJoin;
 

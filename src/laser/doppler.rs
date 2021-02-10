@@ -90,12 +90,8 @@ impl Component for DopplerShiftSamplers {
 /// It also ensures that the size of the `DopplerShiftSamplers` components match the number of CoolingLight entities in the world.
 pub struct InitialiseDopplerShiftSamplersSystem;
 impl<'a> System<'a> for InitialiseDopplerShiftSamplersSystem {
-    type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
-        WriteStorage<'a, DopplerShiftSamplers>,
-    );
-    fn run(&mut self, (cooling, cooling_index, mut samplers): Self::SystemData) {
+    type SystemData = (WriteStorage<'a, DopplerShiftSamplers>,);
+    fn run(&mut self, (mut samplers,): Self::SystemData) {
         use rayon::prelude::*;
         use specs::ParJoin;
 
