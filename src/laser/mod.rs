@@ -112,40 +112,40 @@ pub fn add_systems_to_dispatch(
 		.with(
 			sampler::InitialiseLaserSamplerMasksSystem,
 			"initialise_laser_sampler_masks",
-			&["index_cooling_lights"],
+			deps,
 		)
 		.with(
 			intensity::InitialiseLaserIntensitySamplersSystem,
 			"initialise_laser_intensity",
-			&["index_cooling_lights"],
+			deps,
 		)
 		.with(
 			doppler::InitialiseDopplerShiftSamplersSystem,
 			"initialise_doppler_shift",
-			&["index_cooling_lights"],
+			deps,
 		)
 		.with(
 			sampler::InitialiseLaserDetuningSamplersSystem,
 			"initialise_laser_detuning",
-			&["index_cooling_lights"],
+			deps,
 		)
 		.with(
 			rate::InitialiseRateCoefficientsSystem,
 			"initialise_rate_coefficient",
-			&["index_cooling_lights"],
+			deps,
 		)
 		.with(
 			photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem,
 			"initialise_expected_photons",
-			&["index_cooling_lights"],
+			deps,
 		)
 		.with(
 			photons_scattered::InitialiseActualPhotonsScatteredVectorSystem,
 			"initialise_actual_photons",
-			&["index_cooling_lights"],
+			deps,
 		);
 	// We add a barrier here because the calculations should only start once all components are initialized.
-	builder.add_barrier();
+	//builder.add_barrier();
 	builder = builder
 		.with(
 			sampler::FillLaserSamplerMasksSystem,
@@ -155,17 +155,22 @@ pub fn add_systems_to_dispatch(
 		.with(
 			intensity::SampleLaserIntensitySystem,
 			"sample_laser_intensity",
-			&["initialise_actual_photons"],
+			&["initialise_laser_intensity", "index_cooling_lights"],
 		)
 		.with(
 			doppler::CalculateDopplerShiftSystem,
 			"calculate_doppler_shift",
-			&["initialise_actual_photons"],
+			&["initialise_doppler_shift", "index_cooling_lights"],
 		)
 		.with(
 			sampler::CalculateLaserDetuningSystem,
 			"calculate_laser_detuning",
-			&["calculate_doppler_shift", "zeeman_shift"],
+			&[
+				"initialise_laser_detuning",
+				"calculate_doppler_shift",
+				"zeeman_shift",
+				"index_cooling_lights",
+			],
 		)
 		.with(
 			rate::CalculateRateCoefficientsSystem,
