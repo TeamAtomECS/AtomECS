@@ -3,7 +3,7 @@
 thread_numbers = 1:1:6;
 thread_atom_numbers = 10.^[2:0.5:6];
 atom_numbers = 10.^[0:0.5:6];
-steps = 5e3;
+steps = 5e2;
 
 % Run once to force compilation.
 bench(10, 1, steps);
@@ -50,7 +50,7 @@ set(gca, 'YScale', 'log');
 set(gca, 'XTick', 1:12);
 set(gca, 'YScale', 'log');
 xlim([1 6]);
-labels = arrayfun(@(x) [num2str(x) ' atoms'], thread_atom_numbers, 'UniformOutput', 0);
+%labels = arrayfun(@(x) [num2str(x) ' atoms'], thread_atom_numbers, 'UniformOutput', 0);
 legend(labels, 'Interpreter', 'Latex');
 
 % Render to file

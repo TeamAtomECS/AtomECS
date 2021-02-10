@@ -93,7 +93,7 @@ pub fn add_systems_to_dispatch(
 	builder: DispatcherBuilder<'static, 'static>,
 	deps: &[&str],
 ) -> DispatcherBuilder<'static, 'static> {
-	let mut builder = builder
+	let builder = builder
 		.with(
 			AttachLaserComponentsToNewlyCreatedAtomsSystem,
 			"attach_atom_laser_components",
@@ -115,39 +115,6 @@ pub fn add_systems_to_dispatch(
 			deps,
 		)
 		.with(
-			intensity::InitialiseLaserIntensitySamplersSystem,
-			"initialise_laser_intensity",
-			deps,
-		)
-		.with(
-			doppler::InitialiseDopplerShiftSamplersSystem,
-			"initialise_doppler_shift",
-			deps,
-		)
-		.with(
-			sampler::InitialiseLaserDetuningSamplersSystem,
-			"initialise_laser_detuning",
-			deps,
-		)
-		.with(
-			rate::InitialiseRateCoefficientsSystem,
-			"initialise_rate_coefficient",
-			deps,
-		)
-		.with(
-			photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem,
-			"initialise_expected_photons",
-			deps,
-		)
-		.with(
-			photons_scattered::InitialiseActualPhotonsScatteredVectorSystem,
-			"initialise_actual_photons",
-			deps,
-		);
-	// We add a barrier here because the calculations should only start once all components are initialized.
-	//builder.add_barrier();
-	builder = builder
-		.with(
 			sampler::FillLaserSamplerMasksSystem,
 			"fill_laser_sampler_masks",
 			&["index_cooling_lights", "initialise_laser_sampler_masks"],
@@ -155,18 +122,17 @@ pub fn add_systems_to_dispatch(
 		.with(
 			intensity::SampleLaserIntensitySystem,
 			"sample_laser_intensity",
-			&["initialise_laser_intensity", "index_cooling_lights"],
+			&["index_cooling_lights"],
 		)
 		.with(
 			doppler::CalculateDopplerShiftSystem,
 			"calculate_doppler_shift",
-			&["initialise_doppler_shift", "index_cooling_lights"],
+			&["index_cooling_lights"],
 		)
 		.with(
 			sampler::CalculateLaserDetuningSystem,
 			"calculate_laser_detuning",
 			&[
-				"initialise_laser_detuning",
 				"calculate_doppler_shift",
 				"zeeman_shift",
 				"index_cooling_lights",
