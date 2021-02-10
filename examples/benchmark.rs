@@ -14,10 +14,37 @@ use lib::magnetic::quadrupole::QuadrupoleField3D;
 use nalgebra::Vector3;
 use rand::distributions::{Distribution, Normal};
 use specs::{Builder, World};
+use std::fs::read_to_string;
 use std::time::Instant;
+
+extern crate serde;
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct BenchmarkConfiguration {
+    pub n_threads: usize,
+    pub n_atoms: i32,
+    pub n_steps: i32,
+}
+impl Default for BenchmarkConfiguration {
+    fn default() -> Self {
+        BenchmarkConfiguration {
+            n_atoms: 10000,
+            n_threads: 12,
+            n_steps: 5000,
+        }
+    }
+}
 
 fn main() {
     let now = Instant::now();
+
+    //Load configuration if one exists.
+    let read_result = read_to_string("benchmark.json");
+    let configuration: BenchmarkConfiguration = match read_result {
+        Ok(json_str) => serde_json::from_str(&json_str).unwrap(),
+        Err(_) => BenchmarkConfiguration::default(),
+    };
 
     // Create the simulation world and builder for the ECS dispatcher.
     let mut world = World::new();
@@ -27,7 +54,7 @@ fn main() {
 
     // Configure thread pool.
     let pool = rayon::ThreadPoolBuilder::new()
-        .num_threads(12)
+        .num_threads(configuration.n_threads)
         .build()
         .unwrap();
 
@@ -144,7 +171,7 @@ fn main() {
     let mut rng = rand::thread_rng();
 
     // Add atoms
-    for _ in 0..10000 {
+    for _ in 0..configuration.n_atoms {
         world
             .create_entity()
             .with(Position {
@@ -176,7 +203,7 @@ fn main() {
     world.add_resource(EnableScatteringFluctuations {});
 
     // Run the simulation for a number of steps.
-    for _i in 0..5000 {
+    for _i in 0..configuration.n_steps {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
