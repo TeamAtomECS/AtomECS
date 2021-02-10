@@ -273,20 +273,14 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
                     .for_each(|(expected, actual)| {
                         for index in 0..expected.contents.len() {
                             let lambda = expected.contents[index].scattered;
-                            if lambda <= 1.0e-5 || lambda.is_nan() {
-                                continue;
-                            }
-                            let poisson = Poisson::new(lambda);
-                            let drawn_number = poisson.sample(&mut rand::thread_rng());
-
-                            // I have no clue why it is necessary but it appears that for
-                            // very small expected photon numbers, the poisson distribution
-                            // returns u64::MAX which destroys the Simulation
-                            actual.contents[index].scattered = if drawn_number == u64::MAX {
-                                0.0
-                            } else {
-                                drawn_number as f64
-                            };
+                            actual.contents[index].scattered =
+                                if lambda <= 1.0e-5 || lambda.is_nan() {
+                                    0.0
+                                } else {
+                                    let poisson = Poisson::new(lambda);
+                                    let drawn_number = poisson.sample(&mut rand::thread_rng());
+                                    drawn_number as f64
+                                }
                         }
                     });
             }
