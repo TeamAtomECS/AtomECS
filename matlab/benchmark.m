@@ -1,7 +1,7 @@
 %% Benchmark the simulation performance
 
 thread_numbers = 1:1:6;
-thread_atom_numbers = [1e0 1e1 1e2 1e3 1e4 1e5];
+thread_atom_numbers = 10.^[2:0.5:6];
 atom_numbers = 10.^[0:0.5:6];
 steps = 5e3;
 
@@ -21,6 +21,7 @@ for atom_number=thread_atom_numbers
     thread_results{end+1} = atom_results;
 end
 thread_results = cat(1,thread_results{:});
+save('bench.mat', 'thread_results', 'steps');
 
 %%
 % Plot a graph showing the results
@@ -30,7 +31,7 @@ get_color = @(n) interp1([0; log10(max(thread_atom_numbers))], [ c0; c1 ], log10
 clf;
 set(gcf, 'Color', 'w');
 for i=1:size(thread_results, 1)
-   plot([thread_results(i,:).threads], [thread_results(i,:).time]./([thread_results(i,:).atoms].*[thread_results(i,:).threads].*steps), '.-', 'Color', get_color(thread_results(i,1).atoms)); hold on;
+   plot([thread_results(i,:).threads], [thread_results(i,:).time]./([thread_results(i,:).atoms].*steps), '.-', 'Color', get_color(thread_results(i,1).atoms)); hold on;
    %plot([thread_results(i,:).threads], [thread_results(i,:).time], '.-',
    %'Color', get_color(thread_results(i,1).atoms)); hold on;
    %plot([thread_results(i,:).threads], [thread_results(i,1).time]./
@@ -50,7 +51,7 @@ set(gca, 'XTick', 1:12);
 set(gca, 'YScale', 'log');
 xlim([1 6]);
 labels = arrayfun(@(x) [num2str(x) ' atoms'], thread_atom_numbers, 'UniformOutput', 0);
-legend(labels{:});
+legend(labels, 'Interpreter', 'Latex');
 
 % Render to file
 set(gcf, 'Units', 'centimeters');
