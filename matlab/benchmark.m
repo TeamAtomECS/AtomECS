@@ -2,6 +2,7 @@
 
 thread_numbers = 1:1:6;
 thread_atom_numbers = 10.^[2:0.5:6];
+thread_atom_numbers = 1e6;
 atom_numbers = 10.^[0:0.5:6];
 steps = 5e2;
 
@@ -31,7 +32,7 @@ get_color = @(n) interp1([0; log10(max(thread_atom_numbers))], [ c0; c1 ], log10
 clf;
 set(gcf, 'Color', 'w');
 for i=1:size(thread_results, 1)
-   plot([thread_results(i,:).threads], [thread_results(i,:).time]./([thread_results(i,:).atoms].*steps), '.-', 'Color', get_color(thread_results(i,1).atoms)); hold on;
+   plot([thread_results(i,:).threads], 1e6*[thread_results(i,:).time]./([thread_results(i,:).atoms].*steps), '.-', 'Color', get_color(thread_results(i,1).atoms)); hold on;
    %plot([thread_results(i,:).threads], [thread_results(i,:).time], '.-',
    %'Color', get_color(thread_results(i,1).atoms)); hold on;
    %plot([thread_results(i,:).threads], [thread_results(i,1).time]./
@@ -40,7 +41,7 @@ for i=1:size(thread_results, 1)
 end
 xlabel('number of threads', 'interpreter', 'latex');
 % tau = total wall time per atom, per thread
-ylabel('normalised step time $\tau$ (s) ', 'Interpreter', 'latex');
+ylabel('$\tau$ ($\mu$s) ', 'Interpreter', 'latex');
 grid on;
 set(gca, 'GridLineStyle', ':');
 xlim([min(thread_numbers) max(thread_number)]);
@@ -50,7 +51,7 @@ set(gca, 'YScale', 'log');
 set(gca, 'XTick', 1:12);
 set(gca, 'YScale', 'log');
 xlim([1 6]);
-%labels = arrayfun(@(x) [num2str(x) ' atoms'], thread_atom_numbers, 'UniformOutput', 0);
+labels = arrayfun(@(x) [num2str(x) ' atoms'], thread_atom_numbers, 'UniformOutput', 0);
 legend(labels, 'Interpreter', 'Latex');
 
 % Render to file

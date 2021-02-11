@@ -67,16 +67,19 @@ impl<'a> System<'a> for CalculateZeemanShiftSystem {
         &mut self,
         (mut zeeman_sampler, magnetic_field_sampler, atomic_transition): Self::SystemData,
     ) {
-        for (zeeman, magnetic_field, atom_info) in (
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
+        (
             &mut zeeman_sampler,
             &magnetic_field_sampler,
             &atomic_transition,
         )
-            .join()
-        {
-            zeeman.sigma_plus = atom_info.mup / HBAR * magnetic_field.magnitude;
-            zeeman.sigma_minus = atom_info.mum / HBAR * magnetic_field.magnitude;
-            zeeman.sigma_pi = atom_info.muz / HBAR * magnetic_field.magnitude;
-        }
+            .par_join()
+            .for_each(|(zeeman, magnetic_field, atom_info)| {
+                zeeman.sigma_plus = atom_info.mup / HBAR * magnetic_field.magnitude;
+                zeeman.sigma_minus = atom_info.mum / HBAR * magnetic_field.magnitude;
+                zeeman.sigma_pi = atom_info.muz / HBAR * magnetic_field.magnitude;
+            });
     }
 }
