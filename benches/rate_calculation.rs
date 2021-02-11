@@ -19,6 +19,8 @@ use specs::{Builder, DispatcherBuilder, World};
 fn criterion_benchmark(c: &mut Criterion) {
     // Mock up a simulation world and dispatcher
     let mut world = World::new();
+    ecs::register_components(&mut world);
+    ecs::register_resources(&mut world);
     let mut dispatcher = ecs::create_simulation_dispatcher_builder().build();
     dispatcher.setup(&mut world.res);
 
@@ -161,13 +163,15 @@ fn criterion_benchmark(c: &mut Criterion) {
     world.add_resource(ApplyEmissionForceOption {});
     world.add_resource(EnableScatteringFluctuations {});
 
-    // create test dispatcher
+    // Run a few times with the standard dispatcher to create atoms, initialise components, etc.
+    for _ in 0..5 {
+        dispatcher.dispatch(&mut world.res);
+        world.maintain();
+    }
+
+    // Now bench just a specific system.
     let mut bench_builder = DispatcherBuilder::new();
-    bench_builder.add(
-        lib::laser::rate::CalculateRateCoefficientsSystem,
-        "calcualte_rate_coefficient_system",
-        &[],
-    );
+    bench_builder.add(lib::laser::rate::CalculateRateCoefficientsSystem, "", &[]);
     // Configure thread pool.
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(12)
