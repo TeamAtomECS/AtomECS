@@ -6,7 +6,6 @@ pub mod atom;
 pub mod atom_sources;
 pub mod constant;
 pub mod destructor;
-// pub mod detector; Disabled -- too many warnings to fix and unused.
 pub mod ecs;
 pub mod fileinput;
 pub mod gravity;
@@ -19,5 +18,4 @@ pub mod optimization;
 pub mod output;
 pub mod shapes;
 pub mod sim_region;
-pub mod simulation_templates;
 pub mod tests;

@@ -4,7 +4,7 @@ use crate::constant::{BOHRMAG, C, HBAR, PI};
 use crate::output::file::BinaryConversion;
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
-use specs::{Component, Join, NullStorage, System, VecStorage, World, WriteStorage};
+use specs::{Component, NullStorage, System, VecStorage, World, WriteStorage};
 use std::fmt;
 
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
@@ -230,9 +230,12 @@ pub struct ClearForceSystem;
 impl<'a> System<'a> for ClearForceSystem {
 	type SystemData = WriteStorage<'a, Force>;
 	fn run(&mut self, mut force: Self::SystemData) {
-		for force in (&mut force).join() {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
+		(&mut force).par_join().for_each(|force| {
 			force.force = Vector3::new(0.0, 0.0, 0.0);
-		}
+		});
 	}
 }
 
