@@ -110,48 +110,66 @@ impl<'a> System<'a> for CalculateRateCoefficientsSystem {
                 });
 
                 // LLVM should auto vectorize this but does not!
-                let mut rates_f = [0.0_f64; crate::laser::COOLING_BEAM_LIMIT];
-                for (rate, ((dsp, dsm, dpi, dpol), (intensity, (costheta, mask_filled)))) in
-                    rates_f.iter_mut().zip(
-                        detunings
-                            .contents
-                            .iter()
-                            .map(|d| {
-                                (
-                                    d.detuning_sigma_plus,
-                                    d.detuning_sigma_minus,
-                                    d.detuning_pi,
-                                    d.polarization,
-                                )
-                            })
-                            .zip(
-                                intensities
-                                    .contents
-                                    .iter()
-                                    .map(|s| s.intensity)
-                                    .zip(costhetas.zip(masks.contents.iter().map(|m| m.filled))),
-                            ),
+                for (rate, (detuning, (intensity, (costheta, mask)))) in
+                    rates.contents.iter_mut().zip(
+                        detunings.contents.iter().zip(
+                            intensities
+                                .contents
+                                .iter()
+                                .zip(costhetas.zip(masks.contents.iter())),
+                        ),
                     )
                 {
-                    if !mask_filled {
+                    if !mask.filled {
                         continue;
                     }
 
-                    let prefactor = atominfo.rate_prefactor * intensity;
+                    let prefactor = atominfo.rate_prefactor * intensity.intensity;
 
-                    let scatter1 = 0.25 * (dpol * costheta + 1.).powf(2.) * prefactor
-                        / (dsp.powf(2.) + (PI * atominfo.linewidth).powf(2.));
+                    let scatter1 =
+                        0.25 * (detuning.polarization * costheta + 1.).powf(2.) * prefactor
+                            / (detuning.detuning_sigma_plus.powf(2.)
+                                + (PI * atominfo.linewidth).powf(2.));
 
-                    let scatter2 = 0.25 * (dpol * costheta - 1.).powf(2.) * prefactor
-                        / (dsm.powf(2.) + (PI * atominfo.linewidth).powf(2.));
+                    let scatter2 =
+                        0.25 * (detuning.polarization * costheta - 1.).powf(2.) * prefactor
+                            / (detuning.detuning_sigma_minus.powf(2.)
+                                + (PI * atominfo.linewidth).powf(2.));
 
                     let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor
-                        / (dpi.powf(2.) + (PI * atominfo.linewidth).powf(2.));
-                    *rate = scatter1 + scatter2 + scatter3;
+                        / (detuning.detuning_pi.powf(2.) + (PI * atominfo.linewidth).powf(2.));
+                    rate.rate = scatter1 + scatter2 + scatter3;
                 }
-                for (rate, rate_f) in rates.contents.iter_mut().zip(rates_f.iter()) {
-                    rate.rate = *rate_f;
-                }
+
+                // LLVM doesn't vectorize this either, even though it is explict about being a fixed size slice.
+                // for i in 0..crate::laser::COOLING_BEAM_LIMIT {
+                //     let costheta = if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
+                //         0.0
+                //     } else {
+                //         intensities.contents[i]
+                //             .direction
+                //             .dot(&bfield.field.normalize())
+                //     };
+
+                //     let prefactor = atominfo.rate_prefactor * intensities.contents[i].intensity;
+
+                //     let scatter1 = 0.25
+                //         * (detunings.contents[i].polarization * costheta + 1.).powf(2.)
+                //         * prefactor
+                //         / (detunings.contents[i].detuning_sigma_plus.powf(2.)
+                //             + (PI * atominfo.linewidth).powf(2.));
+
+                //     let scatter2 = 0.25
+                //         * (detunings.contents[i].polarization * costheta - 1.).powf(2.)
+                //         * prefactor
+                //         / (detunings.contents[i].detuning_sigma_minus.powf(2.)
+                //             + (PI * atominfo.linewidth).powf(2.));
+
+                //     let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor
+                //         / (detunings.contents[i].detuning_pi.powf(2.)
+                //             + (PI * atominfo.linewidth).powf(2.));
+                //     rates.contents[i].rate = scatter1 + scatter2 + scatter3;
+                // }
             });
     }
 }
