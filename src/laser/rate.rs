@@ -101,28 +101,22 @@ impl<'a> System<'a> for CalculateRateCoefficientsSystem {
         )
             .par_join()
             .for_each(|(detunings, intensities, atominfo, bfield, masks, rates)| {
-                let costhetas = intensities.contents.iter().map(|intensity| {
-                    if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
-                        0.0
-                    } else {
-                        intensity.direction.dot(&bfield.field.normalize())
-                    }
-                });
-
                 // LLVM should auto vectorize this but does not!
-                for (rate, (detuning, (intensity, (costheta, mask)))) in
-                    rates.contents.iter_mut().zip(
-                        detunings.contents.iter().zip(
-                            intensities
-                                .contents
-                                .iter()
-                                .zip(costhetas.zip(masks.contents.iter())),
-                        ),
-                    )
-                {
+                for (rate, (detuning, (intensity, mask))) in rates.contents.iter_mut().zip(
+                    detunings
+                        .contents
+                        .iter()
+                        .zip(intensities.contents.iter().zip(masks.contents.iter())),
+                ) {
                     if !mask.filled {
                         continue;
                     }
+
+                    let costheta = if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
+                        0.0
+                    } else {
+                        intensity.direction.dot(&bfield.field.normalize())
+                    };
 
                     let prefactor = atominfo.rate_prefactor * intensity.intensity;
 
