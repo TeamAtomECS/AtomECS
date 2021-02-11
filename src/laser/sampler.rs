@@ -32,6 +32,14 @@ impl Component for LaserSamplerMasks {
     type Storage = VecStorage<Self>;
 }
 
+// /// Component that holds a vector of `CoolingLight`
+// pub struct CoolingLightSamplers {
+//     pub contents: [CoolingLight; crate::laser::COOLING_BEAM_LIMIT],
+// }
+// impl Component for CoolingLightSamplers {
+//     type Storage = VecStorage<Self>;
+// }
+
 /// Marks all laser sampler mask slots as empty.
 pub struct InitialiseLaserSamplerMasksSystem;
 impl<'a> System<'a> for InitialiseLaserSamplerMasksSystem {
@@ -75,17 +83,17 @@ pub struct LaserDetuningSampler {
     pub detuning_sigma_minus: f64,
     /// Laser detuning of the pi transition with respect to laser beam, in SI units of Hz
     pub detuning_pi: f64,
+    /// Polarisation of the laser beam
+    pub polarization: f64,
 }
 
 impl Default for LaserDetuningSampler {
     fn default() -> Self {
         LaserDetuningSampler {
-            /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of Hz
             detuning_sigma_plus: f64::NAN,
-            /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of Hz
             detuning_sigma_minus: f64::NAN,
-            /// Laser detuning of the pi transition with respect to laser beam, in SI units of Hz
             detuning_pi: f64::NAN,
+            polarization: f64::NAN,
         }
     }
 }
@@ -176,12 +184,14 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
                                 * constant::PI
                                 - doppler_samplers.contents[index.index].doppler_shift;
 
-                            detuning_sampler.contents[index.index].detuning_sigma_plus =
-                                without_zeeman.clone() - zeeman_sampler.sigma_plus;
-                            detuning_sampler.contents[index.index].detuning_sigma_minus =
-                                without_zeeman.clone() - zeeman_sampler.sigma_minus;
-                            detuning_sampler.contents[index.index].detuning_pi =
-                                without_zeeman.clone() - zeeman_sampler.sigma_pi;
+                            detuning_sampler.contents[index.index] = LaserDetuningSampler {
+                                detuning_sigma_plus: without_zeeman.clone()
+                                    - zeeman_sampler.sigma_plus,
+                                detuning_sigma_minus: without_zeeman.clone()
+                                    - zeeman_sampler.sigma_minus,
+                                detuning_pi: without_zeeman.clone() - zeeman_sampler.sigma_pi,
+                                polarization: cooling.polarization as f64,
+                            };
                         }
                     },
                 )

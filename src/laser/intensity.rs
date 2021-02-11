@@ -10,6 +10,7 @@ extern crate specs;
 use super::cooling::CoolingLightIndex;
 use super::gaussian::{get_gaussian_beam_intensity, CircularMask, GaussianBeam};
 use crate::atom::Position;
+use nalgebra::Vector3;
 use specs::{Component, Entities, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 const LASER_CACHE_SIZE: usize = 16;
@@ -19,6 +20,9 @@ const LASER_CACHE_SIZE: usize = 16;
 pub struct LaserIntensitySampler {
     /// Intensity in SI units of W/m^2
     pub intensity: f64,
+
+    /// Normalised vector showing the direction of the beam.
+    pub direction: Vector3<f64>,
 }
 
 impl Default for LaserIntensitySampler {
@@ -26,6 +30,7 @@ impl Default for LaserIntensitySampler {
         LaserIntensitySampler {
             /// Intensity in SI units of W/m^2
             intensity: f64::NAN,
+            direction: Vector3::new(0.0, 0.0, 0.0),
         }
     }
 }
@@ -109,6 +114,7 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
                         let (index, gaussian, mask) = laser_array[i];
                         samplers.contents[index.index].intensity =
                             get_gaussian_beam_intensity(&gaussian, &pos, mask.as_ref());
+                        samplers.contents[index.index].direction = gaussian.direction.normalize();
                     }
                 });
         }
