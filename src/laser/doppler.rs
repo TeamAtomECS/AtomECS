@@ -149,7 +149,7 @@ pub mod tests {
                 vel: Vector3::new(atom_velocity, 0.0, 0.0),
             })
             .with(DopplerShiftSamplers {
-                contents: vec![DopplerShiftSampler::default()],
+                contents: [DopplerShiftSampler::default(); crate::laser::COOLING_BEAM_LIMIT],
             })
             .build();
 

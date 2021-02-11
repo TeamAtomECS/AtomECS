@@ -19,6 +19,11 @@ byteorder = "1.3.2"
 
 [dev-dependencies]
 gnuplot="0.0.31"
+criterion = "0.3"
+
+[[bench]]
+name = "rate_calculation"
+harness = false
 
 [profile.release]
 opt-level = 3
