@@ -2,7 +2,7 @@
 
 thread_numbers = 1:1:6;
 thread_atom_numbers = 10.^[2:0.5:6];
-thread_atom_numbers = 1e6;
+%thread_atom_numbers = 1e6;
 atom_numbers = 10.^[0:0.5:6];
 steps = 5e2;
 
@@ -26,39 +26,65 @@ save('bench.mat', 'thread_results', 'steps');
 
 %%
 % Plot a graph showing the results
-c1 = [ 0.1608 0.5804 0.6980 ];
-c0 = [ 0.0118 0.0196 0.1176 ];
-get_color = @(n) interp1([0; log10(max(thread_atom_numbers))], [ c0; c1 ], log10(n));
+
+set(gcf, 'Units', 'centimeters');
+pos = get(gcf, 'Position');
+set(gcf, 'Position', [ pos(1) pos(2) 9 12 ]);
 clf;
+axes('Units', 'centimeters', 'Position', [ 1.2 4.7 7.5 7 ]);
+
+c1 = [ 0.1608 0.5804 0.6980 ];
+c0 = 0*[ 0.0118 0.0196 0.1176 ];
+get_color = @(n) interp1([0; log10(max(thread_atom_numbers))], [ c0; c1 ], log10(n));
+
 set(gcf, 'Color', 'w');
+h = [];
 for i=1:size(thread_results, 1)
-   plot([thread_results(i,:).threads], 1e6*[thread_results(i,:).time]./([thread_results(i,:).atoms].*steps), '.-', 'Color', get_color(thread_results(i,1).atoms)); hold on;
+   h(i) = plot([thread_results(i,:).threads], 1e6*[thread_results(i,:).time]./([thread_results(i,:).atoms].*steps), '.-', 'Color', get_color(thread_results(i,1).atoms)); hold on;
    %plot([thread_results(i,:).threads], [thread_results(i,:).time], '.-',
    %'Color', get_color(thread_results(i,1).atoms)); hold on;
    %plot([thread_results(i,:).threads], [thread_results(i,1).time]./
    %[thread_results(i,:).threads], '--', 'Color',
    %get_color(thread_results(i,1).atoms)); hold on;
 end
-xlabel('number of threads', 'interpreter', 'latex');
+xlabel('', 'interpreter', 'latex', 'FontSize', 11);
 % tau = total wall time per atom, per thread
-ylabel('$\tau$ ($\mu$s) ', 'Interpreter', 'latex');
+ylabel('$\tau$ ($\mu$s) ', 'Interpreter', 'latex', 'FontSize', 11);
 grid on;
 set(gca, 'GridLineStyle', ':');
 xlim([min(thread_numbers) max(thread_number)]);
 set(get(gca, 'XAxis'), 'TickLabelInterpreter', 'Latex');
 set(get(gca, 'YAxis'), 'TickLabelInterpreter', 'Latex');
 set(gca, 'YScale', 'log');
-set(gca, 'XTick', 1:12);
+set(gca, 'XTick', []);
 set(gca, 'YScale', 'log');
 xlim([1 6]);
 labels = arrayfun(@(x) [num2str(x) ' atoms'], thread_atom_numbers, 'UniformOutput', 0);
-legend(labels, 'Interpreter', 'Latex');
+selected = [ 1 5 length(labels) ];
+legend(h(selected),labels{selected}, 'Interpreter', 'Latex');
+
+% fit Amdahl's law and show on the graph
+ax2 = axes('Units', 'centimeters', 'Position', [ 1.2 1.2 7.5 3.3 ]);
+f = @(A, p, x) A*(1-p+p./x);
+ft = fittype(f);
+fitResult = fit([thread_results(end,:).threads]', [thread_results(end,:).time]', ft);
+plot([thread_results(end,:).threads]', [thread_results(end,:).time]', 'o', 'Color', c1); hold on;
+xs = [thread_results(end,:).threads]';
+xs = linspace(min(xs), max(xs), 1000);
+plot(xs, fitResult(xs), 'k--'); hold off;
+grid on;
+set(ax2, 'GridLineStyle', ':');
+set(gca, 'XTick', 1:6);
+set(get(ax2, 'XAxis'), 'TickLabelInterpreter', 'Latex');
+set(get(ax2, 'YAxis'), 'TickLabelInterpreter', 'Latex');
+xlabel('number of threads', 'interpreter', 'latex', 'FontSize', 11);
+% tau = total wall time per atom, per thread
+ylabel('wall time (s) ', 'Interpreter', 'latex', 'FontSize', 11);
 
 % Render to file
-set(gcf, 'Units', 'centimeters');
-pos = get(gcf, 'Position');
-set(gcf, 'Position', [ pos(1) pos(2) 9 7.5 ]);
-set(gcf, 'Units', 'centimeters');
+%set(gcf, 'Units', 'centimeters');
+%pos = get(gcf, 'Position');
+%set(gcf, 'Position', [ pos(1) pos(2) 9 7.5 ]);
 pos = get(gcf, 'Position');
 w = pos(3); 
 h = pos(4);
