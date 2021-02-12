@@ -14,7 +14,6 @@ pub mod integrator;
 pub mod laser;
 pub mod magnetic;
 pub mod maths;
-pub mod optimization;
 pub mod output;
 pub mod shapes;
 pub mod sim_region;
