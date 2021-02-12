@@ -259,13 +259,13 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
 
         match fluctuations_option {
             None => {
-                for (expected, actual) in
-                    (&expected_photons_vector, &mut actual_photons_vector).join()
-                {
-                    for index in 0..expected.contents.len() {
-                        actual.contents[index].scattered = expected.contents[index].scattered;
-                    }
-                }
+                (&expected_photons_vector, &mut actual_photons_vector)
+                    .par_join()
+                    .for_each(|(expected, actual)| {
+                        for index in 0..expected.contents.len() {
+                            actual.contents[index].scattered = expected.contents[index].scattered;
+                        }
+                    });
             }
             Some(_rand) => {
                 (&expected_photons_vector, &mut actual_photons_vector)

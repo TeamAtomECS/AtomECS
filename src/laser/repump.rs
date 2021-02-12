@@ -39,14 +39,17 @@ impl<'a> System<'a> for RepumpSystem {
         Entities<'a>,
     );
     fn run(&mut self, (repump_opt, lazy, num, ent): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         match repump_opt {
             None => (),
             Some(repump) => {
-                for (ent, num) in (&ent, &num).join() {
+                (&ent, &num).par_join().for_each(|(ent, num)| {
                     if repump.if_loss(num.total) {
                         lazy.insert(ent, Dark {})
                     }
-                }
+                });
             }
         }
     }
