@@ -4,7 +4,7 @@ extern crate rand;
 extern crate specs;
 use crate::laser::photons_scattered::TotalPhotonsScattered;
 use rand::Rng;
-use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
+use specs::{Component, Entities, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
 /// Marks an atom as being in a dark state
 pub struct Dark;

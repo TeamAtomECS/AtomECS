@@ -15,10 +15,11 @@ use nalgebra::Vector3;
 use rand::distributions::{Distribution, Normal};
 use specs::{Builder, World};
 use std::fs::read_to_string;
+use std::fs::File;
 use std::time::Instant;
 
 extern crate serde;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 pub struct BenchmarkConfiguration {
@@ -35,10 +36,12 @@ impl Default for BenchmarkConfiguration {
         }
     }
 }
+#[derive(Serialize)]
+pub struct SimulationOutput {
+    pub time: f64,
+}
 
 fn main() {
-    let now = Instant::now();
-
     //Load configuration if one exists.
     let read_result = read_to_string("benchmark.json");
     let configuration: BenchmarkConfiguration = match read_result {
@@ -202,11 +205,24 @@ fn main() {
     world.add_resource(ApplyEmissionForceOption {});
     world.add_resource(EnableScatteringFluctuations {});
 
+    let loop_start = Instant::now();
+
     // Run the simulation for a number of steps.
     for _i in 0..configuration.n_steps {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
 
-    println!("Simulation completed in {} ms.", now.elapsed().as_millis());
+    println!(
+        "Simulation loop completed in {} ms.",
+        loop_start.elapsed().as_millis()
+    );
+
+    serde_json::to_writer(
+        File::create("benchmark_result.txt").expect("Could not open output file."),
+        &SimulationOutput {
+            time: loop_start.elapsed().as_secs_f64(),
+        },
+    )
+    .expect("Could not write output file.");
 }

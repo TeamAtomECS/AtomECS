@@ -13,7 +13,7 @@ use crate::laser::rate::RateCoefficients;
 use crate::laser::sampler::LaserSamplerMasks;
 use crate::laser::twolevel::TwoLevelPopulation;
 use serde::{Deserialize, Serialize};
-use specs::{Component, Join, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
+use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
 use std::fmt;
 
 use crate::constant::PI;

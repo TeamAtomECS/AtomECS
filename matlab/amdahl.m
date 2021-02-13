@@ -11,9 +11,7 @@ thread_results = {};
 for atom_number=thread_atom_numbers
     atom_results = {};
     for thread_number=thread_numbers
-        tic
-        bench(thread_number, atom_number, steps);
-        time = toc;
+        time = bench(thread_number, atom_number, steps);
         atom_results{end+1} = struct('threads', thread_number, 'atoms', atom_number, 'time', time);
     end
     atom_results = cat(2,atom_results{:});
@@ -103,13 +101,19 @@ set(gcf,...
 set(gcf, 'Renderer', 'painters')
 saveas(gcf, 'bench.pdf')
 
-function bench(thread_number, atom_numbers, steps)
+function loop_time = bench(thread_number, atom_numbers, steps)
    
 config = struct('n_threads', int32(thread_number), 'n_steps',  int32(steps), 'n_atoms',  int32(atom_numbers));
 fH = fopen('benchmark.json', 'w');
+oc = onCleanup(@() fclose(fH));
 fprintf(fH, '%s', jsonencode(config));
-fclose(fH);
+clear oc;
 
 system('cargo run --example benchmark --release');
+
+fH = fopen('benchmark_result.txt', 'r');
+oc = onCleanup(@() fclose(fH));
+simOutput = jsondecode(fgets(fH));
+loop_time = simOutput.time;
 
 end
