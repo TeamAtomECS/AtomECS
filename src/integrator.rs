@@ -9,7 +9,9 @@ extern crate specs;
 
 use crate::atom::*;
 use crate::constant;
-use specs::{ReadExpect, ReadStorage, System, WriteExpect, WriteStorage};
+use crate::initiate::NewlyCreated;
+use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteExpect, WriteStorage};
+use specs::{Entities, Join, LazyUpdate, Read};
 
 /// Tracks the number of the current integration step.
 pub struct Step {
@@ -57,6 +59,77 @@ impl<'a> System<'a> for EulerIntegrationSystem {
 				euler_update(&mut vel, &mut pos, &force, &mass, t.delta);
 			},
 		);
+	}
+}
+
+/// # Velocity-Verlet Integration
+///
+/// This sytem integrates the classical equations of motion for particles using a velocity-verlet method:
+/// `x' = x + v * dt`.
+/// This integrator is simple to implement but prone to integration error.
+///
+/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource.
+pub struct VelocityVerletIntegrationSystem;
+
+impl<'a> System<'a> for VelocityVerletIntegrationSystem {
+	type SystemData = (
+		WriteStorage<'a, Position>,
+		WriteStorage<'a, Velocity>,
+		ReadExpect<'a, Timestep>,
+		WriteExpect<'a, Step>,
+		ReadStorage<'a, Force>,
+		WriteStorage<'a, OldForce>,
+		ReadStorage<'a, Mass>,
+	);
+
+	fn run(
+		&mut self,
+		(mut pos, mut vel, t, mut step, force, mut oldforce, mass): Self::SystemData,
+	) {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
+		step.n = step.n + 1;
+		let dt = t.delta;
+
+		(&mut pos, &mut vel, &mut oldforce, &force, &mass)
+			.par_join()
+			.for_each(|(mut pos, mut vel, mut oldforce, force, mass)| {
+				pos.pos = pos.pos
+					+ vel.vel * dt + force.force / (constant::AMU * mass.value) / 2.0
+					* dt * dt;
+				vel.vel = vel.vel
+					+ (force.force + oldforce.0.force) / (mass.value * constant::AMU) / 2.0 * dt;
+				oldforce.0 = *force;
+			});
+	}
+}
+
+/// Adds [OldForce](OldForce.struct.html) components to newly created atoms.
+pub struct AddOldForceToNewAtomsSystem;
+
+impl<'a> System<'a> for AddOldForceToNewAtomsSystem {
+	type SystemData = (
+		Entities<'a>,
+		ReadStorage<'a, NewlyCreated>,
+		ReadStorage<'a, OldForce>,
+		Read<'a, LazyUpdate>,
+	);
+	fn run(&mut self, (ent, newly_created, oldforce, updater): Self::SystemData) {
+		for (ent, _, _) in (&ent, &newly_created, !&oldforce).join() {
+			updater.insert(ent, OldForce::default());
+		}
+	}
+}
+
+/// Stores the value of the force calculation from the previous frame.
+pub struct OldForce(Force);
+impl Component for OldForce {
+	type Storage = VecStorage<OldForce>;
+}
+impl Default for OldForce {
+	fn default() -> Self {
+		OldForce { 0: Force::new() }
 	}
 }
 
