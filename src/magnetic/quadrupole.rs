@@ -1,3 +1,5 @@
+//! Magnetic quadrupole fields
+
 extern crate nalgebra;
 extern crate specs;
 use crate::atom::Position;
@@ -14,6 +16,7 @@ pub struct QuadrupoleField3D {
 }
 impl QuadrupoleField3D {
     /// Creates a `QuadrupoleField3D` component with gradient specified in Gauss per cm.
+    #[inline]
     pub fn gauss_per_cm(gradient: f64, direction: Vector3<f64>) -> Self {
         Self {
             gradient: gradient * 0.01,
@@ -62,16 +65,21 @@ impl<'a> System<'a> for Sample3DQuadrupoleFieldSystem {
         ReadStorage<'a, QuadrupoleField3D>,
     );
     fn run(&mut self, (mut sampler, pos, quadrupole): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         for (centre, quadrupole) in (&pos, &quadrupole).join() {
-            for (pos, mut sampler) in (&pos, &mut sampler).join() {
-                let quad_field = Sample3DQuadrupoleFieldSystem::calculate_field(
-                    pos.pos,
-                    centre.pos,
-                    quadrupole.gradient,
-                    quadrupole.direction,
-                );
-                sampler.field = sampler.field + quad_field;
-            }
+            (&pos, &mut sampler)
+                .par_join()
+                .for_each(|(pos, mut sampler)| {
+                    let quad_field = Sample3DQuadrupoleFieldSystem::calculate_field(
+                        pos.pos,
+                        centre.pos,
+                        quadrupole.gradient,
+                        quadrupole.direction,
+                    );
+                    sampler.field = sampler.field + quad_field;
+                });
         }
     }
 }

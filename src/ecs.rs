@@ -11,7 +11,7 @@ use crate::destructor::DeleteToBeDestroyedEntitiesSystem;
 //use crate::detector::DetectingInfo;
 use crate::gravity::ApplyGravitationalForceSystem;
 use crate::initiate::DeflagNewAtomsSystem;
-use crate::integrator::{EulerIntegrationSystem, Step};
+use crate::integrator::{AddOldForceToNewAtomsSystem, Step, VelocityVerletIntegrationSystem};
 use crate::laser;
 use crate::laser::repump::Dark;
 use crate::magnetic;
@@ -43,35 +43,35 @@ impl AtomecsDispatcherBuilder {
 	pub fn add_frame_initialisation_systems(&mut self) {
 		&self.builder.add(ClearForceSystem, "clear", &[]);
 		&self.builder.add(DeflagNewAtomsSystem, "deflag", &[]);
-		&self.builder.add_barrier();
 	}
 
 	pub fn add_systems(&mut self) {
 		magnetic::add_systems_to_dispatch(&mut self.builder, &[]);
-		self.builder.add_barrier();
 		laser::add_systems_to_dispatch(&mut self.builder, &[]);
-		self.builder.add_barrier();
 		atom_sources::add_systems_to_dispatch(&mut self.builder, &[]);
-		self.builder.add_barrier();
 		self.builder
 			.add(ApplyGravitationalForceSystem, "add_gravity", &["clear"]);
 	}
 
 	pub fn add_integration_systems(&mut self) {
-		&self
-			.builder
-			.add(EulerIntegrationSystem, "euler_integrator", &["add_gravity"]);
+		&self.builder.add(
+			VelocityVerletIntegrationSystem,
+			"integrator",
+			&[
+				"calculate_absorption_forces",
+				"calculate_emission_forces",
+				"add_gravity",
+			],
+		);
+		&self.builder.add(AddOldForceToNewAtomsSystem, "", &[]);
 	}
 
 	pub fn add_frame_end_systems(&mut self) {
+		&self.builder.add(ConsoleOutputSystem, "", &["integrator"]);
 		&self
 			.builder
-			.add(ConsoleOutputSystem, "", &["euler_integrator"]);
-		&self
-			.builder
-			.add(DeleteToBeDestroyedEntitiesSystem, "", &["euler_integrator"]);
+			.add(DeleteToBeDestroyedEntitiesSystem, "", &["integrator"]);
 		sim_region::add_systems_to_dispatch(&mut self.builder, &[]);
-		self.builder.add_barrier();
 	}
 
 	pub fn build(mut self) -> DispatcherBuilder<'static, 'static> {

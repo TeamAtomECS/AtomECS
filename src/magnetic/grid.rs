@@ -61,6 +61,8 @@ impl Component for PrecalculatedMagneticFieldGrid {
     type Storage = HashMapStorage<Self>;
 }
 
+/// Samples from the MagneticFieldGrid at a `Position` and stores
+/// result in `MagneticFieldSampler`
 pub struct SampleMagneticGridSystem;
 impl<'a> System<'a> for SampleMagneticGridSystem {
     type SystemData = (

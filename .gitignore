@@ -8,3 +8,7 @@
 **/*.csv
 **/__pycache*
 **/*.json
+**/*.mp4
+*.ipynb
+**/*.pdf
+**/*.mat

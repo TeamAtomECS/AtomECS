@@ -1,16 +1,15 @@
-//! Loading a Sr 3D MOT directly from an oven source.
-
 extern crate atomecs as lib;
+use crate::lib::laser::force::ApplyEmissionForceOption;
+use lib::atom_sources::central_creator::CentralCreator;
+
 extern crate nalgebra;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
-use lib::atom_sources::oven::{OvenAperture, OvenBuilder};
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
-use lib::laser::force::ApplyEmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
@@ -21,23 +20,27 @@ use nalgebra::Vector3;
 use specs::{Builder, World};
 use std::time::Instant;
 
-fn main() {
+fn run_with_parameter(_parameter_name: &str, iterator: usize) {
+    let _detuning_values: Vec<f64> = vec![-0.1, -0.3, -0.7, -1.5, -3.0];
+    let power_values: Vec<f64> = vec![0.1, 0.1, 1.0];
     let now = Instant::now();
 
     // Create the simulation world and builder for the ECS dispatcher.
     let mut world = World::new();
+
     ecs::register_components(&mut world);
     ecs::register_resources(&mut world);
+
     let mut builder = ecs::create_simulation_dispatcher_builder();
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos.txt".to_string(), 100),
+        file::new::<Position, Text>(format!("pos.txt"), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 100),
+        file::new::<Velocity, Text>(format!("vel.txt"), 100),
         "",
         &[],
     );
@@ -48,14 +51,22 @@ fn main() {
     // Create magnetic field.
     world
         .create_entity()
-        .with(QuadrupoleField3D::gauss_per_cm(65.0, Vector3::z()))
+        .with(QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
         .with(Position::new())
         .build();
 
     // Create cooling lasers.
-    let detuning = -90.0;
-    let power = 2.23; //original: 0.23
-    let radius = 33.0e-3 / (2.0 * 2.0_f64.sqrt()); // 33mm 1/e^2 diameter
+    //let detuning = match detuning_values.get(iterator) {
+    //    Some(v) => v,
+    //    None => panic!("parameter value did not exist!"),
+    //}; // MHz
+
+    let detuning = -0.5;
+    let power = match power_values.get(iterator) {
+        Some(v) => v,
+        None => panic!("parameter value did not exist!"),
+    }; //W total power of all Lasers together
+    let radius = 1.0e-2 / (2.0 * 2.0_f64.sqrt()); // 10mm 1/e^2 diameter
 
     // Horizontal beams along z
     world
@@ -63,11 +74,11 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power / 5.0,
+            power: power / 6.0,
             direction: Vector3::z(),
         })
         .with(CoolingLight::for_species(
-            AtomicTransition::strontium(),
+            AtomicTransition::strontium_red(),
             detuning,
             -1,
         ))
@@ -77,11 +88,11 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power / 5.0,
+            power: power / 6.0,
             direction: -Vector3::z(),
         })
         .with(CoolingLight::for_species(
-            AtomicTransition::strontium(),
+            AtomicTransition::strontium_red(),
             detuning,
             -1,
         ))
@@ -93,11 +104,11 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power,
+            power: power / 6.,
             direction: Vector3::new(1.0, 1.0, 0.0).normalize(),
         })
         .with(CoolingLight::for_species(
-            AtomicTransition::strontium(),
+            AtomicTransition::strontium_red(),
             detuning,
             1,
         ))
@@ -107,11 +118,11 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power,
+            power: power / 6.,
             direction: Vector3::new(1.0, -1.0, 0.0).normalize(),
         })
         .with(CoolingLight::for_species(
-            AtomicTransition::strontium(),
+            AtomicTransition::strontium_red(),
             detuning,
             1,
         ))
@@ -121,11 +132,11 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power,
+            power: power / 6.,
             direction: Vector3::new(-1.0, 1.0, 0.0).normalize(),
         })
         .with(CoolingLight::for_species(
-            AtomicTransition::strontium(),
+            AtomicTransition::strontium_red(),
             detuning,
             1,
         ))
@@ -135,48 +146,43 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power,
+            power: power / 6.,
             direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
         })
         .with(CoolingLight::for_species(
-            AtomicTransition::strontium(),
+            AtomicTransition::strontium_red(),
             detuning,
             1,
         ))
         .build();
 
-    // Create an oven.
-    // The oven will eject atoms on the first frame and then be deleted.
-    let number_to_emit = 1000000;
+    // creating the entity that represents the source
+    //
+    // contains a central creator
+    let number_to_emit = 1_000;
+    let size_of_cube = 1.0e-4;
+    let speed = 0.1; // m/s
+
     world
         .create_entity()
-        .with(
-            OvenBuilder::new(776.0, Vector3::x())
-                .with_aperture(OvenAperture::Circular {
-                    radius: 0.005,
-                    thickness: 0.001,
-                })
-                .build(),
-        )
+        .with(CentralCreator::new_uniform_cubic(size_of_cube, speed))
         .with(Position {
-            pos: Vector3::new(-0.083, 0.0, 0.0),
+            pos: Vector3::new(0.0, 0.0, 0.0),
         })
         .with(MassDistribution::new(vec![MassRatio {
             mass: 88.0,
             ratio: 1.0,
         }]))
-        .with(AtomicTransition::strontium())
+        .with(AtomicTransition::strontium_red())
         .with(AtomNumberToEmit {
             number: number_to_emit,
         })
         .with(ToBeDestroyed)
         .build();
-
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-6 });
     // enable the usage of the emission system
     world.add_resource(ApplyEmissionForceOption {});
-
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
         .create_entity()
@@ -184,7 +190,7 @@ fn main() {
             pos: Vector3::new(0.0, 0.0, 0.0),
         })
         .with(Cuboid {
-            half_width: Vector3::new(0.1, 0.01, 0.01), //(0.1, 0.01, 0.01)
+            half_width: Vector3::new(0.01, 0.01, 0.01),
         })
         .with(SimulationVolume {
             volume_type: VolumeType::Inclusive,
@@ -192,10 +198,14 @@ fn main() {
         .build();
 
     // Run the simulation for a number of steps.
-    for _i in 0..10000 {
+    for _i in 0..100_000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
 
     println!("Simulation completed in {} ms.", now.elapsed().as_millis());
+}
+
+fn main() {
+    run_with_parameter("power", 0);
 }

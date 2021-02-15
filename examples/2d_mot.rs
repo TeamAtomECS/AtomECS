@@ -1,6 +1,6 @@
 //! Simulates a 2D MOT cooling atoms coming from a thermal oven.
 
-extern crate magneto_optical_trap as lib;
+extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
@@ -61,7 +61,7 @@ fn main() {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
             detuning,
-            1.0,
+            1,
         ))
         .build();
     world
@@ -75,7 +75,7 @@ fn main() {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
             detuning,
-            1.0,
+            1,
         ))
         .build();
     world
@@ -89,7 +89,7 @@ fn main() {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
             detuning,
-            1.0,
+            1,
         ))
         .build();
     world
@@ -103,7 +103,7 @@ fn main() {
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
             detuning,
-            1.0,
+            1,
         ))
         .build();
 

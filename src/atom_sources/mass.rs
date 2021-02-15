@@ -1,3 +1,5 @@
+//! Masses and isotopes of atoms
+
 use crate::atom::Mass;
 extern crate rand;
 use rand::Rng;

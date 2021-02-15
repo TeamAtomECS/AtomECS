@@ -1,3 +1,5 @@
+//! Magnetic fields and zeeman shift
+
 extern crate nalgebra;
 extern crate specs;
 use crate::initiate::NewlyCreated;
@@ -10,6 +12,7 @@ use specs::{
 pub mod grid;
 pub mod quadrupole;
 pub mod uniform;
+pub mod zeeman;
 use std::fmt;
 
 /// A component that stores the magnetic field at an entity's location.
@@ -57,10 +60,13 @@ pub struct ClearMagneticFieldSamplerSystem;
 impl<'a> System<'a> for ClearMagneticFieldSamplerSystem {
 	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
 	fn run(&mut self, mut sampler: Self::SystemData) {
-		for sampler in (&mut sampler).join() {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
+		(&mut sampler).par_join().for_each(|mut sampler| {
 			sampler.magnitude = 0.;
 			sampler.field = Vector3::new(0.0, 0.0, 0.0)
-		}
+		});
 	}
 }
 
@@ -73,12 +79,15 @@ pub struct CalculateMagneticFieldMagnitudeSystem;
 impl<'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
 	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
 	fn run(&mut self, mut sampler: Self::SystemData) {
-		for sampler in (&mut sampler).join() {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
+		(&mut sampler).par_join().for_each(|mut sampler| {
 			sampler.magnitude = sampler.field.norm();
 			if sampler.magnitude.is_nan() {
 				sampler.magnitude = 0.0;
 			}
-		}
+		});
 	}
 }
 
@@ -106,10 +115,7 @@ impl<'a> System<'a> for AttachFieldSamplersToNewlyCreatedAtomsSystem {
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the magnetics systems run.
-pub fn add_systems_to_dispatch(
-	builder: &mut DispatcherBuilder<'static, 'static>,
-	deps: &[&str],
-) -> () {
+pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>, deps: &[&str]) {
 	builder.add(ClearMagneticFieldSamplerSystem, "magnetics_clear", deps);
 	builder.add(
 		quadrupole::Sample3DQuadrupoleFieldSystem,
@@ -135,6 +141,16 @@ pub fn add_systems_to_dispatch(
 		AttachFieldSamplersToNewlyCreatedAtomsSystem,
 		"add_magnetic_field_samplers",
 		&[],
+	);
+	builder.add(
+		zeeman::AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem,
+		"attach_zeeman_shift_samplers",
+		&["add_magnetic_field_samplers"],
+	);
+	builder.add(
+		zeeman::CalculateZeemanShiftSystem,
+		"zeeman_shift",
+		&["attach_zeeman_shift_samplers"],
 	);
 }
 
