@@ -96,7 +96,7 @@ impl<'a> System<'a> for VelocityVerletIntegrationSystem {
 			.par_join()
 			.for_each(|(mut pos, mut vel, mut oldforce, force, mass)| {
 				pos.pos = pos.pos
-					+ vel.vel * dt + force.force / (constant::AMU * mass.value) / 2.0
+					+ vel.vel * dt + oldforce.0.force / (constant::AMU * mass.value) / 2.0
 					* dt * dt;
 				vel.vel = vel.vel
 					+ (force.force + oldforce.0.force) / (mass.value * constant::AMU) / 2.0 * dt;
@@ -211,5 +211,79 @@ pub mod tests {
 		let positions = test_world.read_storage::<Position>();
 		let position = positions.get(test_entity).expect("entity not found");
 		assert_eq!(position.pos, initial_position + initial_velocity * dt);
+	}
+
+	#[test]
+	fn test_add_old_force_system() {
+		let mut test_world = World::new();
+
+		let mut dispatcher = DispatcherBuilder::new()
+			.with(AddOldForceToNewAtomsSystem, "", &[])
+			.build();
+		dispatcher.setup(&mut test_world.res);
+		test_world.register::<OldForce>();
+
+		let test_entity = test_world.create_entity().with(NewlyCreated {}).build();
+
+		dispatcher.dispatch(&mut test_world.res);
+		test_world.maintain();
+
+		let old_forces = test_world.read_storage::<OldForce>();
+		assert_eq!(
+			old_forces.contains(test_entity),
+			true,
+			"OldForce component not added to test entity."
+		);
+	}
+
+	#[test]
+	fn test_velocity_verlet_system() {
+		let mut test_world = World::new();
+
+		let mut dispatcher = DispatcherBuilder::new()
+			.with(VelocityVerletIntegrationSystem, "", &[])
+			.build();
+		dispatcher.setup(&mut test_world.res);
+
+		let p_1 = Vector3::new(0.0, 0.1, 0.0);
+		let v_1 = Vector3::new(1.0, 1.5, 0.4);
+		let force_2 = Vector3::new(0.4, 0.6, -0.4);
+		let force_1 = Vector3::new(0.2, 0.3, -0.4);
+		let mass = 2.0 / constant::AMU;
+		let test_entity = test_world
+			.create_entity()
+			.with(Position { pos: p_1 })
+			.with(Velocity { vel: v_1 })
+			.with(Force { force: force_2 })
+			.with(OldForce {
+				0: Force { force: force_1 },
+			})
+			.with(Mass { value: mass })
+			.build();
+
+		let dt = 1.0;
+		test_world.add_resource(Timestep { delta: dt });
+		test_world.add_resource(Step { n: 0 });
+
+		dispatcher.dispatch(&mut test_world.res);
+
+		let velocities = test_world.read_storage::<Velocity>();
+		let velocity = velocities.get(test_entity).expect("entity not found");
+		let a_1 = &force_1 / (&mass * constant::AMU);
+		let a_2 = &force_2 / (&mass * constant::AMU);
+		let v_2 = v_1 + (a_1 + a_2) / 2.0 * dt;
+		let p_2 = p_1 + v_1 * dt + a_1 / 2.0 * dt * dt;
+		assert!(
+			(velocity.vel - v_2).norm().abs() < std::f64::EPSILON,
+			"velocity incorrect"
+		);
+		let positions = test_world.read_storage::<Position>();
+		let position = positions.get(test_entity).expect("entity not found");
+		let p_error = (position.pos - p_2).norm().abs();
+		assert!(
+			p_error < std::f64::EPSILON,
+			"position incorrect: delta={}",
+			p_error
+		);
 	}
 }
