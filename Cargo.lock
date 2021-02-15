@@ -37,6 +37,25 @@ version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "atomecs"
+version = "0.2.0"
+dependencies = [
+ "assert_approx_eq 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "byteorder 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "criterion 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "csv 1.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gnuplot 0.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nalgebra 0.18.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rayon 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.123 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.62 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_yaml 0.8.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "specs 0.14.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "specs-derive 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -428,25 +447,6 @@ version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "magneto_optical_trap"
-version = "0.1.0"
-dependencies = [
- "assert_approx_eq 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "byteorder 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "criterion 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "csv 1.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "gnuplot 0.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
- "nalgebra 0.18.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "rayon 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.123 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_json 1.0.62 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_yaml 0.8.16 (registry+https://github.com/rust-lang/crates.io-index)",
- "specs 0.14.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "specs-derive 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

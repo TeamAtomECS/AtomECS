@@ -1,6 +1,6 @@
 [package]
-name = "magneto_optical_trap"
-version = "0.1.0"
+name = "atomecs"
+version = "0.2.0"
 authors = ["Pi-sun <37469116+Pi-sun@users.noreply.github.com>"]
 edition = "2018"
 
