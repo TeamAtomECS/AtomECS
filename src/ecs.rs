@@ -11,7 +11,7 @@ use crate::destructor::DeleteToBeDestroyedEntitiesSystem;
 //use crate::detector::DetectingInfo;
 use crate::gravity::ApplyGravitationalForceSystem;
 use crate::initiate::DeflagNewAtomsSystem;
-use crate::integrator::{EulerIntegrationSystem, Step};
+use crate::integrator::{AddOldForceToNewAtomsSystem, Step, VelocityVerletIntegrationSystem};
 use crate::laser;
 use crate::laser::repump::Dark;
 use crate::magnetic;
@@ -44,16 +44,17 @@ pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'sta
 	builder = atom_sources::add_systems_to_dispatch(builder, &[]);
 	builder = builder.with(ApplyGravitationalForceSystem, "add_gravity", &["clear"]);
 	builder = builder.with(
-		EulerIntegrationSystem,
-		"euler_integrator",
+		VelocityVerletIntegrationSystem,
+		"integrator",
 		&[
 			"calculate_absorption_forces",
 			"calculate_emission_forces",
 			"add_gravity",
 		],
 	);
-	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
-	builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &["euler_integrator"]);
+	builder = builder.with(ConsoleOutputSystem, "", &["integrator"]);
+	builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &["integrator"]);
+	builder.add(AddOldForceToNewAtomsSystem, "", &[]);
 	builder = sim_region::add_systems_to_dispatch(builder, &[]);
 	builder
 }
