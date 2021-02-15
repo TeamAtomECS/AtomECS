@@ -1,6 +1,7 @@
 extern crate magneto_optical_trap as lib;
 use crate::lib::laser::force::ApplyEmissionForceOption;
 use lib::atom_sources::central_creator::CentralCreator;
+use magneto_optical_trap::laser::photons_scattered::EnableScatteringFluctuations;
 
 extern crate nalgebra;
 use lib::atom::{AtomicTransition, Position, Velocity};
@@ -35,12 +36,12 @@ fn run_with_parameter(_parameter_name: &str, iterator: usize) {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>(format!("pos.txt"), 100),
+        file::new::<Position, Text>(format!("pos_2000.txt"), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>(format!("vel.txt"), 100),
+        file::new::<Velocity, Text>(format!("vel_2000.txt"), 100),
         "",
         &[],
     );
@@ -61,7 +62,7 @@ fn run_with_parameter(_parameter_name: &str, iterator: usize) {
     //    None => panic!("parameter value did not exist!"),
     //}; // MHz
 
-    let detuning = -0.5;
+    let detuning = -2.;
     let power = match power_values.get(iterator) {
         Some(v) => v,
         None => panic!("parameter value did not exist!"),
@@ -159,7 +160,7 @@ fn run_with_parameter(_parameter_name: &str, iterator: usize) {
     // creating the entity that represents the source
     //
     // contains a central creator
-    let number_to_emit = 1_000;
+    let number_to_emit = 100;
     let size_of_cube = 1.0e-4;
     let speed = 0.1; // m/s
 
@@ -180,9 +181,11 @@ fn run_with_parameter(_parameter_name: &str, iterator: usize) {
         .with(ToBeDestroyed)
         .build();
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.add_resource(Timestep { delta: 1.0e-5 });
     // enable the usage of the emission system
     world.add_resource(ApplyEmissionForceOption {});
+    world.add_resource(EnableScatteringFluctuations {});
+
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
         .create_entity()
