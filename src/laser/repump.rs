@@ -4,7 +4,7 @@ extern crate rand;
 extern crate specs;
 use crate::laser::photons_scattered::TotalPhotonsScattered;
 use rand::Rng;
-use specs::{Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage};
+use specs::{Component, Entities, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
 /// Marks an atom as being in a dark state
 pub struct Dark;
@@ -39,14 +39,17 @@ impl<'a> System<'a> for RepumpSystem {
         Entities<'a>,
     );
     fn run(&mut self, (repump_opt, lazy, num, ent): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         match repump_opt {
             None => (),
             Some(repump) => {
-                for (ent, num) in (&ent, &num).join() {
+                (&ent, &num).par_join().for_each(|(ent, num)| {
                     if repump.if_loss(num.total) {
                         lazy.insert(ent, Dark {})
                     }
-                }
+                });
             }
         }
     }

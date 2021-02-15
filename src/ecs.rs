@@ -11,11 +11,10 @@ use crate::destructor::DeleteToBeDestroyedEntitiesSystem;
 //use crate::detector::DetectingInfo;
 use crate::gravity::ApplyGravitationalForceSystem;
 use crate::initiate::DeflagNewAtomsSystem;
-use crate::integrator::{EulerIntegrationSystem, Step};
+use crate::integrator::{AddOldForceToNewAtomsSystem, Step, VelocityVerletIntegrationSystem};
 use crate::laser;
 use crate::laser::repump::Dark;
 use crate::magnetic;
-use crate::optimization::LargerEarlyTimestepOptimizationSystem;
 use crate::output::console_output::ConsoleOutputSystem;
 use crate::sim_region;
 use specs::{Dispatcher, DispatcherBuilder, World};
@@ -26,7 +25,6 @@ pub fn register_components(world: &mut World) {
 	magnetic::register_components(world);
 	laser::register_components(world);
 	atom_sources::register_components(world);
-	//detector::register_components(world);
 	sim_region::register_components(world);
 	world.register::<Dark>();
 }
@@ -39,31 +37,25 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 
 pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'static> {
 	let mut builder = DispatcherBuilder::new();
-	builder = builder.with(LargerEarlyTimestepOptimizationSystem, "opt", &[]);
 	builder = builder.with(ClearForceSystem, "clear", &[]);
 	builder = builder.with(DeflagNewAtomsSystem, "deflag", &[]);
-	//builder.add_barrier();
 	builder = magnetic::add_systems_to_dispatch(builder, &[]);
-	//builder.add_barrier();
 	builder = laser::add_systems_to_dispatch(builder, &[]);
-	//builder.add_barrier();
 	builder = atom_sources::add_systems_to_dispatch(builder, &[]);
-	//builder.add_barrier();
 	builder = builder.with(ApplyGravitationalForceSystem, "add_gravity", &["clear"]);
 	builder = builder.with(
-		EulerIntegrationSystem,
-		"euler_integrator",
+		VelocityVerletIntegrationSystem,
+		"integrator",
 		&[
 			"calculate_absorption_forces",
 			"calculate_emission_forces",
 			"add_gravity",
 		],
 	);
-	//builder = detector::add_systems_to_dispatch(builder, &[]);
-	builder = builder.with(ConsoleOutputSystem, "", &["euler_integrator"]);
-	builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &["euler_integrator"]);
+	builder = builder.with(ConsoleOutputSystem, "", &["integrator"]);
+	builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &["integrator"]);
+	builder.add(AddOldForceToNewAtomsSystem, "", &[]);
 	builder = sim_region::add_systems_to_dispatch(builder, &[]);
-	builder.add_barrier();
 	builder
 }
 

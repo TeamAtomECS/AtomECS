@@ -60,10 +60,13 @@ pub struct ClearMagneticFieldSamplerSystem;
 impl<'a> System<'a> for ClearMagneticFieldSamplerSystem {
 	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
 	fn run(&mut self, mut sampler: Self::SystemData) {
-		for sampler in (&mut sampler).join() {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
+		(&mut sampler).par_join().for_each(|mut sampler| {
 			sampler.magnitude = 0.;
 			sampler.field = Vector3::new(0.0, 0.0, 0.0)
-		}
+		});
 	}
 }
 
@@ -76,12 +79,15 @@ pub struct CalculateMagneticFieldMagnitudeSystem;
 impl<'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
 	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
 	fn run(&mut self, mut sampler: Self::SystemData) {
-		for sampler in (&mut sampler).join() {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
+		(&mut sampler).par_join().for_each(|mut sampler| {
 			sampler.magnitude = sampler.field.norm();
 			if sampler.magnitude.is_nan() {
 				sampler.magnitude = 0.0;
 			}
-		}
+		});
 	}
 }
 

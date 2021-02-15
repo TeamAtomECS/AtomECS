@@ -15,6 +15,8 @@ extern crate specs;
 use crate::initiate::NewlyCreated;
 use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System, World};
 
+pub const COOLING_BEAM_LIMIT: usize = 16;
+
 /// Attaches components used for optical force calculation to newly created atoms.
 ///
 /// They are recognized as newly created if they are associated with
@@ -32,26 +34,32 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 		for (ent, _) in (&ent, &newly_created).join() {
 			updater.insert(
 				ent,
+				sampler::LaserSamplerMasks {
+					contents: [sampler::LaserSamplerMask::default(); COOLING_BEAM_LIMIT],
+				},
+			);
+			updater.insert(
+				ent,
 				doppler::DopplerShiftSamplers {
-					contents: Vec::new(),
+					contents: [doppler::DopplerShiftSampler::default(); COOLING_BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				intensity::LaserIntensitySamplers {
-					contents: Vec::new(),
+					contents: [intensity::LaserIntensitySampler::default(); COOLING_BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				sampler::LaserDetuningSamplers {
-					contents: Vec::new(),
+					contents: [sampler::LaserDetuningSampler::default(); COOLING_BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				rate::RateCoefficients {
-					contents: Vec::new(),
+					contents: [rate::RateCoefficient::default(); COOLING_BEAM_LIMIT],
 				},
 			);
 			updater.insert(ent, twolevel::TwoLevelPopulation::default());
@@ -59,13 +67,15 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 			updater.insert(
 				ent,
 				photons_scattered::ExpectedPhotonsScatteredVector {
-					contents: Vec::new(),
+					contents: [photons_scattered::ExpectedPhotonsScattered::default();
+						COOLING_BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				photons_scattered::ActualPhotonsScatteredVector {
-					contents: Vec::new(),
+					contents: [photons_scattered::ActualPhotonsScattered::default();
+						COOLING_BEAM_LIMIT],
 				},
 			);
 		}
@@ -83,7 +93,7 @@ pub fn add_systems_to_dispatch(
 	builder: DispatcherBuilder<'static, 'static>,
 	deps: &[&str],
 ) -> DispatcherBuilder<'static, 'static> {
-	let mut builder = builder
+	let builder = builder
 		.with(
 			AttachLaserComponentsToNewlyCreatedAtomsSystem,
 			"attach_atom_laser_components",
@@ -97,55 +107,36 @@ pub fn add_systems_to_dispatch(
 		.with(
 			cooling::IndexCoolingLightsSystem,
 			"index_cooling_lights",
-			&["attach_cooling_index"],
+			deps,
 		)
 		.with(
-			intensity::InitialiseLaserIntensitySamplersSystem,
-			"initialise_laser_intensity",
-			&["index_cooling_lights"],
+			sampler::InitialiseLaserSamplerMasksSystem,
+			"initialise_laser_sampler_masks",
+			deps,
 		)
 		.with(
-			doppler::InitialiseDopplerShiftSamplersSystem,
-			"initialise_doppler_shift",
-			&["index_cooling_lights"],
+			sampler::FillLaserSamplerMasksSystem,
+			"fill_laser_sampler_masks",
+			&["index_cooling_lights", "initialise_laser_sampler_masks"],
 		)
-		.with(
-			sampler::InitialiseLaserDetuningSamplersSystem,
-			"initialise_laser_detuning",
-			&["index_cooling_lights"],
-		)
-		.with(
-			rate::InitialiseRateCoefficientsSystem,
-			"initialise_rate_coefficient",
-			&["index_cooling_lights"],
-		)
-		.with(
-			photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem,
-			"initialise_expected_photons",
-			&["index_cooling_lights"],
-		)
-		.with(
-			photons_scattered::InitialiseActualPhotonsScatteredVectorSystem,
-			"initialise_actual_photons",
-			&["index_cooling_lights"],
-		);
-	// We add a barrier here because the calculations should only start once all components are initialized.
-	builder.add_barrier();
-	builder = builder
 		.with(
 			intensity::SampleLaserIntensitySystem,
 			"sample_laser_intensity",
-			&["initialise_actual_photons"],
+			&["index_cooling_lights"],
 		)
 		.with(
 			doppler::CalculateDopplerShiftSystem,
 			"calculate_doppler_shift",
-			&["initialise_actual_photons"],
+			&["index_cooling_lights"],
 		)
 		.with(
 			sampler::CalculateLaserDetuningSystem,
 			"calculate_laser_detuning",
-			&["calculate_doppler_shift", "zeeman_shift"],
+			&[
+				"calculate_doppler_shift",
+				"zeeman_shift",
+				"index_cooling_lights",
+			],
 		)
 		.with(
 			rate::CalculateRateCoefficientsSystem,
@@ -155,7 +146,7 @@ pub fn add_systems_to_dispatch(
 		.with(
 			twolevel::CalculateTwoLevelPopulationSystem,
 			"calculate_twolevel",
-			&["calculate_rate_coefficients"],
+			&["calculate_rate_coefficients", "fill_laser_sampler_masks"],
 		)
 		.with(
 			photons_scattered::CalculateMeanTotalPhotonsScatteredSystem,
@@ -165,7 +156,7 @@ pub fn add_systems_to_dispatch(
 		.with(
 			photons_scattered::CalculateExpectedPhotonsScatteredSystem,
 			"calculate_expected_photons",
-			&["calculate_total_photons"],
+			&["calculate_total_photons", "fill_laser_sampler_masks"],
 		)
 		.with(
 			photons_scattered::CalculateActualPhotonsScatteredSystem,

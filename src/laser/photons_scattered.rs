@@ -9,12 +9,11 @@ use specs::Read;
 
 use crate::atom::AtomicTransition;
 use crate::integrator::Timestep;
-use crate::laser::cooling::CoolingLight;
-use crate::laser::cooling::CoolingLightIndex;
 use crate::laser::rate::RateCoefficients;
+use crate::laser::sampler::LaserSamplerMasks;
 use crate::laser::twolevel::TwoLevelPopulation;
 use serde::{Deserialize, Serialize};
-use specs::{Component, Join, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
+use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
 use std::fmt;
 
 use crate::constant::PI;
@@ -59,21 +58,24 @@ impl<'a> System<'a> for CalculateMeanTotalPhotonsScatteredSystem {
         &mut self,
         (timestep, atomic_transition, twolevel_population, mut total_photons_scattered): Self::SystemData,
     ) {
-        for (atominfo, twolevel, total) in (
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
+        (
             &atomic_transition,
             &twolevel_population,
             &mut total_photons_scattered,
         )
-            .join()
-        {
-            // DEFINITELY CHECK the 2pi!!!
-            total.total = timestep.delta * (2. * PI * atominfo.linewidth) * twolevel.excited;
-        }
+            .par_join()
+            .for_each(|(atominfo, twolevel, total)| {
+                // DEFINITELY CHECK the 2pi!!!
+                total.total = timestep.delta * (2. * PI * atominfo.linewidth) * twolevel.excited;
+            });
     }
 }
 
 /// The number of photons scattered by the atom from a single, specific beam
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct ExpectedPhotonsScattered {
     ///photons scattered by the atom from a specific beam
     scattered: f64,
@@ -90,7 +92,7 @@ impl Default for ExpectedPhotonsScattered {
 
 /// The List that holds an `ExpectedPhotonsScattered` for each laser
 pub struct ExpectedPhotonsScatteredVector {
-    pub contents: Vec<ExpectedPhotonsScattered>,
+    pub contents: [ExpectedPhotonsScattered; crate::laser::COOLING_BEAM_LIMIT],
 }
 
 impl Component for ExpectedPhotonsScatteredVector {
@@ -102,22 +104,14 @@ impl Component for ExpectedPhotonsScatteredVector {
 /// It also ensures that the size of the ´ExpectedPhotonsScatteredVector´ components match the number of CoolingLight entities in the world.
 pub struct InitialiseExpectedPhotonsScatteredVectorSystem;
 impl<'a> System<'a> for InitialiseExpectedPhotonsScatteredVectorSystem {
-    type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
-        WriteStorage<'a, ExpectedPhotonsScatteredVector>,
-    );
-    fn run(&mut self, (cooling, cooling_index, mut expected_photons): Self::SystemData) {
+    type SystemData = (WriteStorage<'a, ExpectedPhotonsScatteredVector>,);
+    fn run(&mut self, (mut expected_photons,): Self::SystemData) {
         use rayon::prelude::*;
         use specs::ParJoin;
 
-        let mut content = Vec::new();
-        for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(ExpectedPhotonsScattered::default());
-        }
-
         (&mut expected_photons).par_join().for_each(|mut expected| {
-            expected.contents = content.to_vec();
+            expected.contents =
+                [ExpectedPhotonsScattered::default(); crate::laser::COOLING_BEAM_LIMIT];
         });
     }
 }
@@ -131,12 +125,13 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
     type SystemData = (
         ReadStorage<'a, RateCoefficients>,
         ReadStorage<'a, TotalPhotonsScattered>,
+        ReadStorage<'a, LaserSamplerMasks>,
         WriteStorage<'a, ExpectedPhotonsScatteredVector>,
     );
 
     fn run(
         &mut self,
-        (rate_coefficients, total_photons_scattered, mut expected_photons_vector): Self::SystemData,
+        (rate_coefficients, total_photons_scattered, masks, mut expected_photons_vector): Self::SystemData,
     ) {
         use rayon::prelude::*;
         use specs::ParJoin;
@@ -144,19 +139,24 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
         (
             &rate_coefficients,
             &total_photons_scattered,
+            &masks,
             &mut expected_photons_vector,
         )
             .par_join()
-            .for_each(|(rates, total, expected)| {
+            .for_each(|(rates, total, mask, expected)| {
                 let mut sum_rates: f64 = 0.;
 
-                for count in 0..rates.contents.len() {
-                    sum_rates = sum_rates + rates.contents[count].rate;
+                for index in 0..rates.contents.len() {
+                    if mask.contents[index].filled {
+                        sum_rates = sum_rates + rates.contents[index].rate;
+                    }
                 }
 
                 for index in 0..expected.contents.len() {
-                    expected.contents[index].scattered =
-                        rates.contents[index].rate / sum_rates * total.total;
+                    if mask.contents[index].filled {
+                        expected.contents[index].scattered =
+                            rates.contents[index].rate / sum_rates * total.total;
+                    }
                 }
             });
     }
@@ -171,7 +171,7 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
 /// of a sampling process from a poisson distribution where the lambda parameter is
 /// `ExpectedPhotonsScattered`. This adds an additional degree of randomness to
 /// the simulation that helps to recreate the recoil limit.  
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct ActualPhotonsScattered {
     ///  number of photons actually scattered by the atom from a specific beam
     pub scattered: f64,
@@ -189,7 +189,7 @@ impl Default for ActualPhotonsScattered {
 /// The ist that holds an `ActualPhotonsScattered` for each CoolingLight entity
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ActualPhotonsScatteredVector {
-    pub contents: Vec<ActualPhotonsScattered>,
+    pub contents: [ActualPhotonsScattered; crate::laser::COOLING_BEAM_LIMIT],
 }
 
 impl ActualPhotonsScatteredVector {
@@ -223,22 +223,13 @@ impl Component for ActualPhotonsScatteredVector {
 /// It also ensures that the size of the `ActualPhotonsScatteredVector` components match the number of CoolingLight entities in the world.
 pub struct InitialiseActualPhotonsScatteredVectorSystem;
 impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
-    type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
-        WriteStorage<'a, ActualPhotonsScatteredVector>,
-    );
-    fn run(&mut self, (cooling, cooling_index, mut actual_photons): Self::SystemData) {
+    type SystemData = (WriteStorage<'a, ActualPhotonsScatteredVector>,);
+    fn run(&mut self, (mut actual_photons,): Self::SystemData) {
         use rayon::prelude::*;
         use specs::ParJoin;
 
-        let mut content = Vec::new();
-        for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(ActualPhotonsScattered::default());
-        }
-
         (&mut actual_photons).par_join().for_each(|mut actual| {
-            actual.contents = content.to_vec();
+            actual.contents = [ActualPhotonsScattered::default(); crate::laser::COOLING_BEAM_LIMIT];
         });
     }
 }
@@ -268,30 +259,28 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
 
         match fluctuations_option {
             None => {
-                for (expected, actual) in
-                    (&expected_photons_vector, &mut actual_photons_vector).join()
-                {
-                    for index in 0..expected.contents.len() {
-                        actual.contents[index].scattered = expected.contents[index].scattered;
-                    }
-                }
+                (&expected_photons_vector, &mut actual_photons_vector)
+                    .par_join()
+                    .for_each(|(expected, actual)| {
+                        for index in 0..expected.contents.len() {
+                            actual.contents[index].scattered = expected.contents[index].scattered;
+                        }
+                    });
             }
             Some(_rand) => {
                 (&expected_photons_vector, &mut actual_photons_vector)
                     .par_join()
                     .for_each(|(expected, actual)| {
                         for index in 0..expected.contents.len() {
-                            let poisson = Poisson::new(expected.contents[index].scattered);
-                            let drawn_number = poisson.sample(&mut rand::thread_rng());
-
-                            // I have no clue why it is necessary but it appears that for
-                            // very small expected photon numbers, the poisson distribution
-                            // returns u64::MAX which destroys the Simulation
-                            actual.contents[index].scattered = if drawn_number == u64::MAX {
-                                0.0
-                            } else {
-                                drawn_number as f64
-                            };
+                            let lambda = expected.contents[index].scattered;
+                            actual.contents[index].scattered =
+                                if lambda <= 1.0e-5 || lambda.is_nan() {
+                                    0.0
+                                } else {
+                                    let poisson = Poisson::new(lambda);
+                                    let drawn_number = poisson.sample(&mut rand::thread_rng());
+                                    drawn_number as f64
+                                }
                         }
                     });
             }

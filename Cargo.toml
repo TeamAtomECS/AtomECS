@@ -1,6 +1,6 @@
 [package]
-name = "magneto_optical_trap"
-version = "0.1.0"
+name = "atomecs"
+version = "0.2.0"
 authors = ["Pi-sun <37469116+Pi-sun@users.noreply.github.com>"]
 edition = "2018"
 
@@ -19,6 +19,11 @@ byteorder = "1.3.2"
 
 [dev-dependencies]
 gnuplot="0.0.31"
+criterion = "0.3"
+
+[[bench]]
+name = "rate_calculation"
+harness = false
 
 [profile.release]
 opt-level = 3

@@ -1,6 +1,6 @@
 //! Simulation of atoms cooled to the Doppler limit.
 
-extern crate magneto_optical_trap as lib;
+extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
 use lib::ecs;

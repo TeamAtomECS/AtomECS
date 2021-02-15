@@ -1,6 +1,6 @@
 //! Create a magnetic grid file. This is really just used to show you what format the program expects the file to be in.
 
-extern crate magneto_optical_trap as lib;
+extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::magnetic::grid::PrecalculatedMagneticFieldGrid;
 use nalgebra::Vector3;

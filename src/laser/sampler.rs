@@ -12,8 +12,62 @@ extern crate nalgebra;
 
 const LASER_CACHE_SIZE: usize = 16;
 
+/// Tracks whether slots in the laser sampler arrays are currently used.
+#[derive(Clone, Copy)]
+pub struct LaserSamplerMask {
+    /// Marks whether a cooling light exists for this slot in the laser sampler array.
+    pub filled: bool,
+}
+impl Default for LaserSamplerMask {
+    fn default() -> Self {
+        LaserSamplerMask { filled: false }
+    }
+}
+/// Component that holds a vector of `LaserSamplerMask`
+pub struct LaserSamplerMasks {
+    /// List of `LaserSamplerMask`s
+    pub contents: [LaserSamplerMask; crate::laser::COOLING_BEAM_LIMIT],
+}
+impl Component for LaserSamplerMasks {
+    type Storage = VecStorage<Self>;
+}
+
+/// Marks all laser sampler mask slots as empty.
+pub struct InitialiseLaserSamplerMasksSystem;
+impl<'a> System<'a> for InitialiseLaserSamplerMasksSystem {
+    type SystemData = (WriteStorage<'a, LaserSamplerMasks>,);
+
+    fn run(&mut self, (mut masks,): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
+        (&mut masks).par_join().for_each(|mask| {
+            mask.contents = [LaserSamplerMask::default(); crate::laser::COOLING_BEAM_LIMIT];
+        });
+    }
+}
+
+/// Determines which laser sampler slots are currently being used.
+pub struct FillLaserSamplerMasksSystem;
+impl<'a> System<'a> for FillLaserSamplerMasksSystem {
+    type SystemData = (
+        ReadStorage<'a, CoolingLightIndex>,
+        WriteStorage<'a, LaserSamplerMasks>,
+    );
+    fn run(&mut self, (light_index, mut masks): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
+        for light_index in (&light_index).join() {
+            (&mut masks).par_join().for_each(|masks| {
+                masks.contents[light_index.index] = LaserSamplerMask { filled: true };
+            });
+        }
+    }
+}
+
 /// Represents total detuning of the atom's transition with respect to each beam
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct LaserDetuningSampler {
     /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of Hz
     pub detuning_sigma_plus: f64,
@@ -39,7 +93,7 @@ impl Default for LaserDetuningSampler {
 /// Component that holds a vector of `LaserDetuningSampler`
 pub struct LaserDetuningSamplers {
     /// List of `LaserDetuningSampler`s
-    pub contents: Vec<LaserDetuningSampler>,
+    pub contents: [LaserDetuningSampler; crate::laser::COOLING_BEAM_LIMIT],
 }
 impl Component for LaserDetuningSamplers {
     type Storage = VecStorage<Self>;
@@ -50,20 +104,14 @@ impl Component for LaserDetuningSamplers {
 /// It also ensures that the size of the `LaserDetuningSamplers` components match the number of CoolingLight entities in the world.
 pub struct InitialiseLaserDetuningSamplersSystem;
 impl<'a> System<'a> for InitialiseLaserDetuningSamplersSystem {
-    type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
-        WriteStorage<'a, LaserDetuningSamplers>,
-    );
-    fn run(&mut self, (cooling, cooling_index, mut samplers): Self::SystemData) {
-        let mut content = Vec::new();
-        for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(LaserDetuningSampler::default());
-        }
+    type SystemData = (WriteStorage<'a, LaserDetuningSamplers>,);
+    fn run(&mut self, (mut samplers,): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
 
-        for mut sampler in (&mut samplers).join() {
-            sampler.contents = content.to_vec();
-        }
+        (&mut samplers).par_join().for_each(|mut sampler| {
+            sampler.contents = [LaserDetuningSampler::default(); crate::laser::COOLING_BEAM_LIMIT];
+        });
     }
 }
 

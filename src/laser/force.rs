@@ -84,19 +84,6 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
                     }
                 })
         }
-
-        // for (scattered, mut force, _dark) in (&actual_scattered_vector, &mut forces, !&_dark).join()
-        // {
-        //     for (index, cooling, gaussian) in
-        //         (&cooling_index, &cooling_light, &gaussian_beam).join()
-        //     {
-        //         let new_force = scattered.contents[index.index].scattered as f64 * HBAR
-        //             / timestep.delta
-        //             * gaussian.direction.normalize()
-        //             * cooling.wavenumber();
-        //         force.force = force.force + new_force;
-        //     }
-        // }
     }
 }
 
@@ -127,37 +114,41 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
         &mut self,
         (rand_opt, mut force, actual_scattered_vector, atom_info, timestep): Self::SystemData,
     ) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         match rand_opt {
             None => (),
             Some(_rand) => {
-                for (mut force, atom_info, kick) in
-                    (&mut force, &atom_info, &actual_scattered_vector).join()
-                {
-                    let total: u64 = kick.calculate_total_scattered();
-                    let mut rng = rand::thread_rng();
-                    let omega = 2.0 * constant::PI * atom_info.frequency;
-                    let force_one_kick = constant::HBAR * omega / constant::C / timestep.delta;
-                    if total > 5 {
-                        // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
-                        //Three-Dimensional Random Walk Processes*
-                        let normal = Normal::new(
-                            0.0,
-                            (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
-                        );
+                (&mut force, &atom_info, &actual_scattered_vector)
+                    .par_join()
+                    .for_each(|(mut force, atom_info, kick)| {
+                        let total: u64 = kick.calculate_total_scattered();
+                        let mut rng = rand::thread_rng();
+                        let omega = 2.0 * constant::PI * atom_info.frequency;
+                        let force_one_kick = constant::HBAR * omega / constant::C / timestep.delta;
+                        if total > 5 {
+                            // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
+                            //Three-Dimensional Random Walk Processes*
+                            let normal = Normal::new(
+                                0.0,
+                                (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
+                            );
 
-                        let force_n_kicks = Vector3::new(
-                            normal.sample(&mut rng),
-                            normal.sample(&mut rng),
-                            normal.sample(&mut rng),
-                        );
-                        force.force = force.force + force_n_kicks;
-                    } else {
-                        // explicit random walk implementation
-                        for _i in 0..total {
-                            force.force = force.force + force_one_kick * maths::random_direction();
+                            let force_n_kicks = Vector3::new(
+                                normal.sample(&mut rng),
+                                normal.sample(&mut rng),
+                                normal.sample(&mut rng),
+                            );
+                            force.force = force.force + force_n_kicks;
+                        } else {
+                            // explicit random walk implementation
+                            for _i in 0..total {
+                                force.force =
+                                    force.force + force_one_kick * maths::random_direction();
+                            }
                         }
-                    }
-                }
+                    });
             }
         }
     }

@@ -1,6 +1,6 @@
 //! Loading a Sr 3D MOT directly from the center
 
-extern crate magneto_optical_trap as lib;
+extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::central_creator::CentralCreator;

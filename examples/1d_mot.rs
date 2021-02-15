@@ -2,7 +2,7 @@
 //!
 //! The 1D MOT is formed by counter-propagating laser beams along the z-axis.
 
-extern crate magneto_optical_trap as lib;
+extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
 use lib::ecs;

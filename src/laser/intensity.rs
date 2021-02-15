@@ -7,7 +7,7 @@
 extern crate rayon;
 extern crate specs;
 
-use super::cooling::{CoolingLight, CoolingLightIndex};
+use super::cooling::CoolingLightIndex;
 use super::gaussian::{get_gaussian_beam_intensity, CircularMask, GaussianBeam};
 use crate::atom::Position;
 use specs::{Component, Entities, Join, ReadStorage, System, VecStorage, WriteStorage};
@@ -33,7 +33,7 @@ impl Default for LaserIntensitySampler {
 /// Component that holds a list of `LaserIntensitySamplers`
 pub struct LaserIntensitySamplers {
     /// List of laser samplers
-    pub contents: Vec<LaserIntensitySampler>,
+    pub contents: [LaserIntensitySampler; crate::laser::COOLING_BEAM_LIMIT],
 }
 impl Component for LaserIntensitySamplers {
     type Storage = VecStorage<Self>;
@@ -44,22 +44,13 @@ impl Component for LaserIntensitySamplers {
 /// It also ensures that the size of the `LaserIntensitySamplers` components match the number of CoolingLight entities in the world.
 pub struct InitialiseLaserIntensitySamplersSystem;
 impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
-    type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
-        WriteStorage<'a, LaserIntensitySamplers>,
-    );
-    fn run(&mut self, (cooling, cooling_index, mut samplers): Self::SystemData) {
+    type SystemData = (WriteStorage<'a, LaserIntensitySamplers>,);
+    fn run(&mut self, (mut samplers,): Self::SystemData) {
         use rayon::prelude::*;
         use specs::ParJoin;
 
-        let mut content = Vec::new();
-        for (_, _) in (&cooling, &cooling_index).join() {
-            content.push(LaserIntensitySampler::default());
-        }
-
         (&mut samplers).par_join().for_each(|mut sampler| {
-            sampler.contents = content.to_vec();
+            sampler.contents = [LaserIntensitySampler::default(); crate::laser::COOLING_BEAM_LIMIT];
         });
     }
 }
@@ -118,7 +109,6 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
                         let (index, gaussian, mask) = laser_array[i];
                         samplers.contents[index.index].intensity =
                             get_gaussian_beam_intensity(&gaussian, &pos, mask.as_ref());
-                        //println!("position: {} ", &pos.pos,);
                     }
                 });
         }

@@ -38,11 +38,14 @@ impl<'a> System<'a> for UniformMagneticFieldSystem {
         WriteStorage<'a, MagneticFieldSampler>,
         ReadStorage<'a, UniformMagneticField>,
     );
-    fn run(&mut self, (mut sampler, fields): Self::SystemData) {
+    fn run(&mut self, (mut samplers, fields): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         for field in (&fields).join() {
-            for mut sampler in (&mut sampler).join() {
+            (&mut samplers).par_join().for_each(|sampler| {
                 sampler.field = sampler.field + field.field;
-            }
+            });
         }
     }
 }

@@ -1,6 +1,7 @@
-//! Simulation of atoms cooled to the Doppler limit.
+use criterion::{criterion_group, criterion_main, Criterion};
+extern crate magneto_optical_trap as lib;
+extern crate specs;
 
-extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
 use lib::ecs;
@@ -13,57 +14,14 @@ use lib::laser::photons_scattered::EnableScatteringFluctuations;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use nalgebra::Vector3;
 use rand::distributions::{Distribution, Normal};
-use specs::{Builder, World};
-use std::fs::read_to_string;
-use std::fs::File;
-use std::time::Instant;
+use specs::{Builder, DispatcherBuilder, World};
 
-extern crate serde;
-use serde::{Deserialize, Serialize};
-
-#[derive(Deserialize)]
-pub struct BenchmarkConfiguration {
-    pub n_threads: usize,
-    pub n_atoms: i32,
-    pub n_steps: i32,
-}
-impl Default for BenchmarkConfiguration {
-    fn default() -> Self {
-        BenchmarkConfiguration {
-            n_atoms: 10000,
-            n_threads: 12,
-            n_steps: 5000,
-        }
-    }
-}
-#[derive(Serialize)]
-pub struct SimulationOutput {
-    pub time: f64,
-}
-
-fn main() {
-    //Load configuration if one exists.
-    let read_result = read_to_string("benchmark.json");
-    let configuration: BenchmarkConfiguration = match read_result {
-        Ok(json_str) => serde_json::from_str(&json_str).unwrap(),
-        Err(_) => BenchmarkConfiguration::default(),
-    };
-
-    // Create the simulation world and builder for the ECS dispatcher.
+fn criterion_benchmark(c: &mut Criterion) {
+    // Mock up a simulation world and dispatcher
     let mut world = World::new();
     ecs::register_components(&mut world);
     ecs::register_resources(&mut world);
-    let mut builder = ecs::create_simulation_dispatcher_builder();
-
-    // Configure thread pool.
-    let pool = rayon::ThreadPoolBuilder::new()
-        .num_threads(configuration.n_threads)
-        .build()
-        .unwrap();
-
-    builder.add_pool(::std::sync::Arc::new(pool));
-
-    let mut dispatcher = builder.build();
+    let mut dispatcher = ecs::create_simulation_dispatcher_builder().build();
     dispatcher.setup(&mut world.res);
 
     // Create magnetic field.
@@ -174,7 +132,7 @@ fn main() {
     let mut rng = rand::thread_rng();
 
     // Add atoms
-    for _ in 0..configuration.n_atoms {
+    for _ in 0..10000 {
         world
             .create_entity()
             .with(Position {
@@ -205,24 +163,28 @@ fn main() {
     world.add_resource(ApplyEmissionForceOption {});
     world.add_resource(EnableScatteringFluctuations {});
 
-    let loop_start = Instant::now();
-
-    // Run the simulation for a number of steps.
-    for _i in 0..configuration.n_steps {
+    // Run a few times with the standard dispatcher to create atoms, initialise components, etc.
+    for _ in 0..5 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
 
-    println!(
-        "Simulation loop completed in {} ms.",
-        loop_start.elapsed().as_millis()
-    );
+    // Now bench just a specific system.
+    let mut bench_builder = DispatcherBuilder::new();
+    bench_builder.add(lib::laser::rate::CalculateRateCoefficientsSystem, "", &[]);
+    // Configure thread pool.
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(12)
+        .build()
+        .unwrap();
 
-    serde_json::to_writer(
-        File::create("benchmark_result.txt").expect("Could not open output file."),
-        &SimulationOutput {
-            time: loop_start.elapsed().as_secs_f64(),
-        },
-    )
-    .expect("Could not write output file.");
+    bench_builder.add_pool(::std::sync::Arc::new(pool));
+    let mut bench_dispatcher = bench_builder.build();
+
+    c.bench_function("rate_calculation", |b| {
+        b.iter(|| bench_dispatcher.dispatch(&mut world.res))
+    });
 }
+
+criterion_group!(benches, criterion_benchmark);
+criterion_main!(benches);
