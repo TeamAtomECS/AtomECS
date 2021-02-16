@@ -1,464 +1,155 @@
-extern crate specs;
+//! Calculation of the forces exerted on the atom by the CoolingLight entities
+
 extern crate rayon;
-use crate::atom::{Atom, AtomicTransition};
+extern crate specs;
+use crate::atom::AtomicTransition;
 use crate::constant;
+use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+use crate::laser::gaussian::GaussianBeam;
+use crate::laser::photons_scattered::ActualPhotonsScatteredVector;
 use crate::maths;
 use rand::distributions::{Distribution, Normal};
-use specs::{Component, Join, Read, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
+use specs::{Join, Read, ReadExpect, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
-use super::sampler::LaserSamplers;
 use nalgebra::Vector3;
-use rand::Rng;
 
 use crate::atom::Force;
-use crate::constant::{HBAR, PI};
+use crate::constant::HBAR;
 use crate::integrator::Timestep;
-use crate::magnetic::MagneticFieldSampler;
 
 use crate::laser::repump::*;
 
-/// This sytem calculates the forces exerted by `CoolingLight` on entities.
+const LASER_CACHE_SIZE: usize = 16;
+
+/// This sytem calculates the forces from absorbing photons from the CoolingLight entities.
 ///
-/// The system assumes that the `LaserSamplers` and `MagneticFieldSampler` for each atom
-/// are already populated with the correct terms. Furthermore, it is assumed that a
+/// The system assumes that the `ActualPhotonsScatteredVector` for each atom
+/// s already populated with the correct terms. Furthermore, it is assumed that a
 /// `CoolingLightIndex` is present and assigned for all cooling lasers, with an index
-/// corresponding to the entries in the `LaserSamplers` vector.
-pub struct CalculateCoolingForcesSystem;
-impl<'a> System<'a> for CalculateCoolingForcesSystem {
+/// corresponding to the entries in the `ActualPhotonsScatteredVector` vector.
+pub struct CalculateAbsorptionForcesSystem;
+impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
     type SystemData = (
-        ReadStorage<'a, MagneticFieldSampler>,
-        WriteStorage<'a, LaserSamplers>,
-        ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, CoolingLight>,
+        ReadStorage<'a, GaussianBeam>,
+        ReadStorage<'a, ActualPhotonsScatteredVector>,
         WriteStorage<'a, Force>,
+        ReadExpect<'a, Timestep>,
         ReadStorage<'a, Dark>,
     );
 
     fn run(
         &mut self,
-        (magnetic_samplers, mut laser_samplers, atom_info, mut forces, _dark): Self::SystemData,
+        (
+            cooling_index,
+            cooling_light,
+            gaussian_beam,
+            actual_scattered_vector,
+            mut forces,
+            timestep,
+            _dark,
+        ): Self::SystemData,
     ) {
-		use rayon::prelude::*;
-		use specs::ParJoin;
+        use rayon::prelude::*;
+        use specs::ParJoin;
 
-		(
-			&atom_info,
-            &magnetic_samplers,
-            &mut laser_samplers,
-            &mut forces,
-            !&_dark
-		).par_join().for_each(|(atom_info, bfield, laser_samplers, mut force, ())| {
-            // Inner loop over cooling lasers
-            for mut laser_sampler in &mut laser_samplers.contents {
-                //let s0 = 1.0;
-                let s0 = laser_sampler.intensity / atom_info.saturation_intensity;
-                //println!("s0 : {}", s0);
-                let angular_detuning = (laser_sampler.wavevector.norm() * constant::C / 2. / PI
-                    - atom_info.frequency)
-                    * 2.0
-                    * PI
-                    - laser_sampler.doppler_shift;
-                //println!("laserfre{},atomfre{},shift {}",laser_sampler.wavevector.norm() * constant::C / 2. / PI,atom_info.frequency,laser_sampler.doppler_shift);
-                let wavevector = laser_sampler.wavevector.clone();
-                let costheta = if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
-                    0.0
-                } else {
-                    wavevector.normalize().dot(&bfield.field.normalize())
-                };
-                let gamma = atom_info.gamma();
-                let scatter1 = 0.25 * (laser_sampler.polarization * costheta + 1.).powf(2.) * gamma
-                    / 2.
-                    / (1.
-                        + s0
-                        + 4. * (angular_detuning - atom_info.mup / HBAR * bfield.magnitude)
-                            .powf(2.)
-                            / gamma.powf(2.));
-                let scatter2 = 0.25 * (laser_sampler.polarization * costheta - 1.).powf(2.) * gamma
-                    / 2.
-                    / (1.
-                        + s0
-                        + 4. * (angular_detuning - atom_info.mum / HBAR * bfield.magnitude)
-                            .powf(2.)
-                            / gamma.powf(2.));
-                let scatter3 = 0.5 * (1. - costheta.powf(2.)) * gamma
-                    / 2.
-                    / (1.
-                        + s0
-                        + 4. * (angular_detuning - atom_info.muz / HBAR * bfield.magnitude)
-                            .powf(2.)
-                            / gamma.powf(2.));
-                let cooling_force = wavevector * s0 * HBAR * (scatter1 + scatter2 + scatter3);
-                laser_sampler.force = cooling_force.clone();
-                //println!("detuning{}", angular_detuning / gamma);
-                force.force = force.force + cooling_force;
-            }
-        }
-		);
-    }
-}
+        // There are typically only a small number of lasers in a simulation.
+        // For a speedup, cache the required components into thread memory,
+        // so they can be distributed to parallel workers during the atom loop.
+        type CachedLaser = (CoolingLight, CoolingLightIndex, GaussianBeam);
+        let laser_cache: Vec<CachedLaser> = (&cooling_light, &cooling_index, &gaussian_beam)
+            .join()
+            .map(|(cooling, index, gaussian)| (cooling.clone(), index.clone(), gaussian.clone()))
+            .collect();
 
-/// The expected number of times an atom has scattered a photon this timestep.
-pub struct NumberScattered {
-    pub value: f64,
-}
+        // Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
+        for base_index in (0..laser_cache.len()).step_by(LASER_CACHE_SIZE) {
+            let max_index = laser_cache.len().min(base_index + LASER_CACHE_SIZE);
+            let slice = &laser_cache[base_index..max_index];
+            let mut laser_array = vec![laser_cache[0]; LASER_CACHE_SIZE];
+            laser_array[..max_index].copy_from_slice(slice);
+            let number_in_iteration = slice.len();
 
-impl Component for NumberScattered {
-    type Storage = VecStorage<Self>;
-}
-
-/// A resource that indicates that the simulation should apply random forces to simulate fluctuations in the number of scattered photons.
-pub struct RandomScatteringForceOption;
-
-pub struct CalculateNumberPhotonsScatteredSystem;
-
-impl<'a> System<'a> for CalculateNumberPhotonsScatteredSystem {
-    type SystemData = (
-        ReadStorage<'a, LaserSamplers>,
-        ReadStorage<'a, Atom>,
-        ReadStorage<'a, AtomicTransition>,
-        ReadExpect<'a, Timestep>,
-        ReadStorage<'a, Dark>,
-        WriteStorage<'a, NumberScattered>,
-    );
-
-    fn run(&mut self, (samplers, _atom, atom_info, timestep, _dark, mut number): Self::SystemData) {
-        for (samplers, _, atom_info, (), num) in
-            (&samplers, &_atom, &atom_info, !&_dark, &mut number).join()
-        {
-            let mut total_force = 0.;
-            let omega = 2.0 * constant::PI * atom_info.frequency;
-            for sampler in samplers.contents.iter() {
-                total_force = total_force + sampler.force.norm();
-            }
-            let force_one_atom = constant::HBAR * omega / constant::C / timestep.delta;
-            num.value = total_force / force_one_atom;
+            (&actual_scattered_vector, &mut forces, !&_dark)
+                .par_join()
+                .for_each(|(scattered, mut force, _)| {
+                    for i in 0..number_in_iteration {
+                        let (cooling, index, gaussian) = laser_array[i];
+                        let new_force = scattered.contents[index.index].scattered as f64 * HBAR
+                            / timestep.delta
+                            * gaussian.direction.normalize()
+                            * cooling.wavenumber();
+                        force.force = force.force + new_force;
+                    }
+                })
         }
     }
 }
 
-pub struct ApplyRandomForceSystem;
+/// A resource that indicates that the simulation should apply random forces
+/// to simulate the random walk fluctuations due to spontaneous
+/// emission.
+pub struct ApplyEmissionForceOption;
 
-impl<'a> System<'a> for ApplyRandomForceSystem {
+/// Calculates the force vector due to the spontaneous emissions in this
+/// simulation step.
+///
+/// Only runs if `ApplyEmissionForceOption` is initialized.
+///
+/// Uses an internal threshold of 5 to decide if the random vektor is iteratively
+/// produced or derived by random-walk formula and a single random unit vector.
+pub struct ApplyEmissionForceSystem;
+
+impl<'a> System<'a> for ApplyEmissionForceSystem {
     type SystemData = (
-        Option<Read<'a, RandomScatteringForceOption>>,
+        Option<Read<'a, ApplyEmissionForceOption>>,
         WriteStorage<'a, Force>,
-        ReadStorage<'a, NumberScattered>,
+        ReadStorage<'a, ActualPhotonsScatteredVector>,
         ReadStorage<'a, AtomicTransition>,
         ReadExpect<'a, Timestep>,
     );
 
-    fn run(&mut self, (rand_opt, mut force, kick, atom_info, timestep): Self::SystemData) {
+    fn run(
+        &mut self,
+        (rand_opt, mut force, actual_scattered_vector, atom_info, timestep): Self::SystemData,
+    ) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         match rand_opt {
             None => (),
             Some(_rand) => {
-                for (mut force, atom_info, kick) in (&mut force, &atom_info, &kick).join() {
-                    let mut rng = rand::thread_rng();
-                    let omega = 2.0 * constant::PI * atom_info.frequency;
-                    let force_one_kick = constant::HBAR * omega / constant::C / timestep.delta;
-                    if kick.value > 5.0 {
-                        // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
-                        //Three-Dimensional Random Walk Processes*
-                        let normal = Normal::new(
-                            0.0,
-                            (kick.value * force_one_kick.powf(2.0) / 3.0).powf(0.5),
-                        );
+                (&mut force, &atom_info, &actual_scattered_vector)
+                    .par_join()
+                    .for_each(|(mut force, atom_info, kick)| {
+                        let total: u64 = kick.calculate_total_scattered();
+                        let mut rng = rand::thread_rng();
+                        let omega = 2.0 * constant::PI * atom_info.frequency;
+                        let force_one_kick = constant::HBAR * omega / constant::C / timestep.delta;
+                        if total > 5 {
+                            // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
+                            //Three-Dimensional Random Walk Processes*
+                            let normal = Normal::new(
+                                0.0,
+                                (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
+                            );
 
-                        let force_n_kicks = Vector3::new(
-                            normal.sample(&mut rng),
-                            normal.sample(&mut rng),
-                            normal.sample(&mut rng),
-                        );
-                        force.force = force.force + force_n_kicks;
-                    } else {
-                        let numberkick = kick.value as i64;
-                        let residue = kick.value - (numberkick as f64);
-                        for _i in 0..numberkick {
-                            force.force = force.force + force_one_kick * maths::random_direction();
+                            let force_n_kicks = Vector3::new(
+                                normal.sample(&mut rng),
+                                normal.sample(&mut rng),
+                                normal.sample(&mut rng),
+                            );
+                            force.force = force.force + force_n_kicks;
+                        } else {
+                            // explicit random walk implementation
+                            for _i in 0..total {
+                                force.force =
+                                    force.force + force_one_kick * maths::random_direction();
+                            }
                         }
-                        if residue > rng.gen_range(0.0, 1.0) {
-                            force.force = force.force + force_one_kick * maths::random_direction();
-                        }
-                    }
-                    //println!("force :  {}", force_n_kicks);
-                }
+                    });
             }
         }
-    }
-}
-#[cfg(test)]
-pub mod tests {
-
-    use super::*;
-
-    extern crate specs;
-    use crate::constant;
-    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
-    use crate::laser::gaussian::GaussianBeam;
-    use crate::laser::sampler::{LaserSampler, LaserSamplers};
-    use crate::magnetic::MagneticFieldSampler;
-    use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, Entity, RunNow, World};
-    extern crate nalgebra;
-    use nalgebra::Vector3;
-
-    fn create_world_for_tests(cooling_light: CoolingLight) -> (World, Entity) {
-        let mut test_world = World::new();
-        test_world.register::<CoolingLightIndex>();
-        test_world.register::<CoolingLight>();
-        test_world.register::<GaussianBeam>();
-        test_world.register::<AtomicTransition>();
-        test_world.register::<MagneticFieldSampler>();
-        test_world.register::<Force>();
-        test_world.register::<LaserSamplers>();
-
-        let e_radius = 2.0;
-        let power = 1.0;
-        let laser_entity = test_world
-            .create_entity()
-            .with(cooling_light)
-            .with(CoolingLightIndex {
-                index: 0,
-                initiated: true,
-            })
-            .with(GaussianBeam {
-                direction: Vector3::new(1.0, 0.0, 0.0),
-                intersection: Vector3::new(0.0, 0.0, 0.0),
-                e_radius: e_radius,
-                power: power,
-            })
-            .build();
-        (test_world, laser_entity)
-    }
-
-    #[test]
-    fn test_calculate_cooling_force_system() {
-        let detuning = 0.0;
-        let intensity = 1.0;
-        let cooling = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1.0);
-        let wavenumber = cooling.wavenumber();
-        let (mut test_world, laser) = create_world_for_tests(cooling);
-        test_world.register::<Dark>();
-        let atom1 = test_world
-            .create_entity()
-            .with(Force::new())
-            .with(LaserSamplers {
-                contents: vec![LaserSampler {
-                    scattering_rate: 0.0,
-                    force: Vector3::new(0.0, 0.0, 0.0),
-                    polarization: 1.0,
-                    wavevector: wavenumber * Vector3::new(1.0, 0.0, 0.0),
-                    intensity: intensity,
-                    doppler_shift: 0.0,
-                }],
-            })
-            .with(MagneticFieldSampler {
-                field: Vector3::new(1e-8, 0.0, 0.0),
-                magnitude: 1e-8,
-            })
-            .with(AtomicTransition::rubidium())
-            .build();
-
-        let mut system = CalculateCoolingForcesSystem {};
-        system.run_now(&test_world.res);
-        test_world.maintain();
-
-        // See eg Foot, Atomic Physics, p180.
-        let cooling_light_storage = test_world.read_storage::<CoolingLight>();
-        let cooling_light = cooling_light_storage.get(laser).expect("entity not found");
-        let photon_momentum = constant::HBAR * cooling_light.wavenumber();
-        let i_norm = intensity / AtomicTransition::rubidium().saturation_intensity;
-        let scattering_rate = (AtomicTransition::rubidium().gamma() / 2.0) * i_norm
-            / (1.0
-                + i_norm
-                + 4.0 * (detuning * 1e6 / AtomicTransition::rubidium().linewidth).powf(2.0));
-        let f_scatt = photon_momentum * scattering_rate;
-
-        let force_storage = test_world.read_storage::<Force>();
-        assert_approx_eq!(
-            1e20 * force_storage.get(atom1).expect("entity not found").force[0],
-            1e20 * f_scatt,
-            1e-6
-        );
-        assert_eq!(
-            force_storage.get(atom1).expect("entity not found").force[1],
-            0.0
-        );
-        assert_eq!(
-            force_storage.get(atom1).expect("entity not found").force[2],
-            0.0
-        );
-    }
-
-    #[test]
-    fn test_dark() {
-        let detuning = 0.0;
-        let intensity = 1.0;
-        let cooling = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1.0);
-        let wavenumber = cooling.wavenumber();
-        let (mut test_world, laser) = create_world_for_tests(cooling);
-        test_world.register::<Dark>();
-        let atom1 = test_world
-            .create_entity()
-            .with(Dark {})
-            .with(Force::new())
-            .with(LaserSamplers {
-                contents: vec![LaserSampler {
-                    scattering_rate: 0.0,
-                    force: Vector3::new(0.0, 0.0, 0.0),
-                    polarization: 1.0,
-                    wavevector: wavenumber * Vector3::new(1.0, 0.0, 0.0),
-                    intensity: intensity,
-                    doppler_shift: 0.0,
-                }],
-            })
-            .with(MagneticFieldSampler {
-                field: Vector3::new(1e-8, 0.0, 0.0),
-                magnitude: 1e-8,
-            })
-            .with(AtomicTransition::rubidium())
-            .build();
-
-        let mut system = CalculateCoolingForcesSystem {};
-        system.run_now(&test_world.res);
-        test_world.maintain();
-
-        let cooling_light_storage = test_world.read_storage::<CoolingLight>();
-        cooling_light_storage.get(laser).expect("entity not found");
-
-        let force_storage = test_world.read_storage::<Force>();
-        assert_approx_eq!(
-            force_storage.get(atom1).expect("entity not found").force[0],
-            0.,
-            1e-9
-        );
-        assert_eq!(
-            force_storage.get(atom1).expect("entity not found").force[1],
-            0.0
-        );
-        assert_eq!(
-            force_storage.get(atom1).expect("entity not found").force[2],
-            0.0
-        );
-    }
-    #[test]
-    fn test_cooling_force() {
-        let rb = AtomicTransition::rubidium();
-
-        let lambda = constant::C / rb.frequency;
-        let wavevector = Vector3::new(1.0, 0.0, 0.0) * 2.0 * constant::PI / lambda;
-        let b_field = MagneticFieldSampler::tesla(Vector3::new(1.0e-6, 0.0, 0.0));
-        {
-            // Test that the force goes to zero when intensity is zero.
-            let doppler_shift = 0.0;
-            let intensity = 0.0;
-            let force = calculate_cooling_force(wavevector, intensity, doppler_shift, 1.0, b_field);
-            assert_eq!(force[0], 0.0);
-            assert_eq!(force[1], 0.0);
-            assert_eq!(force[2], 0.0);
-        }
-
-        {
-            // Test that the force goes to zero in the limit of large detuning
-            let doppler_shift = 1.0e16;
-            let intensity = rb.saturation_intensity;
-
-            let force = calculate_cooling_force(wavevector, intensity, doppler_shift, 1.0, b_field);
-            assert_approx_eq!(force[0] as f64, 0.0, 1.0e-30);
-            assert_eq!(force[1], 0.0);
-            assert_eq!(force[2], 0.0);
-        }
-
-        {
-            // Test that force pushes away from laser beam
-            let doppler_shift = 0.0;
-            let intensity = rb.saturation_intensity;
-            let force = calculate_cooling_force(wavevector, intensity, doppler_shift, 1.0, b_field);
-            assert_eq!(force[0] > 0.0, true);
-            assert_eq!(force[1], 0.0);
-            assert_eq!(force[2], 0.0);
-        }
-
-        {
-            // Test force calculation on resonance
-            let doppler_shift = 0.0;
-            let intensity = rb.saturation_intensity;
-
-            let photon_momentum = constant::HBAR * wavevector;
-            let i_norm = 1.0;
-            let scattering_rate =
-                (AtomicTransition::rubidium().gamma() / 2.0) * i_norm / (1.0 + i_norm);
-            let f_scatt = photon_momentum * scattering_rate;
-
-            let force = calculate_cooling_force(wavevector, intensity, doppler_shift, 1.0, b_field);
-            assert_approx_eq!(force[0] / f_scatt[0], 1.0, 0.01);
-            assert_eq!(force[1], 0.0);
-            assert_eq!(force[2], 0.0);
-        }
-
-        {
-            // Test force calculation detuned by one gamma at Isat
-        }
-
-        {
-            // Test that scattering rate goes to Gamma/2 in the limit of saturation
-
-            // let doppler_shift = 0.0;
-            // let intensity = 1000.0 * rb.saturation_intensity;
-            // let force = calculate_cooling_force(wavevector, intensity, doppler_shift, 1.0, b_field);
-            // assert_eq!(force[0] > 0.0, true);
-            // assert_eq!(force[1], 0.0);
-            // assert_eq!(force[2], 0.0);
-        }
-
-        {
-            // Test that scattering rate goes to zero when I=0.
-        }
-
-        {
-            // Test that scattering rate goes to zero at large detuning.
-        }
-
-        {
-            // Test correct value of scattering rate when I=Isat, delta=Gamma.
-        }
-    }
-
-    /// Uses the `CalculateCoolingForcesSystem` to calculate the force exerted on an atom.
-    fn calculate_cooling_force(
-        wavevector: Vector3<f64>,
-        intensity: f64,
-        doppler_shift: f64,
-        polarization: f64,
-        b_field: MagneticFieldSampler,
-    ) -> Vector3<f64> {
-        let mut test_world = World::new();
-        test_world.register::<Dark>();
-        test_world.register::<AtomicTransition>();
-        test_world.register::<MagneticFieldSampler>();
-        test_world.register::<Force>();
-        test_world.register::<LaserSamplers>();
-
-        let atom1 = test_world
-            .create_entity()
-            .with(Force::new())
-            .with(LaserSamplers {
-                contents: vec![LaserSampler {
-                    force: Vector3::new(0.0, 0.0, 0.0),
-                    polarization: polarization,
-                    wavevector: wavevector,
-                    intensity: intensity,
-                    doppler_shift: doppler_shift,
-                    scattering_rate: 0.0,
-                }],
-            })
-            .with(b_field)
-            .with(AtomicTransition::rubidium())
-            .build();
-
-        let mut system = CalculateCoolingForcesSystem {};
-        system.run_now(&test_world.res);
-
-        // See eg Foot, Atomic Physics, p180.
-        let force_storage = test_world.read_storage::<Force>();
-        force_storage.get(atom1).expect("entity not found").force
     }
 }

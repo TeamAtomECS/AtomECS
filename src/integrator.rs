@@ -9,7 +9,9 @@ extern crate specs;
 
 use crate::atom::*;
 use crate::constant;
-use specs::{Join, ReadExpect, ReadStorage, System, WriteExpect, WriteStorage};
+use crate::initiate::NewlyCreated;
+use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteExpect, WriteStorage};
+use specs::{Entities, Join, LazyUpdate, Read};
 
 /// Tracks the number of the current integration step.
 pub struct Step {
@@ -48,10 +50,114 @@ impl<'a> System<'a> for EulerIntegrationSystem {
 	);
 
 	fn run(&mut self, (mut pos, mut vel, t, mut step, force, mass): Self::SystemData) {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
 		step.n = step.n + 1;
-		for (mut vel, mut pos, force, mass) in (&mut vel, &mut pos, &force, &mass).join() {
-			euler_update(&mut vel, &mut pos, &force, &mass, t.delta);
+		(&mut vel, &mut pos, &force, &mass).par_join().for_each(
+			|(mut vel, mut pos, force, mass)| {
+				euler_update(&mut vel, &mut pos, &force, &mass, t.delta);
+			},
+		);
+	}
+}
+
+/// # Velocity-Verlet Integrate Position
+///
+///
+/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource.
+///
+///
+pub const INTEGRATE_POSITION_SYSTEM_NAME: &str = "integrate_position";
+
+pub struct VelocityVerletIntegratePositionSystem;
+
+impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
+	type SystemData = (
+		WriteStorage<'a, Position>,
+		ReadStorage<'a, Velocity>,
+		ReadExpect<'a, Timestep>,
+		WriteExpect<'a, Step>,
+		ReadStorage<'a, Force>,
+		WriteStorage<'a, OldForce>,
+		ReadStorage<'a, Mass>,
+	);
+
+	fn run(&mut self, (mut pos, vel, t, mut step, force, mut oldforce, mass): Self::SystemData) {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
+		step.n = step.n + 1;
+		let dt = t.delta;
+
+		(&mut pos, &vel, &mut oldforce, &force, &mass)
+			.par_join()
+			.for_each(|(mut pos, vel, mut oldforce, force, mass)| {
+				pos.pos = pos.pos
+					+ vel.vel * dt + oldforce.0.force / (constant::AMU * mass.value) / 2.0
+					* dt * dt;
+				oldforce.0 = *force;
+			});
+	}
+}
+
+/// # Velocity-Verlet Integrate Velocity
+///
+///
+/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource
+
+pub const INTEGRATE_VELOCITY_SYSTEM_NAME: &str = "integrate_velocity";
+
+pub struct VelocityVerletIntegrateVelocitySystem;
+impl<'a> System<'a> for VelocityVerletIntegrateVelocitySystem {
+	type SystemData = (
+		WriteStorage<'a, Velocity>,
+		ReadExpect<'a, Timestep>,
+		ReadStorage<'a, Force>,
+		ReadStorage<'a, OldForce>,
+		ReadStorage<'a, Mass>,
+	);
+
+	fn run(&mut self, (mut vel, t, force, oldforce, mass): Self::SystemData) {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
+		let dt = t.delta;
+
+		(&mut vel, &force, &oldforce, &mass).par_join().for_each(
+			|(mut vel, force, oldforce, mass)| {
+				vel.vel = vel.vel
+					+ (force.force + oldforce.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
+			},
+		);
+	}
+}
+
+/// Adds [OldForce](OldForce.struct.html) components to newly created atoms.
+pub struct AddOldForceToNewAtomsSystem;
+
+impl<'a> System<'a> for AddOldForceToNewAtomsSystem {
+	type SystemData = (
+		Entities<'a>,
+		ReadStorage<'a, NewlyCreated>,
+		ReadStorage<'a, OldForce>,
+		Read<'a, LazyUpdate>,
+	);
+	fn run(&mut self, (ent, newly_created, oldforce, updater): Self::SystemData) {
+		for (ent, _, _) in (&ent, &newly_created, !&oldforce).join() {
+			updater.insert(ent, OldForce::default());
 		}
+	}
+}
+
+/// Stores the value of the force calculation from the previous frame.
+pub struct OldForce(Force);
+impl Component for OldForce {
+	type Storage = VecStorage<OldForce>;
+}
+impl Default for OldForce {
+	fn default() -> Self {
+		OldForce { 0: Force::new() }
 	}
 }
 
@@ -133,5 +239,89 @@ pub mod tests {
 		let positions = test_world.read_storage::<Position>();
 		let position = positions.get(test_entity).expect("entity not found");
 		assert_eq!(position.pos, initial_position + initial_velocity * dt);
+	}
+
+	#[test]
+	fn test_add_old_force_system() {
+		let mut test_world = World::new();
+
+		let mut dispatcher = DispatcherBuilder::new()
+			.with(AddOldForceToNewAtomsSystem, "", &[])
+			.build();
+		dispatcher.setup(&mut test_world.res);
+		test_world.register::<OldForce>();
+
+		let test_entity = test_world.create_entity().with(NewlyCreated {}).build();
+
+		dispatcher.dispatch(&mut test_world.res);
+		test_world.maintain();
+
+		let old_forces = test_world.read_storage::<OldForce>();
+		assert_eq!(
+			old_forces.contains(test_entity),
+			true,
+			"OldForce component not added to test entity."
+		);
+	}
+
+	#[test]
+	fn test_velocity_verlet_system() {
+		let mut test_world = World::new();
+
+		let mut dispatcher = DispatcherBuilder::new()
+			.with(
+				VelocityVerletIntegratePositionSystem,
+				"integrate_position",
+				&[],
+			)
+			.with(
+				VelocityVerletIntegrateVelocitySystem,
+				"integrate_velocity",
+				&["integrate_position"],
+			)
+			.build();
+		dispatcher.setup(&mut test_world.res);
+
+		let p_1 = Vector3::new(0.0, 0.1, 0.0);
+		let v_1 = Vector3::new(1.0, 1.5, 0.4);
+		let force_2 = Vector3::new(0.4, 0.6, -0.4);
+		let force_1 = Vector3::new(0.2, 0.3, -0.4);
+		let mass = 2.0 / constant::AMU;
+		let test_entity = test_world
+			.create_entity()
+			.with(Position { pos: p_1 })
+			.with(Velocity { vel: v_1 })
+			.with(Force { force: force_2 })
+			.with(OldForce {
+				0: Force { force: force_1 },
+			})
+			.with(Mass { value: mass })
+			.build();
+
+		let dt = 1.0;
+		test_world.add_resource(Timestep { delta: dt });
+		test_world.add_resource(Step { n: 0 });
+
+		dispatcher.dispatch(&mut test_world.res);
+
+		let velocities = test_world.read_storage::<Velocity>();
+		let velocity = velocities.get(test_entity).expect("entity not found");
+		let a_1 = &force_1 / (&mass * constant::AMU);
+		let a_2 = &force_2 / (&mass * constant::AMU);
+		let v_2 = v_1 + (a_1 + a_2) / 2.0 * dt;
+		let p_2 = p_1 + v_1 * dt + a_1 / 2.0 * dt * dt;
+
+		assert!(
+			(velocity.vel - v_2).norm().abs() < std::f64::EPSILON,
+			"velocity incorrect"
+		);
+		let positions = test_world.read_storage::<Position>();
+		let position = positions.get(test_entity).expect("entity not found");
+		let p_error = (position.pos - p_2).norm().abs();
+		assert!(
+			p_error < std::f64::EPSILON,
+			"position incorrect: delta={}",
+			p_error
+		);
 	}
 }

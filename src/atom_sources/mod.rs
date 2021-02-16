@@ -1,3 +1,6 @@
+//! Creation of atoms in a controlled manner and realease into the simulation
+
+pub mod central_creator;
 pub mod emit;
 pub mod gaussian;
 pub mod mass;
@@ -82,6 +85,11 @@ pub fn add_systems_to_dispatch(
             "gaussian_create_atoms",
         ],
     );
+    builder.add(
+        central_creator::CentralCreatorCreateAtomsSystem,
+        "central_create_system",
+        &[],
+    )
 }
 
 /// Registers resources required by `atom_sources` to the ecs world.
@@ -95,6 +103,7 @@ pub fn register_components(world: &mut World) {
     world.register::<surface::SurfaceSource>();
     world.register::<gaussian::GaussianVelocityDistributionSource>();
     world.register::<gaussian::GaussianVelocityDistributionSourceDefinition>();
+    world.register::<central_creator::CentralCreator>();
 }
 
 /// A simple probability distribution which uses weighted indices to retrieve values.

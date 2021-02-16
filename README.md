@@ -10,7 +10,7 @@
 * File output to binary or text files.
 * Thorough unit testing to ensure simulation results are correct.
 
-Additionally, simulations may be wrapped using python/matlab, as shown in the [optimot](https://bitbucket.org/footgroup/optimot) repo.
+Additionally, simulations may be wrapped using python/matlab, as shown in the [AIONSource](https://github.com/TeamAtomECS/AIONSource) repo.
 
 ## Getting Started
 

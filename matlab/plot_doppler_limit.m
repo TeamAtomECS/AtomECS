@@ -20,7 +20,7 @@ clf;
 plot(10*(1:length(T)), T)
 fprintf('Mean T=%.2f uK\n', mean(T))
 hold on
-plot(xlim, [1 1 ] * 140, '--k')
+plot(xlim, [1 1 ] * 144, '--k')
 set(gcf, 'Color', 'w');
 xlabel('$t$ ($\mu$s)', 'interpreter', 'latex');
 ylabel('T ($\mu$K)', 'interpreter', 'latex');

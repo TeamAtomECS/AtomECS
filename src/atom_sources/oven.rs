@@ -1,3 +1,5 @@
+//! Type of atom source used for releasing (metal) atoms into a gaseous phase
+
 extern crate nalgebra;
 
 use super::emit::AtomNumberToEmit;
@@ -34,7 +36,7 @@ fn velocity_generate(
 	let v_out = dirf * v_mag;
 	(v_out, theta)
 }
-
+/// Opening aperture of the oven
 #[derive(Copy, Clone)]
 pub enum OvenAperture {
 	Cubic { size: [f64; 3] },

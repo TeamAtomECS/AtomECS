@@ -1,6 +1,7 @@
-//! Simulation of atoms cooled to the Doppler limit.
+use criterion::{criterion_group, criterion_main, Criterion};
+extern crate magneto_optical_trap as lib;
+extern crate specs;
 
-extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
 use lib::ecs;
@@ -11,30 +12,16 @@ use lib::laser::force::ApplyEmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser::photons_scattered::EnableScatteringFluctuations;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use lib::output::file;
-use lib::output::file::Text;
 use nalgebra::Vector3;
 use rand::distributions::{Distribution, Normal};
-use specs::{Builder, World};
-use std::time::Instant;
+use specs::{Builder, DispatcherBuilder, World};
 
-fn main() {
-    let now = Instant::now();
-
-    // Create the simulation world and builder for the ECS dispatcher.
+fn criterion_benchmark(c: &mut Criterion) {
+    // Mock up a simulation world and dispatcher
     let mut world = World::new();
     ecs::register_components(&mut world);
     ecs::register_resources(&mut world);
-    let mut builder = ecs::create_simulation_dispatcher_builder();
-
-    // Configure simulation output.
-    builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 10),
-        "",
-        &[],
-    );
-
-    let mut dispatcher = builder.build();
+    let mut dispatcher = ecs::create_simulation_dispatcher_builder().build();
     dispatcher.setup(&mut world.res);
 
     // Create magnetic field.
@@ -145,7 +132,7 @@ fn main() {
     let mut rng = rand::thread_rng();
 
     // Add atoms
-    for _ in 0..1000 {
+    for _ in 0..10000 {
         world
             .create_entity()
             .with(Position {
@@ -176,11 +163,28 @@ fn main() {
     world.add_resource(ApplyEmissionForceOption {});
     world.add_resource(EnableScatteringFluctuations {});
 
-    // Run the simulation for a number of steps.
-    for _i in 0..5000 {
+    // Run a few times with the standard dispatcher to create atoms, initialise components, etc.
+    for _ in 0..5 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
 
-    println!("Simulation completed in {} ms.", now.elapsed().as_millis());
+    // Now bench just a specific system.
+    let mut bench_builder = DispatcherBuilder::new();
+    bench_builder.add(lib::laser::rate::CalculateRateCoefficientsSystem, "", &[]);
+    // Configure thread pool.
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(12)
+        .build()
+        .unwrap();
+
+    bench_builder.add_pool(::std::sync::Arc::new(pool));
+    let mut bench_dispatcher = bench_builder.build();
+
+    c.bench_function("rate_calculation", |b| {
+        b.iter(|| bench_dispatcher.dispatch(&mut world.res))
+    });
 }
+
+criterion_group!(benches, criterion_benchmark);
+criterion_main!(benches);
