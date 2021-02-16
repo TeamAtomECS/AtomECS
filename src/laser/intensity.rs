@@ -127,7 +127,7 @@ pub mod tests {
     extern crate nalgebra;
     use nalgebra::Vector3;
 
-    /// Tests the correct implementation of the `CalculateAbsorptionForceSystem`
+    /// Tests the correct implementation of the `SampleLaserIntensitySystem`
     #[test]
     fn test_sample_laser_intensity_system() {
         let mut test_world = World::new();
