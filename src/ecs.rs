@@ -50,6 +50,13 @@ impl AtomecsDispatcherBuilder {
 	}
 
 	pub fn add_systems(&mut self) {
+		&self.builder.add(
+			VelocityVerletIntegratePositionSystem,
+			INTEGRATE_POSITION_SYSTEM_NAME,
+			&[],
+		);
+		&self.builder.add(AddOldForceToNewAtomsSystem, "", &[]);
+
 		magnetic::add_systems_to_dispatch(&mut self.builder, &[]);
 		laser::add_systems_to_dispatch(&mut self.builder, &[]);
 		atom_sources::add_systems_to_dispatch(&mut self.builder, &[]);
@@ -58,14 +65,7 @@ impl AtomecsDispatcherBuilder {
 			"add_gravity",
 			&["clear", INTEGRATE_POSITION_SYSTEM_NAME],
 		);
-	}
 
-	pub fn add_integration_systems(&mut self) {
-		&self.builder.add(
-			VelocityVerletIntegratePositionSystem,
-			INTEGRATE_POSITION_SYSTEM_NAME,
-			&[],
-		);
 		&self.builder.add(
 			VelocityVerletIntegrateVelocitySystem,
 			INTEGRATE_VELOCITY_SYSTEM_NAME,
@@ -75,7 +75,6 @@ impl AtomecsDispatcherBuilder {
 				"add_gravity",
 			],
 		);
-		&self.builder.add(AddOldForceToNewAtomsSystem, "", &[]);
 	}
 
 	pub fn add_frame_end_systems(&mut self) {
@@ -93,7 +92,6 @@ impl AtomecsDispatcherBuilder {
 	pub fn build(mut self) -> DispatcherBuilder<'static, 'static> {
 		self.add_frame_initialisation_systems();
 		self.add_systems();
-		self.add_integration_systems();
 		self.add_frame_end_systems();
 		self.builder
 	}
