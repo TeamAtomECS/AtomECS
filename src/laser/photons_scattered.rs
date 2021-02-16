@@ -15,7 +15,6 @@ use crate::laser::twolevel::TwoLevelPopulation;
 use serde::{Deserialize, Serialize};
 use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
 use std::fmt;
-
 /// Holds the total number of photons that the atom is expected to scatter
 /// in the current simulation step from all beams.
 ///
