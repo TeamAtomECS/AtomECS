@@ -1,7 +1,7 @@
 extern crate atomecs as lib;
 use crate::lib::laser::force::ApplyEmissionForceOption;
+use atomecs::laser::photons_scattered::EnableScatteringFluctuations;
 use lib::atom_sources::central_creator::CentralCreator;
-use magneto_optical_trap::laser::photons_scattered::EnableScatteringFluctuations;
 
 extern crate nalgebra;
 use lib::atom::{AtomicTransition, Position, Velocity};
