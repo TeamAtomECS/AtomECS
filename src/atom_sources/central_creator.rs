@@ -246,3 +246,121 @@ impl<'a> System<'a> for CentralCreatorCreateAtomsSystem {
         }
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+
+    extern crate specs;
+    use specs::{Builder, RunNow, World};
+    extern crate nalgebra;
+    use nalgebra::Vector3;
+
+    /// Tests the correct implementation of the `SampleLaserIntensitySystem`
+    #[test]
+    fn test_central_creator_create_atoms_system() {
+        let mut test_world = World::new();
+
+        test_world.register::<CentralCreator>();
+        test_world.register::<AtomicTransition>();
+        test_world.register::<AtomNumberToEmit>();
+        test_world.register::<Position>();
+        test_world.register::<Velocity>();
+        test_world.register::<InitialVelocity>();
+        test_world.register::<Force>();
+        test_world.register::<Atom>();
+        test_world.register::<MassDistribution>();
+        test_world.register::<NewlyCreated>();
+        test_world.register::<CheckerComponent>();
+        test_world.register::<Mass>();
+
+        let number_to_emit = 100;
+        let size_of_cube = 1.0; //m
+        let speed = 1.0; // m/s
+
+        test_world
+            .create_entity()
+            .with(CentralCreator::new_uniform_cubic(size_of_cube, speed))
+            .with(Position {
+                pos: Vector3::new(0.0, 0.0, 0.0),
+            })
+            .with(MassDistribution::new(vec![
+                crate::atom_sources::mass::MassRatio {
+                    mass: 88.0,
+                    ratio: 1.0,
+                },
+            ]))
+            .with(AtomicTransition::strontium_red())
+            .with(AtomNumberToEmit {
+                number: number_to_emit,
+            })
+            .build();
+
+        let mut system = CentralCreatorCreateAtomsSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        pub struct CheckerComponent {
+            everything_allright: bool,
+            number: i32,
+        }
+
+        impl Component for CheckerComponent {
+            type Storage = specs::VecStorage<Self>;
+        }
+
+        let checker1 = test_world
+            .create_entity()
+            .with(CheckerComponent {
+                everything_allright: true,
+                number: 0,
+            })
+            .build();
+
+        pub struct TestSystem;
+
+        impl<'a> System<'a> for TestSystem {
+            type SystemData = (
+                specs::WriteStorage<'a, CheckerComponent>,
+                ReadStorage<'a, Position>,
+                ReadStorage<'a, Velocity>,
+                ReadStorage<'a, Atom>,
+            );
+            fn run(&mut self, (mut checker, position, velocity, atom): Self::SystemData) {
+                for mut check in (&mut checker).join() {
+                    for (pos, vel, _atom) in (&position, &velocity, &atom).join() {
+                        if pos.pos.norm() <= 3.0_f64.powf(0.5) * 1.0 {
+                        } else {
+                            check.everything_allright = false;
+                        }
+                        if vel.vel.norm() <= 3.0_f64.powf(0.5) * 1.0 {
+                        } else {
+                            check.everything_allright = false;
+                        }
+                        check.number = check.number + 1;
+                    }
+                }
+            }
+        }
+        TestSystem.run_now(&test_world.res);
+        test_world.maintain();
+
+        let sampler_storage = test_world.read_storage::<CheckerComponent>();
+
+        assert!(
+            sampler_storage
+                .get(checker1)
+                .expect("entity not found")
+                .everything_allright,
+            true
+        );
+
+        assert_eq!(
+            sampler_storage
+                .get(checker1)
+                .expect("entity not found")
+                .number,
+            number_to_emit
+        );
+    }
+}
