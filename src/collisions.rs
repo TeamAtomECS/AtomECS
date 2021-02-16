@@ -3,9 +3,9 @@
 extern crate multimap;
 use multimap::MultiMap;
 use crate::atom::{Position,Velocity};
+use crate::integrator::Timestep;
 use nalgebra::Vector3;
 use specs::{Join,Read, ReadStorage, ReadExpect, System, WriteStorage};
-use atomecs::integrator::Timestep;
 use rand::Rng;
 
 /// A resource that indicates that the simulation should apply scattering
