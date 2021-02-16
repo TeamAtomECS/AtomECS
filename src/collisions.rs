@@ -1,13 +1,12 @@
-// Implement s wave scattering of atoms
+//! Implement s wave scattering of atoms
 
 extern crate multimap;
 use multimap::MultiMap;
-use crate::atom::{Mass,Position,Velocity};
-use crate::constant;
+use crate::atom::{Position,Velocity};
 use nalgebra::Vector3;
-use specs::{Join, Read, ReadStorage, System, WriteStorage};
+use specs::{Join,Read, ReadStorage, ReadExpect, System, WriteStorage};
+use atomecs::integrator::Timestep;
 use rand::Rng;
-
 
 /// A resource that indicates that the simulation should apply scattering
 pub struct ApplyCollisionsOption;
@@ -21,18 +20,19 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
         ReadStorage<'a, Position>,
         WriteStorage<'a, Velocity>,
         Option<Read<'a,ApplyCollisionsOption>>,
+        ReadExpect<'a,Timestep>,
     );
 
-    fn run(&mut self, (positions, mut velocities, collisions_option): Self::SystemData ){
+    fn run(&mut self, (positions, mut velocities, collisions_option, timestep): Self::SystemData ){
         match collisions_option {
             None => (),//(println!("No collisions option enabled")),
             Some(_) => {
                 //make hash table - dividing space up into grid
                 let mut map = MultiMap::new();
-                let N: i64 = 100; // number of boxes per side
-                let width: f64 = 5e-6; // width of each box
+                let N: i64 = 50; // number of boxes per side
+                let width: f64 = 3e-6; // width of each box
                 let mut bin_list = Vec::new();
-
+                let macroparticle = 1e5; // number of real particles each simulation particle represents for purposes of scaling collision physics
 
                 for (position,velocity) in (&positions, &mut velocities).join() {
                     //Assume that atoms that leave the grid are too sparse to collide, so disregard them
@@ -69,15 +69,18 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                 for key in &bin_ids {
                     let result = map.get_vec_mut(key);
 
-                    let collision_chance = 0.1;
+                    
                     let mut rng = rand::thread_rng();
                     
                     match result {
                         Some(vels) =>
                             for i in 0..vels.len()-1{
                                 for j in i+1..vels.len()-1{
+                                    //use relative velocity to make collisions velocity dependent
+                                    let vrel = (vels[i].vel - vels[j].vel).norm();
+                                    let sigma = 3.5e-16; // cross section for Rb
                                 
-
+                                    let collision_chance = macroparticle*sigma*vrel*timestep.delta;
                                     let p = rng.gen::<f64>();
 
                                     if p < collision_chance {
