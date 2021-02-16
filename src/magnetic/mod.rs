@@ -120,7 +120,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		quadrupole::Sample3DQuadrupoleFieldSystem,
 		"magnetics_quadrupole",
-		&["magnetics_clear"],
+		&["magnetics_clear","integrate_position"],
 	);
 	builder.add(
 		uniform::UniformMagneticFieldSystem,
@@ -140,7 +140,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		AttachFieldSamplersToNewlyCreatedAtomsSystem,
 		"add_magnetic_field_samplers",
-		&[],
+		&["integrate_position"],
 	);
 	builder.add(
 		zeeman::AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem,

@@ -162,7 +162,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		force::CalculateAbsorptionForcesSystem,
 		"calculate_absorption_forces",
-		&["calculate_actual_photons"],
+		&["calculate_actual_photons", "integrate_position"],
 	);
 	builder.add(
 		repump::RepumpSystem,
@@ -172,7 +172,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		force::ApplyEmissionForceSystem,
 		"calculate_emission_forces",
-		&["calculate_absorption_forces"],
+		&["calculate_absorption_forces", "integrate_position"],
 	);
 }
 

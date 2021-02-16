@@ -11,7 +11,7 @@ use crate::destructor::DeleteToBeDestroyedEntitiesSystem;
 //use crate::detector::DetectingInfo;
 use crate::gravity::ApplyGravitationalForceSystem;
 use crate::initiate::DeflagNewAtomsSystem;
-use crate::integrator::{AddOldForceToNewAtomsSystem, Step, VelocityVerletIntegrationSystem};
+use crate::integrator::{AddOldForceToNewAtomsSystem, Step, VelocityVerletIntegratePositionSystem, VelocityVerletIntegrateVelocitySystem};
 use crate::laser;
 use crate::laser::repump::Dark;
 use crate::magnetic;
@@ -50,27 +50,31 @@ impl AtomecsDispatcherBuilder {
 		laser::add_systems_to_dispatch(&mut self.builder, &[]);
 		atom_sources::add_systems_to_dispatch(&mut self.builder, &[]);
 		self.builder
-			.add(ApplyGravitationalForceSystem, "add_gravity", &["clear"]);
+			.add(ApplyGravitationalForceSystem, "add_gravity", &["clear","integrate_position"]);
 	}
 
 	pub fn add_integration_systems(&mut self) {
 		&self.builder.add(
-			VelocityVerletIntegrationSystem,
-			"integrator",
-			&[
-				"calculate_absorption_forces",
-				"calculate_emission_forces",
-				"add_gravity",
-			],
+			VelocityVerletIntegratePositionSystem,
+			"integrate_position",
+			&[],
+		);
+		&self.builder.add(
+			VelocityVerletIntegrateVelocitySystem,
+			"integrate_velocity",
+			&[				
+			"calculate_absorption_forces",
+			"calculate_emission_forces",
+			"add_gravity"],
 		);
 		&self.builder.add(AddOldForceToNewAtomsSystem, "", &[]);
 	}
 
 	pub fn add_frame_end_systems(&mut self) {
-		&self.builder.add(ConsoleOutputSystem, "", &["integrator"]);
+		&self.builder.add(ConsoleOutputSystem, "", &["integrate_velocity"]);
 		&self
 			.builder
-			.add(DeleteToBeDestroyedEntitiesSystem, "", &["integrator"]);
+			.add(DeleteToBeDestroyedEntitiesSystem, "", &["integrate_velocity"]);
 		sim_region::add_systems_to_dispatch(&mut self.builder, &[]);
 	}
 

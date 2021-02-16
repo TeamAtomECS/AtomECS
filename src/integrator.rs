@@ -62,19 +62,16 @@ impl<'a> System<'a> for EulerIntegrationSystem {
 	}
 }
 
-/// # Velocity-Verlet Integration
+/// # Velocity-Verlet Integrate Position
 ///
-/// This sytem integrates the classical equations of motion for particles using a velocity-verlet method:
-/// `x' = x + v * dt`.
-/// This integrator is simple to implement but prone to integration error.
 ///
 /// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource.
-pub struct VelocityVerletIntegrationSystem;
+pub struct VelocityVerletIntegratePositionSystem;
 
-impl<'a> System<'a> for VelocityVerletIntegrationSystem {
+impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
 	type SystemData = (
 		WriteStorage<'a, Position>,
-		WriteStorage<'a, Velocity>,
+		ReadStorage<'a, Velocity>,
 		ReadExpect<'a, Timestep>,
 		WriteExpect<'a, Step>,
 		ReadStorage<'a, Force>,
@@ -82,26 +79,50 @@ impl<'a> System<'a> for VelocityVerletIntegrationSystem {
 		ReadStorage<'a, Mass>,
 	);
 
-	fn run(
-		&mut self,
-		(mut pos, mut vel, t, mut step, force, mut oldforce, mass): Self::SystemData,
-	) {
+	fn run(&mut self, (mut pos, vel, t, mut step, force, mut oldforce, mass): Self::SystemData) {
 		use rayon::prelude::*;
 		use specs::ParJoin;
 
 		step.n = step.n + 1;
 		let dt = t.delta;
 
-		(&mut pos, &mut vel, &mut oldforce, &force, &mass)
+		(&mut pos, &vel, &mut oldforce, &force, &mass)
 			.par_join()
-			.for_each(|(mut pos, mut vel, mut oldforce, force, mass)| {
+			.for_each(|(mut pos, vel, mut oldforce, force, mass)| {
 				pos.pos = pos.pos
 					+ vel.vel * dt + oldforce.0.force / (constant::AMU * mass.value) / 2.0
 					* dt * dt;
-				vel.vel = vel.vel
-					+ (force.force + oldforce.0.force) / (mass.value * constant::AMU) / 2.0 * dt;
 				oldforce.0 = *force;
 			});
+	}
+}
+
+/// # Velocity-Verlet Integrate Velocity
+///
+///
+/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource
+pub struct VelocityVerletIntegrateVelocitySystem;
+impl<'a> System<'a> for VelocityVerletIntegrateVelocitySystem {
+	type SystemData = (
+		WriteStorage<'a, Velocity>,
+		ReadExpect<'a, Timestep>,
+		ReadStorage<'a, Force>,
+		ReadStorage<'a, OldForce>,
+		ReadStorage<'a, Mass>,
+	);
+
+	fn run(&mut self, (mut vel, t, force, oldforce, mass): Self::SystemData) {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
+		let dt = t.delta;
+
+		(&mut vel, &force, &oldforce, &mass).par_join().for_each(
+			|(mut vel, force, oldforce, mass)| {
+				vel.vel = vel.vel
+					+ (force.force + oldforce.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
+			},
+		);
 	}
 }
 
@@ -241,7 +262,16 @@ pub mod tests {
 		let mut test_world = World::new();
 
 		let mut dispatcher = DispatcherBuilder::new()
-			.with(VelocityVerletIntegrationSystem, "", &[])
+			.with(
+				VelocityVerletIntegratePositionSystem,
+				"integrate_position",
+				&[],
+			)
+			.with(
+				VelocityVerletIntegrateVelocitySystem,
+				"integrate_velocity",
+				&["integrate_position"],
+			)
 			.build();
 		dispatcher.setup(&mut test_world.res);
 
@@ -273,6 +303,7 @@ pub mod tests {
 		let a_2 = &force_2 / (&mass * constant::AMU);
 		let v_2 = v_1 + (a_1 + a_2) / 2.0 * dt;
 		let p_2 = p_1 + v_1 * dt + a_1 / 2.0 * dt * dt;
+
 		assert!(
 			(velocity.vel - v_2).norm().abs() < std::f64::EPSILON,
 			"velocity incorrect"
