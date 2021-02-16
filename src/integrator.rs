@@ -66,6 +66,10 @@ impl<'a> System<'a> for EulerIntegrationSystem {
 ///
 ///
 /// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource.
+///
+///
+pub const INTEGRATE_POSITION_SYSTEM_NAME: &str = "integrate_position";
+
 pub struct VelocityVerletIntegratePositionSystem;
 
 impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
@@ -101,6 +105,9 @@ impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
 ///
 ///
 /// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource
+
+pub const INTEGRATE_VELOCITY_SYSTEM_NAME: &str = "integrate_velocity";
+
 pub struct VelocityVerletIntegrateVelocitySystem;
 impl<'a> System<'a> for VelocityVerletIntegrateVelocitySystem {
 	type SystemData = (
