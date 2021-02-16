@@ -153,3 +153,122 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
         }
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+
+    extern crate specs;
+    use crate::constant::{HBAR, PI};
+    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use assert_approx_eq::assert_approx_eq;
+    use specs::{Builder, RunNow, World};
+    extern crate nalgebra;
+    use nalgebra::Vector3;
+
+    /// Tests the correct implementation of the `CalculateAbsorptionForceSystem`
+    #[test]
+    fn test_calculate_absorption_forces_system() {
+        let mut test_world = World::new();
+
+        let time_delta = 1.0e-5;
+
+        test_world.register::<CoolingLightIndex>();
+        test_world.register::<CoolingLight>();
+        test_world.register::<GaussianBeam>();
+        test_world.register::<ActualPhotonsScatteredVector>();
+        test_world.register::<Force>();
+        test_world.register::<Dark>();
+        test_world.add_resource(Timestep { delta: time_delta });
+
+        let wavelength = 461e-9;
+        test_world
+            .create_entity()
+            .with(CoolingLight {
+                polarization: 1,
+                wavelength: wavelength,
+            })
+            .with(CoolingLightIndex {
+                index: 0,
+                initiated: true,
+            })
+            .with(GaussianBeam {
+                direction: Vector3::new(1.0, 0.0, 0.0),
+                intersection: Vector3::new(0.0, 0.0, 0.0),
+                e_radius: 2.0,
+                power: 1.0,
+            })
+            .build();
+
+        let number_scattered = 1_000_000.0;
+
+        let atom1 = test_world
+            .create_entity()
+            .with(ActualPhotonsScatteredVector {
+                contents: [crate::laser::photons_scattered::ActualPhotonsScattered {
+                    scattered: number_scattered,
+                }; crate::laser::COOLING_BEAM_LIMIT],
+            })
+            .with(Force::new())
+            .build();
+
+        let mut system = CalculateAbsorptionForcesSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<Force>();
+
+        let actual_force_x = number_scattered * HBAR * 2. * PI / wavelength / time_delta;
+        assert_approx_eq!(
+            sampler_storage.get(atom1).expect("entity not found").force[0],
+            actual_force_x,
+            1e-20_f64
+        );
+    }
+
+    /// Tests the correct implementation of the `ApplyEmissionForceSystem`
+    #[test]
+    fn test_apply_emission_forces_system() {
+        let mut test_world = World::new();
+
+        let time_delta = 1.0e-5;
+
+        test_world.register::<ActualPhotonsScatteredVector>();
+        test_world.register::<Force>();
+        test_world.register::<AtomicTransition>();
+        test_world.add_resource(ApplyEmissionForceOption {});
+        test_world.add_resource(Timestep { delta: time_delta });
+        let number_scattered = 1_000_000.0;
+
+        let atom1 = test_world
+            .create_entity()
+            .with(ActualPhotonsScatteredVector {
+                contents: [crate::laser::photons_scattered::ActualPhotonsScattered {
+                    scattered: number_scattered,
+                }; crate::laser::COOLING_BEAM_LIMIT],
+            })
+            .with(Force::new())
+            .with(AtomicTransition::strontium())
+            .build();
+
+        let mut system = ApplyEmissionForceSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<Force>();
+
+        let max_force_total = number_scattered * 2. * PI * AtomicTransition::strontium().frequency
+            / constant::C
+            * HBAR
+            / time_delta;
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .force
+                .norm(),
+            max_force_total / 2.0,
+            // the outcome is random and will be somewhere between 0 and max_force_total
+            max_force_total / 1.9
+        );
+    }
+}
