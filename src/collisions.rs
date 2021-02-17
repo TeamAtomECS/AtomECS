@@ -3,7 +3,7 @@
 extern crate multimap;
 use crate::atom::{Position, Velocity};
 use crate::integrator::Timestep;
-use multimap::MultiMap;
+use hashbrown::HashMap;
 use rand::Rng;
 use specs::{
     Component, Entities, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System, VecStorage,
@@ -31,6 +31,7 @@ pub struct ApplyCollisionsSystem;
 impl<'a> System<'a> for ApplyCollisionsSystem {
     type SystemData = (
         ReadStorage<'a, Position>,
+        ReadStorage<'a, crate::atom::Atom>,
         WriteStorage<'a, Velocity>,
         Option<Read<'a, ApplyCollisionsOption>>,
         ReadExpect<'a, Timestep>,
@@ -41,27 +42,32 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
 
     fn run(
         &mut self,
-        (positions, mut velocities, collisions_option, t, entities, boxids, updater): Self::SystemData,
+        (positions, atoms, mut velocities, collisions_option, t, entities, mut boxids, updater): Self::SystemData,
     ) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         match collisions_option {
-            None => (), //(println!("No collisions option enabled")),
+            None => (),
             Some(_) => {
                 //make hash table - dividing space up into grid
-                let mut map = MultiMap::new();
-                let N: i64 = 50; // number of boxes per side
+                let mut map: HashMap<i64, Vec<&mut Velocity>> = HashMap::new();
+                let n: i64 = 50; // number of boxes per side
                 let width: f64 = 3e-6; // width of each box
                 let macroparticle = 1e5; // number of real particles each simulation particle represents for purposes of scaling collision physics
-                let mut bin_list = Vec::new();
 
-                use rayon::prelude::*;
-                use specs::ParJoin;
+                // Get all atoms which do not have boxIDs
+                for (entity, _, _) in (&entities, &atoms, !&boxids).join() {
+                    updater.insert(entity, BoxID { id: 0 });
+                }
+
                 // build list of ids for each atom
-                (&positions, &entities)
+                (&positions, &mut boxids)
                     .par_join()
-                    .for_each(|(position, ent)| {
+                    .for_each(|(position, mut boxid)| {
                         //Assume that atoms that leave the grid are too sparse to collide, so disregard them
                         //We'll assign them the max value of i64, and then check for this value when we do a collision and ignore them
-                        let bound = (N as f64) / 2.0 * width;
+                        let bound = (n as f64) / 2.0 * width;
 
                         let id: i64;
                         if position.pos[0].abs() > bound {
@@ -72,59 +78,45 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                             id = i64::MAX;
                         } else {
                             //centre grid on origin
-                            let xp = ((position.pos[0] - ((N as f64) / 2.0).floor()) / width)
+                            let xp = ((position.pos[0] - ((n as f64) / 2.0).floor()) / width)
                                 .floor() as i64;
-                            let yp = ((position.pos[1] - ((N as f64) / 2.0).floor()) / width)
+                            let yp = ((position.pos[1] - ((n as f64) / 2.0).floor()) / width)
                                 .floor() as i64;
-                            let zp = ((position.pos[2] - ((N as f64) / 2.0).floor()) / width)
+                            let zp = ((position.pos[2] - ((n as f64) / 2.0).floor()) / width)
                                 .floor() as i64;
 
                             //convert position to box id
-                            id = xp + N * yp + N.pow(2) * zp;
+                            id = xp + n * yp + n.pow(2) * zp;
                         }
-
-                        updater.insert(ent, BoxID { id: id });
+                        boxid.id = id;
                     });
 
                 //insert atom velocity into hash
-
                 for (velocity, boxid) in (&mut velocities, &boxids).join() {
-                    map.insert(boxid.id, velocity);
-                    bin_list.push(boxid.id);
+                    map.entry(boxid.id).or_default().push(velocity);
                 }
-
-                bin_list.sort();
-                bin_list.dedup();
-
-                (&bin_list).par_iter().for_each(|id| {
-                    let result = map.get_vec_mut(&id);
-
+                map.par_values_mut().for_each(|velocities| {
                     let mut rng = rand::thread_rng();
-                    match result {
-                        Some(vels) => {
-                            for i in 0..vels.len() - 1 {
-                                for j in i + 1..vels.len() - 1 {
-                                    //use relative velocity to make collisions velocity dependent
-                                    let vrel = (vels[i].vel - vels[j].vel).norm();
-                                    let sigma = 3.5e-16; // cross section for Rb
+                    let number = velocities.len() - 1;
+                    for i in 0..number {
+                        for j in i + 1..number {
+                            //use relative velocity to make collisions velocity dependent
+                            let vrel = (velocities[i].vel - velocities[j].vel).norm();
+                            let sigma = 3.5e-16; // cross section for Rb
 
-                                    let collision_chance = macroparticle * sigma * vrel * t.delta;
-                                    let p = rng.gen::<f64>();
+                            let collision_chance = macroparticle * sigma * vrel * t.delta;
+                            let p = rng.gen::<f64>();
 
-                                    if p < collision_chance {
-                                        let v1 = vels[i].vel;
-                                        let v2 = vels[j].vel;
+                            if p < collision_chance {
+                                let v1 = velocities[i].vel;
+                                let v2 = velocities[j].vel;
 
-                                        let temp = v1;
+                                let temp = v1;
 
-                                        vels[i].vel = v2;
-                                        vels[j].vel = temp;
-                                    }
-                                }
+                                velocities[i].vel = v2;
+                                velocities[j].vel = temp;
                             }
                         }
-
-                        None => (), //println!("No velocities found")
                     }
                 });
             }
