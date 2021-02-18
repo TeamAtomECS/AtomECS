@@ -53,7 +53,7 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                 //make hash table - dividing space up into grid
                 let mut map: HashMap<i64, Vec<&mut Velocity>> = HashMap::new();
                 let n: i64 = 50; // number of boxes per side
-                let width: f64 = 3e-6; // width of each box
+                let width: f64 = 5e-6; // width of each box
                 let macroparticle = 1e5; // number of real particles each simulation particle represents for purposes of scaling collision physics
 
                 // Get all atoms which do not have boxIDs
@@ -98,13 +98,15 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                 map.par_values_mut().for_each(|velocities| {
                     let mut rng = rand::thread_rng();
                     let number = velocities.len() - 1;
+
+                    
                     for i in 0..number {
                         for j in i + 1..number {
                             //use relative velocity to make collisions velocity dependent
                             let vrel = (velocities[i].vel - velocities[j].vel).norm();
                             let sigma = 3.5e-16; // cross section for Rb
-
-                            let collision_chance = macroparticle * sigma * vrel * t.delta;
+                            // chance of collision per atom is n*sigma*v*dt, where n is atom density
+                            let collision_chance = macroparticle * (number as f64) * sigma * vrel * t.delta / width.powf(3.0);
                             let p = rng.gen::<f64>();
 
                             if p < collision_chance {
