@@ -24,6 +24,19 @@ impl Component for BoxID {
     type Storage = VecStorage<Self>;
 }
 
+/// Resource for defining collision relevant paramaters like macroparticle number, box width and number of boxes
+/// 
+pub struct CollisionParameters{
+    /// number of real particles one simulation particle represents for collisions
+    pub macroparticle: f64,
+    //number of boxes per side in spatial binning
+    pub box_number: i64,
+    //width of one box in m
+    pub box_width: f64,
+    // collisional cross section of atoms (assuming only one species)
+    pub sigma: f64,
+}
+
 /// This system applies scattering to atoms
 /// Uses spatial partitioning for faster calculation
 ///
@@ -38,11 +51,12 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
         Entities<'a>,
         WriteStorage<'a, BoxID>,
         Read<'a, LazyUpdate>,
+        ReadExpect<'a, CollisionParameters>,
     );
 
     fn run(
         &mut self,
-        (positions, atoms, mut velocities, collisions_option, t, entities, mut boxids, updater): Self::SystemData,
+        (positions, atoms, mut velocities, collisions_option, t, entities, mut boxids, updater,params): Self::SystemData,
     ) {
         use rayon::prelude::*;
         use specs::ParJoin;
@@ -52,9 +66,8 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
             Some(_) => {
                 //make hash table - dividing space up into grid
                 let mut map: HashMap<i64, Vec<&mut Velocity>> = HashMap::new();
-                let n: i64 = 50; // number of boxes per side
-                let width: f64 = 5e-6; // width of each box
-                let macroparticle = 1e5; // number of real particles each simulation particle represents for purposes of scaling collision physics
+                let n: i64 = params.box_number; // number of boxes per side
+                let width: f64 = params.box_width; // width of each box in m
 
                 // Get all atoms which do not have boxIDs
                 for (entity, _, _) in (&entities, &atoms, !&boxids).join() {
@@ -97,29 +110,65 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                 }
                 map.par_values_mut().for_each(|velocities| {
                     let mut rng = rand::thread_rng();
-                    let number = velocities.len() - 1;
+                    let number = velocities.len() as i32;
 
+                    if number <= 1{
+
+                    } else{
                     
-                    for i in 0..number {
-                        for j in i + 1..number {
-                            //use relative velocity to make collisions velocity dependent
-                            let vrel = (velocities[i].vel - velocities[j].vel).norm();
-                            let sigma = 3.5e-16; // cross section for Rb
-                            // chance of collision per atom is n*sigma*v*dt, where n is atom density
-                            let collision_chance = macroparticle * (number as f64) * sigma * vrel * t.delta / width.powf(3.0);
-                            let p = rng.gen::<f64>();
+                    // calculate average speed (not velocity)
+                    // average velocity will be close to zero since many particles are moving in different directions
+                    // we just want a typical speed for calculating collision probability
+                    let mut vsum = 0.0;
+                    for i in 0..(number-1) as usize{
+                        vsum = vsum + velocities[i].vel.norm();
+                    }
 
-                            if p < collision_chance {
-                                let v1 = velocities[i].vel;
-                                let v2 = velocities[j].vel;
+                    let vbar = vsum / number as f64;
+                    // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
+                    let num_collisions_expected = (params.macroparticle * (number as f64)).powf(2.0) * params.sigma * vbar * t.delta * width.powf(-3.0);
 
-                                let temp = v1;
+                    // loop over number of collisions happening
+                    // if number is low (<0.5) treat it as the probability of one total collision occurring
+                    // otherwise, round to nearest integer and select that many pairs to randomly 
+                    // if expected number of collisions is higher than number of simulation particles, just loop over all the particles
+                    let mut num_collisions: i32;
 
-                                velocities[i].vel = v2;
-                                velocities[j].vel = temp;
-                            }
+                    if num_collisions_expected <= 0.5 {
+                        let p = rng.gen::<f64>();
+                        if p < num_collisions_expected {
+                            let idx = rng.gen_range(0, number - 1) as usize; //note gen_range only goes up to number-2 here
+
+                            let v1 = velocities[idx].vel;
+                            let v2 = velocities[idx+1].vel;
+
+                            let temp = v1;
+
+                            velocities[idx].vel = v2;
+                            velocities[idx+1].vel = temp;
+
+                        } 
+                    } else {
+                        num_collisions = num_collisions_expected.round() as i32;
+
+                        if num_collisions > number {
+                            num_collisions = number;
+                        }
+
+                        for _i in 1..num_collisions {
+                            let idx = rng.gen_range(0, number - 1) as usize;
+
+                            let v1 = velocities[idx].vel;
+                            let v2 = velocities[idx+1].vel;
+
+                            let temp = v1;
+
+                            velocities[idx].vel = v2;
+                            velocities[idx+1].vel = temp;
                         }
                     }
+                }
+                    
                 });
             }
         }
