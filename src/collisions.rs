@@ -106,7 +106,11 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
 
                 //insert atom velocity into hash
                 for (velocity, boxid) in (&mut velocities, &boxids).join() {
+                    if boxid.id == i64::MAX{
+                        continue
+                    } else {
                     map.entry(boxid.id).or_default().push(velocity);
+                    }
                 }
                 map.par_values_mut().for_each(|velocities| {
                     let mut rng = rand::thread_rng();
