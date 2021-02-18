@@ -15,6 +15,7 @@ pub mod laser;
 pub mod magnetic;
 pub mod maths;
 pub mod output;
+pub mod rescatter;
 pub mod shapes;
 pub mod sim_region;
 pub mod tests;

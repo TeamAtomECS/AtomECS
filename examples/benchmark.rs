@@ -32,7 +32,7 @@ impl Default for BenchmarkConfiguration {
         BenchmarkConfiguration {
             n_atoms: 10000,
             n_threads: 12,
-            n_steps: 5000,
+            n_steps: 500,
         }
     }
 }
@@ -62,6 +62,8 @@ fn main() {
         .unwrap();
 
     builder.add_pool(::std::sync::Arc::new(pool));
+
+    builder.add(lib::rescatter::RescatteringForceSystem, "rescatter", &[]);
 
     let mut dispatcher = builder.build();
     dispatcher.setup(&mut world.res);
@@ -204,6 +206,12 @@ fn main() {
     //  * Allow random force from emission of photons.
     world.add_resource(ApplyEmissionForceOption {});
     world.add_resource(EnableScatteringFluctuations {});
+    world.add_resource(lib::rescatter::RescatteringOption::On(
+        lib::rescatter::RescatteringConfiguration {
+            force_scaling: 1000.0,
+            theta: 0.5,
+        },
+    ));
 
     let loop_start = Instant::now();
 
