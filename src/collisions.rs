@@ -3,12 +3,15 @@
 extern crate multimap;
 use crate::atom::{Position, Velocity};
 use crate::integrator::Timestep;
+use crate::constant::{PI};
 use hashbrown::HashMap;
 use rand::Rng;
 use specs::{
     Component, Entities, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System, VecStorage,
     WriteStorage,
 };
+use nalgebra::Vector3;
+
 
 /// A resource that indicates that the simulation should apply scattering
 pub struct ApplyCollisionsOption;
@@ -116,6 +119,7 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                     let mut rng = rand::thread_rng();
                     let number = velocities.len() as i32;
 
+
                     if number <= 1{
 
                     } else{
@@ -130,45 +134,72 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
 
                     let vbar = vsum / number as f64;
                     // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
-                    let num_collisions_expected = (params.macroparticle * (number as f64)).powf(2.0) * params.sigma * vbar * t.delta * width.powf(-3.0);
+                    let num_collisions_expected = (params.macroparticle * (number as f64)).powi(2) * params.sigma * vbar * t.delta * width.powi(-3);
+
 
                     // loop over number of collisions happening
                     // if number is low (<0.5) treat it as the probability of one total collision occurring
                     // otherwise, round to nearest integer and select that many pairs to randomly 
-                    // if expected number of collisions is higher than number of simulation particles, just loop over all the particles
                     let mut num_collisions: i32;
+                    
+                    // println!("num_collisions_expected:{}, number:{}", num_collisions_expected,number);
 
                     if num_collisions_expected <= 0.5 {
                         let p = rng.gen::<f64>();
                         if p < num_collisions_expected {
-                            let idx = rng.gen_range(0, number - 1) as usize; //note gen_range only goes up to number-2 here
+                            let idx = rng.gen_range(0, number - 1) as usize;
+                            let mut idx2 = rng.gen_range(0, number - 1) as usize;
+                            if idx2 == idx{
+                                idx2 = idx+1;
+                            }
 
                             let v1 = velocities[idx].vel;
-                            let v2 = velocities[idx+1].vel;
+                            let v2 = velocities[idx2].vel;
 
-                            let temp = v1;
 
-                            velocities[idx].vel = v2;
-                            velocities[idx+1].vel = temp;
+                            // Randomly modify velocities in CoM frame, conserving energy & momentum
+                            let vcm = 0.5*(v1+v2);
+                            let energy = 0.5*( (v1-vcm).norm_squared() + (v2-vcm).norm_squared());
 
+                            let cos_theta: f64 = rng.gen_range(-1.0,1.0);
+                            let sin_theta: f64 = (1.0-cos_theta.powi(2)).sqrt();
+                            let phi: f64 = rng.gen_range(0.0, 2.0*PI);
+
+                            let v_prime = Vector3::new(energy.sqrt()*sin_theta*phi.cos(), energy.sqrt()*sin_theta*phi.sin(),energy.sqrt()*cos_theta);
+                            velocities[idx].vel = vcm + v_prime;
+                            velocities[idx2].vel = vcm - v_prime;
                         } 
                     } else {
                         num_collisions = num_collisions_expected.round() as i32;
 
-                        if num_collisions > number {
-                            num_collisions = number;
+                        if num_collisions > 100000 as i32{
+
+                            num_collisions = 100000  as i32;
                         }
 
                         for _i in 1..num_collisions {
+
                             let idx = rng.gen_range(0, number - 1) as usize;
+                            let mut idx2 = rng.gen_range(0, number - 1) as usize;
+                            if idx2 == idx{
+                                idx2 = idx+1;
+                            }
 
                             let v1 = velocities[idx].vel;
-                            let v2 = velocities[idx+1].vel;
+                            let v2 = velocities[idx2].vel;
 
-                            let temp = v1;
 
-                            velocities[idx].vel = v2;
-                            velocities[idx+1].vel = temp;
+                            // Randomly modify velocities in CoM frame, conserving energy & momentum
+                            let vcm = 0.5*(v1+v2);
+                            let energy = 0.5*( (v1-vcm).norm_squared() + (v2-vcm).norm_squared());
+
+                            let cos_theta: f64 = rng.gen_range(-1.0,1.0);
+                            let sin_theta: f64 = (1.0-cos_theta.powi(2)).sqrt();
+                            let phi: f64 = rng.gen_range(0.0, 2.0*PI);
+
+                            let v_prime = Vector3::new(energy.sqrt()*sin_theta*phi.cos(), energy.sqrt()*sin_theta*phi.sin(),energy.sqrt()*cos_theta);
+                            velocities[idx].vel = vcm + v_prime;
+                            velocities[idx2].vel = vcm - v_prime;
                         }
                     }
                 }
@@ -178,3 +209,23 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
         }
     }
 }
+
+// fn do_collision(mut vel1: Velocity, mut vel2: Velocity) -> (Velocity, Velocity) {
+//     let mut rng = rand::thread_rng();
+//     let v1 = vel1.vel;
+//     let v2 = vel2.vel;
+
+
+//     // Randomly modify velocities in CoM frame, conserving energy & momentum
+//     let vcm = 0.5*(v1+v2);
+//     let energy = 0.5*( (v1-vcm).norm().powi(2) + (v2-vcm).norm().powi(2));
+
+//     let theta: f64 = rng.gen_range(0.0,2.0*PI);
+//     let phi: f64 = rng.gen_range(0.0, 2.0*PI);
+
+//     let v_prime = Vector3::new(energy.sqrt()*theta.sin()*phi.cos(), energy.sqrt()*theta.sin()*phi.sin(),energy.sqrt()*theta.cos());
+//     vel1.vel = vcm + v_prime;
+//     vel2.vel = vcm - v_prime;
+
+//     (vel1,vel2)
+// }
