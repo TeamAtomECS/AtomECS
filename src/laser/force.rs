@@ -3,13 +3,14 @@
 extern crate rayon;
 extern crate specs;
 use crate::atom::AtomicTransition;
+use crate::configuration::{AtomECSConfiguration, Option};
 use crate::constant;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::photons_scattered::ActualPhotonsScatteredVector;
 use crate::maths;
 use rand::distributions::{Distribution, Normal};
-use specs::{Join, Read, ReadExpect, ReadStorage, System, WriteStorage};
+use specs::{Join, ReadExpect, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
 use nalgebra::Vector3;
 
@@ -103,7 +104,7 @@ pub struct ApplyEmissionForceSystem;
 
 impl<'a> System<'a> for ApplyEmissionForceSystem {
     type SystemData = (
-        Option<Read<'a, ApplyEmissionForceOption>>,
+        ReadExpect<'a, AtomECSConfiguration>,
         WriteStorage<'a, Force>,
         ReadStorage<'a, ActualPhotonsScatteredVector>,
         ReadStorage<'a, AtomicTransition>,
@@ -112,14 +113,14 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
 
     fn run(
         &mut self,
-        (rand_opt, mut force, actual_scattered_vector, atom_info, timestep): Self::SystemData,
+        (configuration, mut force, actual_scattered_vector, atom_info, timestep): Self::SystemData,
     ) {
         use rayon::prelude::*;
         use specs::ParJoin;
 
-        match rand_opt {
-            None => (),
-            Some(_rand) => {
+        match configuration.emission_force_option {
+            Option::Disabled => (),
+            Option::Enabled => {
                 (&mut force, &atom_info, &actual_scattered_vector)
                     .par_join()
                     .for_each(|(mut force, atom_info, kick)| {

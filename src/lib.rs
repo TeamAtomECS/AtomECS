@@ -4,6 +4,7 @@
 extern crate specs_derive;
 pub mod atom;
 pub mod atom_sources;
+pub mod configuration;
 pub mod constant;
 pub mod destructor;
 pub mod ecs;

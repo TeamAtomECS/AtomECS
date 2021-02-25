@@ -5,9 +5,9 @@ extern crate specs;
 
 extern crate rand;
 use rand::distributions::{Distribution, Poisson};
-use specs::Read;
 
 use crate::atom::AtomicTransition;
+use crate::configuration::{AtomECSConfiguration, Option};
 use crate::integrator::Timestep;
 use crate::laser::rate::RateCoefficients;
 use crate::laser::sampler::LaserSamplerMasks;
@@ -231,31 +231,25 @@ impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
     }
 }
 
-/// If this is added as a ressource, the number of actual photons will be drawn from a poisson distribution.
-///
-/// Otherwise, the entries of `ActualPhotonsScatteredVector` will be identical with those of
-/// `ExpectedPhotonsScatteredVector`.
-pub struct EnableScatteringFluctuations;
-
 /// Calcutates the actual number of photons scattered by each CoolingLight entity in one iteration step
 /// by drawing from a Poisson Distribution that has `ExpectedPhotonsScattered` as the lambda parameter.
 pub struct CalculateActualPhotonsScatteredSystem;
 impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
     type SystemData = (
-        Option<Read<'a, EnableScatteringFluctuations>>,
+        ReadExpect<'a, AtomECSConfiguration>,
         ReadStorage<'a, ExpectedPhotonsScatteredVector>,
         WriteStorage<'a, ActualPhotonsScatteredVector>,
     );
 
     fn run(
         &mut self,
-        (fluctuations_option, expected_photons_vector, mut actual_photons_vector): Self::SystemData,
+        (configuration, expected_photons_vector, mut actual_photons_vector): Self::SystemData,
     ) {
         use rayon::prelude::*;
         use specs::ParJoin;
 
-        match fluctuations_option {
-            None => {
+        match configuration.scattering_fluctuations_option {
+            Option::Disabled => {
                 (&expected_photons_vector, &mut actual_photons_vector)
                     .par_join()
                     .for_each(|(expected, actual)| {
@@ -264,7 +258,7 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
                         }
                     });
             }
-            Some(_rand) => {
+            Option::Enabled => {
                 (&expected_photons_vector, &mut actual_photons_vector)
                     .par_join()
                     .for_each(|(expected, actual)| {
