@@ -10,7 +10,7 @@
 * File output to binary or text files.
 * Thorough unit testing to ensure simulation results are correct.
 
-Additionally, simulations may be wrapped using python/matlab, as shown in the [optimot](https://bitbucket.org/footgroup/optimot) repo.
+Additionally, simulations may be wrapped using python/matlab, as shown in the [AIONSource](https://github.com/TeamAtomECS/AIONSource) repo.
 
 ## Getting Started
 
@@ -33,4 +33,10 @@ Some useful links are:
 
 ## Credits
 
-`atomecs` is written by Xuhui Chen & [Elliot Bentine](https://github.com/ElliotB256).
+* [Xuhui Chen](https://github.com/Pi-sun), Oxford
+
+* [Elliot Bentine](https://github.com/ElliotB256), Oxford
+
+* [Maurice Zeuner](https://github.com/MauriceZeuner), Cambridge
+
+* [Tiffany Harte](https://github.com/tiffanyharte), Cambridge

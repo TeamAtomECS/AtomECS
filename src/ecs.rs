@@ -29,6 +29,60 @@ pub fn register_components(world: &mut World) {
 	world.register::<Dark>();
 }
 
+/// Struct that creates the ECS Dispatcher builder used in AtomECS.
+pub struct AtomecsDispatcherBuilder {
+	pub builder: DispatcherBuilder<'static, 'static>,
+}
+impl AtomecsDispatcherBuilder {
+	pub fn new() -> AtomecsDispatcherBuilder {
+		AtomecsDispatcherBuilder {
+			builder: DispatcherBuilder::new(),
+		}
+	}
+
+	pub fn add_frame_initialisation_systems(&mut self) {
+		&self.builder.add(ClearForceSystem, "clear", &[]);
+		&self.builder.add(DeflagNewAtomsSystem, "deflag", &[]);
+	}
+
+	pub fn add_systems(&mut self) {
+		magnetic::add_systems_to_dispatch(&mut self.builder, &[]);
+		laser::add_systems_to_dispatch(&mut self.builder, &[]);
+		atom_sources::add_systems_to_dispatch(&mut self.builder, &[]);
+		self.builder
+			.add(ApplyGravitationalForceSystem, "add_gravity", &["clear"]);
+	}
+
+	pub fn add_integration_systems(&mut self) {
+		&self.builder.add(
+			VelocityVerletIntegrationSystem,
+			"integrator",
+			&[
+				"calculate_absorption_forces",
+				"calculate_emission_forces",
+				"add_gravity",
+			],
+		);
+		&self.builder.add(AddOldForceToNewAtomsSystem, "", &[]);
+	}
+
+	pub fn add_frame_end_systems(&mut self) {
+		&self.builder.add(ConsoleOutputSystem, "", &["integrator"]);
+		&self
+			.builder
+			.add(DeleteToBeDestroyedEntitiesSystem, "", &["integrator"]);
+		sim_region::add_systems_to_dispatch(&mut self.builder, &[]);
+	}
+
+	pub fn build(mut self) -> DispatcherBuilder<'static, 'static> {
+		self.add_frame_initialisation_systems();
+		self.add_systems();
+		self.add_integration_systems();
+		self.add_frame_end_systems();
+		self.builder
+	}
+}
+
 /// Creates a [Dispatcher](specs::Dispatcher) that is used to calculate each simulation frame.
 pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 	let builder = create_simulation_dispatcher_builder();
@@ -36,27 +90,8 @@ pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
 }
 
 pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'static> {
-	let mut builder = DispatcherBuilder::new();
-	builder = builder.with(ClearForceSystem, "clear", &[]);
-	builder = builder.with(DeflagNewAtomsSystem, "deflag", &[]);
-	builder = magnetic::add_systems_to_dispatch(builder, &[]);
-	builder = laser::add_systems_to_dispatch(builder, &[]);
-	builder = atom_sources::add_systems_to_dispatch(builder, &[]);
-	builder = builder.with(ApplyGravitationalForceSystem, "add_gravity", &["clear"]);
-	builder = builder.with(
-		VelocityVerletIntegrationSystem,
-		"integrator",
-		&[
-			"calculate_absorption_forces",
-			"calculate_emission_forces",
-			"add_gravity",
-		],
-	);
-	builder = builder.with(ConsoleOutputSystem, "", &["integrator"]);
-	builder = builder.with(DeleteToBeDestroyedEntitiesSystem, "", &["integrator"]);
-	builder.add(AddOldForceToNewAtomsSystem, "", &[]);
-	builder = sim_region::add_systems_to_dispatch(builder, &[]);
-	builder
+	let atomecs_builder = AtomecsDispatcherBuilder::new();
+	atomecs_builder.build()
 }
 
 /// Add required resources to the world

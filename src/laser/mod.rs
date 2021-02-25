@@ -89,96 +89,91 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the systems run.
-pub fn add_systems_to_dispatch(
-	builder: DispatcherBuilder<'static, 'static>,
-	deps: &[&str],
-) -> DispatcherBuilder<'static, 'static> {
-	let builder = builder
-		.with(
-			AttachLaserComponentsToNewlyCreatedAtomsSystem,
-			"attach_atom_laser_components",
-			deps,
-		)
-		.with(
-			cooling::AttachIndexToCoolingLightSystem,
-			"attach_cooling_index",
-			deps,
-		)
-		.with(
-			cooling::IndexCoolingLightsSystem,
-			"index_cooling_lights",
-			deps,
-		)
-		.with(
-			sampler::InitialiseLaserSamplerMasksSystem,
-			"initialise_laser_sampler_masks",
-			deps,
-		)
-		.with(
-			sampler::FillLaserSamplerMasksSystem,
-			"fill_laser_sampler_masks",
-			&["index_cooling_lights", "initialise_laser_sampler_masks"],
-		)
-		.with(
-			intensity::SampleLaserIntensitySystem,
-			"sample_laser_intensity",
-			&["index_cooling_lights"],
-		)
-		.with(
-			doppler::CalculateDopplerShiftSystem,
+pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>, deps: &[&str]) {
+	builder.add(
+		AttachLaserComponentsToNewlyCreatedAtomsSystem,
+		"attach_atom_laser_components",
+		deps,
+	);
+	builder.add(
+		cooling::AttachIndexToCoolingLightSystem,
+		"attach_cooling_index",
+		deps,
+	);
+	builder.add(
+		cooling::IndexCoolingLightsSystem,
+		"index_cooling_lights",
+		deps,
+	);
+	builder.add(
+		sampler::InitialiseLaserSamplerMasksSystem,
+		"initialise_laser_sampler_masks",
+		deps,
+	);
+	builder.add(
+		sampler::FillLaserSamplerMasksSystem,
+		"fill_laser_sampler_masks",
+		&["index_cooling_lights", "initialise_laser_sampler_masks"],
+	);
+	builder.add(
+		intensity::SampleLaserIntensitySystem,
+		"sample_laser_intensity",
+		&["index_cooling_lights"],
+	);
+	builder.add(
+		doppler::CalculateDopplerShiftSystem,
+		"calculate_doppler_shift",
+		&["index_cooling_lights"],
+	);
+	builder.add(
+		sampler::CalculateLaserDetuningSystem,
+		"calculate_laser_detuning",
+		&[
 			"calculate_doppler_shift",
-			&["index_cooling_lights"],
-		)
-		.with(
-			sampler::CalculateLaserDetuningSystem,
-			"calculate_laser_detuning",
-			&[
-				"calculate_doppler_shift",
-				"zeeman_shift",
-				"index_cooling_lights",
-			],
-		)
-		.with(
-			rate::CalculateRateCoefficientsSystem,
-			"calculate_rate_coefficients",
-			&["calculate_laser_detuning"],
-		)
-		.with(
-			twolevel::CalculateTwoLevelPopulationSystem,
-			"calculate_twolevel",
-			&["calculate_rate_coefficients", "fill_laser_sampler_masks"],
-		)
-		.with(
-			photons_scattered::CalculateMeanTotalPhotonsScatteredSystem,
-			"calculate_total_photons",
-			&["calculate_twolevel"],
-		)
-		.with(
-			photons_scattered::CalculateExpectedPhotonsScatteredSystem,
-			"calculate_expected_photons",
-			&["calculate_total_photons", "fill_laser_sampler_masks"],
-		)
-		.with(
-			photons_scattered::CalculateActualPhotonsScatteredSystem,
-			"calculate_actual_photons",
-			&["calculate_expected_photons"],
-		)
-		.with(
-			force::CalculateAbsorptionForcesSystem,
-			"calculate_absorption_forces",
-			&["calculate_actual_photons"],
-		)
-		.with(
-			repump::RepumpSystem,
-			"repump",
-			&["calculate_absorption_forces"],
-		)
-		.with(
-			force::ApplyEmissionForceSystem,
-			"calculate_emission_forces",
-			&["calculate_absorption_forces"],
-		);
-	builder
+			"zeeman_shift",
+			"index_cooling_lights",
+		],
+	);
+	builder.add(
+		rate::CalculateRateCoefficientsSystem,
+		"calculate_rate_coefficients",
+		&["calculate_laser_detuning"],
+	);
+	builder.add(
+		twolevel::CalculateTwoLevelPopulationSystem,
+		"calculate_twolevel",
+		&["calculate_rate_coefficients", "fill_laser_sampler_masks"],
+	);
+	builder.add(
+		photons_scattered::CalculateMeanTotalPhotonsScatteredSystem,
+		"calculate_total_photons",
+		&["calculate_twolevel"],
+	);
+	builder.add(
+		photons_scattered::CalculateExpectedPhotonsScatteredSystem,
+		"calculate_expected_photons",
+		&["calculate_total_photons", "fill_laser_sampler_masks"],
+	);
+	builder.add(
+		photons_scattered::CalculateActualPhotonsScatteredSystem,
+		"calculate_actual_photons",
+		&["calculate_expected_photons"],
+	);
+	builder.add(
+		force::CalculateAbsorptionForcesSystem,
+		"calculate_absorption_forces",
+		&["calculate_actual_photons"],
+	);
+	builder.add(
+		repump::RepumpSystem,
+		"repump",
+		&["calculate_absorption_forces"],
+	);
+	builder.add(
+		force::ApplyEmissionForceSystem,
+		"calculate_emission_forces",
+		&["calculate_absorption_forces"],
+	);
 }
 
 /// Registers resources required by magnetics to the ecs world.
