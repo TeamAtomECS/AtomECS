@@ -2,16 +2,15 @@
 
 extern crate multimap;
 use crate::atom::{Position, Velocity};
+use crate::constant::PI;
 use crate::integrator::Timestep;
-use crate::constant::{PI};
 use hashbrown::HashMap;
+use nalgebra::Vector3;
 use rand::Rng;
 use specs::{
     Component, Entities, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System, VecStorage,
     WriteStorage,
 };
-use nalgebra::Vector3;
-
 
 /// A resource that indicates that the simulation should apply scattering
 pub struct ApplyCollisionsOption;
@@ -28,8 +27,8 @@ impl Component for BoxID {
 }
 
 /// Resource for defining collision relevant paramaters like macroparticle number, box width and number of boxes
-/// 
-pub struct CollisionParameters{
+///
+pub struct CollisionParameters {
     /// number of real particles one simulation particle represents for collisions
     pub macroparticle: f64,
     //number of boxes per side in spatial binning
@@ -59,7 +58,17 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
 
     fn run(
         &mut self,
-        (positions, atoms, mut velocities, collisions_option, t, entities, mut boxids, updater,params): Self::SystemData,
+        (
+            positions,
+            atoms,
+            mut velocities,
+            collisions_option,
+            t,
+            entities,
+            mut boxids,
+            updater,
+            params,
+        ): Self::SystemData,
     ) {
         use rayon::prelude::*;
         use specs::ParJoin;
@@ -81,151 +90,192 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                 (&positions, &mut boxids)
                     .par_join()
                     .for_each(|(position, mut boxid)| {
-                        //Assume that atoms that leave the grid are too sparse to collide, so disregard them
-                        //We'll assign them the max value of i64, and then check for this value when we do a collision and ignore them
-                        let bound = (n as f64) / 2.0 * width;
-
-                        let id: i64;
-                        if position.pos[0].abs() > bound {
-                            id = i64::MAX;
-                        } else if position.pos[1].abs() > bound {
-                            id = i64::MAX;
-                        } else if position.pos[2].abs() > bound {
-                            id = i64::MAX;
-                        } else {
-                            //centre grid on origin
-                            let xp = ((position.pos[0] - ((n as f64) / 2.0).floor()) / width)
-                                .floor() as i64;
-                            let yp = ((position.pos[1] - ((n as f64) / 2.0).floor()) / width)
-                                .floor() as i64;
-                            let zp = ((position.pos[2] - ((n as f64) / 2.0).floor()) / width)
-                                .floor() as i64;
-
-                            //convert position to box id
-                            id = xp + n * yp + n.pow(2) * zp;
-                        }
-                        boxid.id = id;
+                        boxid.id = pos_to_id(position.pos, n, width);
                     });
 
                 //insert atom velocity into hash
                 for (velocity, boxid) in (&mut velocities, &boxids).join() {
-                    if boxid.id == i64::MAX{
-                        continue
+                    if boxid.id == i64::MAX {
+                        continue;
                     } else {
-                    map.entry(boxid.id).or_default().push(velocity);
+                        map.entry(boxid.id).or_default().push(velocity);
                     }
                 }
                 map.par_values_mut().for_each(|velocities| {
                     let mut rng = rand::thread_rng();
                     let number = velocities.len() as i32;
 
-
-                    if number <= 1{
-
-                    } else{
-                    
-                    // calculate average speed (not velocity)
-                    // average velocity will be close to zero since many particles are moving in different directions
-                    // we just want a typical speed for calculating collision probability
-                    let mut vsum = 0.0;
-                    for i in 0..(number-1) as usize{
-                        vsum = vsum + velocities[i].vel.norm();
-                    }
-
-                    let vbar = vsum / number as f64;
-                    // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
-                    let num_collisions_expected = (params.macroparticle * (number as f64)).powi(2) * params.sigma * vbar * t.delta * width.powi(-3);
-
-
-                    // loop over number of collisions happening
-                    // if number is low (<0.5) treat it as the probability of one total collision occurring
-                    // otherwise, round to nearest integer and select that many pairs to randomly 
-                    let mut num_collisions: i32;
-                    
-                    // println!("num_collisions_expected:{}, number:{}", num_collisions_expected,number);
-
-                    if num_collisions_expected <= 0.5 {
-                        let p = rng.gen::<f64>();
-                        if p < num_collisions_expected {
-                            let idx = rng.gen_range(0, number - 1) as usize;
-                            let mut idx2 = rng.gen_range(0, number - 1) as usize;
-                            if idx2 == idx{
-                                idx2 = idx+1;
-                            }
-
-                            let v1 = velocities[idx].vel;
-                            let v2 = velocities[idx2].vel;
-
-
-                            // Randomly modify velocities in CoM frame, conserving energy & momentum
-                            let vcm = 0.5*(v1+v2);
-                            let energy = 0.5*( (v1-vcm).norm_squared() + (v2-vcm).norm_squared());
-
-                            let cos_theta: f64 = rng.gen_range(-1.0,1.0);
-                            let sin_theta: f64 = (1.0-cos_theta.powi(2)).sqrt();
-                            let phi: f64 = rng.gen_range(0.0, 2.0*PI);
-
-                            let v_prime = Vector3::new(energy.sqrt()*sin_theta*phi.cos(), energy.sqrt()*sin_theta*phi.sin(),energy.sqrt()*cos_theta);
-                            velocities[idx].vel = vcm + v_prime;
-                            velocities[idx2].vel = vcm - v_prime;
-                        } 
+                    if number <= 1 {
                     } else {
-                        num_collisions = num_collisions_expected.round() as i32;
-
-                        if num_collisions > 100000 as i32{
-
-                            num_collisions = 100000  as i32;
+                        // calculate average speed (not velocity)
+                        // average velocity will be close to zero since many particles are moving in different directions
+                        // we just want a typical speed for calculating collision probability
+                        let mut vsum = 0.0;
+                        for i in 0..(number - 1) as usize {
+                            vsum = vsum + velocities[i].vel.norm();
                         }
 
-                        for _i in 1..num_collisions {
+                        let vbar = vsum / number as f64;
+                        // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
+                        let num_collisions_expected = (params.macroparticle * (number as f64))
+                            .powi(2)
+                            * params.sigma
+                            * vbar
+                            * t.delta
+                            * width.powi(-3);
 
-                            let idx = rng.gen_range(0, number - 1) as usize;
-                            let mut idx2 = rng.gen_range(0, number - 1) as usize;
-                            if idx2 == idx{
-                                idx2 = idx+1;
+                        // loop over number of collisions happening
+                        // if number is low (<0.5) treat it as the probability of one total collision occurring
+                        // otherwise, round to nearest integer and select that many pairs to randomly
+                        let mut num_collisions: i32;
+
+                        // println!("num_collisions_expected:{}, number:{}", num_collisions_expected,number);
+
+                        if num_collisions_expected <= 0.5 {
+                            let p = rng.gen::<f64>();
+                            if p < num_collisions_expected {
+                                let idx = rng.gen_range(0, number - 1) as usize;
+                                let mut idx2 = rng.gen_range(0, number - 1) as usize;
+                                if idx2 == idx {
+                                    idx2 = idx + 1;
+                                }
+
+                                let v1 = velocities[idx].vel;
+                                let v2 = velocities[idx2].vel;
+                                let (v1new, v2new) = do_collision(v1, v2);
+                                velocities[idx].vel = v1new;
+                                velocities[idx2].vel = v2new;
+                            }
+                        } else {
+                            num_collisions = num_collisions_expected.round() as i32;
+
+                            if num_collisions > 100000 as i32 {
+                                num_collisions = 100000 as i32;
                             }
 
-                            let v1 = velocities[idx].vel;
-                            let v2 = velocities[idx2].vel;
+                            for _i in 1..num_collisions {
+                                let idx = rng.gen_range(0, number - 1) as usize;
+                                let mut idx2 = rng.gen_range(0, number - 1) as usize;
+                                if idx2 == idx {
+                                    idx2 = idx + 1;
+                                }
 
-
-                            // Randomly modify velocities in CoM frame, conserving energy & momentum
-                            let vcm = 0.5*(v1+v2);
-                            let energy = 0.5*( (v1-vcm).norm_squared() + (v2-vcm).norm_squared());
-
-                            let cos_theta: f64 = rng.gen_range(-1.0,1.0);
-                            let sin_theta: f64 = (1.0-cos_theta.powi(2)).sqrt();
-                            let phi: f64 = rng.gen_range(0.0, 2.0*PI);
-
-                            let v_prime = Vector3::new(energy.sqrt()*sin_theta*phi.cos(), energy.sqrt()*sin_theta*phi.sin(),energy.sqrt()*cos_theta);
-                            velocities[idx].vel = vcm + v_prime;
-                            velocities[idx2].vel = vcm - v_prime;
+                                let v1 = velocities[idx].vel;
+                                let v2 = velocities[idx2].vel;
+                                let (v1new, v2new) = do_collision(v1, v2);
+                                velocities[idx].vel = v1new;
+                                velocities[idx2].vel = v2new;
+                            }
                         }
                     }
-                }
-                    
                 });
             }
         }
     }
 }
 
-// fn do_collision(mut vel1: Velocity, mut vel2: Velocity) -> (Velocity, Velocity) {
-//     let mut rng = rand::thread_rng();
-//     let v1 = vel1.vel;
-//     let v2 = vel2.vel;
+fn do_collision<'a>(mut v1: Vector3<f64>, mut v2: Vector3<f64>) -> (Vector3<f64>, Vector3<f64>) {
+    let mut rng = rand::thread_rng();
 
+    // Randomly modify velocities in CoM frame, conserving energy & momentum
+    let vcm = 0.5 * (v1 + v2);
+    let energy: f64 = 0.5 * ((v1 - vcm).norm().powi(2) + (v2 - vcm).norm().powi(2));
 
-//     // Randomly modify velocities in CoM frame, conserving energy & momentum
-//     let vcm = 0.5*(v1+v2);
-//     let energy = 0.5*( (v1-vcm).norm().powi(2) + (v2-vcm).norm().powi(2));
+    let theta: f64 = rng.gen_range(0.0, 2.0 * PI);
+    let phi: f64 = rng.gen_range(0.0, 2.0 * PI);
 
-//     let theta: f64 = rng.gen_range(0.0,2.0*PI);
-//     let phi: f64 = rng.gen_range(0.0, 2.0*PI);
+    let v_prime = Vector3::new(
+        energy.sqrt() * theta.sin() * phi.cos(),
+        energy.sqrt() * theta.sin() * phi.sin(),
+        energy.sqrt() * theta.cos(),
+    );
+    v1 = vcm + v_prime;
+    v2 = vcm - v_prime;
 
-//     let v_prime = Vector3::new(energy.sqrt()*theta.sin()*phi.cos(), energy.sqrt()*theta.sin()*phi.sin(),energy.sqrt()*theta.cos());
-//     vel1.vel = vcm + v_prime;
-//     vel2.vel = vcm - v_prime;
+    (v1, v2)
+}
 
-//     (vel1,vel2)
-// }
+fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
+    //Assume that atoms that leave the grid are too sparse to collide, so disregard them
+    //We'll assign them the max value of i64, and then check for this value when we do a collision and ignore them
+    let bound = (n as f64) / 2.0 * width;
+
+    let id: i64;
+    if pos[0].abs() > bound {
+        id = i64::MAX;
+    } else if pos[1].abs() > bound {
+        id = i64::MAX;
+    } else if pos[2].abs() > bound {
+        id = i64::MAX;
+    } else {
+        //centre grid on origin
+        //grid cells run from [0, width), i.e include lower bound but exclude upper
+        let xp = (pos[0] / width + 0.5 * (n as f64)).floor() as i64;
+        let yp = (pos[1] / width + 0.5 * (n as f64)).floor() as i64;
+        let zp = (pos[2] / width + 0.5 * (n as f64)).floor() as i64;
+        //convert position to box id
+        id = xp + n * yp + n.pow(2) * zp;
+    }
+    id
+}
+
+pub mod tests {
+    #[allow(unused_imports)]
+    use super::*;
+    #[allow(unused_imports)]
+    use nalgebra::Vector3;
+    extern crate specs;
+
+    #[test]
+    fn test_pos_to_id() {
+        let n: i64 = 10;
+        let width: f64 = 2.0;
+
+        let pos1 = Vector3::new(0.0, 0.0, 0.0);
+        let pos2 = Vector3::new(1.0, 0.0, 0.0);
+        let pos3 = Vector3::new(2.0, 0.0, 0.0);
+        let pos4 = Vector3::new(9.9, 0.0, 0.0);
+        let pos5 = Vector3::new(-9.9, 0.0, 0.0);
+        let pos6 = Vector3::new(10.1, 0.0, 0.0);
+        let pos7 = Vector3::new(-9.9, -9.9, -9.9);
+
+        let id1 = pos_to_id(pos1, n, width);
+        let id2 = pos_to_id(pos2, n, width);
+        let id3 = pos_to_id(pos3, n, width);
+        let id4 = pos_to_id(pos4, n, width);
+        let id5 = pos_to_id(pos5, n, width);
+        let id6 = pos_to_id(pos6, n, width);
+        let id7 = pos_to_id(pos7, n, width);
+
+        assert_eq!(id1, 555);
+        assert_eq!(id2, 555);
+        assert_eq!(id3, 556);
+        assert_eq!(id4, 559);
+        assert_eq!(id5, 550);
+        assert_eq!(id6, i64::MAX);
+        assert_eq!(id7, 0);
+    }
+
+    #[test]
+    fn test_do_collision() {
+        // do this test muliple times since there is a random element involved in do_collision
+        for _i in 0..50 {
+            let v1 = Vector3::new(0.5, 1.0, 0.75);
+            let v2 = Vector3::new(0.2, 0.0, 1.25);
+            //calculate energy and momentum before
+            let ptoti = v1 + v2;
+            let energyi = 0.5 * (v1.norm_squared() + v2.norm_squared());
+
+            let (v1new, v2new) = do_collision(v1, v2);
+
+            //energy and momentum after
+            let ptotf = v1new + v2new;
+            let energyf = 0.5 * (v1new.norm_squared() + v2new.norm_squared());
+
+            assert!((ptoti - ptotf) <= Vector3::new(1e-6, 1e-6, 1e-6));
+            assert!((energyi - energyf) <= 1e-6);
+            assert_ne!(v1, v1new);
+            assert_ne!(v2, v2new);
+        }
+    }
+}
