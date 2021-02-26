@@ -128,7 +128,7 @@ pub mod tests {
             .create_entity()
             .with(CoolingLight {
                 polarization: 1,
-                wavelength: 780e-9,
+                wavelength: wavelength,
             })
             .with(CoolingLightIndex {
                 index: 0,

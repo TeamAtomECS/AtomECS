@@ -8,8 +8,6 @@ use crate::laser::rate::RateCoefficients;
 use crate::laser::sampler::LaserSamplerMasks;
 use specs::{Component, ReadStorage, System, VecStorage, WriteStorage};
 
-use crate::constant::PI;
-
 /// Represents the steady-state population density of the excited state and ground state
 pub struct TwoLevelPopulation {
     /// steady-state population density of the ground state, a number in [0,1]
@@ -76,8 +74,71 @@ impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
                         sum_rates = sum_rates + rates.contents[count].rate;
                     }
                 }
-                twolevel.excited = sum_rates / (atominfo.linewidth * 2. * PI + 2. * sum_rates);
+                //DEFINITELY CHECK THE 2PI !!!
+                // I personally think it should not be there since the RateCoefficient is not in Hz not angular.
+                twolevel.excited = sum_rates / (atominfo.linewidth + 2. * sum_rates);
                 twolevel.calculate_ground_state();
             });
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+
+    extern crate specs;
+    use assert_approx_eq::assert_approx_eq;
+    use specs::{Builder, RunNow, World};
+    extern crate nalgebra;
+
+    #[test]
+    fn test_calculate_twolevel_population_system() {
+        let mut test_world = World::new();
+        test_world.register::<RateCoefficients>();
+        test_world.register::<AtomicTransition>();
+        test_world.register::<LaserSamplerMasks>();
+        test_world.register::<TwoLevelPopulation>();
+
+        // this test runs with two lasers only and we have to tell this the mask
+        let mut active_lasers = [crate::laser::sampler::LaserSamplerMask { filled: false };
+            crate::laser::COOLING_BEAM_LIMIT];
+        active_lasers[0] = crate::laser::sampler::LaserSamplerMask { filled: true };
+        active_lasers[1] = crate::laser::sampler::LaserSamplerMask { filled: true };
+
+        let atom1 = test_world
+            .create_entity()
+            .with(RateCoefficients {
+                contents: [crate::laser::rate::RateCoefficient { rate: 1_000_000.0 };
+                    crate::laser::COOLING_BEAM_LIMIT],
+            })
+            .with(AtomicTransition::strontium())
+            .with(LaserSamplerMasks {
+                contents: active_lasers,
+            })
+            .with(TwoLevelPopulation::default())
+            .build();
+
+        let mut system = CalculateTwoLevelPopulationSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<TwoLevelPopulation>();
+
+        let mut sum_rates = 0.0;
+
+        for i in 0..crate::laser::COOLING_BEAM_LIMIT {
+            if active_lasers[i].filled {
+                sum_rates = sum_rates + 1_000_000.0;
+            }
+        }
+
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .excited,
+            sum_rates / (AtomicTransition::strontium().linewidth + 2.0 * sum_rates),
+            1e-5_f64
+        );
     }
 }

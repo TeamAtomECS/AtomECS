@@ -83,3 +83,65 @@ impl<'a> System<'a> for CalculateZeemanShiftSystem {
             });
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+
+    extern crate specs;
+    use crate::constant::HBAR;
+    use assert_approx_eq::assert_approx_eq;
+    use specs::{Builder, RunNow, World};
+    extern crate nalgebra;
+    use nalgebra::Vector3;
+
+    #[test]
+    fn test_calculate_zeeman_shift_system() {
+        let mut test_world = World::new();
+        test_world.register::<MagneticFieldSampler>();
+        test_world.register::<AtomicTransition>();
+        test_world.register::<ZeemanShiftSampler>();
+
+        let atom1 = test_world
+            .create_entity()
+            .with(MagneticFieldSampler {
+                field: Vector3::new(0.0, 0.0, 1.0),
+                magnitude: 1.0,
+            })
+            .with(AtomicTransition::strontium())
+            .with(ZeemanShiftSampler::default())
+            .build();
+
+        let mut system = CalculateZeemanShiftSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<ZeemanShiftSampler>();
+
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .sigma_plus,
+            AtomicTransition::strontium().mup / HBAR * 1.0,
+            1e-5_f64
+        );
+
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .sigma_minus,
+            AtomicTransition::strontium().mum / HBAR * 1.0,
+            1e-5_f64
+        );
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .sigma_pi,
+            AtomicTransition::strontium().muz / HBAR * 1.0,
+            1e-5_f64
+        );
+    }
+}

@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-extern crate magneto_optical_trap as lib;
+extern crate atomecs as lib;
 extern crate specs;
 
 extern crate nalgebra;

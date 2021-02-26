@@ -188,3 +188,90 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
         }
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+
+    extern crate specs;
+    use assert_approx_eq::assert_approx_eq;
+    use specs::{Builder, RunNow, World};
+    extern crate nalgebra;
+
+    #[test]
+    fn test_calculate_laser_detuning_system() {
+        let mut test_world = World::new();
+        test_world.register::<CoolingLight>();
+        test_world.register::<CoolingLightIndex>();
+        test_world.register::<DopplerShiftSamplers>();
+        test_world.register::<LaserDetuningSamplers>();
+        test_world.register::<AtomicTransition>();
+        test_world.register::<ZeemanShiftSampler>();
+
+        let wavelength = constant::C / AtomicTransition::strontium().frequency;
+        test_world
+            .create_entity()
+            .with(CoolingLight {
+                polarization: 1,
+                wavelength: wavelength,
+            })
+            .with(CoolingLightIndex {
+                index: 0,
+                initiated: true,
+            })
+            .build();
+
+        let atom1 = test_world
+            .create_entity()
+            .with(DopplerShiftSamplers {
+                contents: [crate::laser::doppler::DopplerShiftSampler {
+                    doppler_shift: 10.0e6, //rad/s
+                }; crate::laser::COOLING_BEAM_LIMIT],
+            })
+            .with(AtomicTransition::strontium())
+            .with(ZeemanShiftSampler {
+                sigma_plus: 10.0e6,   //rad/s
+                sigma_minus: -10.0e6, //rad/s
+                sigma_pi: 0.0,        //rad/s
+            })
+            .with(LaserDetuningSamplers {
+                contents: [LaserDetuningSampler::default(); crate::laser::COOLING_BEAM_LIMIT],
+            })
+            .build();
+
+        let mut system = CalculateLaserDetuningSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<LaserDetuningSamplers>();
+
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .contents[0]
+                .detuning_sigma_plus,
+            -10.0e6 - 10.0e6,
+            1e-2_f64
+        );
+
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .contents[0]
+                .detuning_sigma_minus,
+            -10.0e6 + 10.0e6,
+            1e-2_f64
+        );
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .contents[0]
+                .detuning_pi,
+            -10.0e6,
+            1e-2_f64
+        );
+    }
+}

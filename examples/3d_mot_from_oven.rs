@@ -6,11 +6,11 @@ use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
 use lib::atom_sources::oven::{OvenAperture, OvenBuilder};
+use lib::configuration::AtomECSConfiguration;
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
-use lib::laser::force::ApplyEmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
@@ -32,12 +32,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos.txt".to_string(), 100),
+        file::new::<Position, Text>("pos_15.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 100),
+        file::new::<Velocity, Text>("vel_15.txt".to_string(), 100),
         "",
         &[],
     );
@@ -53,7 +53,7 @@ fn main() {
         .build();
 
     // Create cooling lasers.
-    let detuning = -90.0;
+    let detuning = -15.0;
     let power = 2.23; //original: 0.23
     let radius = 33.0e-3 / (2.0 * 2.0_f64.sqrt()); // 33mm 1/e^2 diameter
 
@@ -63,7 +63,7 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power / 5.0,
+            power: power,
             direction: Vector3::z(),
         })
         .with(CoolingLight::for_species(
@@ -77,7 +77,7 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power / 5.0,
+            power: power,
             direction: -Vector3::z(),
         })
         .with(CoolingLight::for_species(
@@ -147,7 +147,7 @@ fn main() {
 
     // Create an oven.
     // The oven will eject atoms on the first frame and then be deleted.
-    let number_to_emit = 1000000;
+    let number_to_emit = 1000_000;
     world
         .create_entity()
         .with(
@@ -174,8 +174,8 @@ fn main() {
 
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-6 });
-    // enable the usage of the emission system
-    world.add_resource(ApplyEmissionForceOption {});
+    // enable the usage of the emission system and photon fluctuations
+    world.add_resource(AtomECSConfiguration::default());
 
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
@@ -192,7 +192,7 @@ fn main() {
         .build();
 
     // Run the simulation for a number of steps.
-    for _i in 0..10000 {
+    for _i in 0..100_000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
