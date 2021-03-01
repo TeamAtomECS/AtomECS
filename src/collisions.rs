@@ -117,56 +117,32 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
 
                         let vbar = vsum / number as f64;
                         // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
-                        let num_collisions_expected = (params.macroparticle * (number as f64))
-                            .powi(2)
+                        let collision_chance = (params.macroparticle * (number as f64))
                             * params.sigma
                             * vbar
                             * t.delta
                             * width.powi(-3);
 
-                        // loop over number of collisions happening
-                        // if number is low (<0.5) treat it as the probability of one total collision occurring
-                        // otherwise, round to nearest integer and select that many pairs to randomly
-                        let mut num_collisions: i32;
+                        let mut num_collisions = 0;
 
-                        // println!("num_collisions_expected:{}, number:{}", num_collisions_expected,number);
+                        for idx1 in 1..(number - 1) as usize {
+                            for idx2 in (idx1 + 1)..number as usize {
+                                let p = rng.gen::<f64>();
+                                if p < collision_chance {
+                                    let v1 = velocities[idx1].vel;
+                                    let v2 = velocities[idx2].vel;
+                                    let (v1new, v2new) = do_collision(v1, v2);
+                                    velocities[idx1].vel = v1new;
+                                    velocities[idx2].vel = v2new;
 
-                        if num_collisions_expected <= 0.5 {
-                            let p = rng.gen::<f64>();
-                            if p < num_collisions_expected {
-                                let idx = rng.gen_range(0, number - 1) as usize;
-                                let mut idx2 = rng.gen_range(0, number - 1) as usize;
-                                if idx2 == idx {
-                                    idx2 = idx + 1;
+                                    num_collisions = num_collisions + 1;
                                 }
-
-                                let v1 = velocities[idx].vel;
-                                let v2 = velocities[idx2].vel;
-                                let (v1new, v2new) = do_collision(v1, v2);
-                                velocities[idx].vel = v1new;
-                                velocities[idx2].vel = v2new;
-                            }
-                        } else {
-                            num_collisions = num_collisions_expected.round() as i32;
-
-                            if num_collisions > 100000 as i32 {
-                                num_collisions = 100000 as i32;
-                            }
-
-                            for _i in 1..num_collisions {
-                                let idx = rng.gen_range(0, number - 1) as usize;
-                                let mut idx2 = rng.gen_range(0, number - 1) as usize;
-                                if idx2 == idx {
-                                    idx2 = idx + 1;
-                                }
-
-                                let v1 = velocities[idx].vel;
-                                let v2 = velocities[idx2].vel;
-                                let (v1new, v2new) = do_collision(v1, v2);
-                                velocities[idx].vel = v1new;
-                                velocities[idx2].vel = v2new;
                             }
                         }
+                        //println!(
+                        //     "collision chance: {}, number: {}, actual number of collisions: {}",
+                        //     collision_chance, number, num_collisions
+                        // );
                     }
                 });
             }
@@ -181,13 +157,14 @@ fn do_collision<'a>(mut v1: Vector3<f64>, mut v2: Vector3<f64>) -> (Vector3<f64>
     let vcm = 0.5 * (v1 + v2);
     let energy: f64 = 0.5 * ((v1 - vcm).norm().powi(2) + (v2 - vcm).norm().powi(2));
 
-    let theta: f64 = rng.gen_range(0.0, 2.0 * PI);
+    let cos_theta: f64 = rng.gen_range(-1.0, 1.0);
+    let sin_theta: f64 = (1.0 - cos_theta.powi(2)).sqrt();
     let phi: f64 = rng.gen_range(0.0, 2.0 * PI);
 
     let v_prime = Vector3::new(
-        energy.sqrt() * theta.sin() * phi.cos(),
-        energy.sqrt() * theta.sin() * phi.sin(),
-        energy.sqrt() * theta.cos(),
+        energy.sqrt() * sin_theta * phi.cos(),
+        energy.sqrt() * sin_theta * phi.sin(),
+        energy.sqrt() * cos_theta,
     );
     v1 = vcm + v_prime;
     v2 = vcm - v_prime;
@@ -223,7 +200,23 @@ pub mod tests {
     #[allow(unused_imports)]
     use super::*;
     #[allow(unused_imports)]
+    use crate::atom::{Atom, Force, Mass, Position, Velocity};
+    #[allow(unused_imports)]
+    use crate::ecs;
+    #[allow(unused_imports)]
+    use crate::ecs::AtomecsDispatcherBuilder;
+    #[allow(unused_imports)]
+    use crate::initiate::NewlyCreated;
+    #[allow(unused_imports)]
+    use crate::integrator::{
+        Step, Timestep, VelocityVerletIntegratePositionSystem,
+        VelocityVerletIntegrateVelocitySystem,
+    };
+
+    #[allow(unused_imports)]
     use nalgebra::Vector3;
+    #[allow(unused_imports)]
+    use specs::{Builder, Entity, RunNow, World};
     extern crate specs;
 
     #[test]
@@ -277,5 +270,82 @@ pub mod tests {
             assert_ne!(v1, v1new);
             assert_ne!(v2, v2new);
         }
+    }
+
+    #[test]
+    fn test_collisions() {
+        let mut test_world = World::new();
+
+        ecs::register_components(&mut test_world);
+        ecs::register_resources(&mut test_world);
+        test_world.register::<NewlyCreated>();
+        let mut atomecs_builder = AtomecsDispatcherBuilder::new();
+        atomecs_builder.add_frame_initialisation_systems();
+        atomecs_builder.add_systems();
+        atomecs_builder
+            .builder
+            .add(ApplyCollisionsSystem, "collisions", &[]);
+        atomecs_builder.add_frame_end_systems();
+
+        let builder = atomecs_builder.builder;
+        let mut dispatcher = builder.build();
+        dispatcher.setup(&mut test_world.res);
+
+        let vel1 = Vector3::new(1.0, 0.0, 0.0);
+        let vel2 = Vector3::new(-1.0, 0.0, 0.0);
+
+        let pos1 = Vector3::new(-3.0, 0.0, 0.0);
+        let pos2 = Vector3::new(3.0, 0.0, 0.0);
+
+        //atom 1 to collide
+        let atom1 = test_world
+            .create_entity()
+            .with(Velocity { vel: vel1 })
+            .with(Position { pos: pos1 })
+            .with(Atom)
+            .with(Force::new())
+            .with(Mass { value: 87.0 })
+            .with(NewlyCreated)
+            .build();
+
+        //atom2 to collide
+        let atom2 = test_world
+            .create_entity()
+            .with(Velocity { vel: vel2 })
+            .with(Position { pos: pos2 })
+            .with(Atom)
+            .with(Force::new())
+            .with(Mass { value: 87.0 })
+            .with(NewlyCreated)
+            .build();
+
+        let dt = 1.0;
+        test_world.add_resource(Timestep { delta: dt });
+        test_world.add_resource(ApplyCollisionsOption);
+        test_world.add_resource(CollisionParameters {
+            macroparticle: 1.0,
+            box_number: 10,
+            box_width: 2.0,
+            sigma: 10.0,
+        });
+
+        for _i in 0..10 {
+            dispatcher.setup(&mut test_world.res);
+            test_world.maintain();
+        }
+
+        let velocities = test_world.read_storage::<Velocity>();
+        let vel1new = velocities.get(atom1).expect("atom1 not found");
+        let vel2new = velocities.get(atom2).expect("atom2 not found");
+
+        let positions = test_world.read_storage::<Position>();
+        let pos1new = positions.get(atom1).expect("atom1 not found");
+        let pos2new = positions.get(atom2).expect("atom2 not found");
+
+        assert_ne!(pos1, pos1new.pos);
+        assert_ne!(pos2, pos2new.pos);
+
+        assert_ne!(vel1 - vel1new.vel, Vector3::new(0.0, 0.0, 0.0));
+        assert_ne!(vel2 - vel2new.vel, Vector3::new(0.0, 0.0, 0.0));
     }
 }
