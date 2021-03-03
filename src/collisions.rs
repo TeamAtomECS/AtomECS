@@ -125,8 +125,8 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
 
                         let mut num_collisions = 0;
 
-                        for idx1 in 1..(number - 1) as usize {
-                            for idx2 in (idx1 + 1)..number as usize {
+                        for idx1 in 0..(number as usize - 1) {
+                            for idx2 in (idx1 + 1)..(number as usize) {
                                 let p = rng.gen::<f64>();
                                 if p < collision_chance {
                                     let v1 = velocities[idx1].vel;
@@ -330,7 +330,7 @@ pub mod tests {
         });
 
         for _i in 0..10 {
-            dispatcher.setup(&mut test_world.res);
+            dispatcher.dispatch(&mut test_world.res);
             test_world.maintain();
         }
 
