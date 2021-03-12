@@ -10,9 +10,9 @@ use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
-use lib::laser::force::ApplyEmissionForceOption;
+use lib::laser::force::EmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
-use lib::laser::photons_scattered::EnableScatteringFluctuations;
+use lib::laser::photons_scattered::ScatteringFluctuationsOption;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
@@ -173,9 +173,9 @@ fn main() {
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-6 });
     // enable the usage of the emission system
-    world.add_resource(ApplyEmissionForceOption {});
+    world.add_resource(EmissionForceOption::default());
     // enable that the number of actually scattered photons is drawn from a poisson distribution
-    world.add_resource(EnableScatteringFluctuations {});
+    world.add_resource(ScatteringFluctuationsOption::default());
 
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world

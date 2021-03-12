@@ -235,14 +235,23 @@ impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
 ///
 /// Otherwise, the entries of `ActualPhotonsScatteredVector` will be identical with those of
 /// `ExpectedPhotonsScatteredVector`.
-pub struct EnableScatteringFluctuations;
+#[derive(Clone, Copy)]
+pub enum ScatteringFluctuationsOption {
+    Off,
+    On,
+}
+impl Default for ScatteringFluctuationsOption {
+    fn default() -> Self {
+        ScatteringFluctuationsOption::On
+    }
+}
 
 /// Calcutates the actual number of photons scattered by each CoolingLight entity in one iteration step
 /// by drawing from a Poisson Distribution that has `ExpectedPhotonsScattered` as the lambda parameter.
 pub struct CalculateActualPhotonsScatteredSystem;
 impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
     type SystemData = (
-        Option<Read<'a, EnableScatteringFluctuations>>,
+        Option<Read<'a, ScatteringFluctuationsOption>>,
         ReadStorage<'a, ExpectedPhotonsScatteredVector>,
         WriteStorage<'a, ActualPhotonsScatteredVector>,
     );
@@ -264,23 +273,35 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
                         }
                     });
             }
-            Some(_rand) => {
-                (&expected_photons_vector, &mut actual_photons_vector)
-                    .par_join()
-                    .for_each(|(expected, actual)| {
-                        for index in 0..expected.contents.len() {
-                            let lambda = expected.contents[index].scattered;
-                            actual.contents[index].scattered =
-                                if lambda <= 1.0e-5 || lambda.is_nan() {
-                                    0.0
-                                } else {
-                                    let poisson = Poisson::new(lambda);
-                                    let drawn_number = poisson.sample(&mut rand::thread_rng());
-                                    drawn_number as f64
-                                }
-                        }
-                    });
-            }
+            Some(rand_option) => match *rand_option {
+                ScatteringFluctuationsOption::Off => {
+                    (&expected_photons_vector, &mut actual_photons_vector)
+                        .par_join()
+                        .for_each(|(expected, actual)| {
+                            for index in 0..expected.contents.len() {
+                                actual.contents[index].scattered =
+                                    expected.contents[index].scattered;
+                            }
+                        });
+                }
+                ScatteringFluctuationsOption::On => {
+                    (&expected_photons_vector, &mut actual_photons_vector)
+                        .par_join()
+                        .for_each(|(expected, actual)| {
+                            for index in 0..expected.contents.len() {
+                                let lambda = expected.contents[index].scattered;
+                                actual.contents[index].scattered =
+                                    if lambda <= 1.0e-5 || lambda.is_nan() {
+                                        0.0
+                                    } else {
+                                        let poisson = Poisson::new(lambda);
+                                        let drawn_number = poisson.sample(&mut rand::thread_rng());
+                                        drawn_number as f64
+                                    }
+                            }
+                        });
+                }
+            },
         }
     }
 }

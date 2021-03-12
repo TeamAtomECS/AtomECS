@@ -12,3 +12,4 @@
 *.ipynb
 **/*.pdf
 **/*.mat
+*.xyz

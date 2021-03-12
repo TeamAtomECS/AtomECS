@@ -7,9 +7,9 @@ use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
-use lib::laser::force::ApplyEmissionForceOption;
+use lib::laser::force::EmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
-use lib::laser::photons_scattered::EnableScatteringFluctuations;
+use lib::laser::photons_scattered::ScatteringFluctuationsOption;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use nalgebra::Vector3;
 use rand::distributions::{Distribution, Normal};
@@ -202,8 +202,8 @@ fn main() {
     // Enable fluctuation options
     //  * Allow photon numbers to fluctuate.
     //  * Allow random force from emission of photons.
-    world.add_resource(ApplyEmissionForceOption {});
-    world.add_resource(EnableScatteringFluctuations {});
+    world.add_resource(EmissionForceOption::default());
+    world.add_resource(ScatteringFluctuationsOption::default());
 
     let loop_start = Instant::now();
 

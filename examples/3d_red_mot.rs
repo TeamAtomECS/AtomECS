@@ -1,6 +1,6 @@
 extern crate atomecs as lib;
-use crate::lib::laser::force::ApplyEmissionForceOption;
-use atomecs::laser::photons_scattered::EnableScatteringFluctuations;
+use crate::lib::laser::force::EmissionForceOption;
+use atomecs::laser::photons_scattered::ScatteringFluctuationsOption;
 use lib::atom_sources::central_creator::CentralCreator;
 
 extern crate nalgebra;
@@ -183,8 +183,8 @@ fn run_with_parameter(_parameter_name: &str, iterator: usize) {
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-5 });
     // enable the usage of the emission system
-    world.add_resource(ApplyEmissionForceOption {});
-    world.add_resource(EnableScatteringFluctuations {});
+    world.add_resource(EmissionForceOption::default());
+    world.add_resource(ScatteringFluctuationsOption::default());
 
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
