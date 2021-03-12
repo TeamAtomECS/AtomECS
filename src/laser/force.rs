@@ -88,11 +88,6 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
     }
 }
 
-/// A resource that indicates that the simulation should apply random forces
-/// to simulate the random walk fluctuations due to spontaneous
-/// emission.
-pub struct ApplyEmissionForceOption;
-
 /// Calculates the force vector due to the spontaneous emissions in this
 /// simulation step.
 ///
@@ -237,7 +232,9 @@ pub mod tests {
         test_world.register::<ActualPhotonsScatteredVector>();
         test_world.register::<Force>();
         test_world.register::<AtomicTransition>();
-        test_world.add_resource(ApplyEmissionForceOption {});
+        // enable the usage of the emission system and photon fluctuations
+        test_world.add_resource(AtomECSConfiguration::default());
+
         test_world.add_resource(Timestep { delta: time_delta });
         let number_scattered = 1_000_000.0;
 
