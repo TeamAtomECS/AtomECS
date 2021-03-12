@@ -3,7 +3,6 @@
 extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
-use lib::configuration::AtomECSConfiguration;
 use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
