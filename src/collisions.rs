@@ -9,7 +9,7 @@ use nalgebra::Vector3;
 use rand::Rng;
 use specs::{
     Component, Entities, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System, VecStorage,
-    WriteStorage,
+    WriteExpect, WriteStorage,
 };
 
 /// A resource that indicates that the simulation should apply scattering
@@ -37,6 +37,8 @@ pub struct CollisionParameters {
     pub box_width: f64,
     // collisional cross section of atoms (assuming only one species)
     pub sigma: f64,
+    //total number of collisions overall
+    pub num_total: i64,
 }
 
 /// This system applies scattering to atoms
@@ -53,7 +55,7 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
         Entities<'a>,
         WriteStorage<'a, BoxID>,
         Read<'a, LazyUpdate>,
-        ReadExpect<'a, CollisionParameters>,
+        WriteExpect<'a, CollisionParameters>,
     );
 
     fn run(
@@ -67,7 +69,7 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
             entities,
             mut boxids,
             updater,
-            params,
+            mut params,
         ): Self::SystemData,
     ) {
         use rayon::prelude::*;
@@ -101,6 +103,9 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                         map.entry(boxid.id).or_default().push(velocity);
                     }
                 }
+
+                let mut collisions_vec: Vec<i64>;
+
                 map.par_values_mut().for_each(|velocities| {
                     let mut rng = rand::thread_rng();
                     let number = velocities.len() as i32;
@@ -117,32 +122,60 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
 
                         let vbar = vsum / number as f64;
                         // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
-                        let collision_chance = (params.macroparticle * (number as f64))
+                        let num_collisions_expected = (params.macroparticle * (number as f64))
+                            .powi(2)
                             * params.sigma
                             * vbar
                             * t.delta
                             * width.powi(-3);
 
-                        let mut num_collisions = 0;
+                        // loop over number of collisions happening
+                        // if number is low (<0.5) treat it as the probability of one total collision occurring
+                        // otherwise, round to nearest integer and select that many pairs to randomly
+                        let mut num_collisions: i32;
 
-                        for idx1 in 0..(number as usize - 1) {
-                            for idx2 in (idx1 + 1)..(number as usize) {
-                                let p = rng.gen::<f64>();
-                                if p < collision_chance {
-                                    let v1 = velocities[idx1].vel;
-                                    let v2 = velocities[idx2].vel;
-                                    let (v1new, v2new) = do_collision(v1, v2);
-                                    velocities[idx1].vel = v1new;
-                                    velocities[idx2].vel = v2new;
+                        // println!("num_collisions_expected:{}, number:{}", num_collisions_expected,number);
 
-                                    num_collisions = num_collisions + 1;
+                        if num_collisions_expected <= 0.5 {
+                            let p = rng.gen::<f64>();
+                            if p < num_collisions_expected {
+                                let idx = rng.gen_range(0, number - 1) as usize;
+                                let mut idx2 = rng.gen_range(0, number - 1) as usize;
+                                if idx2 == idx {
+                                    idx2 = idx + 1;
                                 }
+
+                                let v1 = velocities[idx].vel;
+                                let v2 = velocities[idx2].vel;
+                                let (v1new, v2new) = do_collision(v1, v2);
+                                velocities[idx].vel = v1new;
+                                velocities[idx2].vel = v2new;
                             }
+                        } else {
+                            num_collisions = num_collisions_expected.round() as i32;
+
+                            if num_collisions > 100000 as i32 {
+                                num_collisions = 100000 as i32;
+                            }
+
+                            for _i in 0..num_collisions {
+                                let idx = rng.gen_range(0, number - 1) as usize;
+                                let mut idx2 = rng.gen_range(0, number - 1) as usize;
+                                if idx2 == idx {
+                                    idx2 = idx + 1;
+                                }
+
+                                let v1 = velocities[idx].vel;
+                                let v2 = velocities[idx2].vel;
+                                let (v1new, v2new) = do_collision(v1, v2);
+                                velocities[idx].vel = v1new;
+                                velocities[idx2].vel = v2new;
+                            }
+                            // println!(
+                            //     "number: {}, actual number of collisions: {}",
+                            //     number, num_collisions
+                            // );
                         }
-                        //println!(
-                        //     "collision chance: {}, number: {}, actual number of collisions: {}",
-                        //     collision_chance, number, num_collisions
-                        // );
                     }
                 });
             }
@@ -327,6 +360,7 @@ pub mod tests {
             box_number: 10,
             box_width: 2.0,
             sigma: 10.0,
+            num_total: 0,
         });
 
         for _i in 0..10 {
