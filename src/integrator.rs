@@ -10,6 +10,7 @@ extern crate specs;
 use crate::atom::*;
 use crate::constant;
 use crate::initiate::NewlyCreated;
+use nalgebra::Vector3;
 use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteExpect, WriteStorage};
 use specs::{Entities, Join, LazyUpdate, Read};
 
@@ -126,10 +127,25 @@ impl<'a> System<'a> for VelocityVerletIntegrateVelocitySystem {
 
 		(&mut vel, &force, &oldforce, &mass).par_join().for_each(
 			|(mut vel, force, oldforce, mass)| {
+				println!("{},{},{}", vel.vel, force.force, oldforce.0.force);
 				vel.vel = vel.vel
 					+ (force.force + oldforce.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
 			},
 		);
+	}
+}
+
+/// Test system: adds a force to test velocity verlet integration
+///
+
+pub struct TestVelocityVerletForceSystem;
+impl<'a> System<'a> for TestVelocityVerletForceSystem {
+	type SystemData = (WriteStorage<'a, Force>, ReadStorage<'a, Atom>);
+
+	fn run(&mut self, (mut forces, atoms): Self::SystemData) {
+		for (force, _atom) in (&mut forces, &atoms).join() {
+			force.force = Vector3::new(0.4, 0.6, -0.4);
+		}
 	}
 }
 
@@ -275,6 +291,11 @@ pub mod tests {
 				&[],
 			)
 			.with(
+				TestVelocityVerletForceSystem,
+				"testForce",
+				&["integrate_position"],
+			)
+			.with(
 				VelocityVerletIntegrateVelocitySystem,
 				"integrate_velocity",
 				&["integrate_position"],
@@ -284,18 +305,20 @@ pub mod tests {
 
 		let p_1 = Vector3::new(0.0, 0.1, 0.0);
 		let v_1 = Vector3::new(1.0, 1.5, 0.4);
-		let force_2 = Vector3::new(0.4, 0.6, -0.4);
+		let force_2 = Vector3::new(0.4, 0.6, -0.4); // this force is added by testForce system
 		let force_1 = Vector3::new(0.2, 0.3, -0.4);
+		let force_0 = Vector3::new(0.4, 0.0, 0.5);
 		let mass = 2.0 / constant::AMU;
 		let test_entity = test_world
 			.create_entity()
 			.with(Position { pos: p_1 })
 			.with(Velocity { vel: v_1 })
-			.with(Force { force: force_2 })
+			.with(Force { force: force_1 })
 			.with(OldForce {
-				0: Force { force: force_1 },
+				0: Force { force: force_0 },
 			})
 			.with(Mass { value: mass })
+			.with(Atom)
 			.build();
 
 		let dt = 1.0;
@@ -306,11 +329,14 @@ pub mod tests {
 
 		let velocities = test_world.read_storage::<Velocity>();
 		let velocity = velocities.get(test_entity).expect("entity not found");
+		let a_0 = &force_0 / (&mass * constant::AMU);
 		let a_1 = &force_1 / (&mass * constant::AMU);
 		let a_2 = &force_2 / (&mass * constant::AMU);
 		let v_2 = v_1 + (a_1 + a_2) / 2.0 * dt;
-		let p_2 = p_1 + v_1 * dt + a_1 / 2.0 * dt * dt;
+		let p_2 = p_1 + v_1 * dt + a_0 / 2.0 * dt * dt;
 
+		println!("{}", velocity.vel);
+		println!("{}", v_2);
 		assert!(
 			(velocity.vel - v_2).norm().abs() < std::f64::EPSILON,
 			"velocity incorrect"
