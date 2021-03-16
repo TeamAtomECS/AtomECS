@@ -3,6 +3,7 @@
 extern crate nalgebra;
 extern crate specs;
 use crate::initiate::NewlyCreated;
+use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use nalgebra::Vector3;
 use specs::{
 	Component, DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System,
@@ -120,7 +121,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		quadrupole::Sample3DQuadrupoleFieldSystem,
 		"magnetics_quadrupole",
-		&["magnetics_clear"],
+		&["magnetics_clear", "integrate_position"],
 	);
 	builder.add(
 		uniform::UniformMagneticFieldSystem,
@@ -130,7 +131,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		grid::SampleMagneticGridSystem,
 		"magnetics_grid",
-		&["magnetics_uniform"],
+		&["magnetics_uniform", INTEGRATE_POSITION_SYSTEM_NAME],
 	);
 	builder.add(
 		CalculateMagneticFieldMagnitudeSystem,

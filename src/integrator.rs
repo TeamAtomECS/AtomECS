@@ -10,6 +10,7 @@ extern crate specs;
 use crate::atom::*;
 use crate::constant;
 use crate::initiate::NewlyCreated;
+use nalgebra::Vector3;
 use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteExpect, WriteStorage};
 use specs::{Entities, Join, LazyUpdate, Read};
 
@@ -62,19 +63,20 @@ impl<'a> System<'a> for EulerIntegrationSystem {
 	}
 }
 
-/// # Velocity-Verlet Integration
+/// # Velocity-Verlet Integrate Position
 ///
-/// This sytem integrates the classical equations of motion for particles using a velocity-verlet method:
-/// `x' = x + v * dt`.
-/// This integrator is simple to implement but prone to integration error.
 ///
 /// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource.
-pub struct VelocityVerletIntegrationSystem;
+///
+///
+pub const INTEGRATE_POSITION_SYSTEM_NAME: &str = "integrate_position";
 
-impl<'a> System<'a> for VelocityVerletIntegrationSystem {
+pub struct VelocityVerletIntegratePositionSystem;
+
+impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
 	type SystemData = (
 		WriteStorage<'a, Position>,
-		WriteStorage<'a, Velocity>,
+		ReadStorage<'a, Velocity>,
 		ReadExpect<'a, Timestep>,
 		WriteExpect<'a, Step>,
 		ReadStorage<'a, Force>,
@@ -82,26 +84,68 @@ impl<'a> System<'a> for VelocityVerletIntegrationSystem {
 		ReadStorage<'a, Mass>,
 	);
 
-	fn run(
-		&mut self,
-		(mut pos, mut vel, t, mut step, force, mut oldforce, mass): Self::SystemData,
-	) {
+	fn run(&mut self, (mut pos, vel, t, mut step, force, mut oldforce, mass): Self::SystemData) {
 		use rayon::prelude::*;
 		use specs::ParJoin;
 
 		step.n = step.n + 1;
 		let dt = t.delta;
 
-		(&mut pos, &mut vel, &mut oldforce, &force, &mass)
+		(&mut pos, &vel, &mut oldforce, &force, &mass)
 			.par_join()
-			.for_each(|(mut pos, mut vel, mut oldforce, force, mass)| {
+			.for_each(|(mut pos, vel, mut oldforce, force, mass)| {
 				pos.pos = pos.pos
 					+ vel.vel * dt + oldforce.0.force / (constant::AMU * mass.value) / 2.0
 					* dt * dt;
-				vel.vel = vel.vel
-					+ (force.force + oldforce.0.force) / (mass.value * constant::AMU) / 2.0 * dt;
 				oldforce.0 = *force;
 			});
+	}
+}
+
+/// # Velocity-Verlet Integrate Velocity
+///
+///
+/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource
+
+pub const INTEGRATE_VELOCITY_SYSTEM_NAME: &str = "integrate_velocity";
+
+pub struct VelocityVerletIntegrateVelocitySystem;
+impl<'a> System<'a> for VelocityVerletIntegrateVelocitySystem {
+	type SystemData = (
+		WriteStorage<'a, Velocity>,
+		ReadExpect<'a, Timestep>,
+		ReadStorage<'a, Force>,
+		ReadStorage<'a, OldForce>,
+		ReadStorage<'a, Mass>,
+	);
+
+	fn run(&mut self, (mut vel, t, force, oldforce, mass): Self::SystemData) {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
+		let dt = t.delta;
+
+		(&mut vel, &force, &oldforce, &mass).par_join().for_each(
+			|(mut vel, force, oldforce, mass)| {
+				println!("{},{},{}", vel.vel, force.force, oldforce.0.force);
+				vel.vel = vel.vel
+					+ (force.force + oldforce.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
+			},
+		);
+	}
+}
+
+/// Test system: adds a force to test velocity verlet integration
+///
+
+pub struct TestVelocityVerletForceSystem;
+impl<'a> System<'a> for TestVelocityVerletForceSystem {
+	type SystemData = (WriteStorage<'a, Force>, ReadStorage<'a, Atom>);
+
+	fn run(&mut self, (mut forces, atoms): Self::SystemData) {
+		for (force, _atom) in (&mut forces, &atoms).join() {
+			force.force = Vector3::new(0.4, 0.6, -0.4);
+		}
 	}
 }
 
@@ -241,24 +285,40 @@ pub mod tests {
 		let mut test_world = World::new();
 
 		let mut dispatcher = DispatcherBuilder::new()
-			.with(VelocityVerletIntegrationSystem, "", &[])
+			.with(
+				VelocityVerletIntegratePositionSystem,
+				"integrate_position",
+				&[],
+			)
+			.with(
+				TestVelocityVerletForceSystem,
+				"testForce",
+				&["integrate_position"],
+			)
+			.with(
+				VelocityVerletIntegrateVelocitySystem,
+				"integrate_velocity",
+				&["integrate_position"],
+			)
 			.build();
 		dispatcher.setup(&mut test_world.res);
 
 		let p_1 = Vector3::new(0.0, 0.1, 0.0);
 		let v_1 = Vector3::new(1.0, 1.5, 0.4);
-		let force_2 = Vector3::new(0.4, 0.6, -0.4);
+		let force_2 = Vector3::new(0.4, 0.6, -0.4); // this force is added by testForce system
 		let force_1 = Vector3::new(0.2, 0.3, -0.4);
+		let force_0 = Vector3::new(0.4, 0.0, 0.5);
 		let mass = 2.0 / constant::AMU;
 		let test_entity = test_world
 			.create_entity()
 			.with(Position { pos: p_1 })
 			.with(Velocity { vel: v_1 })
-			.with(Force { force: force_2 })
+			.with(Force { force: force_1 })
 			.with(OldForce {
-				0: Force { force: force_1 },
+				0: Force { force: force_0 },
 			})
 			.with(Mass { value: mass })
+			.with(Atom)
 			.build();
 
 		let dt = 1.0;
@@ -269,10 +329,14 @@ pub mod tests {
 
 		let velocities = test_world.read_storage::<Velocity>();
 		let velocity = velocities.get(test_entity).expect("entity not found");
+		let a_0 = &force_0 / (&mass * constant::AMU);
 		let a_1 = &force_1 / (&mass * constant::AMU);
 		let a_2 = &force_2 / (&mass * constant::AMU);
 		let v_2 = v_1 + (a_1 + a_2) / 2.0 * dt;
-		let p_2 = p_1 + v_1 * dt + a_1 / 2.0 * dt * dt;
+		let p_2 = p_1 + v_1 * dt + a_0 / 2.0 * dt * dt;
+
+		println!("{}", velocity.vel);
+		println!("{}", v_2);
 		assert!(
 			(velocity.vel - v_2).norm().abs() < std::f64::EPSILON,
 			"velocity incorrect"
