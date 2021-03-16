@@ -124,7 +124,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		doppler::CalculateDopplerShiftSystem,
 		"calculate_doppler_shift",
-		&["index_cooling_lights"],
+		&["index_cooling_lights", INTEGRATE_POSITION_SYSTEM_NAME],
 	);
 	builder.add(
 		sampler::CalculateLaserDetuningSystem,
@@ -133,6 +133,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 			"calculate_doppler_shift",
 			"zeeman_shift",
 			"index_cooling_lights",
+			INTEGRATE_POSITION_SYSTEM_NAME
 		],
 	);
 	builder.add(
