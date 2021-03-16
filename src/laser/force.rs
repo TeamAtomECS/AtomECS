@@ -3,14 +3,13 @@
 extern crate rayon;
 extern crate specs;
 use crate::atom::AtomicTransition;
-use crate::configuration::{AtomECSConfiguration, Option};
 use crate::constant;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::photons_scattered::ActualPhotonsScatteredVector;
 use crate::maths;
 use rand::distributions::{Distribution, Normal};
-use specs::{Join, ReadExpect, ReadStorage, System, WriteStorage};
+use specs::{Join, Read, ReadExpect, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
 use nalgebra::Vector3;
 
@@ -91,7 +90,29 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
 /// A resource that indicates that the simulation should apply random forces
 /// to simulate the random walk fluctuations due to spontaneous
 /// emission.
-pub struct ApplyEmissionForceOption;
+#[derive(Clone, Copy)]
+pub enum EmissionForceOption {
+    Off,
+    On(EmissionForceConfiguration),
+}
+impl Default for EmissionForceOption {
+    fn default() -> Self {
+        EmissionForceOption::On(EmissionForceConfiguration {
+            explicit_threshold: 5,
+        })
+    }
+}
+
+/// A particular configuration that tells the `ApplyEmissionForceSystem` when to
+/// switch over to averaged mode
+#[derive(Clone, Copy)]
+pub struct EmissionForceConfiguration {
+    /// If the number of photons scattered by a specific beam during one iteration step
+    /// exceeds this number, the force vector will be generated
+    /// using an averaged random walk formula instead of the explicit addition of
+    /// random vectors
+    pub explicit_threshold: u64,
+}
 
 /// Calculates the force vector due to the spontaneous emissions in this
 /// simulation step.
@@ -104,7 +125,7 @@ pub struct ApplyEmissionForceSystem;
 
 impl<'a> System<'a> for ApplyEmissionForceSystem {
     type SystemData = (
-        ReadExpect<'a, AtomECSConfiguration>,
+        Option<Read<'a, EmissionForceOption>>,
         WriteStorage<'a, Force>,
         ReadStorage<'a, ActualPhotonsScatteredVector>,
         ReadStorage<'a, AtomicTransition>,
@@ -113,43 +134,49 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
 
     fn run(
         &mut self,
-        (configuration, mut force, actual_scattered_vector, atom_info, timestep): Self::SystemData,
+        (rand_opt, mut force, actual_scattered_vector, atom_info, timestep): Self::SystemData,
     ) {
         use rayon::prelude::*;
         use specs::ParJoin;
 
-        match configuration.emission_force_option {
-            Option::Disabled => (),
-            Option::Enabled => {
-                (&mut force, &atom_info, &actual_scattered_vector)
-                    .par_join()
-                    .for_each(|(mut force, atom_info, kick)| {
-                        let total: u64 = kick.calculate_total_scattered();
-                        let mut rng = rand::thread_rng();
-                        let omega = 2.0 * constant::PI * atom_info.frequency;
-                        let force_one_kick = constant::HBAR * omega / constant::C / timestep.delta;
-                        if total > 5 {
-                            // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
-                            //Three-Dimensional Random Walk Processes*
-                            let normal = Normal::new(
-                                0.0,
-                                (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
-                            );
+        match rand_opt {
+            None => (),
+            Some(opt) => {
+                match *opt {
+                    EmissionForceOption::Off => {}
+                    EmissionForceOption::On(configuration) => {
+                        (&mut force, &atom_info, &actual_scattered_vector)
+                            .par_join()
+                            .for_each(|(mut force, atom_info, kick)| {
+                                let total: u64 = kick.calculate_total_scattered();
+                                let mut rng = rand::thread_rng();
+                                let omega = 2.0 * constant::PI * atom_info.frequency;
+                                let force_one_kick =
+                                    constant::HBAR * omega / constant::C / timestep.delta;
+                                if total > configuration.explicit_threshold {
+                                    // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
+                                    //Three-Dimensional Random Walk Processes*
+                                    let normal = Normal::new(
+                                        0.0,
+                                        (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
+                                    );
 
-                            let force_n_kicks = Vector3::new(
-                                normal.sample(&mut rng),
-                                normal.sample(&mut rng),
-                                normal.sample(&mut rng),
-                            );
-                            force.force = force.force + force_n_kicks;
-                        } else {
-                            // explicit random walk implementation
-                            for _i in 0..total {
-                                force.force =
-                                    force.force + force_one_kick * maths::random_direction();
-                            }
-                        }
-                    });
+                                    let force_n_kicks = Vector3::new(
+                                        normal.sample(&mut rng),
+                                        normal.sample(&mut rng),
+                                        normal.sample(&mut rng),
+                                    );
+                                    force.force = force.force + force_n_kicks;
+                                } else {
+                                    // explicit random walk implementation
+                                    for _i in 0..total {
+                                        force.force = force.force
+                                            + force_one_kick * maths::random_direction();
+                                    }
+                                }
+                            });
+                    }
+                }
             }
         }
     }
@@ -237,7 +264,7 @@ pub mod tests {
         test_world.register::<ActualPhotonsScatteredVector>();
         test_world.register::<Force>();
         test_world.register::<AtomicTransition>();
-        test_world.add_resource(ApplyEmissionForceOption {});
+        test_world.add_resource(EmissionForceOption::default());
         test_world.add_resource(Timestep { delta: time_delta });
         let number_scattered = 1_000_000.0;
 

@@ -5,9 +5,9 @@ extern crate specs;
 
 extern crate rand;
 use rand::distributions::{Distribution, Poisson};
+use specs::Read;
 
 use crate::atom::AtomicTransition;
-use crate::configuration::{AtomECSConfiguration, Option};
 use crate::integrator::Timestep;
 use crate::laser::rate::RateCoefficients;
 use crate::laser::sampler::LaserSamplerMasks;
@@ -231,25 +231,40 @@ impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
     }
 }
 
+/// If this is added as a ressource, the number of actual photons will be drawn from a poisson distribution.
+///
+/// Otherwise, the entries of `ActualPhotonsScatteredVector` will be identical with those of
+/// `ExpectedPhotonsScatteredVector`.
+#[derive(Clone, Copy)]
+pub enum ScatteringFluctuationsOption {
+    Off,
+    On,
+}
+impl Default for ScatteringFluctuationsOption {
+    fn default() -> Self {
+        ScatteringFluctuationsOption::On
+    }
+}
+
 /// Calcutates the actual number of photons scattered by each CoolingLight entity in one iteration step
 /// by drawing from a Poisson Distribution that has `ExpectedPhotonsScattered` as the lambda parameter.
 pub struct CalculateActualPhotonsScatteredSystem;
 impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
     type SystemData = (
-        ReadExpect<'a, AtomECSConfiguration>,
+        Option<Read<'a, ScatteringFluctuationsOption>>,
         ReadStorage<'a, ExpectedPhotonsScatteredVector>,
         WriteStorage<'a, ActualPhotonsScatteredVector>,
     );
 
     fn run(
         &mut self,
-        (configuration, expected_photons_vector, mut actual_photons_vector): Self::SystemData,
+        (fluctuations_option, expected_photons_vector, mut actual_photons_vector): Self::SystemData,
     ) {
         use rayon::prelude::*;
         use specs::ParJoin;
 
-        match configuration.scattering_fluctuations_option {
-            Option::Disabled => {
+        match fluctuations_option {
+            None => {
                 (&expected_photons_vector, &mut actual_photons_vector)
                     .par_join()
                     .for_each(|(expected, actual)| {
@@ -258,23 +273,35 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
                         }
                     });
             }
-            Option::Enabled => {
-                (&expected_photons_vector, &mut actual_photons_vector)
-                    .par_join()
-                    .for_each(|(expected, actual)| {
-                        for index in 0..expected.contents.len() {
-                            let lambda = expected.contents[index].scattered;
-                            actual.contents[index].scattered =
-                                if lambda <= 1.0e-5 || lambda.is_nan() {
-                                    0.0
-                                } else {
-                                    let poisson = Poisson::new(lambda);
-                                    let drawn_number = poisson.sample(&mut rand::thread_rng());
-                                    drawn_number as f64
-                                }
-                        }
-                    });
-            }
+            Some(rand_option) => match *rand_option {
+                ScatteringFluctuationsOption::Off => {
+                    (&expected_photons_vector, &mut actual_photons_vector)
+                        .par_join()
+                        .for_each(|(expected, actual)| {
+                            for index in 0..expected.contents.len() {
+                                actual.contents[index].scattered =
+                                    expected.contents[index].scattered;
+                            }
+                        });
+                }
+                ScatteringFluctuationsOption::On => {
+                    (&expected_photons_vector, &mut actual_photons_vector)
+                        .par_join()
+                        .for_each(|(expected, actual)| {
+                            for index in 0..expected.contents.len() {
+                                let lambda = expected.contents[index].scattered;
+                                actual.contents[index].scattered =
+                                    if lambda <= 1.0e-5 || lambda.is_nan() {
+                                        0.0
+                                    } else {
+                                        let poisson = Poisson::new(lambda);
+                                        let drawn_number = poisson.sample(&mut rand::thread_rng());
+                                        drawn_number as f64
+                                    }
+                            }
+                        });
+                }
+            },
         }
     }
 }

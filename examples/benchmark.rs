@@ -3,12 +3,13 @@
 extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
-use lib::configuration::AtomECSConfiguration;
 use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
+use lib::laser::force::EmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
+use lib::laser::photons_scattered::ScatteringFluctuationsOption;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use nalgebra::Vector3;
 use rand::distributions::{Distribution, Normal};
@@ -201,8 +202,8 @@ fn main() {
     // Enable fluctuation options
     //  * Allow photon numbers to fluctuate.
     //  * Allow random force from emission of photons.
-    // enable the usage of the emission system and photon fluctuations
-    world.add_resource(AtomECSConfiguration::default());
+    world.add_resource(EmissionForceOption::default());
+    world.add_resource(ScatteringFluctuationsOption::default());
 
     let loop_start = Instant::now();
 

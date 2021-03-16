@@ -6,12 +6,13 @@ use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
 use lib::atom_sources::oven::{OvenAperture, OvenBuilder};
-use lib::configuration::AtomECSConfiguration;
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
+use lib::laser::force::EmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
+use lib::laser::photons_scattered::ScatteringFluctuationsOption;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
@@ -63,7 +64,7 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power,
+            power: power / 5.0,
             direction: Vector3::z(),
         })
         .with(CoolingLight::for_species(
@@ -77,7 +78,7 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power,
+            power: power / 5.0,
             direction: -Vector3::z(),
         })
         .with(CoolingLight::for_species(
@@ -174,8 +175,10 @@ fn main() {
 
     // Define timestep
     world.add_resource(Timestep { delta: 1.0e-6 });
-    // enable the usage of the emission system and photon fluctuations
-    world.add_resource(AtomECSConfiguration::default());
+    // enable the usage of the emission system
+    world.add_resource(EmissionForceOption::default());
+
+    world.add_resource(ScatteringFluctuationsOption::default());
 
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
