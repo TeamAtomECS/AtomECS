@@ -127,7 +127,6 @@ impl<'a> System<'a> for VelocityVerletIntegrateVelocitySystem {
 
 		(&mut vel, &force, &oldforce, &mass).par_join().for_each(
 			|(mut vel, force, oldforce, mass)| {
-				println!("{},{},{}", vel.vel, force.force, oldforce.0.force);
 				vel.vel = vel.vel
 					+ (force.force + oldforce.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
 			},
