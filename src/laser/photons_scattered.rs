@@ -66,13 +66,13 @@ impl<'a> System<'a> for CalculateMeanTotalPhotonsScatteredSystem {
             .par_join()
             .for_each(|(atominfo, twolevel, total)| {
                 // DEFINITELY CHECK the 2pi!!!
-                total.total = timestep.delta * atominfo.linewidth * twolevel.excited;
+                total.total = timestep.delta * atominfo.gamma() * twolevel.excited;
             });
     }
 }
 
 /// The number of photons scattered by the atom from a single, specific beam
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize,Deserialize)]
 pub struct ExpectedPhotonsScattered {
     ///photons scattered by the atom from a specific beam
     scattered: f64,
@@ -88,6 +88,7 @@ impl Default for ExpectedPhotonsScattered {
 }
 
 /// The List that holds an `ExpectedPhotonsScattered` for each laser
+#[derive(Deserialize, Serialize, Clone)]
 pub struct ExpectedPhotonsScatteredVector {
     pub contents: [ExpectedPhotonsScattered; crate::laser::COOLING_BEAM_LIMIT],
 }
@@ -95,6 +96,17 @@ pub struct ExpectedPhotonsScatteredVector {
 impl Component for ExpectedPhotonsScatteredVector {
     type Storage = VecStorage<Self>;
 }
+
+impl fmt::Display for ExpectedPhotonsScatteredVector {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut result = f.write_str("");
+        for aps in &self.contents {
+            result = f.write_fmt(format_args!("{},", aps.scattered));
+        }
+        result
+    }
+}
+
 
 /// This system initialises all ´ExpectedPhotonsScatteredVector´ to a NAN value.
 ///
@@ -207,7 +219,6 @@ impl fmt::Display for ActualPhotonsScatteredVector {
             result = f.write_fmt(format_args!("{},", aps.scattered));
         }
         result
-        //f.debug_list().entries(self.contents.iter()).finish()
     }
 }
 
