@@ -69,22 +69,19 @@ impl<'a> System<'a> for FillLaserSamplerMasksSystem {
 /// Represents total detuning of the atom's transition with respect to each beam
 #[derive(Clone, Copy)]
 pub struct LaserDetuningSampler {
-    /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of Hz
+    /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_plus: f64,
-    /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of Hz
+    /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of rad/s 
     pub detuning_sigma_minus: f64,
-    /// Laser detuning of the pi transition with respect to laser beam, in SI units of Hz
+    /// Laser detuning of the pi transition with respect to laser beam, in SI units of rad/s
     pub detuning_pi: f64,
 }
 
 impl Default for LaserDetuningSampler {
     fn default() -> Self {
         LaserDetuningSampler {
-            /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of Hz
             detuning_sigma_plus: f64::NAN,
-            /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of Hz
             detuning_sigma_minus: f64::NAN,
-            /// Laser detuning of the pi transition with respect to laser beam, in SI units of Hz
             detuning_pi: f64::NAN,
         }
     }
@@ -170,10 +167,7 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
                     |(detuning_sampler, doppler_samplers, zeeman_sampler, atom_info)| {
                         for i in 0..number_in_iteration {
                             let (index, cooling) = laser_array[i];
-                            let without_zeeman = (constant::C / cooling.wavelength
-                                - atom_info.frequency)
-                                * 2.0
-                                * constant::PI
+                            let without_zeeman = 2.0 * constant::PI * (constant::C / cooling.wavelength - atom_info.frequency)
                                 - doppler_samplers.contents[index.index].doppler_shift;
 
                             detuning_sampler.contents[index.index].detuning_sigma_plus =

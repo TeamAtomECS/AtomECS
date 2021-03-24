@@ -7,13 +7,22 @@ use crate::atom::AtomicTransition;
 use crate::laser::rate::RateCoefficients;
 use crate::laser::sampler::LaserSamplerMasks;
 use specs::{Component, ReadStorage, System, VecStorage, WriteStorage};
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// Represents the steady-state population density of the excited state and ground state
+#[derive(Deserialize, Serialize, Clone)]
 pub struct TwoLevelPopulation {
     /// steady-state population density of the ground state, a number in [0,1]
     pub ground: f64,
     /// steady-state population density of the excited state, a number in [0,1]
     pub excited: f64,
+}
+
+impl fmt::Display for TwoLevelPopulation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "g:{},e:{}", self.ground, self.excited)
+    }
 }
 
 impl Default for TwoLevelPopulation {
@@ -76,7 +85,7 @@ impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
                 }
                 //DEFINITELY CHECK THE 2PI !!!
                 // I personally think it should not be there since the RateCoefficient is not in Hz not angular.
-                twolevel.excited = sum_rates / (atominfo.linewidth + 2. * sum_rates);
+                twolevel.excited = sum_rates / (atominfo.gamma() + 2. * sum_rates);
                 twolevel.calculate_ground_state();
             });
     }
@@ -137,8 +146,49 @@ pub mod tests {
                 .get(atom1)
                 .expect("entity not found")
                 .excited,
-            sum_rates / (AtomicTransition::strontium().linewidth + 2.0 * sum_rates),
+            sum_rates / (AtomicTransition::strontium().gamma() + 2.0 * sum_rates),
             1e-5_f64
+        );
+    }
+
+    #[test]
+    fn test_popn_high_intensity_limit() {
+        let mut test_world = World::new();
+        test_world.register::<RateCoefficients>();
+        test_world.register::<AtomicTransition>();
+        test_world.register::<LaserSamplerMasks>();
+        test_world.register::<TwoLevelPopulation>();
+
+        // this test runs with two lasers only and we have to tell this the mask
+        let mut active_lasers = [crate::laser::sampler::LaserSamplerMask { filled: false };
+            crate::laser::COOLING_BEAM_LIMIT];
+        active_lasers[0] = crate::laser::sampler::LaserSamplerMask { filled: true };
+
+        let atom1 = test_world
+            .create_entity()
+            .with(RateCoefficients {
+                contents: [crate::laser::rate::RateCoefficient { rate: 1.0e9 };
+                    crate::laser::COOLING_BEAM_LIMIT],
+            })
+            .with(AtomicTransition::rubidium())
+            .with(LaserSamplerMasks {
+                contents: active_lasers,
+            })
+            .with(TwoLevelPopulation::default())
+            .build();
+
+        let mut system = CalculateTwoLevelPopulationSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<TwoLevelPopulation>();
+
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .excited,
+            0.5,
+            0.01
         );
     }
 }

@@ -132,7 +132,7 @@ pub struct AtomicTransition {
 	/// Linewidth of the laser cooling transition, Hz
 	pub linewidth: f64,
 	/// Saturation intensity, in units of W/m^2.
-	pub saturation_intensity: f64,
+	//pub saturation_intensity: f64,
 	/// Precalculate prefactor used in the determination of rate coefficients.
 	pub rate_prefactor: f64,
 }
@@ -143,8 +143,8 @@ impl Component for AtomicTransition {
 impl AtomicTransition {
 	pub fn calculate(mut self) -> Self {
 		self.rate_prefactor =
-			3. / 4. * C * C / HBAR * (self.frequency).powf(-3.) * self.linewidth * self.linewidth
-				/ 2. / PI;
+			PI.powi(2) * C.powi(2) * (2.0 * PI * self.frequency).powi(-3) * self.gamma().powi(2)
+				/ HBAR;
 		self
 	}
 
@@ -156,9 +156,9 @@ impl AtomicTransition {
 			mum: -BOHRMAG,
 			muz: 0.0,
 			frequency: C / 780.0e-9,
-			linewidth: 6.065e6,          // [Steck, Rubidium87]
-			saturation_intensity: 16.69, // [Steck, Rubidium 87, D2 cycling transition]
-			rate_prefactor: 0.0,         // set in calculate
+			linewidth: 6.065e6, // [Steck, Rubidium87]
+			//saturation_intensity: 16.69, // [Steck, Rubidium 87, D2 cycling transition]
+			rate_prefactor: 0.0, // set in calculate
 		}
 		.calculate()
 	}
@@ -171,9 +171,9 @@ impl AtomicTransition {
 			mum: -BOHRMAG, // to check
 			muz: 0.0,
 			frequency: 650_759_219_088_937.,
-			linewidth: 32e6,             // [Nosske2017]
-			saturation_intensity: 430.0, // [Nosske2017, 43mW/cm^2]
-			rate_prefactor: 0.0,         // set in calculate
+			linewidth: 32e6, // [Nosske2017]
+			//saturation_intensity: 430.0, // [Nosske2017, 43mW/cm^2]
+			rate_prefactor: 0.0, // set in calculate
 		}
 		.calculate()
 	}
@@ -187,8 +187,8 @@ impl AtomicTransition {
 			muz: 0.0,
 			frequency: 434_829_121_311_000., // NIST, doi:10.1063/1.344917
 			linewidth: 7_400.,               // [Schreck2013]
-			saturation_intensity: 0.0295,    // [SChreck2013, 3 µW/cm^2]
-			rate_prefactor: 0.0,             // set in calculate
+			//saturation_intensity: 0.0295,    // [SChreck2013, 3 µW/cm^2]
+			rate_prefactor: 0.0, // set in calculate
 		}
 		.calculate()
 	}
@@ -201,7 +201,7 @@ impl AtomicTransition {
 			muz: 0.0,
 			frequency: 5.142e14,
 			linewidth: 190e3,
-			saturation_intensity: 0.13,
+			//saturation_intensity: 0.13,
 			rate_prefactor: 0.0, // set in calculate
 		}
 		.calculate()
@@ -214,7 +214,7 @@ impl AtomicTransition {
 			muz: 0.0,
 			frequency: 7.476e14,
 			linewidth: 30e6,
-			saturation_intensity: 56.0,
+			//saturation_intensity: 56.0,
 			rate_prefactor: 0.0, // set in calculate
 		}
 		.calculate()

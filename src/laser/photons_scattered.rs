@@ -65,7 +65,6 @@ impl<'a> System<'a> for CalculateMeanTotalPhotonsScatteredSystem {
         )
             .par_join()
             .for_each(|(atominfo, twolevel, total)| {
-                // DEFINITELY CHECK the 2pi!!!
                 total.total = timestep.delta * atominfo.gamma() * twolevel.excited;
             });
     }
@@ -354,7 +353,7 @@ pub mod tests {
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<TotalPhotonsScattered>();
 
-        let scattered = AtomicTransition::strontium().linewidth * 0.3 * time_delta;
+        let scattered = AtomicTransition::strontium().gamma() * 0.3 * time_delta;
 
         assert_approx_eq!(
             sampler_storage.get(atom1).expect("entity not found").total,
