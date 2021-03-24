@@ -11,6 +11,8 @@ use specs::{
     Component, Entities, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System, VecStorage,
     WriteExpect, WriteStorage,
 };
+use std::sync::{Arc, Mutex};
+
 
 /// A resource that indicates that the simulation should apply scattering
 pub struct ApplyCollisionsOption;
@@ -37,9 +39,17 @@ pub struct CollisionParameters {
     pub box_width: f64,
     // collisional cross section of atoms (assuming only one species)
     pub sigma: f64,
-    //total number of collisions overall
-    pub num_total: i64,
 }
+
+/// store stats about collisions
+#[derive(Clone)]
+pub struct CollisionsTracker {
+    // number of collisions in each box
+    pub num_collisions: Vec<i64>,
+    // number of simulated atoms in each box
+    pub num_atoms: Vec<i64>,
+}
+
 
 /// This system applies scattering to atoms
 /// Uses spatial partitioning for faster calculation
@@ -55,7 +65,8 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
         Entities<'a>,
         WriteStorage<'a, BoxID>,
         Read<'a, LazyUpdate>,
-        WriteExpect<'a, CollisionParameters>,
+        ReadExpect<'a, CollisionParameters>,
+        WriteExpect<'a, CollisionsTracker>,
     );
 
     fn run(
@@ -69,7 +80,8 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
             entities,
             mut boxids,
             updater,
-            mut params,
+            params,
+            mut tracker,
         ): Self::SystemData,
     ) {
         use rayon::prelude::*;
@@ -104,13 +116,18 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                     }
                 }
 
-                let mut collisions_vec: Vec<i64>;
-
+                let collisions_vec = Arc::new(Mutex::new(Vec::<i64>::new()));
+                let num_atoms_vec = Arc::new(Mutex::new(Vec::<i64>::new()));
                 map.par_values_mut().for_each(|velocities| {
-                    let mut rng = rand::thread_rng();
-                    let number = velocities.len() as i32;
 
+                    let mut rng = rand::thread_rng();
+                    let number = velocities.len() as i64;                    
                     if number <= 1 {
+                        let mut collisions_vec = collisions_vec.lock().unwrap();
+                        collisions_vec.push(0);
+                        let mut num_atoms_vec = num_atoms_vec.lock().unwrap();
+                        num_atoms_vec.push(number);
+
                     } else {
                         // calculate average speed (not velocity)
                         // average velocity will be close to zero since many particles are moving in different directions
@@ -132,9 +149,7 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                         // loop over number of collisions happening
                         // if number is low (<0.5) treat it as the probability of one total collision occurring
                         // otherwise, round to nearest integer and select that many pairs to randomly
-                        let mut num_collisions: i32;
-
-                        // println!("num_collisions_expected:{}, number:{}", num_collisions_expected,number);
+                        let mut num_collisions: i64;
 
                         if num_collisions_expected <= 0.5 {
                             let p = rng.gen::<f64>();
@@ -150,13 +165,22 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                                 let (v1new, v2new) = do_collision(v1, v2);
                                 velocities[idx].vel = v1new;
                                 velocities[idx2].vel = v2new;
+
+                                let mut collisions_vec = collisions_vec.lock().unwrap();
+                                collisions_vec.push(1);
+                                let mut num_atoms_vec = num_atoms_vec.lock().unwrap();
+                                num_atoms_vec.push(number);
                             }
                         } else {
-                            num_collisions = num_collisions_expected.round() as i32;
+                            num_collisions = num_collisions_expected.round() as i64;
 
-                            if num_collisions > 100000 as i32 {
-                                num_collisions = 100000 as i32;
+                            //collisions_vec.push(num_collisions);
+
+                            if num_collisions > 100000 as i64 {
+                                num_collisions = 100000 as i64;
                             }
+
+
 
                             for _i in 0..num_collisions {
                                 let idx = rng.gen_range(0, number - 1) as usize;
@@ -171,13 +195,24 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                                 velocities[idx].vel = v1new;
                                 velocities[idx2].vel = v2new;
                             }
-                            // println!(
-                            //     "number: {}, actual number of collisions: {}",
-                            //     number, num_collisions
-                            // );
+
+                            let mut collisions_vec = collisions_vec.lock().unwrap();
+                            collisions_vec.push(num_collisions);
+                            let mut num_atoms_vec = num_atoms_vec.lock().unwrap();
+                            num_atoms_vec.push(number);
+
                         }
                     }
                 });
+                let collisions_vec = Arc::try_unwrap(collisions_vec).expect("Arc cannot unwrap.");
+                let collisions_vec = collisions_vec.into_inner().expect("Mutex cannot return value, may be poisoned.");
+                
+                let num_atoms_vec = Arc::try_unwrap(num_atoms_vec).expect("Arc cannot unwrap.");
+                let num_atoms_vec = num_atoms_vec.into_inner().expect("Mutex cannot return value, may be poisoned.");
+                
+
+                tracker.num_collisions = collisions_vec;
+                tracker.num_atoms = num_atoms_vec;
             }
         }
     }
@@ -360,7 +395,6 @@ pub mod tests {
             box_number: 10,
             box_width: 2.0,
             sigma: 10.0,
-            num_total: 0,
         });
 
         for _i in 0..10 {
