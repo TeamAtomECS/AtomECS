@@ -9,7 +9,6 @@ use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser::photons_scattered::ExpectedPhotonsScatteredVector;
-use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;

@@ -47,6 +47,8 @@ impl CoolingLight {
 	///
 	/// `species`: The atomic species to take the base wavelength from.
 	///
+	/// `detuning`: Detuning of the laser from transition in units of MHz
+	///
 	/// `polarization`: Polarization of the cooling beam.
 	pub fn for_species(species: AtomicTransition, detuning: f64, polarization: i32) -> Self {
 		let freq = species.frequency + detuning * 1.0e6;

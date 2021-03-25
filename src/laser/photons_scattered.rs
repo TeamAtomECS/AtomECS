@@ -71,7 +71,7 @@ impl<'a> System<'a> for CalculateMeanTotalPhotonsScatteredSystem {
 }
 
 /// The number of photons scattered by the atom from a single, specific beam
-#[derive(Clone, Copy, Serialize,Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct ExpectedPhotonsScattered {
     ///photons scattered by the atom from a specific beam
     scattered: f64,
@@ -105,7 +105,6 @@ impl fmt::Display for ExpectedPhotonsScatteredVector {
         result
     }
 }
-
 
 /// This system initialises all ´ExpectedPhotonsScatteredVector´ to a NAN value.
 ///
@@ -241,7 +240,7 @@ impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
     }
 }
 
-/// If this is added as a ressource, the number of actual photons will be drawn from a poisson distribution.
+/// If this is added as a resource, the number of actual photons will be drawn from a poisson distribution.
 ///
 /// Otherwise, the entries of `ActualPhotonsScatteredVector` will be identical with those of
 /// `ExpectedPhotonsScatteredVector`.
