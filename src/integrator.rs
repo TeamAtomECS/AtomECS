@@ -72,7 +72,6 @@ impl<'a> System<'a> for EulerIntegrationSystem {
 pub const INTEGRATE_POSITION_SYSTEM_NAME: &str = "integrate_position";
 
 pub struct VelocityVerletIntegratePositionSystem;
-
 impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
 	type SystemData = (
 		WriteStorage<'a, Position>,
@@ -136,7 +135,6 @@ impl<'a> System<'a> for VelocityVerletIntegrateVelocitySystem {
 
 /// Adds [OldForce](OldForce.struct.html) components to newly created atoms.
 pub struct AddOldForceToNewAtomsSystem;
-
 impl<'a> System<'a> for AddOldForceToNewAtomsSystem {
 	type SystemData = (
 		Entities<'a>,
