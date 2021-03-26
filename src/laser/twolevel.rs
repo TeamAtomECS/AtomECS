@@ -6,8 +6,8 @@ extern crate specs;
 use crate::atom::AtomicTransition;
 use crate::laser::rate::RateCoefficients;
 use crate::laser::sampler::LaserSamplerMasks;
-use specs::{Component, ReadStorage, System, VecStorage, WriteStorage};
 use serde::{Deserialize, Serialize};
+use specs::{Component, ReadStorage, System, VecStorage, WriteStorage};
 use std::fmt;
 
 /// Represents the steady-state population density of the excited state and ground state
@@ -83,8 +83,6 @@ impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
                         sum_rates = sum_rates + rates.contents[count].rate;
                     }
                 }
-                //DEFINITELY CHECK THE 2PI !!!
-                // I personally think it should not be there since the RateCoefficient is not in Hz not angular.
                 twolevel.excited = sum_rates / (atominfo.gamma() + 2. * sum_rates);
                 twolevel.calculate_ground_state();
             });
