@@ -201,45 +201,67 @@ pub mod tests {
 
 	/// Tests the [EulerIntegrationSystem] by creating a mock world and integrating the trajectory of one entity.
 	#[test]
-	fn test_euler_system() {
-		let mut test_world = World::new();
+	fn test_euler_integration() {
+		let mut world = World::new();
 
 		let mut dispatcher = DispatcherBuilder::new()
 			.with(EulerIntegrationSystem, "integrator", &[])
 			.build();
-		dispatcher.setup(&mut test_world.res);
+		dispatcher.setup(&mut world.res);
 
-		let initial_position = Vector3::new(0.0, 0.1, 0.0);
-		let initial_velocity = Vector3::new(1.0, 1.5, 0.4);
-		let initial_force = Vector3::new(0.4, 0.6, -0.4);
-		let mass = 2.0 / constant::AMU;
-		let test_entity = test_world
+		// create a particle with known force and mass
+		let force = Vector3::new(1.0, 0.0, 0.0);
+		let mass = 1.0;
+		let atom = world
 			.create_entity()
 			.with(Position {
-				pos: initial_position,
+				pos: Vector3::new(0.0, 0.0, 0.0),
 			})
 			.with(Velocity {
-				vel: initial_velocity,
+				vel: Vector3::new(0.0, 0.0, 0.0),
 			})
-			.with(Force {
-				force: initial_force,
+			.with(Force { force: force })
+			.with(Mass {
+				value: mass / constant::AMU,
 			})
-			.with(Mass { value: mass })
 			.build();
 
-		let dt = 1.0;
-		test_world.add_resource(Timestep { delta: dt });
-		test_world.add_resource(Step { n: 0 });
+		let dt = 1.0e-3;
+		world.add_resource(Timestep { delta: dt });
+		world.add_resource(Step { n: 0 });
 
-		dispatcher.dispatch(&mut test_world.res);
+		// run simulation loop 1_000 times.
+		let n_steps = 1_000;
+		for _i in 0..n_steps {
+			dispatcher.dispatch(&mut world.res);
+			world.maintain();
+		}
 
-		let velocities = test_world.read_storage::<Velocity>();
-		let velocity = velocities.get(test_entity).expect("entity not found");
-		let initial_acceleration = &initial_force / (&mass * constant::AMU);
-		assert_eq!(velocity.vel, initial_velocity + initial_acceleration * dt);
-		let positions = test_world.read_storage::<Position>();
-		let position = positions.get(test_entity).expect("entity not found");
-		assert_eq!(position.pos, initial_position + initial_velocity * dt);
+		let a = force / mass;
+		let expected_v = a * (n_steps as f64 * dt);
+
+		assert_approx_eq::assert_approx_eq!(
+			expected_v.norm(),
+			world
+				.read_storage::<Velocity>()
+				.get(atom)
+				.expect("atom not found.")
+				.vel
+				.norm(),
+			expected_v.norm() * 0.01
+		);
+
+		let expected_x = a * (n_steps as f64 * dt).powi(2) / 2.0;
+		assert_approx_eq::assert_approx_eq!(
+			expected_x.norm(),
+			world
+				.read_storage::<Position>()
+				.get(atom)
+				.expect("atom not found.")
+				.pos
+				.norm(),
+			expected_x.norm() * 0.01
+		);
 	}
 
 	#[test]
