@@ -180,7 +180,7 @@ fn main() {
     let mut rng = rand::thread_rng();
 
     // Add atoms
-    for _ in 0..1000 {
+    for _ in 0..2000 {
         world
             .create_entity()
             .with(Position {
