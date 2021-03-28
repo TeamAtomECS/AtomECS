@@ -58,7 +58,7 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: 0.01,
-            power: 0.1,
+            power: 0.01,
             direction: -Vector3::z(),
         })
         .with(CoolingLight::for_species(
@@ -72,7 +72,7 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: 0.01,
-            power: 0.1,
+            power: 0.01,
             direction: Vector3::z(),
         })
         .with(CoolingLight::for_species(
