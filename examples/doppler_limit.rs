@@ -15,7 +15,7 @@ use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
-use lib::laser::force::EmissionForceOption;
+use lib::laser::force::{EmissionForceConfiguration, EmissionForceOption};
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser::photons_scattered::ScatteringFluctuationsOption;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
@@ -208,7 +208,9 @@ fn main() {
     // Enable fluctuation options
     //  * Allow photon numbers to fluctuate.
     //  * Allow random force from emission of photons.
-    world.add_resource(EmissionForceOption::default());
+    world.add_resource(EmissionForceOption::On(EmissionForceConfiguration {
+        explicit_threshold: 5,
+    }));
     world.add_resource(ScatteringFluctuationsOption::On);
 
     // Run the simulation for a number of steps.

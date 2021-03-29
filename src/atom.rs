@@ -1,6 +1,6 @@
 //! Common atom components and systems.
 
-use crate::constant::{BOHRMAG, C, HBAR, PI};
+use crate::constant::{BOHRMAG, C};
 use crate::output::file::BinaryConversion;
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};

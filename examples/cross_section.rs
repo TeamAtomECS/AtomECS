@@ -38,7 +38,7 @@ fn main() {
     // Set the intensity equal to Isat.
     let radius = 0.01; // 1cm
     let std = radius / 2.0_f64.powf(0.5);
-    let intensity = 7.905; //16.69; //AtomicTransition::rubidium().saturation_intensity;
+    let intensity = AtomicTransition::rubidium().saturation_intensity;
     let power = 2.0 * lib::constant::PI * std.powi(2) * intensity;
 
     // Single laser beam propagating in +x direction.
