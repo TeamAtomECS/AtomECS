@@ -121,7 +121,10 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		quadrupole::Sample3DQuadrupoleFieldSystem,
 		"magnetics_quadrupole",
-		&["magnetics_clear", "integrate_position"],
+		&[
+			"magnetics_clear",
+			crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME,
+		],
 	);
 	builder.add(
 		uniform::UniformMagneticFieldSystem,
@@ -146,12 +149,12 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		zeeman::AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem,
 		"attach_zeeman_shift_samplers",
-		&["add_magnetic_field_samplers"],
+		&[],
 	);
 	builder.add(
 		zeeman::CalculateZeemanShiftSystem,
 		"zeeman_shift",
-		&["attach_zeeman_shift_samplers"],
+		&["magnetics_magnitude"],
 	);
 }
 
@@ -177,11 +180,19 @@ pub mod tests {
 	fn test_magnetics_systems() {
 		let mut test_world = World::new();
 		register_components(&mut test_world);
-		test_world.register::<Position>();
+		test_world.register::<NewlyCreated>();
+		test_world.register::<zeeman::ZeemanShiftSampler>();
 		let mut builder = DispatcherBuilder::new();
+		builder.add(
+			crate::integrator::VelocityVerletIntegratePositionSystem {},
+			crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME,
+			&[],
+		);
 		add_systems_to_dispatch(&mut builder, &[]);
 		let mut dispatcher = builder.build();
 		dispatcher.setup(&mut test_world.res);
+		test_world.add_resource(crate::integrator::Step { n: 0 });
+		test_world.add_resource(crate::integrator::Timestep { delta: 1.0e-6 });
 
 		test_world
 			.create_entity()
@@ -221,10 +232,18 @@ pub mod tests {
 		let mut test_world = World::new();
 		register_components(&mut test_world);
 		test_world.register::<NewlyCreated>();
+		test_world.register::<zeeman::ZeemanShiftSampler>();
 		let mut builder = DispatcherBuilder::new();
+		builder.add(
+			crate::integrator::VelocityVerletIntegratePositionSystem {},
+			crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME,
+			&[],
+		);
 		add_systems_to_dispatch(&mut builder, &[]);
 		let mut dispatcher = builder.build();
 		dispatcher.setup(&mut test_world.res);
+		test_world.add_resource(crate::integrator::Step { n: 0 });
+		test_world.add_resource(crate::integrator::Timestep { delta: 1.0e-6 });
 
 		let sampler_entity = test_world.create_entity().with(NewlyCreated).build();
 

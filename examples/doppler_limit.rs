@@ -1,4 +1,12 @@
-//! Simulation of atoms cooled to the Doppler limit.
+//! # Doppler Sweep
+//!
+//! Simulate a cloud of atoms in a 3D MOT to measure the Doppler temperature limit for laser cooling.
+//!
+//! The Doppler Limit depends on temperature, see eg https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.61.169.
+//!
+//! Some parameters of the simulation can be set by writing a configuration file called `doppler.json`. This file
+//! allows the user to control parameters, eg detuning. If the file is not written, a default detuning of 0.5 Gamma
+//! is used, which corresponds to the minimum Doppler temperature.
 
 extern crate atomecs as lib;
 extern crate nalgebra;
@@ -16,10 +24,37 @@ use lib::output::file::Text;
 use nalgebra::Vector3;
 use rand::distributions::{Distribution, Normal};
 use specs::{Builder, World};
+use std::fs::read_to_string;
 use std::time::Instant;
+
+extern crate serde;
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct DopperSimulationConfiguration {
+    /// Detuning of laser beams, in units of MHz.
+    pub detuning: f64,
+    /// Number of simulation steps to evolve for.
+    pub number_of_steps: i32,
+}
+impl Default for DopperSimulationConfiguration {
+    fn default() -> Self {
+        DopperSimulationConfiguration {
+            detuning: -3.0,
+            number_of_steps: 5000,
+        }
+    }
+}
 
 fn main() {
     let now = Instant::now();
+
+    //Load configuration if one exists.
+    let read_result = read_to_string("doppler.json");
+    let configuration: DopperSimulationConfiguration = match read_result {
+        Ok(json_str) => serde_json::from_str(&json_str).unwrap(),
+        Err(_) => DopperSimulationConfiguration::default(),
+    };
 
     // Create the simulation world and builder for the ECS dispatcher.
     let mut world = World::new();
@@ -40,14 +75,14 @@ fn main() {
     // Create magnetic field.
     world
         .create_entity()
-        .with(QuadrupoleField3D::gauss_per_cm(18.2, Vector3::z()))
+        .with(QuadrupoleField3D::gauss_per_cm(0.001 * 18.2, Vector3::z()))
         .with(Position {
             pos: Vector3::new(0.0, 0.0, 0.0),
         })
         .build();
 
     // Create cooling lasers.
-    let detuning = -3.0;
+    let detuning = configuration.detuning;
     let power = 0.02;
     let radius = 66.7e-3 / (2.0_f64.sqrt());
     let beam_centre = Vector3::new(0.0, 0.0, 0.0);
@@ -145,7 +180,7 @@ fn main() {
     let mut rng = rand::thread_rng();
 
     // Add atoms
-    for _ in 0..1000 {
+    for _ in 0..2000 {
         world
             .create_entity()
             .with(Position {
@@ -174,10 +209,10 @@ fn main() {
     //  * Allow photon numbers to fluctuate.
     //  * Allow random force from emission of photons.
     world.add_resource(EmissionForceOption::default());
-    world.add_resource(ScatteringFluctuationsOption::default());
+    world.add_resource(ScatteringFluctuationsOption::On);
 
     // Run the simulation for a number of steps.
-    for _i in 0..5000 {
+    for _i in 0..configuration.number_of_steps {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
