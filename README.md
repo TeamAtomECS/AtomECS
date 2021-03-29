@@ -13,8 +13,7 @@ The `atomecs` crate simulates the laser-cooling of atoms by optical scattering f
 * File output in binary or text format.
 * Thorough unit testing to ensure simulation results are correct.
 * Good parallel performance on modern multi-core CPUs
-
-Additionally, simulations may be wrapped using python/matlab, as shown in the [AIONSource](https://github.com/TeamAtomECS/AIONSource) repo.
+* Simulations can be wrapped using python/matlab, as shown in the [source_optimisation_example](https://github.com/TeamAtomECS/source_optimisation_example).
 
 ## Getting Started
 
