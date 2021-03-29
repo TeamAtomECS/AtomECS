@@ -40,7 +40,7 @@ pub mod tests {
         let mut world = World::new();
 
         let transition = AtomicTransition::rubidium();
-        let i_sat = 7.905;
+        let i_sat = transition.saturation_intensity;
         let intensity = i_sat * i_over_i_sat;
         let delta = delta_over_gamma * transition.clone().gamma();
         let detuning_megahz = delta / (2.0 * std::f64::consts::PI * 1.0e6);

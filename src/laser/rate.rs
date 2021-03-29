@@ -219,11 +219,11 @@ pub mod tests {
 
         let man_pref = AtomicTransition::strontium().rate_prefactor * intensity;
         let scatter1 = 0.5 * man_pref
-            / (detuning.powf(2.0) + (PI * AtomicTransition::strontium().linewidth).powf(2.0));
+            / (detuning.powf(2.0) + (PI * AtomicTransition::strontium().gamma()).powf(2.0));
         let scatter2 = 0.5 * man_pref
-            / (detuning.powf(2.0) + (PI * AtomicTransition::strontium().linewidth).powf(2.0));
+            / (detuning.powf(2.0) + (PI * AtomicTransition::strontium().gamma()).powf(2.0));
         let scatter3 = 0.5 * man_pref
-            / (detuning.powf(2.) + (PI * AtomicTransition::strontium().linewidth).powf(2.));
+            / (detuning.powf(2.) + (PI * AtomicTransition::strontium().gamma()).powf(2.));
 
         assert_approx_eq!(
             sampler_storage
