@@ -10,7 +10,6 @@ extern crate specs;
 use crate::atom::*;
 use crate::constant;
 use crate::initiate::NewlyCreated;
-use nalgebra::Vector3;
 use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteExpect, WriteStorage};
 use specs::{Entities, Join, LazyUpdate, Read};
 
@@ -63,14 +62,14 @@ impl<'a> System<'a> for EulerIntegrationSystem {
 	}
 }
 
-/// # Velocity-Verlet Integrate Position
-///
-///
-/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource.
-///
-///
 pub const INTEGRATE_POSITION_SYSTEM_NAME: &str = "integrate_position";
 
+/// # Velocity-Verlet Integrate Position
+///
+/// Integrates position using a velocity-verlet integration approach.
+/// Stores the value of `Force` from the previous frame in the `OldForce` component.
+///
+/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource.
 pub struct VelocityVerletIntegratePositionSystem;
 impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
 	type SystemData = (
@@ -101,13 +100,13 @@ impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
 	}
 }
 
-/// # Velocity-Verlet Integrate Velocity
-///
-///
-/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource
-
 pub const INTEGRATE_VELOCITY_SYSTEM_NAME: &str = "integrate_velocity";
 
+/// # Velocity-Verlet Integrate Velocity
+///
+/// Integrates velocity using the velocity-verlet method, and the average of `Force` this frame and `OldForce` from the previous frame.
+///
+/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource
 pub struct VelocityVerletIntegrateVelocitySystem;
 impl<'a> System<'a> for VelocityVerletIntegrateVelocitySystem {
 	type SystemData = (
