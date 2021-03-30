@@ -140,7 +140,6 @@ pub mod tests {
     use super::*;
 
     extern crate specs;
-    use crate::constant::PI;
     use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
@@ -218,12 +217,12 @@ pub mod tests {
         let sampler_storage = test_world.read_storage::<RateCoefficients>();
 
         let man_pref = AtomicTransition::strontium().rate_prefactor * intensity;
-        let scatter1 = 0.5 * man_pref
-            / (detuning.powf(2.0) + (PI * AtomicTransition::strontium().gamma()).powf(2.0));
-        let scatter2 = 0.5 * man_pref
-            / (detuning.powf(2.0) + (PI * AtomicTransition::strontium().gamma()).powf(2.0));
+        let scatter1 = 0.25 * man_pref
+            / (detuning.powf(2.0) + (AtomicTransition::strontium().gamma() / 2.).powf(2.0));
+        let scatter2 = 0.25 * man_pref
+            / (detuning.powf(2.0) + (AtomicTransition::strontium().gamma() / 2.).powf(2.0));
         let scatter3 = 0.5 * man_pref
-            / (detuning.powf(2.) + (PI * AtomicTransition::strontium().gamma()).powf(2.));
+            / (detuning.powf(2.) + (AtomicTransition::strontium().gamma() / 2.).powf(2.));
 
         assert_approx_eq!(
             sampler_storage
