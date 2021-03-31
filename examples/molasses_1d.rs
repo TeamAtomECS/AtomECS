@@ -1,4 +1,4 @@
-extern crate magneto_optical_trap as lib;
+extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
 use lib::ecs;
@@ -6,6 +6,7 @@ use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
+use lib::laser::photons_scattered::ActualPhotonsScatteredVector;
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;
@@ -24,17 +25,14 @@ fn main() {
         &[],
     );
 
+    builder = builder.with(
+        file::new::<ActualPhotonsScatteredVector, Text>("scattered.txt".to_string(), 10),
+        "",
+        &[],
+    );
+
     let mut dispatcher = builder.build();
     dispatcher.setup(&mut world.res);
-
-    // // Create magnetic field.
-    // world
-    //     .create_entity()
-    //     .with(QuadrupoleField3D::gauss_per_cm(18.2, Vector3::z()))
-    //     .with(Position {
-    //         pos: Vector3::new(0.0, 0.0, 0.0),
-    //     })
-    //     .build();
 
     // Create atoms
     for i in 0..20 {
@@ -60,13 +58,13 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: 0.01,
-            power: 0.1,
+            power: 0.01,
             direction: -Vector3::z(),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
             -6.0,
-            -1.0,
+            -1,
         ))
         .build();
     world
@@ -74,13 +72,13 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: 0.01,
-            power: 0.1,
+            power: 0.01,
             direction: Vector3::z(),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
             -6.0,
-            -1.0,
+            -1,
         ))
         .build();
 

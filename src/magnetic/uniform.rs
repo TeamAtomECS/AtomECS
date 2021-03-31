@@ -1,8 +1,10 @@
-extern crate specs;
+//! Uniform magnetic fields
+
 extern crate nalgebra;
+extern crate specs;
 use super::MagneticFieldSampler;
-use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 use nalgebra::Vector3;
+use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 
 /// A component representing a uniform bias field, of the form `B = [ B_x, B_y, B_z ]`
 pub struct UniformMagneticField {
@@ -36,11 +38,14 @@ impl<'a> System<'a> for UniformMagneticFieldSystem {
         WriteStorage<'a, MagneticFieldSampler>,
         ReadStorage<'a, UniformMagneticField>,
     );
-    fn run(&mut self, (mut sampler, fields): Self::SystemData) {
+    fn run(&mut self, (mut samplers, fields): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         for field in (&fields).join() {
-            for mut sampler in (&mut sampler).join() {
+            (&mut samplers).par_join().for_each(|sampler| {
                 sampler.field = sampler.field + field.field;
-            }
+            });
         }
     }
 }

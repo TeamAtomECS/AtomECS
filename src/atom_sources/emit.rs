@@ -1,3 +1,5 @@
+//! Emission of atoms (over time)
+
 extern crate nalgebra;
 extern crate rand;
 use crate::integrator::Timestep;

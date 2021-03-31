@@ -1,3 +1,5 @@
+//! Mathematical utilities
+
 use crate::constant::EXP;
 use crate::constant::PI;
 extern crate rand;
@@ -24,9 +26,11 @@ pub fn get_minimum_distance_line_point(
 	distance
 }
 
+/// A normalised gaussian distribution.
+///
+/// The distribution is normalised such that the 2D area underneath a gaussian dist with sigma_x=sigma_y=std is equal to 1.
 pub fn gaussian_dis(std: f64, distance: f64) -> f64 {
-	//checked
-	1.0 / (2.0 * PI * std.powf(2.0)) * EXP.powf(-distance.powf(2.0) / 2.0 / (std).powf(2.0))
+	1.0 / (2.0 * PI * std * std) * EXP.powf(-distance * distance / 2.0 / (std * std))
 }
 
 /// generate a uniform random direction

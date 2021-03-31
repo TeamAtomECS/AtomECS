@@ -1,12 +1,4 @@
-//! # Doppler Sweep
-//!
-//! Simulate a cloud of atoms in a 3D MOT to measure the Doppler temperature limit for laser cooling.
-//!
-//! The Doppler Limit depends on temperature, see eg https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.61.169.
-//!
-//! Some parameters of the simulation can be set by writing a configuration file called `doppler.json`. This file
-//! allows the user to control parameters, eg detuning. If the file is not written, a default detuning of 0.5 Gamma
-//! is used, which corresponds to the minimum Doppler temperature.
+//! Simulation of atoms cooled to the Doppler limit.
 
 extern crate atomecs as lib;
 extern crate nalgebra;
@@ -15,45 +7,46 @@ use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
-use lib::laser::force::{EmissionForceConfiguration, EmissionForceOption};
+use lib::laser::force::EmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser::photons_scattered::ScatteringFluctuationsOption;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use lib::output::file;
-use lib::output::file::Text;
 use nalgebra::Vector3;
 use rand::distributions::{Distribution, Normal};
 use specs::{Builder, World};
 use std::fs::read_to_string;
+use std::fs::File;
 use std::time::Instant;
 
 extern crate serde;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
-pub struct DopperSimulationConfiguration {
-    /// Detuning of laser beams, in units of MHz.
-    pub detuning: f64,
-    /// Number of simulation steps to evolve for.
-    pub number_of_steps: i32,
+pub struct BenchmarkConfiguration {
+    pub n_threads: usize,
+    pub n_atoms: i32,
+    pub n_steps: i32,
 }
-impl Default for DopperSimulationConfiguration {
+impl Default for BenchmarkConfiguration {
     fn default() -> Self {
-        DopperSimulationConfiguration {
-            detuning: -3.0,
-            number_of_steps: 5000,
+        BenchmarkConfiguration {
+            n_atoms: 10000,
+            n_threads: 12,
+            n_steps: 5000,
         }
     }
 }
+#[derive(Serialize)]
+pub struct SimulationOutput {
+    pub time: f64,
+}
 
 fn main() {
-    let now = Instant::now();
-
     //Load configuration if one exists.
-    let read_result = read_to_string("doppler.json");
-    let configuration: DopperSimulationConfiguration = match read_result {
+    let read_result = read_to_string("benchmark.json");
+    let configuration: BenchmarkConfiguration = match read_result {
         Ok(json_str) => serde_json::from_str(&json_str).unwrap(),
-        Err(_) => DopperSimulationConfiguration::default(),
+        Err(_) => BenchmarkConfiguration::default(),
     };
 
     // Create the simulation world and builder for the ECS dispatcher.
@@ -62,12 +55,13 @@ fn main() {
     ecs::register_resources(&mut world);
     let mut builder = ecs::create_simulation_dispatcher_builder();
 
-    // Configure simulation output.
-    builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 10),
-        "",
-        &[],
-    );
+    // Configure thread pool.
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(configuration.n_threads)
+        .build()
+        .unwrap();
+
+    builder.add_pool(::std::sync::Arc::new(pool));
 
     let mut dispatcher = builder.build();
     dispatcher.setup(&mut world.res);
@@ -75,14 +69,14 @@ fn main() {
     // Create magnetic field.
     world
         .create_entity()
-        .with(QuadrupoleField3D::gauss_per_cm(0.001 * 18.2, Vector3::z()))
+        .with(QuadrupoleField3D::gauss_per_cm(18.2, Vector3::z()))
         .with(Position {
             pos: Vector3::new(0.0, 0.0, 0.0),
         })
         .build();
 
     // Create cooling lasers.
-    let detuning = configuration.detuning;
+    let detuning = -3.0;
     let power = 0.02;
     let radius = 66.7e-3 / (2.0_f64.sqrt());
     let beam_centre = Vector3::new(0.0, 0.0, 0.0);
@@ -180,7 +174,7 @@ fn main() {
     let mut rng = rand::thread_rng();
 
     // Add atoms
-    for _ in 0..2000 {
+    for _ in 0..configuration.n_atoms {
         world
             .create_entity()
             .with(Position {
@@ -208,16 +202,27 @@ fn main() {
     // Enable fluctuation options
     //  * Allow photon numbers to fluctuate.
     //  * Allow random force from emission of photons.
-    world.add_resource(EmissionForceOption::On(EmissionForceConfiguration {
-        explicit_threshold: 5,
-    }));
-    world.add_resource(ScatteringFluctuationsOption::On);
+    world.add_resource(EmissionForceOption::default());
+    world.add_resource(ScatteringFluctuationsOption::default());
+
+    let loop_start = Instant::now();
 
     // Run the simulation for a number of steps.
-    for _i in 0..configuration.number_of_steps {
+    for _i in 0..configuration.n_steps {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
 
-    println!("Simulation completed in {} ms.", now.elapsed().as_millis());
+    println!(
+        "Simulation loop completed in {} ms.",
+        loop_start.elapsed().as_millis()
+    );
+
+    serde_json::to_writer(
+        File::create("benchmark_result.txt").expect("Could not open output file."),
+        &SimulationOutput {
+            time: loop_start.elapsed().as_secs_f64(),
+        },
+    )
+    .expect("Could not write output file.");
 }

@@ -163,42 +163,41 @@ impl<'a> System<'a> for AttachRegionTestsToNewlyCreatedSystem {
 ///
 /// `deps`: any dependencies that must be completed before the `sim_region` systems run.
 pub fn add_systems_to_dispatch(
-    builder: DispatcherBuilder<'static, 'static>,
+    builder: &mut DispatcherBuilder<'static, 'static>,
     deps: &[&str],
-) -> DispatcherBuilder<'static, 'static> {
-    builder
-        .with(ClearRegionTestSystem, "clear_region_test", deps)
-        .with(
-            RegionTestSystem::<Sphere> {
-                marker: PhantomData,
-            },
-            "region_test_sphere",
-            &["clear_region_test"],
-        )
-        .with(
-            RegionTestSystem::<Cuboid> {
-                marker: PhantomData,
-            },
-            "region_test_cuboid",
-            &["region_test_sphere"],
-        )
-        .with(
-            RegionTestSystem::<Cylinder> {
-                marker: PhantomData,
-            },
-            "region_test_cylinder",
-            &["region_test_cuboid"],
-        )
-        .with(
-            DeleteFailedRegionTestsSystem,
-            "delete_region_test_failure",
-            &["region_test_cylinder"],
-        )
-        .with(
-            AttachRegionTestsToNewlyCreatedSystem,
-            "attach_region_tests_to_newly_created",
-            deps,
-        )
+) -> () {
+    builder.add(ClearRegionTestSystem, "clear_region_test", deps);
+    builder.add(
+        RegionTestSystem::<Sphere> {
+            marker: PhantomData,
+        },
+        "region_test_sphere",
+        &["clear_region_test"],
+    );
+    builder.add(
+        RegionTestSystem::<Cuboid> {
+            marker: PhantomData,
+        },
+        "region_test_cuboid",
+        &["region_test_sphere"],
+    );
+    builder.add(
+        RegionTestSystem::<Cylinder> {
+            marker: PhantomData,
+        },
+        "region_test_cylinder",
+        &["region_test_cuboid"],
+    );
+    builder.add(
+        DeleteFailedRegionTestsSystem,
+        "delete_region_test_failure",
+        &["region_test_cylinder"],
+    );
+    builder.add(
+        AttachRegionTestsToNewlyCreatedSystem,
+        "attach_region_tests_to_newly_created",
+        deps,
+    );
 }
 
 /// Registers resources required by magnetics to the ecs world.
@@ -214,8 +213,8 @@ pub fn register_components(world: &mut World) {
 pub mod tests {
     use super::*;
     use crate::atom::Position;
-    use specs::{Builder, DispatcherBuilder, RunNow, World};
     use nalgebra::Vector3;
+    use specs::{Builder, DispatcherBuilder, RunNow, World};
 
     #[test]
     fn test_clear_region_tests_system() {
@@ -370,9 +369,9 @@ pub mod tests {
         let mut test_world = World::new();
         register_components(&mut test_world);
         test_world.register::<NewlyCreated>();
-        let builder = DispatcherBuilder::new();
-        let configured_builder = add_systems_to_dispatch(builder, &[]);
-        let mut dispatcher = configured_builder.build();
+        let mut builder = DispatcherBuilder::new();
+        add_systems_to_dispatch(&mut builder, &[]);
+        let mut dispatcher = builder.build();
         dispatcher.setup(&mut test_world.res);
 
         let sampler_entity = test_world.create_entity().with(NewlyCreated).build();

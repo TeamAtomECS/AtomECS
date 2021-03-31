@@ -1,3 +1,6 @@
+//! Creation of atoms in a controlled manner and realease into the simulation
+
+pub mod central_creator;
 pub mod emit;
 pub mod gaussian;
 pub mod mass;
@@ -26,63 +29,67 @@ pub struct VelocityCap {
 ///
 /// `deps`: any dependencies that must be completed before the atom_sources systems run.
 pub fn add_systems_to_dispatch(
-    builder: DispatcherBuilder<'static, 'static>,
+    builder: &mut DispatcherBuilder<'static, 'static>,
     deps: &[&str],
-) -> DispatcherBuilder<'static, 'static> {
-    builder
-        .with(
-            emit::EmitNumberPerFrameSystem,
-            "emit_number_per_frame",
-            deps,
-        )
-        .with(
-            emit::EmitFixedRateSystem,
-            "emit_fixed_rate",
-            &["emit_number_per_frame"],
-        )
-        .with(
-            precalc::PrecalculateForSpeciesSystem::<oven::Oven> {
-                marker: PhantomData,
-            },
-            "precalculated_oven",
-            deps,
-        )
-        .with(
-            precalc::PrecalculateForSpeciesSystem::<surface::SurfaceSource> {
-                marker: PhantomData,
-            },
-            "precalculated_surfaces",
-            deps,
-        )
-        .with(
-            gaussian::PrecalculateForGaussianSourceSystem,
-            "precalculate_gaussian",
-            deps,
-        )
-        .with(
-            oven::OvenCreateAtomsSystem,
+) -> () {
+    builder.add(
+        emit::EmitNumberPerFrameSystem,
+        "emit_number_per_frame",
+        deps,
+    );
+    builder.add(
+        emit::EmitFixedRateSystem,
+        "emit_fixed_rate",
+        &["emit_number_per_frame"],
+    );
+    builder.add(
+        precalc::PrecalculateForSpeciesSystem::<oven::Oven> {
+            marker: PhantomData,
+        },
+        "precalculated_oven",
+        deps,
+    );
+    builder.add(
+        precalc::PrecalculateForSpeciesSystem::<surface::SurfaceSource> {
+            marker: PhantomData,
+        },
+        "precalculated_surfaces",
+        deps,
+    );
+    builder.add(
+        gaussian::PrecalculateForGaussianSourceSystem,
+        "precalculate_gaussian",
+        deps,
+    );
+    builder.add(
+        oven::OvenCreateAtomsSystem,
+        "oven_create_atoms",
+        &["emit_number_per_frame", "precalculated_oven"],
+    );
+    builder.add(
+        surface::CreateAtomsOnSurfaceSystem,
+        "surface_create_atoms",
+        &["emit_number_per_frame", "precalculated_surfaces"],
+    );
+    builder.add(
+        gaussian::GaussianCreateAtomsSystem,
+        "gaussian_create_atoms",
+        &["emit_number_per_frame", "precalculate_gaussian"],
+    );
+    builder.add(
+        emit::EmitOnceSystem,
+        "emit_once_system",
+        &[
             "oven_create_atoms",
-            &["emit_number_per_frame", "precalculated_oven"],
-        )
-        .with(
-            surface::CreateAtomsOnSurfaceSystem,
             "surface_create_atoms",
-            &["emit_number_per_frame", "precalculated_surfaces"],
-        )
-        .with(
-            gaussian::GaussianCreateAtomsSystem,
             "gaussian_create_atoms",
-            &["emit_number_per_frame", "precalculate_gaussian"],
-        )
-        .with(
-            emit::EmitOnceSystem,
-            "emit_once_system",
-            &[
-                "oven_create_atoms",
-                "surface_create_atoms",
-                "gaussian_create_atoms",
-            ],
-        )
+        ],
+    );
+    builder.add(
+        central_creator::CentralCreatorCreateAtomsSystem,
+        "central_create_system",
+        &[],
+    )
 }
 
 /// Registers resources required by `atom_sources` to the ecs world.
@@ -96,6 +103,7 @@ pub fn register_components(world: &mut World) {
     world.register::<surface::SurfaceSource>();
     world.register::<gaussian::GaussianVelocityDistributionSource>();
     world.register::<gaussian::GaussianVelocityDistributionSourceDefinition>();
+    world.register::<central_creator::CentralCreator>();
 }
 
 /// A simple probability distribution which uses weighted indices to retrieve values.

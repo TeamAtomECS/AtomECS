@@ -1,3 +1,5 @@
+//! Components for the CoolingLight entities and their initilization
+
 extern crate specs;
 use crate::atom::AtomicTransition;
 use serde::{Deserialize, Serialize};
@@ -7,11 +9,23 @@ use specs::{
 
 use crate::constant;
 
-/// A component representing light used for laser cooling.
+/// A component representing light properties used for laser cooling.
+///
+/// Currently only holds the information about polarization and wavelength
+/// and works as a marker for all laser cooling processes. This will be
+/// split into different components in a future version.
 #[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct CoolingLight {
-	/// Polarisation of the laser light, 1. for +, -1. for -,
-	pub polarization: f64,
+	/// Polarisation of the laser light, 1 for +, -1 for -,
+	///
+	/// Note that the polarization is defined by the quantization vector (e.g. magnetic field)
+	/// and not (always) in direction of the wavevector. Look at the given examples of 3D-MOT
+	/// simulations to see a working example if unsure.
+	///
+	/// Currently this is an integer value since every partial polarization can be expressed
+	/// as a superposition of fully polarized beams. It  is possible that this will be
+	/// changed to a non-integer value in the future.
+	pub polarization: i32,
 
 	/// wavelength of the laser light, in SI units of m.
 	pub wavelength: f64,
@@ -27,16 +41,16 @@ impl CoolingLight {
 		2.0 * constant::PI / self.wavelength
 	}
 
-	/// Creates a `CoolingLight` component with the specified detuning from the desired atomic species.
+	/// Creates a `CoolingLight` component from the desired atomic species.
 	///
 	/// # Arguments
 	///
-	/// `species`: The atomic species to detune from.
+	/// `species`: The atomic species to take the base wavelength from.
 	///
-	/// `detuning`: Detuning from the transition, specified in MHz. Red-detuned is negative.
+	/// `detuning`: Detuning of the laser from transition in units of MHz
 	///
 	/// `polarization`: Polarization of the cooling beam.
-	pub fn for_species(species: AtomicTransition, detuning: f64, polarization: f64) -> Self {
+	pub fn for_species(species: AtomicTransition, detuning: f64, polarization: i32) -> Self {
 		let freq = species.frequency + detuning * 1.0e6;
 		CoolingLight {
 			wavelength: constant::C / freq,
@@ -53,7 +67,7 @@ impl Component for CoolingLight {
 ///
 /// Default `CoolingLightIndex`s are created with `initiated: false`.
 /// Once the index is set, initiated is set to true.
-/// This is used to detect if all lasers in the simulation are correctly indexed, incase new lasers are added.
+/// This is used to detect if all lasers in the simulation are correctly indexed, in case new lasers are added.
 #[derive(Clone, Copy)]
 pub struct CoolingLightIndex {
 	pub index: usize,
@@ -134,7 +148,7 @@ pub mod tests {
 			.create_entity()
 			.with(CoolingLightIndex::default())
 			.with(CoolingLight {
-				polarization: 1.0,
+				polarization: 1,
 				wavelength: 780e-9,
 			})
 			.build();
@@ -142,7 +156,7 @@ pub mod tests {
 			.create_entity()
 			.with(CoolingLightIndex::default())
 			.with(CoolingLight {
-				polarization: 1.0,
+				polarization: 1,
 				wavelength: 780e-9,
 			})
 			.build();
@@ -171,7 +185,7 @@ pub mod tests {
 		let test_entity = test_world
 			.create_entity()
 			.with(CoolingLight {
-				polarization: 1.0,
+				polarization: 1,
 				wavelength: 780e-9,
 			})
 			.build();
@@ -192,7 +206,7 @@ pub mod tests {
 	#[test]
 	fn test_for_species() {
 		let detuning = 12.0;
-		let light = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1.0);
+		let light = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1);
 		assert_approx_eq!(
 			light.frequency(),
 			AtomicTransition::rubidium().frequency + 1.0e6 * detuning

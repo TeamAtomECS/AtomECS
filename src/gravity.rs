@@ -3,7 +3,7 @@
 use crate::atom::{Force, Mass};
 use crate::constant;
 use nalgebra::Vector3;
-use specs::{Join, Read, ReadStorage, System, WriteStorage};
+use specs::{Read, ReadStorage, System, WriteStorage};
 
 /// A resource that indicates that the simulation should apply the force of gravity.
 pub struct ApplyGravityOption;
@@ -18,14 +18,59 @@ impl<'a> System<'a> for ApplyGravitationalForceSystem {
     );
 
     fn run(&mut self, (mut force, mass, gravity_option): Self::SystemData) {
+        use rayon::prelude::*;
+        use specs::ParJoin;
+
         match gravity_option {
             None => (),
             Some(_) => {
-                for (mut force, mass) in (&mut force, &mass).join() {
-                    force.force = force.force
-                        + mass.value * constant::AMU * constant::GC * Vector3::new(0., 0., -1.);
-                }
+                (&mut force, &mass)
+                    .par_join()
+                    .for_each(|(mut force, mass)| {
+                        force.force = force.force
+                            + mass.value * constant::AMU * constant::GC * Vector3::new(0., 0., -1.);
+                    });
             }
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+
+    extern crate specs;
+    use assert_approx_eq::assert_approx_eq;
+    use specs::{Builder, RunNow, World};
+    extern crate nalgebra;
+    use nalgebra::Vector3;
+
+    /// Tests the correct implementation of the `ApplyGravitationalForceSystem`
+    #[test]
+    fn test_apply_gravitational_force_system() {
+        let mut test_world = World::new();
+
+        test_world.register::<Mass>();
+        test_world.register::<Force>();
+        test_world.add_resource(ApplyGravityOption);
+
+        let atom1 = test_world
+            .create_entity()
+            .with(Mass { value: 1.0 })
+            .with(Force {
+                force: Vector3::new(0.0, 0.0, 0.0),
+            })
+            .build();
+        let mut system = ApplyGravitationalForceSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<Force>();
+
+        assert_approx_eq!(
+            sampler_storage.get(atom1).expect("entity not found").force[2],
+            -1.0 * constant::AMU * constant::GC,
+            1e-30_f64
+        );
     }
 }

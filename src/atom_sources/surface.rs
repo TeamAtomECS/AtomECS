@@ -1,3 +1,5 @@
+//! Surface sources
+
 extern crate nalgebra;
 use nalgebra::Vector3;
 

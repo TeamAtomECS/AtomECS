@@ -1,6 +1,4 @@
-//! Simulate a 1D MOT.
 //!
-//! The 1D MOT is formed by counter-propagating laser beams along the z-axis.
 
 extern crate atomecs as lib;
 extern crate nalgebra;
@@ -10,7 +8,7 @@ use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
-use lib::magnetic::quadrupole::QuadrupoleField3D;
+use lib::laser::photons_scattered::ExpectedPhotonsScatteredVector;
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;
@@ -22,14 +20,14 @@ fn main() {
     ecs::register_resources(&mut world);
     let mut builder = ecs::create_simulation_dispatcher_builder();
 
-    // Add some output to the simulation
+    // Output scattering rate and velocity
     builder = builder.with(
-        file::new::<Position, Text>("pos.txt".to_string(), 10),
+        file::new::<ExpectedPhotonsScatteredVector, Text>("scattered.txt".to_string(), 1),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 10),
+        file::new::<Velocity, Text>("vel.txt".to_string(), 1),
         "",
         &[],
     );
@@ -37,56 +35,51 @@ fn main() {
     let mut dispatcher = builder.build();
     dispatcher.setup(&mut world.res);
 
-    // Create magnetic field.
+    // Set the intensity equal to Isat.
+    let radius = 0.01; // 1cm
+    let std = radius / 2.0_f64.powf(0.5);
+    let intensity = AtomicTransition::rubidium().saturation_intensity;
+    let power = 2.0 * lib::constant::PI * std.powi(2) * intensity;
+
+    // Single laser beam propagating in +x direction.
+    let detuning = 0.0;
+    //let power = 3e-3; //3mW
     world
         .create_entity()
-        .with(QuadrupoleField3D::gauss_per_cm(15.0, Vector3::z()))
-        .with(Position::new())
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power,
+            direction: Vector3::x(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::rubidium(),
+            detuning,
+            1,
+        ))
         .build();
 
-    // Create cooling lasers.
-    let detuning = -12.0;
-    let power = 0.03;
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: 0.01,
-            power: power,
-            direction: -Vector3::z(),
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::rubidium(),
-            detuning,
-            -1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: 0.01,
-            power: power,
-            direction: Vector3::z(),
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::rubidium(),
-            detuning,
-            -1,
-        ))
-        .build();
+    // world
+    //     .create_entity()
+    //     .with(lib::magnetic::uniform::UniformMagneticField::gauss(
+    //         Vector3::new(20.0, 0.0, 0.0),
+    //     ))
+    //     .build();
+
+    // Define timestep
+    world.add_resource(Timestep { delta: 1.0e-6 });
 
     // Create atoms
-    for i in 0..20 {
+    for i in 0..200 {
         world
             .create_entity()
             .with(Position {
-                pos: Vector3::new(0.0, 0.0, -0.05),
+                pos: Vector3::new(0.0, 0.0, 0.0),
             })
             .with(Atom)
             .with(Force::new())
             .with(Velocity {
-                vel: Vector3::new(0.0, 0.0, 10.0 + (i as f64) * 5.0),
+                vel: Vector3::new(-100.0 + (i as f64) * 1.0, 0.0, 0.0),
             })
             .with(NewlyCreated)
             .with(AtomicTransition::rubidium())
@@ -94,12 +87,12 @@ fn main() {
             .build();
     }
 
-    // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
-
-    // Run the simulation for a number of steps.
-    for _i in 0..5000 {
-        dispatcher.dispatch(&mut world.res);
-        world.maintain();
-    }
+    // Run the simulation twice
+    dispatcher.dispatch(&mut world.res);
+    world.maintain();
+    dispatcher.dispatch(&mut world.res);
+    world.maintain();
+    dispatcher.dispatch(&mut world.res);
+    world.maintain();
+    dispatcher.dispatch(&mut world.res);
 }
