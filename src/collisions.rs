@@ -11,15 +11,11 @@ use specs::{
     Component, Entities, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System, VecStorage,
     WriteExpect, WriteStorage,
 };
-use std::sync::{Arc, Mutex};
-
 
 /// A resource that indicates that the simulation should apply scattering
 pub struct ApplyCollisionsOption;
 
 /// Component that marks which box an atom is in for spatial partitioning
-///
-
 pub struct BoxID {
     /// ID of the box
     pub id: i64,
@@ -28,8 +24,100 @@ impl Component for BoxID {
     type Storage = VecStorage<Self>;
 }
 
+/// A patition of space within which collisions can occur
+pub struct CollisionBox<'a> {
+    pub velocities: Vec<&'a mut Velocity>,
+    pub expected_collision_number: f64,
+    pub collision_number: i32,
+    pub density: f64,
+    pub volume: f64,
+    pub atom_number: i32,
+}
+
+impl Default for CollisionBox<'_> {
+    fn default() -> Self {
+        CollisionBox {
+            velocities: Vec::new(),
+            expected_collision_number: 0.0,
+            density: 0.0,
+            volume: 0.0,
+            atom_number: 0,
+            collision_number: 0,
+        }
+    }
+}
+
+impl CollisionBox<'_> {
+    /// Perform collisions within a box.
+    fn do_collisions(&mut self, params: CollisionParameters, dt: f64) {
+        let mut rng = rand::thread_rng();
+        self.atom_number = self.velocities.len() as i32;
+        if self.atom_number <= 1 {
+            // Only one atom or less in box - no collisions.
+            return;
+        } else {
+            // calculate average speed (not velocity)
+            // average velocity will be close to zero since many particles are moving in different directions
+            // we just want a typical speed for calculating collision probability
+            let mut vsum = 0.0;
+            for i in 0..(self.atom_number - 1) as usize {
+                vsum = vsum + self.velocities[i].vel.norm();
+            }
+
+            let vbar = vsum / self.atom_number as f64;
+            // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
+            let num_collisions_expected = (params.macroparticle * (self.atom_number as f64))
+                .powi(2)
+                * params.sigma
+                * vbar
+                * dt
+                * params.box_width.powi(-3);
+
+            // loop over number of collisions happening
+            // if number is low (<0.5) treat it as the probability of one total collision occurring
+            // otherwise, round to nearest integer and select that many pairs to randomly
+            let mut num_collisions: i64;
+
+            if num_collisions_expected <= 0.5 {
+                let p = rng.gen::<f64>();
+                if p < num_collisions_expected {
+                    let idx = rng.gen_range(0, self.atom_number - 1) as usize;
+                    let mut idx2 = rng.gen_range(0, self.atom_number - 1) as usize;
+                    if idx2 == idx {
+                        idx2 = idx + 1;
+                    }
+
+                    let v1 = self.velocities[idx].vel;
+                    let v2 = self.velocities[idx2].vel;
+                    let (v1new, v2new) = do_collision(v1, v2);
+                    self.velocities[idx].vel = v1new;
+                    self.velocities[idx2].vel = v2new;
+                }
+            } else {
+                num_collisions = num_collisions_expected.round() as i64;
+                if num_collisions > 100000_i64 {
+                    num_collisions = 100000_i64;
+                }
+                for _i in 0..num_collisions {
+                    let idx = rng.gen_range(0, self.atom_number - 1) as usize;
+                    let mut idx2 = rng.gen_range(0, self.atom_number - 1) as usize;
+                    if idx2 == idx {
+                        idx2 = idx + 1;
+                    }
+
+                    let v1 = self.velocities[idx].vel;
+                    let v2 = self.velocities[idx2].vel;
+                    let (v1new, v2new) = do_collision(v1, v2);
+                    self.velocities[idx].vel = v1new;
+                    self.velocities[idx2].vel = v2new;
+                }
+            }
+        }
+    }
+}
+
 /// Resource for defining collision relevant paramaters like macroparticle number, box width and number of boxes
-///
+#[derive(Copy, Clone)]
 pub struct CollisionParameters {
     /// number of real particles one simulation particle represents for collisions
     pub macroparticle: f64,
@@ -45,11 +133,10 @@ pub struct CollisionParameters {
 #[derive(Clone)]
 pub struct CollisionsTracker {
     // number of collisions in each box
-    pub num_collisions: Vec<i64>,
+    pub num_collisions: Vec<i32>,
     // number of simulated atoms in each box
-    pub num_atoms: Vec<i64>,
+    pub num_atoms: Vec<i32>,
 }
-
 
 /// This system applies scattering to atoms
 /// Uses spatial partitioning for faster calculation
@@ -91,9 +178,8 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
             None => (),
             Some(_) => {
                 //make hash table - dividing space up into grid
-                let mut map: HashMap<i64, Vec<&mut Velocity>> = HashMap::new();
+                let mut map: HashMap<i64, CollisionBox> = HashMap::new();
                 let n: i64 = params.box_number; // number of boxes per side
-                let width: f64 = params.box_width; // width of each box in m
 
                 // Get all atoms which do not have boxIDs
                 for (entity, _, _) in (&entities, &atoms, !&boxids).join() {
@@ -104,7 +190,7 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                 (&positions, &mut boxids)
                     .par_join()
                     .for_each(|(position, mut boxid)| {
-                        boxid.id = pos_to_id(position.pos, n, width);
+                        boxid.id = pos_to_id(position.pos, n, params.box_width);
                     });
 
                 //insert atom velocity into hash
@@ -112,107 +198,35 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                     if boxid.id == i64::MAX {
                         continue;
                     } else {
-                        map.entry(boxid.id).or_default().push(velocity);
+                        map.entry(boxid.id).or_default().velocities.push(velocity);
                     }
                 }
 
-                let collisions_vec = Arc::new(Mutex::new(Vec::<i64>::new()));
-                let num_atoms_vec = Arc::new(Mutex::new(Vec::<i64>::new()));
-                map.par_values_mut().for_each(|velocities| {
-
-                    let mut rng = rand::thread_rng();
-                    let number = velocities.len() as i64;                    
-                    if number <= 1 {
-                        let mut collisions_vec = collisions_vec.lock().unwrap();
-                        collisions_vec.push(0);
-                        let mut num_atoms_vec = num_atoms_vec.lock().unwrap();
-                        num_atoms_vec.push(number);
-
-                    } else {
-                        // calculate average speed (not velocity)
-                        // average velocity will be close to zero since many particles are moving in different directions
-                        // we just want a typical speed for calculating collision probability
-                        let mut vsum = 0.0;
-                        for i in 0..(number - 1) as usize {
-                            vsum = vsum + velocities[i].vel.norm();
-                        }
-
-                        let vbar = vsum / number as f64;
-                        // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
-                        let num_collisions_expected = (params.macroparticle * (number as f64))
-                            .powi(2)
-                            * params.sigma
-                            * vbar
-                            * t.delta
-                            * width.powi(-3);
-
-                        // loop over number of collisions happening
-                        // if number is low (<0.5) treat it as the probability of one total collision occurring
-                        // otherwise, round to nearest integer and select that many pairs to randomly
-                        let mut num_collisions: i64;
-
-                        if num_collisions_expected <= 0.5 {
-                            let p = rng.gen::<f64>();
-                            if p < num_collisions_expected {
-                                let idx = rng.gen_range(0, number - 1) as usize;
-                                let mut idx2 = rng.gen_range(0, number - 1) as usize;
-                                if idx2 == idx {
-                                    idx2 = idx + 1;
-                                }
-
-                                let v1 = velocities[idx].vel;
-                                let v2 = velocities[idx2].vel;
-                                let (v1new, v2new) = do_collision(v1, v2);
-                                velocities[idx].vel = v1new;
-                                velocities[idx2].vel = v2new;
-
-                                let mut collisions_vec = collisions_vec.lock().unwrap();
-                                collisions_vec.push(1);
-                                let mut num_atoms_vec = num_atoms_vec.lock().unwrap();
-                                num_atoms_vec.push(number);
-                            }
-                        } else {
-                            num_collisions = num_collisions_expected.round() as i64;
-
-                            //collisions_vec.push(num_collisions);
-
-                            if num_collisions > 100000 as i64 {
-                                num_collisions = 100000 as i64;
-                            }
-
-
-
-                            for _i in 0..num_collisions {
-                                let idx = rng.gen_range(0, number - 1) as usize;
-                                let mut idx2 = rng.gen_range(0, number - 1) as usize;
-                                if idx2 == idx {
-                                    idx2 = idx + 1;
-                                }
-
-                                let v1 = velocities[idx].vel;
-                                let v2 = velocities[idx2].vel;
-                                let (v1new, v2new) = do_collision(v1, v2);
-                                velocities[idx].vel = v1new;
-                                velocities[idx2].vel = v2new;
-                            }
-
-                            let mut collisions_vec = collisions_vec.lock().unwrap();
-                            collisions_vec.push(num_collisions);
-                            let mut num_atoms_vec = num_atoms_vec.lock().unwrap();
-                            num_atoms_vec.push(number);
-
-                        }
-                    }
+                map.par_values_mut().for_each(|collision_box| {
+                    collision_box.do_collisions(*params, t.delta);
                 });
-                let collisions_vec = Arc::try_unwrap(collisions_vec).expect("Arc cannot unwrap.");
-                let collisions_vec = collisions_vec.into_inner().expect("Mutex cannot return value, may be poisoned.");
-                
-                let num_atoms_vec = Arc::try_unwrap(num_atoms_vec).expect("Arc cannot unwrap.");
-                let num_atoms_vec = num_atoms_vec.into_inner().expect("Mutex cannot return value, may be poisoned.");
-                
 
-                tracker.num_collisions = collisions_vec;
-                tracker.num_atoms = num_atoms_vec;
+                // Todo - save box results into the collision tracker component.
+                // let collisions_vec = Arc::try_unwrap(collisions_vec).expect("Arc cannot unwrap.");
+                // let collisions_vec = collisions_vec
+                //     .into_inner()
+                //     .expect("Mutex cannot return value, may be poisoned.");
+                // let num_atoms_vec = Arc::try_unwrap(num_atoms_vec).expect("Arc cannot unwrap.");
+                // let num_atoms_vec = num_atoms_vec
+                //     .into_inner()
+                //     .expect("Mutex cannot return value, may be poisoned.");
+
+                // tracker.num_collisions = collisions_vec;
+                // tracker.num_atoms = num_atoms_vec;
+
+                tracker.num_atoms = map
+                    .values()
+                    .map(|collision_box| collision_box.atom_number)
+                    .collect();
+                tracker.num_collisions = map
+                    .values()
+                    .map(|collision_box| collision_box.collision_number)
+                    .collect();
             }
         }
     }
