@@ -1,4 +1,4 @@
-//! Implement s wave scattering of atoms
+//! Implements s-wave scattering of atoms
 
 extern crate multimap;
 use crate::atom::{Position, Velocity};
@@ -47,71 +47,64 @@ impl Default for CollisionBox<'_> {
     }
 }
 
+pub const MAX_COLLISIONS: f64 = 10_000.0;
+
 impl CollisionBox<'_> {
     /// Perform collisions within a box.
     fn do_collisions(&mut self, params: CollisionParameters, dt: f64) {
         let mut rng = rand::thread_rng();
         self.atom_number = self.velocities.len() as i32;
+
+        // Only one atom or less in box - no collisions.
         if self.atom_number <= 1 {
-            // Only one atom or less in box - no collisions.
             return;
-        } else {
-            // calculate average speed (not velocity)
-            // average velocity will be close to zero since many particles are moving in different directions
-            // we just want a typical speed for calculating collision probability
-            let mut vsum = 0.0;
-            for i in 0..(self.atom_number - 1) as usize {
-                vsum = vsum + self.velocities[i].vel.norm();
-            }
+        }
 
-            let vbar = vsum / self.atom_number as f64;
-            // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
-            let num_collisions_expected = (params.macroparticle * (self.atom_number as f64))
-                .powi(2)
-                * params.sigma
-                * vbar
-                * dt
-                * params.box_width.powi(-3);
+        // calculate average speed (not velocity)
+        // average velocity will be close to zero since many particles are moving in different directions
+        // we just want a typical speed for calculating collision probability
+        let mut vsum = 0.0;
+        for i in 0..(self.atom_number - 1) as usize {
+            vsum = vsum + self.velocities[i].vel.norm();
+        }
+        let vbar = vsum / self.atom_number as f64;
 
-            // loop over number of collisions happening
-            // if number is low (<0.5) treat it as the probability of one total collision occurring
-            // otherwise, round to nearest integer and select that many pairs to randomly
-            let mut num_collisions: i64;
+        // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
+        self.expected_collision_number = (params.macroparticle * (self.atom_number as f64)).powi(2)
+            * params.sigma
+            * vbar
+            * dt
+            * params.box_width.powi(-3);
 
-            if num_collisions_expected <= 0.5 {
-                let p = rng.gen::<f64>();
-                if p < num_collisions_expected {
-                    let idx = rng.gen_range(0, self.atom_number - 1) as usize;
-                    let mut idx2 = rng.gen_range(0, self.atom_number - 1) as usize;
-                    if idx2 == idx {
-                        idx2 = idx + 1;
-                    }
+        let mut num_collisions_left: f64 = self.expected_collision_number;
 
-                    let v1 = self.velocities[idx].vel;
-                    let v2 = self.velocities[idx2].vel;
-                    let (v1new, v2new) = do_collision(v1, v2);
-                    self.velocities[idx].vel = v1new;
-                    self.velocities[idx2].vel = v2new;
-                }
+        if num_collisions_left > MAX_COLLISIONS {
+            num_collisions_left = MAX_COLLISIONS;
+            // I don't like this silent capping. Raise a warning in log? Panic? Define MAX_COLLISIONS in params instead and panic on exceed sounds best.
+        }
+
+        while num_collisions_left > 0.0 {
+            let collide = if num_collisions_left > 1.0 {
+                true
             } else {
-                num_collisions = num_collisions_expected.round() as i64;
-                if num_collisions > 100000_i64 {
-                    num_collisions = 100000_i64;
-                }
-                for _i in 0..num_collisions {
-                    let idx = rng.gen_range(0, self.atom_number - 1) as usize;
-                    let mut idx2 = rng.gen_range(0, self.atom_number - 1) as usize;
-                    if idx2 == idx {
-                        idx2 = idx + 1;
-                    }
+                rng.gen::<f64>() < num_collisions_left
+            };
 
-                    let v1 = self.velocities[idx].vel;
-                    let v2 = self.velocities[idx2].vel;
-                    let (v1new, v2new) = do_collision(v1, v2);
-                    self.velocities[idx].vel = v1new;
-                    self.velocities[idx2].vel = v2new;
+            if collide {
+                let idx = rng.gen_range(0, self.atom_number - 1) as usize;
+                let mut idx2 = rng.gen_range(0, self.atom_number - 1) as usize;
+                if idx2 == idx {
+                    idx2 = idx + 1;
                 }
+
+                let v1 = self.velocities[idx].vel;
+                let v2 = self.velocities[idx2].vel;
+                let (v1new, v2new) = do_collision(v1, v2);
+                self.velocities[idx].vel = v1new;
+                self.velocities[idx2].vel = v2new;
             }
+
+            num_collisions_left -= 1.0;
         }
     }
 }
@@ -138,9 +131,7 @@ pub struct CollisionsTracker {
     pub num_atoms: Vec<i32>,
 }
 
-/// This system applies scattering to atoms
-/// Uses spatial partitioning for faster calculation
-///
+/// Performs collisions within the atom cloud using a spatially partitioned Monte-Carlo approach.
 pub struct ApplyCollisionsSystem;
 impl<'a> System<'a> for ApplyCollisionsSystem {
     type SystemData = (
@@ -205,19 +196,6 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                 map.par_values_mut().for_each(|collision_box| {
                     collision_box.do_collisions(*params, t.delta);
                 });
-
-                // Todo - save box results into the collision tracker component.
-                // let collisions_vec = Arc::try_unwrap(collisions_vec).expect("Arc cannot unwrap.");
-                // let collisions_vec = collisions_vec
-                //     .into_inner()
-                //     .expect("Mutex cannot return value, may be poisoned.");
-                // let num_atoms_vec = Arc::try_unwrap(num_atoms_vec).expect("Arc cannot unwrap.");
-                // let num_atoms_vec = num_atoms_vec
-                //     .into_inner()
-                //     .expect("Mutex cannot return value, may be poisoned.");
-
-                // tracker.num_collisions = collisions_vec;
-                // tracker.num_atoms = num_atoms_vec;
 
                 tracker.num_atoms = map
                     .values()
