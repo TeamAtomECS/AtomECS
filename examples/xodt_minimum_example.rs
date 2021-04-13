@@ -101,7 +101,7 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.add_resource(Timestep { delta: 1.0e-5 });
 
     // Create a single test atom
     world
@@ -120,7 +120,7 @@ fn main() {
         .build();
 
     // Run the simulation for a number of steps.
-    for _i in 0..100_000 {
+    for _i in 0..1_000_000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }

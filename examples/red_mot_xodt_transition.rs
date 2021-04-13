@@ -35,12 +35,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos_dipole_aion.txt".to_string(), 1000),
+        file::new::<Position, Text>("pos_dipole_aion.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel_dipole_aion.txt".to_string(), 1000),
+        file::new::<Velocity, Text>("vel_dipole_aion.txt".to_string(), 100),
         "",
         &[],
     );
@@ -65,7 +65,7 @@ fn main() {
         .create_entity()
         .with(QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
         .with(Position {
-            pos: Vector3::new(0.0, 0.0, 100.0e-6),
+            pos: Vector3::new(0.0, 0.0, 0.0e-6),
         })
         .build();
 
@@ -196,7 +196,7 @@ fn main() {
         intersection: Vector3::new(0.0, 0.0, 0.0),
         e_radius: e_radius,
         power: power,
-        direction: Vector3::new(0.924, 0.259, 1.).normalize(),
+        direction: Vector3::y(),
     };
     world
         .create_entity()
@@ -205,8 +205,8 @@ fn main() {
             wavelength: 1064.0e-9,
         })
         .with(laser::gaussian::GaussianReferenceFrame {
-            x_vector: Vector3::new(0., 0.96810035, -0.25056281),
-            y_vector: Vector3::new(-0.74536307, 0.16703989, 0.64539258),
+            x_vector: Vector3::x(),
+            y_vector: Vector3::z(),
             ellipticity: 0.0,
         })
         .with(laser::gaussian::make_gaussian_rayleigh_range(
@@ -214,6 +214,7 @@ fn main() {
             &gaussian_beam,
         ))
         .build();
+
     // creating the entity that represents the source
     //
     // contains a central creator
@@ -242,7 +243,7 @@ fn main() {
     world.add_resource(Timestep { delta: 1.0e-6 });
 
     //enable gravity
-    world.add_resource(lib::gravity::ApplyGravityOption);
+    //world.add_resource(lib::gravity::ApplyGravityOption);
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
         .create_entity()

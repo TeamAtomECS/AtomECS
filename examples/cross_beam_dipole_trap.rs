@@ -108,9 +108,9 @@ fn main() {
     // creating the entity that represents the source
     //
     // contains a central creator
-    let number_to_emit = 1;
+    let number_to_emit = 1_000;
     let size_of_cube = 1.0e-5;
-    let speed = 0.000000000000000000000000000000000000000000000000000001; // m/s
+    let speed = 0.1; // m/s
 
     world
         .create_entity()
@@ -130,7 +130,7 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.add_resource(Timestep { delta: 1.0e-5 });
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
         .create_entity()
@@ -148,7 +148,7 @@ fn main() {
     let mut switcher_system =
         dipole::transition_switcher::AttachAtomicDipoleTransitionToAtomsSystem;
     // Run the simulation for a number of steps.
-    for _i in 0..400_000 {
+    for _i in 0..100_000 {
         dispatcher.dispatch(&mut world.res);
         switcher_system.run_now(&world.res);
         world.maintain();
