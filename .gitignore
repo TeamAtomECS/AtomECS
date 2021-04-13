@@ -13,3 +13,5 @@
 **/*.pdf
 **/*.mat
 *.xyz
+*.blend
+*.blend1
