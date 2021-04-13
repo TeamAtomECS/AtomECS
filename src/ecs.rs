@@ -9,6 +9,7 @@ use crate::atom_sources;
 use crate::destructor::DeleteToBeDestroyedEntitiesSystem;
 //use crate::detector;
 //use crate::detector::DetectingInfo;
+use crate::dipole;
 use crate::gravity::ApplyGravitationalForceSystem;
 use crate::initiate::DeflagNewAtomsSystem;
 use crate::integrator::{
@@ -28,6 +29,7 @@ pub fn register_components(world: &mut World) {
 	atom::register_components(world);
 	magnetic::register_components(world);
 	laser::register_components(world);
+	dipole::register_components(world);
 	atom_sources::register_components(world);
 	sim_region::register_components(world);
 	world.register::<Dark>();
@@ -60,6 +62,7 @@ impl AtomecsDispatcherBuilder {
 
 		magnetic::add_systems_to_dispatch(&mut self.builder, &[]);
 		laser::add_systems_to_dispatch(&mut self.builder, &[]);
+		dipole::add_systems_to_dispatch(&mut self.builder, &[]);
 		atom_sources::add_systems_to_dispatch(&mut self.builder, &[]);
 		self.builder.add(
 			ApplyGravitationalForceSystem,
