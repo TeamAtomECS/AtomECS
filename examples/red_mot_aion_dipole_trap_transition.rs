@@ -35,12 +35,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos_dipole.txt".to_string(), 1000),
+        file::new::<Position, Text>("pos_dipole_aion.txt".to_string(), 1000),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel_dipole.txt".to_string(), 1000),
+        file::new::<Velocity, Text>("vel_dipole_aion.txt".to_string(), 1000),
         "",
         &[],
     );
@@ -56,7 +56,7 @@ fn main() {
             initialized: false,
             scale_factor: 20000.,
             discard_place: Vector3::new(20., 20., 20.),
-            name: format!("{}", "aion_transition_gravity_1000"),
+            name: format!("{}", "aion_transition_gravity_1000_test_new_git"),
         })
         .build();
     // BEGIN MOT PART

@@ -6,6 +6,7 @@ pub mod atom;
 pub mod atom_sources;
 pub mod constant;
 pub mod destructor;
+pub mod dipole;
 pub mod ecs;
 pub mod fileinput;
 pub mod gravity;
