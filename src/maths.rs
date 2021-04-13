@@ -20,10 +20,11 @@ pub fn get_minimum_distance_line_point(
 	pos: &Vector3<f64>,
 	line_point: &Vector3<f64>,
 	dir: &Vector3<f64>,
-) -> f64 {
+) -> (f64, f64) {
 	let rela_cood = pos - line_point;
 	let distance = (dir.cross(&rela_cood) / dir.norm()).norm();
-	distance
+	let z = rela_cood.dot(&dir) / dir.norm();
+	(distance, z)
 }
 
 /// A normalised gaussian distribution.
@@ -55,7 +56,7 @@ mod tests {
 		let pos = Vector3::new(1., 1., 1.);
 		let centre = Vector3::new(0., 1., 1.);
 		let dir = Vector3::new(1., 2., 2.);
-		let distance = get_minimum_distance_line_point(&pos, &centre, &dir);
+		let (distance, _) = get_minimum_distance_line_point(&pos, &centre, &dir);
 		assert!(distance > 0.942, distance < 0.943);
 	}
 }
