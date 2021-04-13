@@ -31,7 +31,8 @@ pub struct CollisionBox<'a> {
     pub collision_number: i32,
     pub density: f64,
     pub volume: f64,
-    pub atom_number: i32,
+    pub atom_number: f64,
+    pub particle_number: i32,
 }
 
 impl Default for CollisionBox<'_> {
@@ -41,46 +42,40 @@ impl Default for CollisionBox<'_> {
             expected_collision_number: 0.0,
             density: 0.0,
             volume: 0.0,
-            atom_number: 0,
+            atom_number: 0.0,
             collision_number: 0,
+            particle_number: 0,
         }
     }
 }
-
-pub const MAX_COLLISIONS: f64 = 10_000.0;
 
 impl CollisionBox<'_> {
     /// Perform collisions within a box.
     fn do_collisions(&mut self, params: CollisionParameters, dt: f64) {
         let mut rng = rand::thread_rng();
-        self.atom_number = self.velocities.len() as i32;
+        self.particle_number = self.velocities.len() as i32;
+        self.atom_number = self.particle_number as f64 * params.macroparticle;
 
         // Only one atom or less in box - no collisions.
-        if self.atom_number <= 1 {
+        if self.particle_number <= 1 {
             return;
         }
 
-        // calculate average speed (not velocity)
-        // average velocity will be close to zero since many particles are moving in different directions
-        // we just want a typical speed for calculating collision probability
+        // vbar is the average _speed_, not the average _velocity_.
         let mut vsum = 0.0;
-        for i in 0..(self.atom_number - 1) as usize {
+        for i in 0..self.velocities.len() {
             vsum = vsum + self.velocities[i].vel.norm();
         }
-        let vbar = vsum / self.atom_number as f64;
+        let vbar = vsum / self.velocities.len() as f64;
 
         // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
-        self.expected_collision_number = (params.macroparticle * (self.atom_number as f64)).powi(2)
-            * params.sigma
-            * vbar
-            * dt
-            * params.box_width.powi(-3);
+        let density = self.atom_number / params.box_width.powi(3);
+        self.expected_collision_number = self.atom_number * density * params.sigma * vbar * dt;
 
         let mut num_collisions_left: f64 = self.expected_collision_number;
 
-        if num_collisions_left > MAX_COLLISIONS {
-            num_collisions_left = MAX_COLLISIONS;
-            // I don't like this silent capping. Raise a warning in log? Panic? Define MAX_COLLISIONS in params instead and panic on exceed sounds best.
+        if num_collisions_left > params.collision_limit {
+            panic!("Number of collisions in a box in a single frame exceeds limit. Number of collisions={}, limit={}.", num_collisions_left, params.collision_limit);
         }
 
         while num_collisions_left > 0.0 {
@@ -91,17 +86,18 @@ impl CollisionBox<'_> {
             };
 
             if collide {
-                let idx = rng.gen_range(0, self.atom_number - 1) as usize;
-                let mut idx2 = rng.gen_range(0, self.atom_number - 1) as usize;
-                if idx2 == idx {
-                    idx2 = idx + 1;
+                let idx1 = rng.gen_range(0, self.velocities.len());
+                let mut idx2 = idx1;
+                while idx2 == idx1 {
+                    idx2 = rng.gen_range(0, self.velocities.len())
                 }
 
-                let v1 = self.velocities[idx].vel;
+                let v1 = self.velocities[idx1].vel;
                 let v2 = self.velocities[idx2].vel;
                 let (v1new, v2new) = do_collision(v1, v2);
-                self.velocities[idx].vel = v1new;
+                self.velocities[idx1].vel = v1new;
                 self.velocities[idx2].vel = v2new;
+                self.collision_number += 1;
             }
 
             num_collisions_left -= 1.0;
@@ -114,21 +110,25 @@ impl CollisionBox<'_> {
 pub struct CollisionParameters {
     /// number of real particles one simulation particle represents for collisions
     pub macroparticle: f64,
-    //number of boxes per side in spatial binning
+    /// number of boxes per side in spatial binning
     pub box_number: i64,
-    //width of one box in m
+    /// width of one box in m
     pub box_width: f64,
     // collisional cross section of atoms (assuming only one species)
     pub sigma: f64,
+    /// Limit on number of collisions per box each frame. If the number of collisions to calculate exceeds this, the simulation will panic.
+    pub collision_limit: f64,
 }
 
 /// store stats about collisions
 #[derive(Clone)]
 pub struct CollisionsTracker {
-    // number of collisions in each box
+    /// number of collisions in each box
     pub num_collisions: Vec<i32>,
-    // number of simulated atoms in each box
-    pub num_atoms: Vec<i32>,
+    /// number of simulated particles in each box
+    pub num_particles: Vec<i32>,
+    /// number of simulated atoms in each box
+    pub num_atoms: Vec<f64>,
 }
 
 /// Performs collisions within the atom cloud using a spatially partitioned Monte-Carlo approach.
@@ -204,6 +204,10 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                 tracker.num_collisions = map
                     .values()
                     .map(|collision_box| collision_box.collision_number)
+                    .collect();
+                tracker.num_particles = map
+                    .values()
+                    .map(|collision_box| collision_box.particle_number)
                     .collect();
             }
         }
@@ -332,7 +336,49 @@ pub mod tests {
         }
     }
 
+    /// Test that the expected number of collisions in a CollisionBox is correct.
     #[test]
+    fn collision_rate() {
+        use assert_approx_eq::assert_approx_eq;
+
+        let vel = Vector3::new(1.0, 0.0, 0.0);
+        const MACRO_ATOM_NUMBER: usize = 100;
+        let mut velocities: Vec<Velocity> = vec![Velocity { vel: vel.clone() }; MACRO_ATOM_NUMBER];
+        let mut collision_box = CollisionBox::default();
+        collision_box.velocities = velocities.iter_mut().collect();
+
+        let params = CollisionParameters {
+            macroparticle: 10.0,
+            box_number: 1,
+            box_width: 1e-3,
+            sigma: 1e-8,
+            collision_limit: 10_000.0,
+        };
+        let dt = 1e-3;
+        collision_box.do_collisions(params, dt);
+        assert_eq!(collision_box.particle_number, MACRO_ATOM_NUMBER as i32);
+        let atom_number = params.macroparticle * MACRO_ATOM_NUMBER as f64;
+        assert_eq!(collision_box.atom_number, atom_number);
+        let density = atom_number / params.box_width.powi(3);
+        let expected_number = atom_number * density * params.sigma * vel.norm() * dt;
+        assert_approx_eq!(
+            collision_box.expected_collision_number,
+            expected_number,
+            0.01
+        );
+        if (collision_box.collision_number
+            != collision_box.expected_collision_number.floor() as i32)
+            && (collision_box.collision_number
+                != collision_box.expected_collision_number.ceil() as i32)
+        {
+            panic!(
+                "number of collisions invalid. Expected={}, Actual={}.",
+                collision_box.expected_collision_number, collision_box.collision_number
+            );
+        }
+    }
+
+    //#[test]
     fn test_collisions() {
         let mut test_world = World::new();
 
@@ -387,6 +433,7 @@ pub mod tests {
             box_number: 10,
             box_width: 2.0,
             sigma: 10.0,
+            collision_limit: 10_000.0,
         });
 
         for _i in 0..10 {
