@@ -10,6 +10,7 @@ extern crate specs;
 use super::cooling::CoolingLightIndex;
 use super::gaussian::{get_gaussian_beam_intensity, CircularMask, GaussianBeam};
 use crate::atom::Position;
+use crate::laser::gaussian::GaussianRayleighRange;
 use specs::{Component, Entities, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 const LASER_CACHE_SIZE: usize = 16;
@@ -68,13 +69,14 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
         ReadStorage<'a, CoolingLightIndex>,
         ReadStorage<'a, GaussianBeam>,
         ReadStorage<'a, CircularMask>,
+        ReadStorage<'a, GaussianRayleighRange>,
         ReadStorage<'a, Position>,
         WriteStorage<'a, LaserIntensitySamplers>,
     );
 
     fn run(
         &mut self,
-        (entities, indices, gaussian, masks, position, mut intensity_samplers): Self::SystemData,
+        (entities, indices, gaussian, masks, rayleigh_range, position, mut intensity_samplers): Self::SystemData,
     ) {
         use rayon::prelude::*;
         use specs::ParJoin;
@@ -82,7 +84,12 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
         // There are typically only a small number of lasers in a simulation.
         // For a speedup, cache the required components into thread memory,
         // so they can be distributed to parallel workers during the atom loop.
-        type CachedLaser = (CoolingLightIndex, GaussianBeam, Option<CircularMask>);
+        type CachedLaser = (
+            CoolingLightIndex,
+            GaussianBeam,
+            Option<CircularMask>,
+            Option<GaussianRayleighRange>,
+        );
         let laser_cache: Vec<CachedLaser> = (&entities, &indices, &gaussian)
             .join()
             .map(|(laser_entity, index, gaussian)| {
@@ -90,6 +97,7 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
                     index.clone(),
                     gaussian.clone(),
                     masks.get(laser_entity).cloned(),
+                    rayleigh_range.get(laser_entity).cloned(),
                 )
             })
             .collect();
@@ -106,9 +114,13 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
                 .par_join()
                 .for_each(|(samplers, pos)| {
                     for i in 0..number_in_iteration {
-                        let (index, gaussian, mask) = laser_array[i];
-                        samplers.contents[index.index].intensity =
-                            get_gaussian_beam_intensity(&gaussian, &pos, mask.as_ref());
+                        let (index, gaussian, mask, range) = laser_array[i];
+                        samplers.contents[index.index].intensity = get_gaussian_beam_intensity(
+                            &gaussian,
+                            &pos,
+                            mask.as_ref(),
+                            range.as_ref(),
+                        );
                     }
                 });
         }
@@ -134,6 +146,7 @@ pub mod tests {
 
         test_world.register::<CoolingLightIndex>();
         test_world.register::<GaussianBeam>();
+        test_world.register::<GaussianRayleighRange>();
         test_world.register::<CircularMask>();
         test_world.register::<Position>();
         test_world.register::<LaserIntensitySamplers>();
@@ -173,6 +186,7 @@ pub mod tests {
                 power: 1.0,
             },
             &Position { pos: Vector3::y() },
+            None,
             None,
         );
 
