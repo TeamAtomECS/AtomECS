@@ -201,7 +201,7 @@ impl<'a> System<'a> for CentralCreatorCreateAtomsSystem {
             None => std::f64::MAX,
         };
 
-        for (central_creator, atom, number_to_emit, _creator_position, mass_distribution) in (
+        for (central_creator, atom, number_to_emit, creator_position, mass_distribution) in (
             &central_creator,
             &atom,
             &numbers_to_emit,
@@ -214,6 +214,7 @@ impl<'a> System<'a> for CentralCreatorCreateAtomsSystem {
                 let mass = mass_distribution.draw_random_mass();
                 let (start_position, start_velocity) = central_creator.get_random_spawn_condition();
 
+                let start_position = start_position + creator_position.pos;
                 if start_velocity.norm() > max_vel {
                     continue;
                 }
