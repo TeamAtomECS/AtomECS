@@ -194,7 +194,7 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                 }
 
                 map.par_values_mut().for_each(|collision_box| {
-                    collision_box.do_collisions(*params, t.delta);
+                    collision_box.do_collisions(params.clone(), t.delta);
                 });
 
                 tracker.num_atoms = map
