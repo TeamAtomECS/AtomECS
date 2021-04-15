@@ -10,6 +10,7 @@ use std::io::prelude::*;
 pub struct XYZWriteHelper {
     pub overwrite: bool,
     pub initialized: bool,
+    pub write_every: u64,
     pub scale_factor: f64,
     pub discard_place: Vector3<f64>,
     pub name: String,
@@ -20,6 +21,7 @@ impl Default for XYZWriteHelper {
         XYZWriteHelper {
             overwrite: true,
             initialized: false,
+            write_every: 100,
             scale_factor: 20000.,
             discard_place: Vector3::new(0., 0., 0.),
             name: format!("{}", "pos_xyz"),
@@ -42,8 +44,9 @@ impl<'a> System<'a> for WriteToXYZFileSystem {
     );
 
     fn run(&mut self, (step_number, atom, velocity, position, mut xyz_helper): Self::SystemData) {
-        if (step_number.n % 100 == 0 && step_number.n != 0) || step_number.n == 1 {
-            for helper in (&mut xyz_helper).join() {
+        for helper in (&mut xyz_helper).join() {
+            if (step_number.n % helper.write_every == 0 && step_number.n != 0) || step_number.n == 2
+            {
                 let mut data_string = String::new();
                 if helper.initialized != true {
                     if helper.overwrite == true {
@@ -141,6 +144,7 @@ pub mod tests {
             .with(XYZWriteHelper {
                 overwrite: true,
                 initialized: false,
+                write_every: 100,
                 scale_factor: 20000.,
                 discard_place: Vector3::new(0.0, 0.0, 0.0),
                 name: format!("{}", "test_xyz"),

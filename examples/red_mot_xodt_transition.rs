@@ -35,12 +35,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos_dipole_aion.txt".to_string(), 100),
+        file::new::<Position, Text>("pos_dipole_red_xodt_gravity.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel_dipole_aion.txt".to_string(), 100),
+        file::new::<Velocity, Text>("vel_dipole_red_xodt_gravity".to_string(), 100),
         "",
         &[],
     );
@@ -54,9 +54,10 @@ fn main() {
         .with(xyz_file::XYZWriteHelper {
             overwrite: true,
             initialized: false,
+            write_every: 100,
             scale_factor: 20000.,
             discard_place: Vector3::new(20., 20., 20.),
-            name: format!("{}", "aion_transition_gravity_1000_test_new_git"),
+            name: format!("{}", "xodt_transition_gravity"),
         })
         .build();
     // BEGIN MOT PART
@@ -243,7 +244,7 @@ fn main() {
     world.add_resource(Timestep { delta: 1.0e-6 });
 
     //enable gravity
-    //world.add_resource(lib::gravity::ApplyGravityOption);
+    world.add_resource(lib::gravity::ApplyGravityOption);
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
         .create_entity()
@@ -274,7 +275,7 @@ fn main() {
     let mut switcher_system =
         dipole::transition_switcher::AttachAtomicDipoleTransitionToAtomsSystem;
     switcher_system.run_now(&world.res);
-    for _i in 0..50_000 {
+    for _i in 0..30_000 {
         dispatcher.dispatch(&mut world.res);
         ramp_down_system.run_now(&world.res);
         world.maintain();

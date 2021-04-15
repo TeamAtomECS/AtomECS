@@ -50,6 +50,7 @@ fn main() {
         .with(xyz_file::XYZWriteHelper {
             overwrite: true,
             initialized: false,
+            write_every: 100,
             scale_factor: 20000.,
             discard_place: Vector3::new(2., 2., 2.),
             name: format!("{}", "cross_beam_basic_heating_escape"),

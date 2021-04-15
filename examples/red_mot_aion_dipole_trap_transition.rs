@@ -35,12 +35,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos_dipole_aion.txt".to_string(), 1000),
+        file::new::<Position, Text>("pos_dipole_aion_fine.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel_dipole_aion.txt".to_string(), 1000),
+        file::new::<Velocity, Text>("vel_dipole_aion_fine.txt".to_string(), 100),
         "",
         &[],
     );
@@ -54,9 +54,10 @@ fn main() {
         .with(xyz_file::XYZWriteHelper {
             overwrite: true,
             initialized: false,
+            write_every: 100,
             scale_factor: 20000.,
             discard_place: Vector3::new(20., 20., 20.),
-            name: format!("{}", "aion_transition_gravity_1000_test_new_git"),
+            name: format!("{}", "aion_transition_gravity_1000_test_new_git_fine"),
         })
         .build();
     // BEGIN MOT PART
@@ -65,7 +66,7 @@ fn main() {
         .create_entity()
         .with(QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
         .with(Position {
-            pos: Vector3::new(0.0, 0.0, 100.0e-6),
+            pos: Vector3::new(0.0, 0.0, 0.0e-6),
         })
         .build();
 
@@ -239,7 +240,7 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.add_resource(Timestep { delta: 1.0e-7 });
 
     //enable gravity
     world.add_resource(lib::gravity::ApplyGravityOption);
@@ -258,7 +259,7 @@ fn main() {
         .build();
 
     // Run the simulation for a number of steps.
-    for _i in 0..20_000 {
+    for _i in 0..200_000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
@@ -273,7 +274,7 @@ fn main() {
     let mut switcher_system =
         dipole::transition_switcher::AttachAtomicDipoleTransitionToAtomsSystem;
     switcher_system.run_now(&world.res);
-    for _i in 0..50_000 {
+    for _i in 0..300_000 {
         dispatcher.dispatch(&mut world.res);
         ramp_down_system.run_now(&world.res);
         world.maintain();
@@ -281,7 +282,7 @@ fn main() {
     let mut delete_beams_system = dipole::transition_switcher::DisableMOTBeamsSystem;
     delete_beams_system.run_now(&world.res);
     println!("Switched from MOT to Dipole setup");
-    for _i in 0..40_000 {
+    for _i in 0..400_000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
