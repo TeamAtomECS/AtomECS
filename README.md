@@ -20,6 +20,9 @@ The `atomecs` crate simulates the laser-cooling of atoms by optical scattering f
 If you would like to get started, try some examples with `cargo run --release --example 1d_mot`, then use the scripts in the Matlab directory to plot the results.
 You can also use `cargo doc` to explore the documentation, which has more detail on the structure of the program.
 
+**Important note:** If you receive the error 'panicked while panicking' then see [this issue](https://github.com/TeamAtomECS/AtomECS/issues/2) - you may need to use an earlier toolchain.
+
+
 ## ECS
 
 `atomecs` follows the data-oriented Entity-Component-System (ECS) pattern, which is implemented using [specs](https://github.com/slide-rs/specs).
