@@ -1,4 +1,10 @@
 //! Implements s-wave scattering of atoms
+//!
+//! # Limitations
+//!
+//! * Currently assumes that colliding particles have equal mass.
+//! * For accurate collision rates, make sure that there are on average >1 particles per box.
+//!
 
 extern crate multimap;
 use crate::atom::{Position, Velocity};
