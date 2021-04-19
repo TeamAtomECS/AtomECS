@@ -175,7 +175,6 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
             None => (),
             Some(_) => {
                 //make hash table - dividing space up into grid
-                let mut map: HashMap<i64, CollisionBox> = HashMap::new();
                 let n: i64 = params.box_number; // number of boxes per side
 
                 // Get all atoms which do not have boxIDs
@@ -191,6 +190,7 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                     });
 
                 //insert atom velocity into hash
+                let mut map: HashMap<i64, CollisionBox> = HashMap::new();
                 for (velocity, boxid) in (&mut velocities, &boxids).join() {
                     if boxid.id == i64::MAX {
                         continue;
@@ -199,7 +199,10 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                     }
                 }
 
-                map.par_values_mut().for_each(|collision_box| {
+                // get immutable list of boxes and iterate in parallel
+                // (Note that using hashmap parallel values mut does not work in parallel, tested.)
+                let boxes: Vec<&mut CollisionBox> = map.values_mut().collect();
+                boxes.into_par_iter().for_each(|collision_box| {
                     collision_box.do_collisions(params.clone(), t.delta);
                 });
 
