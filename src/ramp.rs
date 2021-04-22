@@ -71,6 +71,18 @@ where
     ramped: PhantomData<T>,
 }
 
+impl<T> Default for RampUpdateSystem<T>
+where
+    T: Component,
+    T: Lerp<T>,
+{
+    fn default() -> Self {
+        Self {
+            ramped: PhantomData,
+        }
+    }
+}
+
 impl<'a, T> System<'a> for RampUpdateSystem<T>
 where
     T: Lerp<T> + Component + Sync + Send + Clone,
@@ -115,44 +127,88 @@ pub mod tests {
 
     #[test]
     fn test_ramp() {
-        let comp_a = ALerpComp { value: 0.0 };
-        let comp_b = ALerpComp { value: 1.0 };
+        use assert_approx_eq::assert_approx_eq;
 
         let mut frames = Vec::new();
-        frames.push((0.0, comp_a.clone()));
-        frames.push((1.0, comp_b.clone()));
+        frames.push((0.0, ALerpComp { value: 0.0 }));
+        frames.push((1.0, ALerpComp { value: 1.0 }));
+        frames.push((2.0, ALerpComp { value: 0.0 }));
         let mut ramp = Ramp {
             prev: 0,
             keyframes: frames,
         };
 
-        let a = ramp.get_value(0.0);
-        assert!(
-            a.value < std::f64::EPSILON,
-            "incorrect: a.value={}, target={}",
-            a.value,
-            0.0
-        );
-        let b = ramp.get_value(0.5);
-        assert!(
-            (0.5 - b.value).abs() < std::f64::EPSILON,
-            "incorrect: value={}, target={}",
-            b.value,
-            0.5
-        );
-        let c = ramp.get_value(1.0);
-        assert!(
-            (1.0 - c.value).abs() < std::f64::EPSILON,
-            "incorrect: value={}, target={}",
-            c.value,
-            1.0
-        );
-        let d = ramp.get_value(2.0);
-        assert!(
-            (1.0 - d.value).abs() < std::f64::EPSILON,
-            "incorrect: value={}, target={}",
-            d.value,
-            1.0
-        );
+        {
+            let comp = ramp.get_value(0.0);
+            assert_approx_eq!(comp.value, 0.0, std::f64::EPSILON);
+        }
+        {
+            let comp = ramp.get_value(0.5);
+            assert_approx_eq!(comp.value, 0.5, std::f64::EPSILON);
+        }
+        {
+            let comp = ramp.get_value(1.0);
+            assert_approx_eq!(comp.value, 1.0, std::f64::EPSILON);
+        }
+        {
+            let comp = ramp.get_value(1.5);
+            assert_approx_eq!(comp.value, 0.5, std::f64::EPSILON);
+        }
+        {
+            let comp = ramp.get_value(2.0);
+            assert_approx_eq!(comp.value, 0.0, std::f64::EPSILON);
+        }
+        {
+            let comp = ramp.get_value(2.5);
+            assert_approx_eq!(comp.value, 0.0, std::f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_ramp_system() {
+        use crate::integrator::VelocityVerletIntegratePositionSystem;
+        use assert_approx_eq::assert_approx_eq;
+        use specs::{Builder, DispatcherBuilder, ReadStorage, World};
+
+        let mut test_world = World::new();
+        let mut dispatcher = DispatcherBuilder::new()
+            .with(VelocityVerletIntegratePositionSystem, "integrator", &[])
+            .with(
+                RampUpdateSystem::<ALerpComp>::default(),
+                "update_lerp_comp",
+                &["integrator"],
+            )
+            .build();
+        dispatcher.setup(&mut test_world.res);
+
+        let mut frames = Vec::new();
+        frames.push((0.0, ALerpComp { value: 0.0 }));
+        frames.push((1.0, ALerpComp { value: 1.0 }));
+        let ramp = Ramp {
+            prev: 0,
+            keyframes: frames,
+        };
+
+        let test_entity = test_world
+            .create_entity()
+            .with(ALerpComp { value: 0.0 })
+            .with(ramp)
+            .build();
+
+        let dt = 0.1;
+        test_world.add_resource(Timestep { delta: dt });
+        test_world.add_resource(Step { n: 0 });
+
+        // Perform dispatcher loop to ramp components.
+        for i in 1..10 {
+            dispatcher.dispatch(&mut test_world.res);
+
+            let comps: ReadStorage<ALerpComp> = test_world.system_data();
+            assert_approx_eq!(
+                comps.get(test_entity).expect("Entity not found").value,
+                i as f64 * dt,
+                std::f64::EPSILON
+            );
+        }
     }
 }
