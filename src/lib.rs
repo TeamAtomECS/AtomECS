@@ -4,7 +4,7 @@
 extern crate specs_derive;
 
 #[macro_use]
-extern crate atomecs_ramp_derive;
+extern crate atomecs_derive;
 
 pub mod atom;
 pub mod atom_sources;

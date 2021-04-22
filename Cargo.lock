@@ -52,7 +52,7 @@ name = "atomecs"
 version = "0.3.0"
 dependencies = [
  "assert_approx_eq",
- "atomecs_ramp_derive",
+ "atomecs-derive",
  "byteorder",
  "criterion",
  "csv",
@@ -70,8 +70,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "atomecs_ramp_derive"
+name = "atomecs-derive"
 version = "0.1.0"
+source = "git+https://github.com/TeamAtomECS/AtomECS-derive#ba08e3b980462f677738310d8be47a29770413c0"
 dependencies = [
  "quote 1.0.9",
  "syn 1.0.60",
