@@ -60,6 +60,13 @@ where
     fn at_end(&self) -> bool {
         return self.prev == self.keyframes.len() - 1;
     }
+
+    pub fn new(keyframes: Vec<(f64, T)>) -> Self {
+        Ramp {
+            keyframes: keyframes,
+            prev: 0,
+        }
+    }
 }
 
 impl<T> Component for Ramp<T>
