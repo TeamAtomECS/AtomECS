@@ -4,6 +4,7 @@
 extern crate specs_derive;
 pub mod atom;
 pub mod atom_sources;
+pub mod collisions;
 pub mod constant;
 pub mod destructor;
 pub mod ecs;
@@ -15,7 +16,7 @@ pub mod laser;
 pub mod magnetic;
 pub mod maths;
 pub mod output;
+pub mod ramp;
 pub mod shapes;
 pub mod sim_region;
 pub mod tests;
-pub mod collisions;
