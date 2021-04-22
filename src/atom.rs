@@ -2,6 +2,7 @@
 
 use crate::constant::{BOHRMAG, C, HBAR, PI};
 use crate::output::file::BinaryConversion;
+use crate::ramp::Lerp;
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 use specs::{Component, NullStorage, System, VecStorage, World, WriteStorage};
@@ -10,7 +11,7 @@ use std::fmt;
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
 ///
 /// SI units (metres)
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Lerp)]
 pub struct Position {
 	/// position in 3D in units of m
 	pub pos: Vector3<f64>,

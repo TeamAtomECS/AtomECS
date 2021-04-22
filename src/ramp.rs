@@ -5,6 +5,12 @@
 //!
 //! To ramp a component `T`'s values, add a `Ramp<T>` to the entity. You should also create a
 //! `RampUpdateSystem<T>` and add it to the dispatcher.
+//!
+//! Only components which implement the `Lerp` trait can be ramped.
+//! You can either explicitly implement this trait for your types, or use `[#derive(Clone,Lerp)]`.
+//! The derive implementation is crude, and assumes:
+//!   * The struct implements `Clone`.
+//!   * The fields can all be multiplied by an f64 and added (eg `f64` and `Vector3<f64>` types).
 
 use specs::{Component, HashMapStorage, Join, ReadExpect, System, WriteStorage};
 

@@ -3,10 +3,12 @@
 extern crate nalgebra;
 extern crate specs;
 use super::MagneticFieldSampler;
+use crate::ramp::Lerp;
 use nalgebra::Vector3;
 use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 
 /// A component representing a uniform bias field, of the form `B = [ B_x, B_y, B_z ]`
+#[derive(Clone, Lerp)]
 pub struct UniformMagneticField {
     /// Vector field components with respect to the x,y,z cartesian axes, in units of Tesla.
     pub field: Vector3<f64>,
