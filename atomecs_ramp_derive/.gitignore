@@ -1,0 +1,14 @@
+/target
+**/*.rs.bk
+/doc/**
+**/*.txt
+**/*.dat
+.vs/**
+**/*.yaml
+**/*.csv
+**/__pycache*
+**/*.json
+**/*.mp4
+*.ipynb
+**/*.pdf
+**/*.mat

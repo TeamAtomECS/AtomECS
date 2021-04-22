@@ -2,6 +2,10 @@
 
 #[macro_use]
 extern crate specs_derive;
+
+#[macro_use]
+extern crate atomecs_ramp_derive;
+
 pub mod atom;
 pub mod atom_sources;
 pub mod collisions;

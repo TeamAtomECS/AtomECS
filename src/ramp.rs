@@ -108,21 +108,13 @@ pub mod tests {
     extern crate specs;
     use specs::{Component, HashMapStorage};
 
-    #[derive(Clone)]
+    #[derive(Clone, Lerp)]
     struct ALerpComp {
         value: f64,
     }
 
     impl Component for ALerpComp {
         type Storage = HashMapStorage<Self>;
-    }
-
-    impl Lerp<ALerpComp> for ALerpComp {
-        fn lerp(&self, other: &Self, amount: f64) -> Self {
-            ALerpComp {
-                value: self.value * (1.0 - amount) + other.value * amount,
-            }
-        }
     }
 
     #[test]
