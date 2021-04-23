@@ -55,7 +55,11 @@ pub mod tests {
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;
+    use crate::laser;
+    use crate::laser::gaussian::GaussianBeam;
     use nalgebra::Vector3;
+
+    use crate::dipole;
 
     #[test]
     fn test_apply_dipole_force_system() {
@@ -151,5 +155,124 @@ pub mod tests {
         assert_approx_eq!(-6.06743188e-29, sim_result_force[0], 3e-30_f64);
         assert_approx_eq!(-3.11151847e-23, sim_result_force[1], 2e-24_f64);
         assert_approx_eq!(-3.11151847e-23, sim_result_force[2], 2e-24_f64);
+    }
+
+    #[test]
+    fn test_apply_dipole_force_and_gradient_system() {
+        let mut test_world = World::new();
+
+        test_world.register::<DipoleLightIndex>();
+        test_world.register::<DipoleLight>();
+        test_world.register::<Force>();
+        test_world.register::<LaserIntensityGradientSamplers>();
+        test_world.register::<AtomicDipoleTransition>();
+        test_world.register::<crate::atom::Position>();
+        test_world.register::<crate::laser::gaussian::GaussianBeam>();
+        test_world.register::<crate::laser::gaussian::GaussianRayleighRange>();
+        test_world.register::<crate::laser::gaussian::GaussianReferenceFrame>();
+
+        let power = 10.0;
+        let e_radius = 60.0e-6 / (2.0_f64.sqrt());
+
+        let gaussian_beam = GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: e_radius,
+            power: power,
+            direction: Vector3::x(),
+        };
+        test_world
+            .create_entity()
+            .with(gaussian_beam)
+            .with(dipole::dipole_beam::DipoleLight {
+                wavelength: 1064.0e-9,
+            })
+            .with(DipoleLightIndex {
+                index: 0,
+                initiated: true,
+            })
+            .with(laser::gaussian::GaussianReferenceFrame {
+                x_vector: Vector3::y(),
+                y_vector: Vector3::z(),
+                ellipticity: 0.0,
+            })
+            .with(laser::gaussian::make_gaussian_rayleigh_range(
+                &1064.0e-9,
+                &gaussian_beam,
+            ))
+            .build();
+        let gaussian_beam = GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: e_radius,
+            power: power,
+            direction: Vector3::y(),
+        };
+        test_world
+            .create_entity()
+            .with(gaussian_beam)
+            .with(dipole::dipole_beam::DipoleLight {
+                wavelength: 1064.0e-9,
+            })
+            .with(DipoleLightIndex {
+                index: 1,
+                initiated: true,
+            })
+            .with(laser::gaussian::GaussianReferenceFrame {
+                x_vector: Vector3::x(),
+                y_vector: Vector3::z(),
+                ellipticity: 0.0,
+            })
+            .with(laser::gaussian::make_gaussian_rayleigh_range(
+                &1064.0e-9,
+                &gaussian_beam,
+            ))
+            .build();
+
+        let transition = AtomicDipoleTransition::strontium();
+        let atom1 = test_world
+            .create_entity()
+            .with(crate::atom::Position {
+                pos: Vector3::new(-1.0e-4, -1.0e-4, -2.0e-4),
+            })
+            .with(Force {
+                force: Vector3::new(0.0, 0.0, 0.0),
+            })
+            .with(LaserIntensityGradientSamplers {
+                contents: [dipole::intensity_gradient::LaserIntensityGradientSampler::default();
+                    crate::dipole::DIPOLE_BEAM_LIMIT],
+            })
+            .with(transition)
+            .build();
+        let mut grad_system = dipole::intensity_gradient::SampleLaserIntensityGradientSystem;
+        let mut force_system = ApplyDipoleForceSystem;
+        grad_system.run_now(&test_world.res);
+        test_world.maintain();
+        force_system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<Force>();
+        let grad_sampler_storage = test_world.read_storage::<LaserIntensityGradientSamplers>();
+        let sim_result_force = sampler_storage.get(atom1).expect("Entity not found!").force;
+        let _sim_result_grad = grad_sampler_storage
+            .get(atom1)
+            .expect("Entity not found!")
+            .contents;
+        //println!("force is: {}", sim_result_force);
+        //println!("gradient 1 is: {}", sim_result_grad[0].gradient);
+        //println!("gradient 2 is: {}", sim_result_grad[1].gradient);
+
+        assert_approx_eq!(
+            0.00000000000000000000000000000000012747566586448897,
+            sim_result_force[0],
+            3e-46_f64
+        );
+        assert_approx_eq!(
+            0.00000000000000000000000000000000012747566586448897,
+            sim_result_force[1],
+            2e-46_f64
+        );
+        assert_approx_eq!(
+            0.0000000000000000000000000000000005101243283409891,
+            sim_result_force[2],
+            2e-46_f64
+        );
     }
 }

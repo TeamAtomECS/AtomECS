@@ -40,7 +40,7 @@ fn main() {
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel_dipole_red_xodt_gravity".to_string(), 100),
+        file::new::<Velocity, Text>("vel_dipole_red_xodt_gravity.txt".to_string(), 100),
         "",
         &[],
     );
@@ -70,7 +70,7 @@ fn main() {
         })
         .build();
 
-    let detuning = -0.12; //MHz
+    let detuning = -0.14; //MHz
     let power = 0.01; //W total power of all Lasers together
     let radius = 1.0e-2 / (2.0 * 2.0_f64.sqrt()); // 10mm 1/e^2 diameter
 
@@ -167,7 +167,7 @@ fn main() {
     // END MOT part
 
     // Create dipole laser.
-    let power = 10.;
+    let power = 10.0;
     let e_radius = 100.0e-6 / (2.0_f64.sqrt());
 
     let gaussian_beam = GaussianBeam {
@@ -215,11 +215,10 @@ fn main() {
             &gaussian_beam,
         ))
         .build();
-
     // creating the entity that represents the source
     //
     // contains a central creator
-    let number_to_emit = 1_000;
+    let number_to_emit = 300;
     let size_of_cube = 1.0e-4;
     let speed = 0.01; // m/s
 
@@ -241,7 +240,7 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.add_resource(Timestep { delta: 1.0e-5 });
 
     //enable gravity
     world.add_resource(lib::gravity::ApplyGravityOption);
@@ -252,7 +251,7 @@ fn main() {
             pos: Vector3::new(0.0, 0.0, 0.0),
         })
         .with(Cuboid {
-            half_width: Vector3::new(0.001, 0.001, 0.001),
+            half_width: Vector3::new(0.0005, 0.0005, 0.0005),
         })
         .with(SimulationVolume {
             volume_type: VolumeType::Inclusive,
@@ -275,7 +274,7 @@ fn main() {
     let mut switcher_system =
         dipole::transition_switcher::AttachAtomicDipoleTransitionToAtomsSystem;
     switcher_system.run_now(&world.res);
-    for _i in 0..30_000 {
+    for _i in 0..20_000 {
         dispatcher.dispatch(&mut world.res);
         ramp_down_system.run_now(&world.res);
         world.maintain();
@@ -283,7 +282,7 @@ fn main() {
     let mut delete_beams_system = dipole::transition_switcher::DisableMOTBeamsSystem;
     delete_beams_system.run_now(&world.res);
     println!("Switched from MOT to Dipole setup");
-    for _i in 0..40_000 {
+    for _i in 0..140_000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }

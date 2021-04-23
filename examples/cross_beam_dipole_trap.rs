@@ -2,6 +2,10 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
+use atomecs::laser::cooling::CoolingLight;
+use atomecs::laser::force::EmissionForceOption;
+use atomecs::laser::photons_scattered::ScatteringFluctuationsOption;
+use atomecs::magnetic::quadrupole::QuadrupoleField3D;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::central_creator::CentralCreator;
 use lib::atom_sources::emit::AtomNumberToEmit;
@@ -56,6 +60,108 @@ fn main() {
             name: format!("{}", "cross_beam_basic_heating_escape"),
         })
         .build();
+
+    world
+        .create_entity()
+        .with(QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
+        .with(Position {
+            pos: Vector3::new(0.0, 0.0, 0.0e-6),
+        })
+        .build();
+
+    let detuning = -20.0; //MHz
+    let power = 0.01; //W total power of all Lasers together
+    let radius = 1.0e-2 / (2.0 * 2.0_f64.sqrt()); // 10mm 1/e^2 diameter
+
+    // Horizontal beams along z
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power / 6.0,
+            direction: Vector3::z(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::strontium_red(),
+            detuning,
+            -1,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power / 6.0,
+            direction: -Vector3::z(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::strontium_red(),
+            detuning,
+            -1,
+        ))
+        .build();
+
+    // Angled vertical beams
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power / 6.,
+            direction: Vector3::new(1.0, 1.0, 0.0).normalize(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::strontium_red(),
+            detuning,
+            1,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power / 6.,
+            direction: Vector3::new(1.0, -1.0, 0.0).normalize(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::strontium_red(),
+            detuning,
+            1,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power / 6.,
+            direction: Vector3::new(-1.0, 1.0, 0.0).normalize(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::strontium_red(),
+            detuning,
+            1,
+        ))
+        .build();
+    world
+        .create_entity()
+        .with(GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: radius,
+            power: power / 6.,
+            direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
+        })
+        .with(CoolingLight::for_species(
+            AtomicTransition::strontium_red(),
+            detuning,
+            1,
+        ))
+        .build();
+    world.add_resource(EmissionForceOption::default());
+    world.add_resource(ScatteringFluctuationsOption::default());
 
     // Create dipole laser.
     let power = 10.0;
@@ -139,7 +245,7 @@ fn main() {
             pos: Vector3::new(0.0, 0.0, 0.0),
         })
         .with(Cuboid {
-            half_width: Vector3::new(0.01, 0.01, 0.01), //(0.1, 0.01, 0.01)
+            half_width: Vector3::new(0.0005, 0.0005, 0.0005), //(0.1, 0.01, 0.01)
         })
         .with(SimulationVolume {
             volume_type: VolumeType::Inclusive,
