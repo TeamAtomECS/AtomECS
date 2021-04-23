@@ -81,8 +81,13 @@ impl CollisionBox<'_> {
         let mut num_collisions_left: f64 = self.expected_collision_number;
 
         if num_collisions_left > params.collision_limit {
-            panic!("Number of collisions in a box in a single frame exceeds limit. Number of collisions={}, limit={}.", num_collisions_left, params.collision_limit);
+            panic!("Number of collisions in a box in a single frame exceeds limit. Number of collisions={}, limit={}, particles={}.", num_collisions_left, params.collision_limit, self.particle_number);
         }
+
+        // To check: I'm sometimes finding that a box should have many more collisions than there are particles.
+        // From theory, box should thermalise after ~3 collisions per particle.
+        // Let's let each particle collide approx 3 times with every other.
+        num_collisions_left = num_collisions_left.min((3 * self.particle_number.pow(2)) as f64);
 
         while num_collisions_left > 0.0 {
             let collide = if num_collisions_left > 1.0 {
