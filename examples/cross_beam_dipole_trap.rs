@@ -10,6 +10,7 @@ use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::central_creator::CentralCreator;
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
+use lib::constant;
 use lib::destructor::ToBeDestroyed;
 use lib::dipole;
 use lib::ecs;
@@ -81,6 +82,10 @@ fn main() {
             e_radius: radius,
             power: power / 6.0,
             direction: Vector3::z(),
+            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
+                &(constant::C / AtomicTransition::strontium_red().frequency),
+                &radius,
+            ),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
@@ -95,6 +100,10 @@ fn main() {
             e_radius: radius,
             power: power / 6.0,
             direction: -Vector3::z(),
+            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
+                &(constant::C / AtomicTransition::strontium_red().frequency),
+                &radius,
+            ),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
@@ -111,6 +120,10 @@ fn main() {
             e_radius: radius,
             power: power / 6.,
             direction: Vector3::new(1.0, 1.0, 0.0).normalize(),
+            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
+                &(constant::C / AtomicTransition::strontium_red().frequency),
+                &radius,
+            ),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
@@ -125,6 +138,10 @@ fn main() {
             e_radius: radius,
             power: power / 6.,
             direction: Vector3::new(1.0, -1.0, 0.0).normalize(),
+            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
+                &(constant::C / AtomicTransition::strontium_red().frequency),
+                &radius,
+            ),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
@@ -139,6 +156,10 @@ fn main() {
             e_radius: radius,
             power: power / 6.,
             direction: Vector3::new(-1.0, 1.0, 0.0).normalize(),
+            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
+                &(constant::C / AtomicTransition::strontium_red().frequency),
+                &radius,
+            ),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
@@ -153,6 +174,10 @@ fn main() {
             e_radius: radius,
             power: power / 6.,
             direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
+            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
+                &(constant::C / AtomicTransition::strontium_red().frequency),
+                &radius,
+            ),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
@@ -172,6 +197,7 @@ fn main() {
         e_radius: e_radius,
         power: power,
         direction: Vector3::x(),
+        rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
     };
     world
         .create_entity()
@@ -184,10 +210,6 @@ fn main() {
             y_vector: Vector3::z(),
             ellipticity: 0.0,
         })
-        .with(laser::gaussian::make_gaussian_rayleigh_range(
-            &1064.0e-9,
-            &gaussian_beam,
-        ))
         .build();
 
     let gaussian_beam = GaussianBeam {
@@ -195,6 +217,7 @@ fn main() {
         e_radius: e_radius,
         power: power,
         direction: Vector3::y(),
+        rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
     };
     world
         .create_entity()
@@ -207,10 +230,6 @@ fn main() {
             y_vector: Vector3::z(),
             ellipticity: 0.0,
         })
-        .with(laser::gaussian::make_gaussian_rayleigh_range(
-            &1064.0e-9,
-            &gaussian_beam,
-        ))
         .build();
     // creating the entity that represents the source
     //

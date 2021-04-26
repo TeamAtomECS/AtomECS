@@ -6,6 +6,7 @@ use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
 use lib::atom_sources::oven::{OvenAperture, OvenBuilder};
+use lib::constant;
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
@@ -66,6 +67,10 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::z(),
+            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
+                &(constant::C / AtomicTransition::strontium().frequency),
+                &radius,
+            ),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -80,6 +85,10 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: -Vector3::z(),
+            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
+                &(constant::C / AtomicTransition::strontium().frequency),
+                &radius,
+            ),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -96,6 +105,10 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(1.0, 1.0, 0.0).normalize(),
+            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
+                &(constant::C / AtomicTransition::strontium().frequency),
+                &radius,
+            ),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -110,6 +123,10 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(1.0, -1.0, 0.0).normalize(),
+            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
+                &(constant::C / AtomicTransition::strontium().frequency),
+                &radius,
+            ),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -124,6 +141,10 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(-1.0, 1.0, 0.0).normalize(),
+            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
+                &(constant::C / AtomicTransition::strontium().frequency),
+                &radius,
+            ),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -138,6 +159,10 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
+            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
+                &(constant::C / AtomicTransition::strontium().frequency),
+                &radius,
+            ),
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),

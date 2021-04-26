@@ -180,6 +180,7 @@ pub mod tests {
                 intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
+                rayleigh_range: 1.0,
             })
             .build();
 

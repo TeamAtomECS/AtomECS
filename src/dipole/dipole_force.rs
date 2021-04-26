@@ -168,7 +168,6 @@ pub mod tests {
         test_world.register::<AtomicDipoleTransition>();
         test_world.register::<crate::atom::Position>();
         test_world.register::<crate::laser::gaussian::GaussianBeam>();
-        test_world.register::<crate::laser::gaussian::GaussianRayleighRange>();
         test_world.register::<crate::laser::gaussian::GaussianReferenceFrame>();
 
         let power = 10.0;
@@ -179,6 +178,7 @@ pub mod tests {
             e_radius: e_radius,
             power: power,
             direction: Vector3::x(),
+            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
         };
         test_world
             .create_entity()
@@ -195,16 +195,13 @@ pub mod tests {
                 y_vector: Vector3::z(),
                 ellipticity: 0.0,
             })
-            .with(laser::gaussian::make_gaussian_rayleigh_range(
-                &1064.0e-9,
-                &gaussian_beam,
-            ))
             .build();
         let gaussian_beam = GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: e_radius,
             power: power,
             direction: Vector3::y(),
+            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
         };
         test_world
             .create_entity()
@@ -221,10 +218,6 @@ pub mod tests {
                 y_vector: Vector3::z(),
                 ellipticity: 0.0,
             })
-            .with(laser::gaussian::make_gaussian_rayleigh_range(
-                &1064.0e-9,
-                &gaussian_beam,
-            ))
             .build();
 
         let transition = AtomicDipoleTransition::strontium();

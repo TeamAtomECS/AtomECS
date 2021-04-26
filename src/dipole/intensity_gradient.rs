@@ -9,7 +9,6 @@ extern crate specs;
 
 use crate::atom::Position;
 use crate::dipole::dipole_beam::DipoleLightIndex;
-use crate::laser::gaussian::GaussianRayleighRange;
 use crate::laser::gaussian::{
     get_gaussian_beam_intensity_gradient, GaussianBeam, GaussianReferenceFrame,
 };
@@ -54,7 +53,6 @@ impl<'a> System<'a> for SampleLaserIntensityGradientSystem {
     type SystemData = (
         ReadStorage<'a, DipoleLightIndex>,
         ReadStorage<'a, GaussianBeam>,
-        ReadStorage<'a, GaussianRayleighRange>,
         ReadStorage<'a, GaussianReferenceFrame>,
         ReadStorage<'a, Position>,
         WriteStorage<'a, LaserIntensityGradientSamplers>,
@@ -62,17 +60,15 @@ impl<'a> System<'a> for SampleLaserIntensityGradientSystem {
 
     fn run(
         &mut self,
-        (dipole_index, gaussian, rayleigh_range, reference_frame, pos, mut sampler): Self::SystemData,
+        (dipole_index, gaussian, reference_frame, pos, mut sampler): Self::SystemData,
     ) {
         use rayon::prelude::*;
         use specs::ParJoin;
 
-        for (index, beam, rayleigh, reference) in
-            (&dipole_index, &gaussian, &rayleigh_range, &reference_frame).join()
-        {
+        for (index, beam, reference) in (&dipole_index, &gaussian, &reference_frame).join() {
             (&pos, &mut sampler).par_join().for_each(|(pos, sampler)| {
                 sampler.contents[index.index].gradient =
-                    get_gaussian_beam_intensity_gradient(beam, pos, rayleigh, reference);
+                    get_gaussian_beam_intensity_gradient(beam, pos, reference);
             });
         }
     }
@@ -95,7 +91,6 @@ pub mod tests {
         test_world.register::<GaussianBeam>();
         test_world.register::<Position>();
         test_world.register::<LaserIntensityGradientSamplers>();
-        test_world.register::<GaussianRayleighRange>();
         test_world.register::<GaussianReferenceFrame>();
 
         let beam = GaussianBeam {
@@ -103,6 +98,10 @@ pub mod tests {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: 70.71067812e-6,
             power: 100.0,
+            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
+                &1064.0e-9,
+                &70.71067812e-6,
+            ),
         };
 
         test_world
@@ -112,9 +111,6 @@ pub mod tests {
                 initiated: true,
             })
             .with(beam)
-            .with(crate::laser::gaussian::make_gaussian_rayleigh_range(
-                &1064.0e-9, &beam,
-            ))
             .with(GaussianReferenceFrame {
                 x_vector: Vector3::x(),
                 y_vector: Vector3::y(),
@@ -148,7 +144,6 @@ pub mod tests {
                 &Position {
                     pos: Vector3::new(10.0e-6, 0.0, 30.0e-6),
                 },
-                &crate::laser::gaussian::make_gaussian_rayleigh_range(&1064.0e-9, &beam),
                 &GaussianReferenceFrame {
                     x_vector: Vector3::x(),
                     y_vector: Vector3::y(),
@@ -180,7 +175,6 @@ pub mod tests {
         test_world.register::<GaussianBeam>();
         test_world.register::<Position>();
         test_world.register::<LaserIntensityGradientSamplers>();
-        test_world.register::<GaussianRayleighRange>();
         test_world.register::<GaussianReferenceFrame>();
 
         let beam = GaussianBeam {
@@ -188,6 +182,10 @@ pub mod tests {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: 70.71067812e-6,
             power: 100.0,
+            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
+                &1064.0e-9,
+                &70.71067812e-6,
+            ),
         };
 
         test_world
@@ -197,9 +195,6 @@ pub mod tests {
                 initiated: true,
             })
             .with(beam)
-            .with(crate::laser::gaussian::make_gaussian_rayleigh_range(
-                &1064.0e-9, &beam,
-            ))
             .with(GaussianReferenceFrame {
                 x_vector: Vector3::y(),
                 y_vector: Vector3::z(),

@@ -193,6 +193,7 @@ pub mod tests {
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;
+    use crate::laser::gaussian;
     use nalgebra::Vector3;
 
     /// Tests the correct implementation of the `CalculateAbsorptionForceSystem`
@@ -226,6 +227,7 @@ pub mod tests {
                 intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
+                rayleigh_range: gaussian::calculate_rayleigh_range(&wavelength, &2.0),
             })
             .build();
 

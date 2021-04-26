@@ -65,6 +65,7 @@ pub mod tests {
                 Vector3::new(-1.0, 0.0, 0.0),
                 intensity,
                 0.01,
+                780.0e-9,
             ))
             .build();
 
