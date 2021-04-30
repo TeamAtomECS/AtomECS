@@ -71,7 +71,7 @@ fn main() {
         })
         .build();
 
-    let detuning = -0.14; //MHz
+    let detuning = -0.2; //MHz
     let power = 0.01; //W total power of all Lasers together
     let radius = 1.0e-2 / (2.0 * 2.0_f64.sqrt()); // 10mm 1/e^2 diameter
 
@@ -237,7 +237,7 @@ fn main() {
     // creating the entity that represents the source
     //
     // contains a central creator
-    let number_to_emit = 300;
+    let number_to_emit = 1000;
     let size_of_cube = 1.0e-4;
     let speed = 0.01; // m/s
 
@@ -278,7 +278,7 @@ fn main() {
         .build();
 
     // Run the simulation for a number of steps.
-    for _i in 0..20_000 {
+    for _i in 0..2_000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
@@ -293,15 +293,16 @@ fn main() {
     let mut switcher_system =
         dipole::transition_switcher::AttachAtomicDipoleTransitionToAtomsSystem;
     switcher_system.run_now(&world.res);
-    for _i in 0..20_000 {
+    for _i in 0..10_000 {
         dispatcher.dispatch(&mut world.res);
         ramp_down_system.run_now(&world.res);
         world.maintain();
     }
+    world.add_resource(EmissionForceOption::Off);
     let mut delete_beams_system = dipole::transition_switcher::DisableMOTBeamsSystem;
     delete_beams_system.run_now(&world.res);
     println!("Switched from MOT to Dipole setup");
-    for _i in 0..140_000 {
+    for _i in 0..20_000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }

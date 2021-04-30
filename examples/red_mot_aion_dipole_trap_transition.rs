@@ -36,12 +36,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos_dipole_aion_fine.txt".to_string(), 100),
+        file::new::<Position, Text>("pos_dipole_aion_low.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel_dipole_aion_fine.txt".to_string(), 100),
+        file::new::<Velocity, Text>("vel_dipole_aion_low.txt".to_string(), 100),
         "",
         &[],
     );
@@ -71,7 +71,7 @@ fn main() {
         })
         .build();
 
-    let detuning = -0.12; //MHz
+    let detuning = -0.2; //MHz
     let power = 0.01; //W total power of all Lasers together
     let radius = 1.0e-2 / (2.0 * 2.0_f64.sqrt()); // 10mm 1/e^2 diameter
 
@@ -192,7 +192,7 @@ fn main() {
     // END MOT part
 
     // Create dipole laser.
-    let power = 10.;
+    let power = 1.;
     let e_radius = 100.0e-6 / (2.0_f64.sqrt());
 
     let gaussian_beam = GaussianBeam {
@@ -259,7 +259,7 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-7 });
+    world.add_resource(Timestep { delta: 1.0e-5 });
 
     //enable gravity
     world.add_resource(lib::gravity::ApplyGravityOption);
@@ -278,7 +278,7 @@ fn main() {
         .build();
 
     // Run the simulation for a number of steps.
-    for _i in 0..200_000 {
+    for _i in 0..2_000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }
@@ -293,15 +293,16 @@ fn main() {
     let mut switcher_system =
         dipole::transition_switcher::AttachAtomicDipoleTransitionToAtomsSystem;
     switcher_system.run_now(&world.res);
-    for _i in 0..300_000 {
+    for _i in 0..10_000 {
         dispatcher.dispatch(&mut world.res);
         ramp_down_system.run_now(&world.res);
         world.maintain();
     }
+    world.add_resource(EmissionForceOption::Off);
     let mut delete_beams_system = dipole::transition_switcher::DisableMOTBeamsSystem;
     delete_beams_system.run_now(&world.res);
     println!("Switched from MOT to Dipole setup");
-    for _i in 0..400_000 {
+    for _i in 0..20_000 {
         dispatcher.dispatch(&mut world.res);
         world.maintain();
     }

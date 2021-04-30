@@ -98,7 +98,7 @@ pub enum EmissionForceOption {
 impl Default for EmissionForceOption {
     fn default() -> Self {
         EmissionForceOption::On(EmissionForceConfiguration {
-            explicit_threshold: 5,
+            explicit_threshold: 0,
         })
     }
 }
