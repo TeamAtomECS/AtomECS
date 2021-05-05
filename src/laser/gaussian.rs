@@ -63,6 +63,38 @@ impl GaussianBeam {
 		direction: Vector3<f64>,
 		peak_intensity: f64,
 		e_radius: f64,
+	) -> Self {
+		let std = e_radius / 2.0_f64.powf(0.5);
+		let power = 2.0 * std::f64::consts::PI * std.powi(2) * peak_intensity;
+		GaussianBeam {
+			intersection: intersection,
+			direction: direction,
+			power: power,
+			e_radius: e_radius,
+			rayleigh_range: f64::INFINITY,
+		}
+	}
+}
+
+impl GaussianBeam {
+	/// Create a GaussianBeam component by specifying the peak intensity, rather than power.
+	///
+	/// # Arguments:
+	///
+	/// `intersection`: as per component.
+	///
+	/// `direction`: as per component.
+	///
+	/// `peak_intensity`: peak intensity in units of W/m^2.
+	///
+	/// `e_radius`: radius of beam in units of m.
+	///
+	/// `wavelength`: wavelength of the electromagnetic light
+	pub fn from_peak_intensity_with_rayleigh_range(
+		intersection: Vector3<f64>,
+		direction: Vector3<f64>,
+		peak_intensity: f64,
+		e_radius: f64,
 		wavelength: f64,
 	) -> Self {
 		let std = e_radius / 2.0_f64.powf(0.5);

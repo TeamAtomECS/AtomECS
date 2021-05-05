@@ -3,7 +3,6 @@
 extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
-use lib::constant;
 use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
@@ -89,10 +88,7 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, 0.0, 1.0),
-            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::rubidium().frequency),
-                &radius,
-            ),
+            rayleigh_range: f64::INFINITY,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -107,10 +103,7 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, 0.0, -1.0),
-            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::rubidium().frequency),
-                &radius,
-            ),
+            rayleigh_range: f64::INFINITY,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -125,10 +118,7 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(-1.0, 0.0, 0.0),
-            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::rubidium().frequency),
-                &radius,
-            ),
+            rayleigh_range: f64::INFINITY,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -143,10 +133,7 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(1.0, 0.0, 0.0),
-            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::rubidium().frequency),
-                &radius,
-            ),
+            rayleigh_range: f64::INFINITY,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -161,10 +148,7 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, 1.0, 0.0),
-            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::rubidium().frequency),
-                &radius,
-            ),
+            rayleigh_range: f64::INFINITY,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -179,10 +163,7 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, -1.0, 0.0),
-            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::rubidium().frequency),
-                &radius,
-            ),
+            rayleigh_range: f64::INFINITY,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),

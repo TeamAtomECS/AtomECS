@@ -3,7 +3,6 @@
 extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
-use lib::constant;
 use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
@@ -103,7 +102,6 @@ fn main() {
             Vector3::new(0.0, 0.0, 1.0),
             intensity,
             radius,
-            constant::C / recoil_limited_transition().frequency,
         ))
         .with(CoolingLight::for_species(
             recoil_limited_transition(),
@@ -118,7 +116,6 @@ fn main() {
             Vector3::new(0.0, 0.0, -1.0),
             intensity,
             radius,
-            constant::C / recoil_limited_transition().frequency,
         ))
         .with(CoolingLight::for_species(
             recoil_limited_transition(),
@@ -133,7 +130,6 @@ fn main() {
             Vector3::new(1.0, 0.0, 0.0),
             intensity,
             radius,
-            constant::C / recoil_limited_transition().frequency,
         ))
         .with(CoolingLight::for_species(
             recoil_limited_transition(),
@@ -148,7 +144,6 @@ fn main() {
             Vector3::new(-1.0, 0.0, 0.0),
             intensity,
             radius,
-            constant::C / recoil_limited_transition().frequency,
         ))
         .with(CoolingLight::for_species(
             recoil_limited_transition(),
@@ -163,7 +158,6 @@ fn main() {
             Vector3::new(0.0, 1.0, 0.0),
             intensity,
             radius,
-            constant::C / recoil_limited_transition().frequency,
         ))
         .with(CoolingLight::for_species(
             recoil_limited_transition(),
@@ -178,7 +172,6 @@ fn main() {
             Vector3::new(0.0, -1.0, 0.0),
             intensity,
             radius,
-            constant::C / recoil_limited_transition().frequency,
         ))
         .with(CoolingLight::for_species(
             recoil_limited_transition(),

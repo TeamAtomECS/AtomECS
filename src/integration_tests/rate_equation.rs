@@ -60,7 +60,7 @@ pub mod tests {
                 1,
             ))
             .with(CoolingLightIndex::default())
-            .with(GaussianBeam::from_peak_intensity(
+            .with(GaussianBeam::from_peak_intensity_with_rayleigh_range(
                 Vector3::new(0.0, 0.0, 0.0),
                 Vector3::new(-1.0, 0.0, 0.0),
                 intensity,
