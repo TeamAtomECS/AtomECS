@@ -2,6 +2,7 @@
 
 extern crate specs;
 use crate::atom::AtomicTransition;
+use crate::ramp::Lerp;
 use serde::{Deserialize, Serialize};
 use specs::{
 	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System, WriteStorage,
@@ -58,6 +59,18 @@ impl CoolingLight {
 }
 impl Component for CoolingLight {
 	type Storage = HashMapStorage<Self>;
+}
+/// Implementation of lerp to allow ramping of cooling light
+/// Only frequency can be ramped - polarisation is constant
+impl Lerp<CoolingLight> for CoolingLight {
+	fn lerp(&self, b: &CoolingLight, amount: f64) -> Self {
+		let mut cooling_light = self.clone();
+		let frequency =
+			cooling_light.frequency() + amount * (b.frequency() - cooling_light.frequency());
+		let wavelength = constant::C / frequency;
+		cooling_light.wavelength = wavelength;
+		return cooling_light;
+	}
 }
 
 /// An index that uniquely identifies this cooling light in the interaction list for each atom.
