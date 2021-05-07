@@ -154,7 +154,7 @@ fn main() {
 
     // Create an oven.
     // The oven will eject atoms on the first frame and then be deleted.
-    let number_to_emit = 3200_000;
+    let number_to_emit = 3_200_000;
     world
         .create_entity()
         .with(
@@ -185,7 +185,7 @@ fn main() {
     world.add_resource(EmissionForceOption::default());
     //enable gravity
     world.add_resource(lib::gravity::ApplyGravityOption);
-
+    //enable the fluctuations in Photon numbers
     world.add_resource(ScatteringFluctuationsOption::default());
 
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
