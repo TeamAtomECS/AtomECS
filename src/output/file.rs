@@ -118,6 +118,30 @@ where
     }
 }
 
+pub struct SerdeJson {}
+impl<C, W> Format<C, W> for SerdeJson
+where
+    C: Component + serde::Serialize + Clone,
+    W: Write,
+{
+    fn write_frame_header(writer: &mut W, step: u64, atom_number: usize) -> Result<(), io::Error> {
+        write!(writer, "step-{:?}, {:?}\n", step, atom_number)?;
+        Ok(())
+    }
+
+    fn write_atom(writer: &mut W, atom: Entity, data: C) -> Result<(), io::Error> {
+        let serialized = serde_json::to_string(&data).unwrap();
+        write!(
+            writer,
+            "{:?},{:?}, {}\n",
+            atom.gen().id(),
+            atom.id(),
+            serialized
+        )?;
+        Ok(())
+    }
+}
+
 type Endianness = LittleEndian;
 
 pub trait BinaryConversion {
