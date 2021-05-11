@@ -14,6 +14,8 @@ pub mod grid;
 pub mod quadrupole;
 pub mod uniform;
 pub mod zeeman;
+pub mod dipole;
+
 use std::fmt;
 
 /// A component that stores the magnetic field at an entity's location.
@@ -142,9 +144,14 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		&["magnetics_uniform", INTEGRATE_POSITION_SYSTEM_NAME],
 	);
 	builder.add(
+		dipole::SampleDipoleFieldSystem,
+		"magnetics_dipole",
+		&["magnetics_grid"],
+	);
+	builder.add(
 		CalculateMagneticFieldMagnitudeSystem,
 		"magnetics_magnitude",
-		&["magnetics_grid"],
+		&["magnetics_dipole"],
 	);
 	builder.add(
 		AttachFieldSamplersToNewlyCreatedAtomsSystem,
@@ -168,6 +175,7 @@ pub fn register_components(world: &mut World) {
 	world.register::<uniform::UniformMagneticField>();
 	world.register::<quadrupole::QuadrupoleField3D>();
 	world.register::<quadrupole::QuadrupoleField2D>();
+	world.register::<dipole::MagneticDipole>();
 	world.register::<MagneticFieldSampler>();
 	world.register::<grid::PrecalculatedMagneticFieldGrid>();
 }
