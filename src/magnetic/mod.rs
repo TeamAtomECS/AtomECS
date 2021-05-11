@@ -17,6 +17,7 @@ pub mod quadrupole;
 pub mod uniform;
 pub mod zeeman;
 pub mod dipole;
+pub mod wire;
 
 use std::fmt;
 
@@ -149,9 +150,14 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		&["magnetics_grid"],
 	);
 	builder.add(
+		wire::SampleWireFieldSystem,
+		"magnetics_wire",
+		&["magnetics_dipole"],
+	);
+	builder.add(
 		CalculateMagneticFieldMagnitudeSystem,
 		"magnetics_magnitude",
-		&["magnetics_dipole"],
+		&["magnetics_wire"],
 	);
 	builder.add(
 		AttachFieldSamplersToNewlyCreatedAtomsSystem,
@@ -176,6 +182,7 @@ pub fn register_components(world: &mut World) {
 	world.register::<quadrupole::QuadrupoleField3D>();
 	world.register::<quadrupole::QuadrupoleField2D>();
 	world.register::<dipole::MagneticDipole>();
+	world.register::<wire::MagneticWire>();
 	world.register::<MagneticFieldSampler>();
 	world.register::<grid::PrecalculatedMagneticFieldGrid>();
 }
