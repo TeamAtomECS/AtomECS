@@ -18,6 +18,7 @@ pub mod uniform;
 pub mod zeeman;
 pub mod dipole;
 pub mod wire;
+pub mod coil;
 
 use std::fmt;
 
@@ -155,9 +156,14 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		&["magnetics_dipole"],
 	);
 	builder.add(
+		coil::SampleCoilFieldSystem,
+		"magnetics_coil",
+		&["magnetics_wire"],
+	);
+	builder.add(
 		CalculateMagneticFieldMagnitudeSystem,
 		"magnetics_magnitude",
-		&["magnetics_wire"],
+		&["magnetics_coil"],
 	);
 	builder.add(
 		AttachFieldSamplersToNewlyCreatedAtomsSystem,
