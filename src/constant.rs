@@ -23,3 +23,6 @@ pub const AMU: f64 = 1.6605e-27;
 
 /// Speed of light in SI units of m/s
 pub const C: f64 = 2.998e8;
+
+/// Sqrt of 2
+pub const SQRT2: f64 = 1.41421356237;
