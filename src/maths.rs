@@ -1,11 +1,13 @@
 //! Mathematical utilities
 
+extern crate nalgebra;
+extern crate rand;
+
+use nalgebra::Vector3;
+use rand::Rng;
+
 use crate::constant::EXP;
 use crate::constant::PI;
-extern crate rand;
-use rand::Rng;
-extern crate nalgebra;
-use nalgebra::Vector3;
 
 /// Get miniminum distance between a point and a line.
 ///
@@ -46,6 +48,22 @@ pub fn random_direction() -> Vector3<f64> {
 	//println!("{:?}",result);
 	result
 }
+
+/// Rational approximation for the the complete elliptic integral of the second kind.
+pub fn ellip_e_approx(x: f64) -> f64 {
+    let x2 = x.powi(2);
+    let g =
+        (-131072. + x2 * (172032. + x2 * (-67072. + x2 * (8512. + x2 * -336.))))
+        / (-131072. + x2 * (196608. + x2 * (-93696. + x2 * (16256. + x2 * -984.))));
+    PI / 2.0 * (1.0 - x2 / 4.0 * g)
+}
+
+/// Approximation for the the complete elliptic integral of the first kind.
+pub fn ellip_k_approx(x: f64) -> f64 {
+    let s = (1.0 - x.powi(2)).sqrt();
+    ((1.0 + s) * ellip_e_approx((1.0 - s) / (1.0 + s)) - ellip_e_approx(x)) / s
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
