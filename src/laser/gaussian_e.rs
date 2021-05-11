@@ -129,6 +129,41 @@ pub fn get_gaussian_e_field(beam: &LinearGaussianEBeam, pos: &Position) -> Compl
 
     Complex::new(
         beam.e_0 * real_amplitude.re * phase_factor.re,
-        beam.e_0 * phase_factor.im,
+        beam.e_0 * real_amplitude.re * phase_factor.im,
     )
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+
+    extern crate specs;
+    use assert_approx_eq::assert_approx_eq;
+
+    extern crate nalgebra;
+    use nalgebra::Vector3;
+
+    #[test]
+    fn test_get_gaussian_e_field() {
+        let beam = LinearGaussianEBeam::from_power(
+            Vector3::new(0.0, 0.0, 0.0),
+            Vector3::new(0.0, 0.0, 1.0),
+            Vector3::new(1.0, 0.0, 0.0),
+            1.0,
+            100.0e-6 / 2.0_f64.powf(0.5),
+            1064.0e-9,
+        );
+        let pos1 = Position {
+            pos: Vector3::new(10.0e-6, 20.0e-6, 30.0e-6),
+        };
+
+        let e_field: Complex<Vector3<f64>> = get_gaussian_e_field(&beam, &pos1);
+        assert_approx_eq!(e_field.re[0], 70182.09940488, 1e-6_f64);
+        assert_approx_eq!(e_field.re[1], 0.0, 1e-6_f64);
+        assert_approx_eq!(e_field.re[2], 0.0, 1e-6_f64);
+        assert_approx_eq!(e_field.im[0], 196233.6664737, 1e-6_f64);
+        assert_approx_eq!(e_field.im[1], 0.0, 1e-6_f64);
+        assert_approx_eq!(e_field.im[2], 0.0, 1e-6_f64);
+    }
 }
