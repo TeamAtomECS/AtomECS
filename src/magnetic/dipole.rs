@@ -77,3 +77,27 @@ impl<'a> System<'a> for SampleDipoleFieldSystem {
         }
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use assert_approx_eq::assert_approx_eq;
+    use nalgebra::Vector3;
+
+    use super::*;
+
+    extern crate nalgebra;
+
+    /// Tests the correct implementation of the computed dipole field.
+    #[test]
+    fn test_dipole_field() {
+        let location = Vector3::new(1.0 / 2f64.sqrt(), 0., 1.0 / 2f64.sqrt());
+        let position = Vector3::new(0., 0., 0.);
+        let moment = 1e7;
+        let direction = Vector3::z();
+        let field =
+            SampleDipoleFieldSystem::calculate_field(location, position, moment, direction);
+        assert_approx_eq!(field.x, 1.5);
+        assert_approx_eq!(field.y, 0.0);
+        assert_approx_eq!(field.z, 0.5);
+    }
+}
