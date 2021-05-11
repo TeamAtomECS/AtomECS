@@ -4,6 +4,7 @@ pub mod cooling;
 pub mod doppler;
 pub mod force;
 pub mod gaussian;
+pub mod gaussian_e;
 pub mod intensity;
 pub mod photons_scattered;
 pub mod rate;
