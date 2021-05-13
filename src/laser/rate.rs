@@ -144,7 +144,7 @@ pub mod tests {
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;
-    use nalgebra::Vector3;
+    use nalgebra::{Matrix3, Vector3};
 
     use crate::laser::intensity::LaserIntensitySamplers;
     use crate::laser::sampler::LaserDetuningSamplers;
@@ -205,6 +205,8 @@ pub mod tests {
             .with(MagneticFieldSampler {
                 field: field,
                 magnitude: 1.0,
+                gradient: Vector3::new(0.0, 0.0, 0.0),
+                jacobian: Matrix3::zeros(),
             })
             .with(RateCoefficients {
                 contents: [RateCoefficient::default(); crate::laser::COOLING_BEAM_LIMIT],

@@ -94,7 +94,7 @@ pub mod tests {
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;
-    use nalgebra::Vector3;
+    use nalgebra::{Matrix3, Vector3};
 
     #[test]
     fn test_calculate_zeeman_shift_system() {
@@ -108,6 +108,8 @@ pub mod tests {
             .with(MagneticFieldSampler {
                 field: Vector3::new(0.0, 0.0, 1.0),
                 magnitude: 1.0,
+                gradient: Vector3::new(0.0, 0.0, 0.0),
+                jacobian: Matrix3::zeros(),
             })
             .with(AtomicTransition::strontium())
             .with(ZeemanShiftSampler::default())
