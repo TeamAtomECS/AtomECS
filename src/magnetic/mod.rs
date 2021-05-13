@@ -10,6 +10,7 @@ use specs::{
 	VecStorage, World, WriteStorage,
 };
 
+pub mod force;
 pub mod grid;
 pub mod quadrupole;
 pub mod uniform;
