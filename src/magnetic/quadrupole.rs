@@ -6,7 +6,7 @@ use crate::atom::Position;
 
 use crate::magnetic::MagneticFieldSampler;
 use crate::ramp::Lerp;
-use nalgebra::{Unit, Vector3};
+use nalgebra::{Matrix3, Unit, Vector3};
 use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 
 /// A component representing a 3D quadrupole field.
@@ -81,6 +81,36 @@ impl<'a> System<'a> for Sample3DQuadrupoleFieldSystem {
                         quadrupole.direction,
                     );
                     sampler.field = sampler.field + quad_field;
+
+                    // calculate local jacobian
+                    let mut jacobian = Matrix3::<f64>::zeros();
+                    let delta = 1e-8;
+                    for i in 0..3 {
+                        let mut pos_plus_dr = pos.pos;
+                        let mut pos_minus_dr = pos.pos;
+                        pos_plus_dr[i] = pos_plus_dr[i] + delta;
+                        pos_minus_dr[i] = pos_minus_dr[i] - delta;
+
+                        let b_plus_dr = Sample3DQuadrupoleFieldSystem::calculate_field(
+                            pos_plus_dr,
+                            centre.pos,
+                            quadrupole.gradient,
+                            quadrupole.direction,
+                        );
+                        let b_minus_dr = Sample3DQuadrupoleFieldSystem::calculate_field(
+                            pos_minus_dr,
+                            centre.pos,
+                            quadrupole.gradient,
+                            quadrupole.direction,
+                        );
+
+                        let grad_plus = (b_plus_dr - quad_field) / delta;
+                        let grad_minus = (quad_field - b_minus_dr) / delta;
+                        let gradient = (grad_plus + grad_minus) / 2.0;
+
+                        jacobian.set_column(i, &gradient);
+                    }
+                    sampler.jacobian = sampler.jacobian + jacobian;
                 });
         }
     }
