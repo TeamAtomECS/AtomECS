@@ -26,8 +26,15 @@ impl<'a> System<'a> for ApplyMagneticForceSystem {
         ReadStorage<'a, MagneticDipole>,
     );
 
-    fn run(&mut self, (mut force, magnetic_field_sampler, dipole): Self::SystemData) {
+    fn run(&mut self, (mut forces, samplers, dipoles): Self::SystemData) {
         use rayon::prelude::*;
         use specs::ParJoin;
+
+        (&mut forces, &samplers, &dipoles)
+            .par_join()
+            .foreach(|mut force, sampler, dipole| {
+                force.force =
+                    force.force + dipole.mF * dipole.gF * constant::BOHRMAG * sampler.gradient;
+            });
     }
 }
