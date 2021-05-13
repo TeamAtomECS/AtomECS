@@ -82,9 +82,11 @@ impl<'a> System<'a> for Sample3DQuadrupoleFieldSystem {
                     );
                     sampler.field = sampler.field + quad_field;
 
-                    // calculate local jacobian
+                    // calculate local jacobian for magnetic field gradient
                     let mut jacobian = Matrix3::<f64>::zeros();
-                    let delta = 1e-8;
+                    let delta = 1e-9; // Is there a better way to choose this number?
+                                      // Strictly speaking to be accurate it depends on the length scale over which
+                                      // the magnetic field changes
                     for i in 0..3 {
                         let mut pos_plus_dr = pos.pos;
                         let mut pos_minus_dr = pos.pos;
@@ -209,7 +211,10 @@ pub mod tests {
 
     use super::*;
     extern crate nalgebra;
+    extern crate specs;
+    use assert_approx_eq::assert_approx_eq;
     use nalgebra::Vector3;
+    use specs::{Builder, RunNow, World};
 
     /// Tests the correct implementation of the quadrupole 3D field
     #[test]
@@ -220,6 +225,66 @@ pub mod tests {
         let field =
             Sample3DQuadrupoleFieldSystem::calculate_field(pos, centre, gradient, Vector3::z());
         assert_eq!(field, Vector3::new(1., 0., -2.));
+    }
+
+    #[test]
+
+    fn test_quadrupole_jacobian_calculation() {
+        let mut test_world = World::new();
+
+        test_world.register::<QuadrupoleField3D>();
+        test_world.register::<Position>();
+        test_world.register::<MagneticFieldSampler>();
+
+        let atom1 = test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(0.02, 0.01, -0.05),
+            })
+            .with(MagneticFieldSampler::default())
+            .build();
+
+        test_world
+            .create_entity()
+            .with(QuadrupoleField3D {
+                gradient: 1.0,
+                direction: Vector3::new(0.0, 0.0, 1.0),
+            })
+            .with(Position {
+                pos: Vector3::new(0.0, 0.0, 0.0),
+            })
+            .build();
+
+        test_world
+            .create_entity()
+            .with(QuadrupoleField3D {
+                gradient: 2.0,
+                direction: Vector3::new(1.0, 0.0, 1.0).normalize(),
+            })
+            .with(Position {
+                pos: Vector3::new(0.0, 0.0, 0.0),
+            })
+            .build();
+
+        let mut system = Sample3DQuadrupoleFieldSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<MagneticFieldSampler>();
+
+        let test_jacobian = sampler_storage
+            .get(atom1)
+            .expect("entity not found")
+            .jacobian;
+
+        assert_approx_eq!(test_jacobian[(0, 0)], 0.0, 1e-6_f64);
+        assert_approx_eq!(test_jacobian[(1, 0)], 0.0, 1e-6_f64);
+        assert_approx_eq!(test_jacobian[(2, 0)], -3.0, 1e-6_f64);
+        assert_approx_eq!(test_jacobian[(0, 1)], 0.0, 1e-6_f64);
+        assert_approx_eq!(test_jacobian[(1, 1)], 3.0, 1e-6_f64);
+        assert_approx_eq!(test_jacobian[(2, 1)], 0.0, 1e-6_f64);
+        assert_approx_eq!(test_jacobian[(0, 2)], -3.0, 1e-6_f64);
+        assert_approx_eq!(test_jacobian[(1, 2)], 0.0, 1e-6_f64);
+        assert_approx_eq!(test_jacobian[(2, 2)], -3.0, 1e-6_f64);
     }
 
     #[test]
