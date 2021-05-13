@@ -4,7 +4,7 @@ extern crate nalgebra;
 extern crate specs;
 use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
-use nalgebra::Vector3;
+use nalgebra::{Matrix3, Vector3};
 use specs::{
 	Component, DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System,
 	VecStorage, World, WriteStorage,
@@ -24,12 +24,20 @@ pub struct MagneticFieldSampler {
 
 	/// Magnitude of the magnetic field in units of Tesla
 	pub magnitude: f64,
+
+	/// Local gradient of the magnitude of the magnetic field in T/m
+	pub gradient: Vector3<f64>,
+
+	///Local jacobian of magnetic field
+	pub jacobian: Matrix3<f64>,
 }
 impl MagneticFieldSampler {
 	pub fn tesla(b_field: Vector3<f64>) -> Self {
 		MagneticFieldSampler {
 			field: b_field,
 			magnitude: b_field.norm(),
+			gradient: Vector3::new(0.0, 0.0, 0.0),
+			jacobian: Matrix3::zeros(),
 		}
 	}
 }
@@ -51,6 +59,8 @@ impl Default for MagneticFieldSampler {
 		MagneticFieldSampler {
 			field: Vector3::new(0.0, 0.0, 0.0),
 			magnitude: 0.0,
+			gradient: Vector3::new(0.0, 0.0, 0.0),
+			jacobian: Matrix3::zeros(),
 		}
 	}
 }
@@ -88,6 +98,28 @@ impl<'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
 			if sampler.magnitude.is_nan() {
 				sampler.magnitude = 0.0;
 			}
+		});
+	}
+}
+
+/// System that calculates the gradient of the magnitude of the magnetic field.
+///
+
+pub struct CalculateMagneticMagnitudeGradientSystem;
+
+impl<'a> System<'a> for CalculateMagneticMagnitudeGradientSystem {
+	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
+	fn run(&mut self, mut sampler: Self::SystemData) {
+		use rayon::prelude::*;
+		use specs::ParJoin;
+
+		(&mut sampler).par_join().for_each(|mut sampler| {
+			let mut gradient = Vector3::new(0.0, 0.0, 0.0);
+			for i in 0..3 {
+				gradient[i] =
+					(1.0 / (sampler.magnitude)) * (sampler.field.dot(&sampler.jacobian.column(i)));
+			}
+			sampler.gradient = gradient;
 		});
 	}
 }
