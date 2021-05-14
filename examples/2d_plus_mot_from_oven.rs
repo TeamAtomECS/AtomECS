@@ -2,6 +2,7 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
+use atomecs::output::file::SerdeJson;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
@@ -10,6 +11,7 @@ use lib::atom_sources::VelocityCap;
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
+use lib::integrator::INTEGRATE_VELOCITY_SYSTEM_NAME;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
@@ -40,6 +42,12 @@ fn main() {
         file::new::<Velocity, Text>("vel.txt".to_string(), 100),
         "",
         &[],
+    );
+
+    builder = builder.with(
+        file::new::<lib::atom::Force, SerdeJson>("force.txt".to_string(), 100),
+        "",
+        &[INTEGRATE_VELOCITY_SYSTEM_NAME],
     );
 
     let mut dispatcher = builder.build();

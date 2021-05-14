@@ -1,6 +1,7 @@
 //! Calculation of RateCoefficients for the rate equation approach
 
 extern crate rayon;
+extern crate serde;
 extern crate specs;
 
 use super::cooling::{CoolingLight, CoolingLightIndex};
@@ -9,10 +10,11 @@ use crate::laser::gaussian::GaussianBeam;
 use crate::laser::intensity::LaserIntensitySamplers;
 use crate::laser::sampler::LaserDetuningSamplers;
 use crate::magnetic::MagneticFieldSampler;
+use serde::Serialize;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 /// Represents the rate coefficient of the atom with respect to a specific CoolingLight entity
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
 pub struct RateCoefficient {
     /// rate coefficient in Hz
     pub rate: f64,
@@ -28,6 +30,7 @@ impl Default for RateCoefficient {
 }
 
 /// Component that holds a Vector of `RateCoefficient`
+#[derive(Clone, Copy, Serialize)]
 pub struct RateCoefficients {
     /// Vector of `RateCoefficient` where each entry corresponds to a different CoolingLight entity
     pub contents: [RateCoefficient; crate::laser::COOLING_BEAM_LIMIT],

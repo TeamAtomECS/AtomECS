@@ -1,11 +1,13 @@
 //! Calculation of the total detuning for specific atoms and CoolingLight entities
 
+extern crate serde;
 extern crate specs;
 use crate::atom::AtomicTransition;
 use crate::constant;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::doppler::DopplerShiftSamplers;
 use crate::magnetic::zeeman::ZeemanShiftSampler;
+use serde::Serialize;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 use std::f64;
 extern crate nalgebra;
@@ -13,7 +15,7 @@ extern crate nalgebra;
 const LASER_CACHE_SIZE: usize = 16;
 
 /// Tracks whether slots in the laser sampler arrays are currently used.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
 pub struct LaserSamplerMask {
     /// Marks whether a cooling light exists for this slot in the laser sampler array.
     pub filled: bool,
@@ -67,11 +69,11 @@ impl<'a> System<'a> for FillLaserSamplerMasksSystem {
 }
 
 /// Represents total detuning of the atom's transition with respect to each beam
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
 pub struct LaserDetuningSampler {
     /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_plus: f64,
-    /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of rad/s 
+    /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_minus: f64,
     /// Laser detuning of the pi transition with respect to laser beam, in SI units of rad/s
     pub detuning_pi: f64,
@@ -88,6 +90,7 @@ impl Default for LaserDetuningSampler {
 }
 
 /// Component that holds a vector of `LaserDetuningSampler`
+#[derive(Clone, Copy, Serialize)]
 pub struct LaserDetuningSamplers {
     /// List of `LaserDetuningSampler`s
     pub contents: [LaserDetuningSampler; crate::laser::COOLING_BEAM_LIMIT],
@@ -167,7 +170,9 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
                     |(detuning_sampler, doppler_samplers, zeeman_sampler, atom_info)| {
                         for i in 0..number_in_iteration {
                             let (index, cooling) = laser_array[i];
-                            let without_zeeman = 2.0 * constant::PI * (constant::C / cooling.wavelength - atom_info.frequency)
+                            let without_zeeman = 2.0
+                                * constant::PI
+                                * (constant::C / cooling.wavelength - atom_info.frequency)
                                 - doppler_samplers.contents[index.index].doppler_shift;
 
                             detuning_sampler.contents[index.index].detuning_sigma_plus =

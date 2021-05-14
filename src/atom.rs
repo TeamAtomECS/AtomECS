@@ -75,7 +75,7 @@ impl Component for InitialVelocity {
 /// Force applies to an entity, with respect to cartesian x,y,z axes.
 ///
 /// SI units (Newtons)
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Serialize)]
 pub struct Force {
 	/// force vector in 3D in units of N
 	pub force: Vector3<f64>,
