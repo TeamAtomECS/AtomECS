@@ -1,4 +1,5 @@
 //! Magnetic dipole force applied to an atom in an external magnetic field
+#![allow(non_snake_case)]
 
 use super::MagneticFieldSampler;
 use crate::atom::Force;
@@ -8,10 +9,8 @@ use specs::{Component, ReadStorage, System, VecStorage, WriteStorage};
 /// Component that represents the magnetic dipole moment of an atom.
 #[derive(Clone)]
 pub struct MagneticDipole {
-    /// Zeeman state mF
-    pub mF: f64,
-    /// Lande g factor
-    pub gF: f64,
+    /// Product of Zeeman state mF & lande g-factor
+    pub mFgF: f64,
 }
 
 impl Component for MagneticDipole {
@@ -33,8 +32,8 @@ impl<'a> System<'a> for ApplyMagneticForceSystem {
         (&mut forces, &samplers, &dipoles)
             .par_join()
             .for_each(|(mut force, sampler, dipole)| {
-                force.force =
-                    force.force + dipole.mF * dipole.gF * constant::BOHRMAG * sampler.gradient;
+                let dipole_force = -dipole.mFgF * constant::BOHRMAG * sampler.gradient;
+                force.force = force.force + dipole_force;
             });
     }
 }
@@ -65,7 +64,7 @@ pub mod tests {
                 gradient: Vector3::new(1.0, -0.5, 2.0),
                 jacobian: Matrix3::zeros(),
             })
-            .with(MagneticDipole { mF: -1.0, gF: -0.5 })
+            .with(MagneticDipole { mFgF: 0.5 })
             .with(Force::new())
             .build();
 
@@ -76,9 +75,9 @@ pub mod tests {
         let force = force_storage.get(atom1).expect("entity not found").force;
 
         let real_force = Vector3::new(
-            0.5 * constant::BOHRMAG,
-            -0.25 * constant::BOHRMAG,
-            1.0 * constant::BOHRMAG,
+            -0.5 * constant::BOHRMAG,
+            0.25 * constant::BOHRMAG,
+            -1.0 * constant::BOHRMAG,
         );
         assert_approx_eq!(force[0] * 1e24, real_force[0] * 1e24, 1e-10_f64);
         assert_approx_eq!(force[1] * 1e24, real_force[1] * 1e24, 1e-10_f64);
