@@ -180,6 +180,11 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		&["magnetics_grid"],
 	);
 	builder.add(
+		CalculateMagneticMagnitudeGradientSystem,
+		"magnetics_gradient",
+		&["magnetics_magnitude"],
+	);
+	builder.add(
 		AttachFieldSamplersToNewlyCreatedAtomsSystem,
 		"add_magnetic_field_samplers",
 		&[],
