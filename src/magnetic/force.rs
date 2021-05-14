@@ -49,7 +49,7 @@ pub mod tests {
     extern crate nalgebra;
     use nalgebra::{Matrix3, Vector3};
 
-    //Test correct force in 3d quadrupole field
+    //Test correct force in an external magnetic gradient
     #[test]
     fn test_apply_magnetic_force_system() {
         let mut test_world = World::new();
@@ -79,8 +79,8 @@ pub mod tests {
             0.25 * constant::BOHRMAG,
             -1.0 * constant::BOHRMAG,
         );
-        assert_approx_eq!(force[0] * 1e24, real_force[0] * 1e24, 1e-10_f64);
-        assert_approx_eq!(force[1] * 1e24, real_force[1] * 1e24, 1e-10_f64);
-        assert_approx_eq!(force[2] * 1e24, real_force[2] * 1e24, 1e-10_f64);
+        assert_approx_eq!(force[0], real_force[0], 1e-10_f64);
+        assert_approx_eq!(force[1], real_force[1], 1e-10_f64);
+        assert_approx_eq!(force[2], real_force[2], 1e-10_f64);
     }
 }
