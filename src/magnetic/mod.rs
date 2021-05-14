@@ -211,7 +211,9 @@ pub mod tests {
 	use super::*;
 	extern crate specs;
 	use crate::atom::Position;
-	use specs::{Builder, DispatcherBuilder, World};
+	use crate::magnetic::quadrupole::{QuadrupoleField3D, Sample3DQuadrupoleFieldSystem};
+	use assert_approx_eq::assert_approx_eq;
+	use specs::{Builder, DispatcherBuilder, RunNow, World};
 
 	/// Tests the correct implementation of the magnetics systems and dispatcher.
 	/// This is done by setting up a test world and ensuring that the magnetic systems perform the correct operations on test entities.
@@ -291,5 +293,60 @@ pub mod tests {
 
 		let samplers = test_world.read_storage::<MagneticFieldSampler>();
 		assert_eq!(samplers.contains(sampler_entity), true);
+	}
+
+	// Test correct calculation of magnetic field gradient
+	#[test]
+
+	fn test_magnetic_gradient_system() {
+		let mut test_world = World::new();
+
+		test_world.register::<QuadrupoleField3D>();
+		test_world.register::<Position>();
+		test_world.register::<MagneticFieldSampler>();
+
+		let atom1 = test_world
+			.create_entity()
+			.with(Position {
+				pos: Vector3::new(2.0, 1.0, -5.0),
+			})
+			.with(MagneticFieldSampler::default())
+			.build();
+
+		test_world
+			.create_entity()
+			.with(QuadrupoleField3D::gauss_per_cm(2.0, Vector3::z()))
+			.with(Position {
+				pos: Vector3::new(0.0, 0.0, 0.0),
+			})
+			.build();
+
+		test_world
+			.create_entity()
+			.with(QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
+			.with(Position {
+				pos: Vector3::new(0.0, 0.0, 0.0),
+			})
+			.build();
+
+		let mut quad_system = Sample3DQuadrupoleFieldSystem;
+		quad_system.run_now(&test_world.res);
+
+		let mut magnitude_system = CalculateMagneticFieldMagnitudeSystem;
+		magnitude_system.run_now(&test_world.res);
+		let mut gradient_system = CalculateMagneticMagnitudeGradientSystem;
+		gradient_system.run_now(&test_world.res);
+
+		test_world.maintain();
+		let sampler_storage = test_world.read_storage::<MagneticFieldSampler>();
+
+		let test_gradient = sampler_storage
+			.get(atom1)
+			.expect("entity not found")
+			.gradient;
+
+		assert_approx_eq!(test_gradient[0], 5.8554e-3, 1e-6_f64);
+		assert_approx_eq!(test_gradient[1], 2.9277e-3, 1e-6_f64);
+		assert_approx_eq!(test_gradient[2], -0.058554, 1e-6_f64);
 	}
 }
