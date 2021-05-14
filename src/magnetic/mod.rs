@@ -13,6 +13,7 @@ use specs::{
 pub mod force;
 pub mod grid;
 pub mod quadrupole;
+pub mod top;
 pub mod uniform;
 pub mod zeeman;
 use std::fmt;
@@ -172,9 +173,14 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		&["magnetics_2dquadrupole"],
 	);
 	builder.add(
+		top::TimeOrbitingPotentialSystem,
+		"magnetics_top",
+		&["magnetics_uniform"],
+	);
+	builder.add(
 		grid::SampleMagneticGridSystem,
 		"magnetics_grid",
-		&["magnetics_uniform", INTEGRATE_POSITION_SYSTEM_NAME],
+		&["magnetics_top", INTEGRATE_POSITION_SYSTEM_NAME],
 	);
 	builder.add(
 		CalculateMagneticFieldMagnitudeSystem,
