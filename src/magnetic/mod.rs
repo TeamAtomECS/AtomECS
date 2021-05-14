@@ -77,7 +77,9 @@ impl<'a> System<'a> for ClearMagneticFieldSamplerSystem {
 
 		(&mut sampler).par_join().for_each(|mut sampler| {
 			sampler.magnitude = 0.;
-			sampler.field = Vector3::new(0.0, 0.0, 0.0)
+			sampler.field = Vector3::new(0.0, 0.0, 0.0);
+			sampler.gradient = Vector3::new(0.0, 0.0, 0.0);
+			sampler.jacobian = Matrix3::zeros();
 		});
 	}
 }
