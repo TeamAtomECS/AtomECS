@@ -11,9 +11,8 @@ use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 
 use crate::atom::Position;
 use crate::magnetic::MagneticFieldSampler;
-use crate::maths::{ellip_e_approx, ellip_k_approx};
 
-/// A component representing a coil.
+/// A component representing a circular coil mad of a single loop.
 #[derive(Serialize, Deserialize)]
 pub struct MagneticCoil {
     /// Radius of the coil, in m.
@@ -69,15 +68,16 @@ impl SampleCoilFieldSystem {
         let q = (1.0 + alpha).powi(2) + beta.powi(2);
         let k = (4.0 * alpha / q).sqrt();
 
-        let ek = ellip_e_approx(k);
-        let kk = ellip_k_approx(k);
+        let ellips = ellip_ke(k, 1e-6);
+        let kk = ellips.0;
+        let ek = ellips.1;
 
         let bx = b0 / PI / q.sqrt() * (ek * (1.0 - alpha.powi(2) - beta.powi(2)) / (q - 4.0 * alpha)
             + kk);
         let br = b0 / PI / q.sqrt() * gamma * (ek * (1.0 + alpha.powi(2) + beta.powi(2)) / (q - 4.0 * alpha)
             - kk);
 
-        return bx * normal + br * er
+        return bx * normal + br * er;
     }
 }
 
@@ -108,13 +108,62 @@ impl<'a> System<'a> for SampleCoilFieldSystem {
     }
 }
 
+
+/// Computes the complete elliptic integrals of first and second kind.
+///
+/// Conventions for the argument are the same as in
+/// Carlson, B. C. (1995). "Numerical Computation of Real or Complex Elliptic Integrals". Numerical Algorithms. 10 (1): 13–26.
+///
+/// # Arguments
+///
+/// `k`: argument of the elliptic integrals, must be 0 <= k < 1.
+///
+/// `epsrel`: relative tolerable error for the function evaluation
+fn ellip_ke(k: f64, epsrel: f64) -> (f64, f64)
+{
+    let mut a = 1.;
+    let mut g = (1. - k.powi(2)).sqrt();
+    let mut c = k;
+    let mut power2_acc = 0.5;
+    let mut c_acc = power2_acc * c.powi(2);
+    loop {
+        let a_new = (a + g) / 2.;
+        let g_new = (a * g).sqrt();
+        let c_new = c.powi(2) / 4. / a_new;
+        power2_acc *= 2.;
+        c_acc += power2_acc * c_new.powi(2);
+        let agm_converged = (a_new - a).abs() <= epsrel.sqrt() * a_new;
+
+        a = a_new;
+        g = g_new;
+        c = c_new;
+        if agm_converged {
+            break;
+        }
+    }
+    let ellip_k = PI / 2. / a;
+    let ellip_e = ellip_k * (1. - c_acc);
+    return (ellip_k, ellip_e);
+}
+
 #[cfg(test)]
 pub mod tests {
+    use assert_approx_eq::assert_approx_eq;
+    use nalgebra::Vector3;
 
     use super::*;
+
     extern crate nalgebra;
-    use nalgebra::Vector3;
-    use assert_approx_eq::assert_approx_eq;
+
+    /// Test computation of elliptic integrals
+    #[test]
+    fn test_elliptic() {
+        let k = 0.5;
+        let epsrel = 1e-6;
+        let values = ellip_ke(k, epsrel);
+        assert_approx_eq!(values.0, 1.685750354812596);
+        assert_approx_eq!(values.1, 1.467462209339427);
+    }
 
     /// Tests the correct implementation of the coil field
     #[test]
