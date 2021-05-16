@@ -175,10 +175,8 @@ pub mod tests {
         let normal = Vector3::z();
         let field =
             SampleCoilFieldSystem::calculate_field(pos, centre, radius, current, normal);
-        // Compare to true field value, but when using the approximation for
-        // the elliptic integrals it is only valid to about 1e-4
-        assert_approx_eq!(field.x, 0.1119068, 1e-4);
+        assert_approx_eq!(field.x, 0.1119068);
         assert_approx_eq!(field.y, 0.0);
-        assert_approx_eq!(field.z, 2.9372828, 1e-4);
+        assert_approx_eq!(field.z, 2.9372828);
     }
 }
