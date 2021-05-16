@@ -15,9 +15,6 @@ use crate::laser::twolevel::TwoLevelPopulation;
 use serde::{Deserialize, Serialize};
 use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
 use std::fmt;
-
-use crate::constant::PI;
-
 /// Holds the total number of photons that the atom is expected to scatter
 /// in the current simulation step from all beams.
 ///
@@ -68,14 +65,13 @@ impl<'a> System<'a> for CalculateMeanTotalPhotonsScatteredSystem {
         )
             .par_join()
             .for_each(|(atominfo, twolevel, total)| {
-                // DEFINITELY CHECK the 2pi!!!
-                total.total = timestep.delta * (2. * PI * atominfo.linewidth) * twolevel.excited;
+                total.total = timestep.delta * atominfo.gamma() * twolevel.excited;
             });
     }
 }
 
 /// The number of photons scattered by the atom from a single, specific beam
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct ExpectedPhotonsScattered {
     ///photons scattered by the atom from a specific beam
     scattered: f64,
@@ -91,12 +87,23 @@ impl Default for ExpectedPhotonsScattered {
 }
 
 /// The List that holds an `ExpectedPhotonsScattered` for each laser
+#[derive(Deserialize, Serialize, Clone)]
 pub struct ExpectedPhotonsScatteredVector {
     pub contents: [ExpectedPhotonsScattered; crate::laser::COOLING_BEAM_LIMIT],
 }
 
 impl Component for ExpectedPhotonsScatteredVector {
     type Storage = VecStorage<Self>;
+}
+
+impl fmt::Display for ExpectedPhotonsScatteredVector {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut result = f.write_str("");
+        for aps in &self.contents {
+            result = f.write_fmt(format_args!("{},", aps.scattered));
+        }
+        result
+    }
 }
 
 /// This system initialises all ´ExpectedPhotonsScatteredVector´ to a NAN value.
@@ -210,7 +217,6 @@ impl fmt::Display for ActualPhotonsScatteredVector {
             result = f.write_fmt(format_args!("{},", aps.scattered));
         }
         result
-        //f.debug_list().entries(self.contents.iter()).finish()
     }
 }
 
@@ -234,18 +240,27 @@ impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
     }
 }
 
-/// If this is added as a ressource, the number of actual photons will be drawn from a poisson distribution.
+/// If this is added as a resource, the number of actual photons will be drawn from a poisson distribution.
 ///
 /// Otherwise, the entries of `ActualPhotonsScatteredVector` will be identical with those of
 /// `ExpectedPhotonsScatteredVector`.
-pub struct EnableScatteringFluctuations;
+#[derive(Clone, Copy)]
+pub enum ScatteringFluctuationsOption {
+    Off,
+    On,
+}
+impl Default for ScatteringFluctuationsOption {
+    fn default() -> Self {
+        ScatteringFluctuationsOption::On
+    }
+}
 
 /// Calcutates the actual number of photons scattered by each CoolingLight entity in one iteration step
 /// by drawing from a Poisson Distribution that has `ExpectedPhotonsScattered` as the lambda parameter.
 pub struct CalculateActualPhotonsScatteredSystem;
 impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
     type SystemData = (
-        Option<Read<'a, EnableScatteringFluctuations>>,
+        Option<Read<'a, ScatteringFluctuationsOption>>,
         ReadStorage<'a, ExpectedPhotonsScatteredVector>,
         WriteStorage<'a, ActualPhotonsScatteredVector>,
     );
@@ -267,23 +282,127 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
                         }
                     });
             }
-            Some(_rand) => {
-                (&expected_photons_vector, &mut actual_photons_vector)
-                    .par_join()
-                    .for_each(|(expected, actual)| {
-                        for index in 0..expected.contents.len() {
-                            let lambda = expected.contents[index].scattered;
-                            actual.contents[index].scattered =
-                                if lambda <= 1.0e-5 || lambda.is_nan() {
-                                    0.0
-                                } else {
-                                    let poisson = Poisson::new(lambda);
-                                    let drawn_number = poisson.sample(&mut rand::thread_rng());
-                                    drawn_number as f64
-                                }
-                        }
-                    });
-            }
+            Some(rand_option) => match *rand_option {
+                ScatteringFluctuationsOption::Off => {
+                    (&expected_photons_vector, &mut actual_photons_vector)
+                        .par_join()
+                        .for_each(|(expected, actual)| {
+                            for index in 0..expected.contents.len() {
+                                actual.contents[index].scattered =
+                                    expected.contents[index].scattered;
+                            }
+                        });
+                }
+                ScatteringFluctuationsOption::On => {
+                    (&expected_photons_vector, &mut actual_photons_vector)
+                        .par_join()
+                        .for_each(|(expected, actual)| {
+                            for index in 0..expected.contents.len() {
+                                let lambda = expected.contents[index].scattered;
+                                actual.contents[index].scattered =
+                                    if lambda <= 1.0e-5 || lambda.is_nan() {
+                                        0.0
+                                    } else {
+                                        let poisson = Poisson::new(lambda);
+                                        let drawn_number = poisson.sample(&mut rand::thread_rng());
+                                        drawn_number as f64
+                                    }
+                            }
+                        });
+                }
+            },
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+
+    extern crate specs;
+    use assert_approx_eq::assert_approx_eq;
+    use specs::{Builder, RunNow, World};
+    extern crate nalgebra;
+
+    /// Tests the correct implementation of the `CalculateMeanTotalPhotonsScatteredSystem`
+    #[test]
+    fn test_calculate_mean_total_photons_scattered_system() {
+        let mut test_world = World::new();
+
+        let time_delta = 1.0e-6;
+
+        test_world.register::<TwoLevelPopulation>();
+        test_world.register::<AtomicTransition>();
+        test_world.register::<TotalPhotonsScattered>();
+        test_world.add_resource(Timestep { delta: time_delta });
+
+        let atom1 = test_world
+            .create_entity()
+            .with(TotalPhotonsScattered::default())
+            .with(AtomicTransition::strontium())
+            .with(TwoLevelPopulation {
+                ground: 0.7,
+                excited: 0.3,
+            })
+            .build();
+
+        let mut system = CalculateMeanTotalPhotonsScatteredSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<TotalPhotonsScattered>();
+
+        let scattered = AtomicTransition::strontium().gamma() * 0.3 * time_delta;
+
+        assert_approx_eq!(
+            sampler_storage.get(atom1).expect("entity not found").total,
+            scattered,
+            1e-5_f64
+        );
+    }
+
+    /// Tests the correct implementation of the `CalculateExpectedPhotonsScatteredSystem`
+    #[test]
+    fn test_calculate_expected_photons_scattered_system() {
+        let mut test_world = World::new();
+
+        test_world.register::<RateCoefficients>();
+        test_world.register::<LaserSamplerMasks>();
+        test_world.register::<TotalPhotonsScattered>();
+        test_world.register::<ExpectedPhotonsScatteredVector>();
+
+        //We assume 16 beams with equal `RateCoefficient`s for this test
+
+        let atom1 = test_world
+            .create_entity()
+            .with(TotalPhotonsScattered { total: 8.0 })
+            .with(LaserSamplerMasks {
+                contents: [crate::laser::sampler::LaserSamplerMask { filled: true };
+                    crate::laser::COOLING_BEAM_LIMIT],
+            })
+            .with(RateCoefficients {
+                contents: [crate::laser::rate::RateCoefficient { rate: 1_000_000.0 };
+                    crate::laser::COOLING_BEAM_LIMIT],
+            })
+            .with(ExpectedPhotonsScatteredVector {
+                contents: [ExpectedPhotonsScattered::default(); crate::laser::COOLING_BEAM_LIMIT],
+            })
+            .build();
+        let mut system = CalculateExpectedPhotonsScatteredSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<ExpectedPhotonsScatteredVector>();
+
+        let scattered = 8.0 / crate::laser::COOLING_BEAM_LIMIT as f64;
+
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .contents[12] //any entry between 0 and 15 should be the same
+                .scattered,
+            scattered,
+            1e-5_f64
+        );
     }
 }

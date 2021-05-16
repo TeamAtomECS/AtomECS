@@ -1,0 +1,24 @@
+name: unit_tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: stable-2020-07-16
+          profile: minimal
+          override: true
+    - name: Run tests
+      run: cargo test --verbose

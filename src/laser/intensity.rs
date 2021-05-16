@@ -114,3 +114,76 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
         }
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+
+    extern crate specs;
+    use crate::laser::cooling::CoolingLightIndex;
+    use assert_approx_eq::assert_approx_eq;
+    use specs::{Builder, RunNow, World};
+    extern crate nalgebra;
+    use nalgebra::Vector3;
+
+    /// Tests the correct implementation of the `SampleLaserIntensitySystem`
+    #[test]
+    fn test_sample_laser_intensity_system() {
+        let mut test_world = World::new();
+
+        test_world.register::<CoolingLightIndex>();
+        test_world.register::<GaussianBeam>();
+        test_world.register::<CircularMask>();
+        test_world.register::<Position>();
+        test_world.register::<LaserIntensitySamplers>();
+
+        test_world
+            .create_entity()
+            .with(CoolingLightIndex {
+                index: 0,
+                initiated: true,
+            })
+            .with(GaussianBeam {
+                direction: Vector3::new(1.0, 0.0, 0.0),
+                intersection: Vector3::new(0.0, 0.0, 0.0),
+                e_radius: 2.0,
+                power: 1.0,
+            })
+            .build();
+
+        let atom1 = test_world
+            .create_entity()
+            .with(Position { pos: Vector3::y() })
+            .with(LaserIntensitySamplers {
+                contents: [LaserIntensitySampler::default(); crate::laser::COOLING_BEAM_LIMIT],
+            })
+            .build();
+
+        let mut system = SampleLaserIntensitySystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<LaserIntensitySamplers>();
+
+        let actual_intensity = crate::laser::gaussian::get_gaussian_beam_intensity(
+            &GaussianBeam {
+                direction: Vector3::new(1.0, 0.0, 0.0),
+                intersection: Vector3::new(0.0, 0.0, 0.0),
+                e_radius: 2.0,
+                power: 1.0,
+            },
+            &Position { pos: Vector3::y() },
+            None,
+        );
+
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .contents[0]
+                .intensity,
+            actual_intensity,
+            1e-6_f64
+        );
+    }
+}

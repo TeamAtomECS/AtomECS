@@ -69,22 +69,19 @@ impl<'a> System<'a> for FillLaserSamplerMasksSystem {
 /// Represents total detuning of the atom's transition with respect to each beam
 #[derive(Clone, Copy)]
 pub struct LaserDetuningSampler {
-    /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of Hz
+    /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_plus: f64,
-    /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of Hz
+    /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of rad/s 
     pub detuning_sigma_minus: f64,
-    /// Laser detuning of the pi transition with respect to laser beam, in SI units of Hz
+    /// Laser detuning of the pi transition with respect to laser beam, in SI units of rad/s
     pub detuning_pi: f64,
 }
 
 impl Default for LaserDetuningSampler {
     fn default() -> Self {
         LaserDetuningSampler {
-            /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of Hz
             detuning_sigma_plus: f64::NAN,
-            /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of Hz
             detuning_sigma_minus: f64::NAN,
-            /// Laser detuning of the pi transition with respect to laser beam, in SI units of Hz
             detuning_pi: f64::NAN,
         }
     }
@@ -170,10 +167,7 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
                     |(detuning_sampler, doppler_samplers, zeeman_sampler, atom_info)| {
                         for i in 0..number_in_iteration {
                             let (index, cooling) = laser_array[i];
-                            let without_zeeman = (constant::C / cooling.wavelength
-                                - atom_info.frequency)
-                                * 2.0
-                                * constant::PI
+                            let without_zeeman = 2.0 * constant::PI * (constant::C / cooling.wavelength - atom_info.frequency)
                                 - doppler_samplers.contents[index.index].doppler_shift;
 
                             detuning_sampler.contents[index.index].detuning_sigma_plus =
@@ -186,5 +180,92 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
                     },
                 )
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+
+    use super::*;
+
+    extern crate specs;
+    use assert_approx_eq::assert_approx_eq;
+    use specs::{Builder, RunNow, World};
+    extern crate nalgebra;
+
+    #[test]
+    fn test_calculate_laser_detuning_system() {
+        let mut test_world = World::new();
+        test_world.register::<CoolingLight>();
+        test_world.register::<CoolingLightIndex>();
+        test_world.register::<DopplerShiftSamplers>();
+        test_world.register::<LaserDetuningSamplers>();
+        test_world.register::<AtomicTransition>();
+        test_world.register::<ZeemanShiftSampler>();
+
+        let wavelength = constant::C / AtomicTransition::strontium().frequency;
+        test_world
+            .create_entity()
+            .with(CoolingLight {
+                polarization: 1,
+                wavelength: wavelength,
+            })
+            .with(CoolingLightIndex {
+                index: 0,
+                initiated: true,
+            })
+            .build();
+
+        let atom1 = test_world
+            .create_entity()
+            .with(DopplerShiftSamplers {
+                contents: [crate::laser::doppler::DopplerShiftSampler {
+                    doppler_shift: 10.0e6, //rad/s
+                }; crate::laser::COOLING_BEAM_LIMIT],
+            })
+            .with(AtomicTransition::strontium())
+            .with(ZeemanShiftSampler {
+                sigma_plus: 10.0e6,   //rad/s
+                sigma_minus: -10.0e6, //rad/s
+                sigma_pi: 0.0,        //rad/s
+            })
+            .with(LaserDetuningSamplers {
+                contents: [LaserDetuningSampler::default(); crate::laser::COOLING_BEAM_LIMIT],
+            })
+            .build();
+
+        let mut system = CalculateLaserDetuningSystem;
+        system.run_now(&test_world.res);
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<LaserDetuningSamplers>();
+
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .contents[0]
+                .detuning_sigma_plus,
+            -10.0e6 - 10.0e6,
+            1e-2_f64
+        );
+
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .contents[0]
+                .detuning_sigma_minus,
+            -10.0e6 + 10.0e6,
+            1e-2_f64
+        );
+        assert_approx_eq!(
+            sampler_storage
+                .get(atom1)
+                .expect("entity not found")
+                .contents[0]
+                .detuning_pi,
+            -10.0e6,
+            1e-2_f64
+        );
     }
 }

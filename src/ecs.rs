@@ -44,10 +44,7 @@ impl AtomecsDispatcherBuilder {
 		}
 	}
 
-	pub fn add_frame_initialisation_systems(&mut self) {
-		&self.builder.add(ClearForceSystem, "clear", &[]);
-		&self.builder.add(DeflagNewAtomsSystem, "deflag", &[]);
-	}
+	pub fn add_frame_initialisation_systems(&mut self) {}
 
 	pub fn add_systems(&mut self) {
 		&self.builder.add(
@@ -55,6 +52,10 @@ impl AtomecsDispatcherBuilder {
 			INTEGRATE_POSITION_SYSTEM_NAME,
 			&[],
 		);
+		&self
+			.builder
+			.add(ClearForceSystem, "clear", &[INTEGRATE_POSITION_SYSTEM_NAME]);
+		&self.builder.add(DeflagNewAtomsSystem, "deflag", &[]);
 		&self.builder.add(AddOldForceToNewAtomsSystem, "", &[]);
 
 		magnetic::add_systems_to_dispatch(&mut self.builder, &[]);

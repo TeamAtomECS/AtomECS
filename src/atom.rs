@@ -1,6 +1,6 @@
 //! Common atom components and systems.
 
-use crate::constant::{BOHRMAG, C, HBAR, PI};
+use crate::constant::{BOHRMAG, C};
 use crate::output::file::BinaryConversion;
 use crate::ramp::Lerp;
 use nalgebra::Vector3;
@@ -143,9 +143,11 @@ impl Component for AtomicTransition {
 }
 impl AtomicTransition {
 	pub fn calculate(mut self) -> Self {
-		self.rate_prefactor =
-			3. / 4. * C * C / HBAR * (self.frequency).powf(-3.) * self.linewidth * self.linewidth
-				/ 2. / PI;
+		// self.rate_prefactor =
+		// 	PI.powi(2) * C.powi(2) * (2.0 * PI * self.frequency).powi(-3) * self.gamma().powi(2)
+		// 		/ HBAR;
+		// For a pure two-level system, the saturation intensity is equal to (hbar omega^3 Gamma) / (8 pi^2 c^2)
+		self.rate_prefactor = self.gamma().powi(3) / (self.saturation_intensity * 8.0);
 		self
 	}
 
