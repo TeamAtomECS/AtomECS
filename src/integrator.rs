@@ -296,11 +296,6 @@ pub mod tests {
 				&[],
 			)
 			.with(
-				TestVelocityVerletForceSystem,
-				"testForce",
-				&["integrate_position"],
-			)
-			.with(
 				VelocityVerletIntegrateVelocitySystem,
 				"integrate_velocity",
 				&["integrate_position"],
