@@ -15,7 +15,7 @@ use byteorder::{LittleEndian, WriteBytesExt};
 
 /// A system that writes simulation data to file.
 ///
-/// This system writes per-atom data `C` to a file at a defined interval.
+/// This system writes data `C` of entities associated with `A` to a file at a defined interval.
 /// The data type `C` must be a [Component](specs::Component) and implement the
 /// [Clone](struct.Clone.html) trait.
 pub struct OutputSystem<C: Component + Clone, W: Write, F: Format<C, W>, A = Atom> {
@@ -28,12 +28,14 @@ pub struct OutputSystem<C: Component + Clone, W: Write, F: Format<C, W>, A = Ato
     marker: PhantomData<C>,
 }
 
-/// Creates a new [OutputSystem](struct.OutputSystem.html) to write per-atom [Component](specs::Component) data
+/// Creates a new [OutputSystem](struct.OutputSystem.html) to write per-entity [Component](specs::Component) data
 /// according to the specified [Format](struct.Format.html).
 ///
 /// The interval specifies how often, in integration steps, the file should be written.
 ///
-/// For example, `new::<Position,Text>("pos.txt", 10).
+/// Only component data of entities associated with a component given by `A` is written down.
+///
+/// For example, `new::<Position, Text, Atom>("pos.txt", 10).
 pub fn new<C, F, A>(file_name: String, interval: u64) -> OutputSystem<C, BufWriter<File>, F, A>
 where
     C: Component + Clone,
@@ -75,7 +77,7 @@ where
             let atom_number = (&atom_flags).join().count();
             F::write_frame_header(&mut self.stream, step.n, atom_number).expect("Could not write.");
 
-            // write each atom
+            // write each entity
             for (data, _, ent) in (&data, &atom_flags, &entities).join() {
                 F::write_atom(&mut self.stream, ent, data.clone()).expect("Could not write.");
             }
