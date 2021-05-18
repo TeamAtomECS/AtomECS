@@ -41,7 +41,7 @@ impl BinaryConversion for Position {
 /// Velocity of an entity in space, with respect to cartesian x,y,z axes.
 ///
 /// SI units (metres/second)
-#[derive(Clone)]
+#[derive(Clone, Copy, Serialize)]
 pub struct Velocity {
 	/// velocity vector in 3D in units of m/s
 	pub vel: Vector3<f64>,
