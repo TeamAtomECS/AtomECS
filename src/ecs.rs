@@ -21,7 +21,8 @@ use crate::laser::repump::Dark;
 use crate::magnetic;
 use crate::output::console_output::ConsoleOutputSystem;
 use crate::sim_region;
-use specs::{Dispatcher, DispatcherBuilder, World};
+
+use specs::prelude::*;
 
 /// Registers all components used by the modules of the program.
 pub fn register_components(world: &mut World) {
@@ -111,5 +112,5 @@ pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'sta
 
 /// Add required resources to the world
 pub fn register_resources(world: &mut World) {
-	world.add_resource(Step { n: 0 });
+	world.insert(Step { n: 0 });
 }

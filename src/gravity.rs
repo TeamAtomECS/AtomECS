@@ -3,7 +3,7 @@
 use crate::atom::{Force, Mass};
 use crate::constant;
 use nalgebra::Vector3;
-use specs::{Read, ReadStorage, System, WriteStorage};
+use specs::prelude::*;
 
 /// A resource that indicates that the simulation should apply the force of gravity.
 pub struct ApplyGravityOption;
@@ -19,7 +19,6 @@ impl<'a> System<'a> for ApplyGravitationalForceSystem {
 
     fn run(&mut self, (mut force, mass, gravity_option): Self::SystemData) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         match gravity_option {
             None => (),
@@ -53,7 +52,7 @@ pub mod tests {
 
         test_world.register::<Mass>();
         test_world.register::<Force>();
-        test_world.add_resource(ApplyGravityOption);
+        test_world.insert(ApplyGravityOption);
 
         let atom1 = test_world
             .create_entity()
@@ -63,7 +62,7 @@ pub mod tests {
             })
             .build();
         let mut system = ApplyGravitationalForceSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
 
