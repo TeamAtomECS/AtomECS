@@ -4,6 +4,8 @@ use crate::constant::{BOHRMAG, C};
 use crate::output::file::BinaryConversion;
 use crate::ramp::Lerp;
 use nalgebra::Vector3;
+use specs::prelude::*;
+
 use serde::{Deserialize, Serialize};
 use specs::{Component, NullStorage, System, VecStorage, World, WriteStorage};
 use std::fmt;
@@ -235,7 +237,6 @@ impl<'a> System<'a> for ClearForceSystem {
 	type SystemData = WriteStorage<'a, Force>;
 	fn run(&mut self, mut force: Self::SystemData) {
 		use rayon::prelude::*;
-		use specs::ParJoin;
 
 		(&mut force).par_join().for_each(|force| {
 			force.force = Vector3::new(0.0, 0.0, 0.0);

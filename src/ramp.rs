@@ -12,7 +12,7 @@
 //!   * The struct implements `Clone`.
 //!   * The fields can all be multiplied by an f64 and added (eg `f64` and `Vector3<f64>` types).
 
-use specs::{Component, HashMapStorage, Join, ReadExpect, System, WriteStorage};
+use specs::prelude::*;
 
 use crate::integrator::{Step, Timestep};
 use std::marker::PhantomData;
@@ -184,7 +184,7 @@ pub mod tests {
                 &["integrator"],
             )
             .build();
-        dispatcher.setup(&mut test_world.res);
+        dispatcher.setup(&mut test_world);
 
         let mut frames = Vec::new();
         frames.push((0.0, ALerpComp { value: 0.0 }));
@@ -201,12 +201,12 @@ pub mod tests {
             .build();
 
         let dt = 0.1;
-        test_world.add_resource(Timestep { delta: dt });
-        test_world.add_resource(Step { n: 0 });
+        test_world.insert(Timestep { delta: dt });
+        test_world.insert(Step { n: 0 });
 
         // Perform dispatcher loop to ramp components.
         for i in 1..10 {
-            dispatcher.dispatch(&mut test_world.res);
+            dispatcher.dispatch(&mut test_world);
 
             let comps: ReadStorage<ALerpComp> = test_world.system_data();
             assert_approx_eq!(
