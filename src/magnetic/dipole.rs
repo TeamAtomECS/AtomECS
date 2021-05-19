@@ -1,7 +1,6 @@
 //! Magnetic field from a dipole.
 
 extern crate nalgebra;
-extern crate specs;
 
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};

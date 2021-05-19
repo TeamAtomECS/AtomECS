@@ -1,7 +1,6 @@
 //! Magnetic field from a straight wire.
 
 extern crate nalgebra;
-extern crate specs;
 
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
@@ -11,7 +10,8 @@ use crate::atom::Position;
 use crate::magnetic::MagneticFieldSampler;
 
 /// A component representing a straight wire.
-/// For example, it is possible to
+/// For example, it is possible to represent a rectangular coil by
+/// adding four wires end-to-end.
 #[derive(Serialize, Deserialize)]
 pub struct MagneticWire {
     /// Length of the wire, in m
@@ -56,8 +56,8 @@ impl SampleWireFieldSystem {
         let perp = delta - axial_dist * direction;
         let radial_dist = perp.norm();
         let magnitude = 1e-7 * current / radial_dist * (
-              (axial_dist - length / 2.) / (radial_dist.powi(2) + (axial_dist - length / 2.).powi(2)).sqrt()
-            - (axial_dist + length / 2.) / (radial_dist.powi(2) + (axial_dist + length / 2.).powi(2)).sqrt()
+            (axial_dist - length / 2.) / (radial_dist.powi(2) + (axial_dist - length / 2.).powi(2)).sqrt()
+                - (axial_dist + length / 2.) / (radial_dist.powi(2) + (axial_dist + length / 2.).powi(2)).sqrt()
         );
 
         magnitude * perp.cross(&direction) / (radial_dist + 1e-6)

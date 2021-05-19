@@ -1,7 +1,6 @@
 //! Magnetic field from a circular coil
 
 extern crate nalgebra;
-extern crate specs;
 
 use std::f64::consts::PI;
 
@@ -12,7 +11,7 @@ use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 use crate::atom::Position;
 use crate::magnetic::MagneticFieldSampler;
 
-/// A component representing a circular coil mad of a single loop.
+/// A component representing a circular coil made of a single loop.
 #[derive(Serialize, Deserialize)]
 pub struct MagneticCoil {
     /// Radius of the coil, in m.

@@ -1,7 +1,6 @@
 //! Uniform magnetic fields
 
 extern crate nalgebra;
-extern crate specs;
 use super::MagneticFieldSampler;
 use crate::ramp::Lerp;
 use nalgebra::Vector3;
