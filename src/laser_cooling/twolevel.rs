@@ -109,7 +109,7 @@ pub mod tests {
 
         // this test runs with two lasers only and we have to tell this the mask
         let mut active_lasers = [crate::laser::sampler::LaserSamplerMask { filled: false };
-            crate::laser::COOLING_BEAM_LIMIT];
+            crate::laser::BEAM_LIMIT];
         active_lasers[0] = crate::laser::sampler::LaserSamplerMask { filled: true };
         active_lasers[1] = crate::laser::sampler::LaserSamplerMask { filled: true };
 
@@ -117,7 +117,7 @@ pub mod tests {
             .create_entity()
             .with(RateCoefficients {
                 contents: [crate::laser::rate::RateCoefficient { rate: 1_000_000.0 };
-                    crate::laser::COOLING_BEAM_LIMIT],
+                    crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::strontium())
             .with(LaserSamplerMasks {
@@ -133,7 +133,7 @@ pub mod tests {
 
         let mut sum_rates = 0.0;
 
-        for i in 0..crate::laser::COOLING_BEAM_LIMIT {
+        for i in 0..crate::laser::BEAM_LIMIT {
             if active_lasers[i].filled {
                 sum_rates = sum_rates + 1_000_000.0;
             }
@@ -159,14 +159,14 @@ pub mod tests {
 
         // this test runs with two lasers only and we have to tell this the mask
         let mut active_lasers = [crate::laser::sampler::LaserSamplerMask { filled: false };
-            crate::laser::COOLING_BEAM_LIMIT];
+            crate::laser::BEAM_LIMIT];
         active_lasers[0] = crate::laser::sampler::LaserSamplerMask { filled: true };
 
         let atom1 = test_world
             .create_entity()
             .with(RateCoefficients {
                 contents: [crate::laser::rate::RateCoefficient { rate: 1.0e9 };
-                    crate::laser::COOLING_BEAM_LIMIT],
+                    crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::rubidium())
             .with(LaserSamplerMasks {

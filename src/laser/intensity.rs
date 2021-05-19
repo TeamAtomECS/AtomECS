@@ -33,7 +33,7 @@ impl Default for LaserIntensitySampler {
 /// Component that holds a list of `LaserIntensitySamplers`
 pub struct LaserIntensitySamplers {
     /// List of laser samplers
-    pub contents: [LaserIntensitySampler; crate::laser::COOLING_BEAM_LIMIT],
+    pub contents: [LaserIntensitySampler; crate::laser::BEAM_LIMIT],
 }
 impl Component for LaserIntensitySamplers {
     type Storage = VecStorage<Self>;
@@ -50,7 +50,7 @@ impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
         use specs::ParJoin;
 
         (&mut samplers).par_join().for_each(|mut sampler| {
-            sampler.contents = [LaserIntensitySampler::default(); crate::laser::COOLING_BEAM_LIMIT];
+            sampler.contents = [LaserIntensitySampler::default(); crate::laser::BEAM_LIMIT];
         });
     }
 }
@@ -158,7 +158,7 @@ pub mod tests {
             .create_entity()
             .with(Position { pos: Vector3::y() })
             .with(LaserIntensitySamplers {
-                contents: [LaserIntensitySampler::default(); crate::laser::COOLING_BEAM_LIMIT],
+                contents: [LaserIntensitySampler::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
 

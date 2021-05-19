@@ -30,7 +30,7 @@ impl Default for RateCoefficient {
 /// Component that holds a Vector of `RateCoefficient`
 pub struct RateCoefficients {
     /// Vector of `RateCoefficient` where each entry corresponds to a different CoolingLight entity
-    pub contents: [RateCoefficient; crate::laser::COOLING_BEAM_LIMIT],
+    pub contents: [RateCoefficient; crate::laser::BEAM_LIMIT],
 }
 impl Component for RateCoefficients {
     type Storage = VecStorage<Self>;
@@ -49,8 +49,7 @@ impl<'a> System<'a> for InitialiseRateCoefficientsSystem {
         (&mut rate_coefficients)
             .par_join()
             .for_each(|mut rate_coefficient| {
-                rate_coefficient.contents =
-                    [RateCoefficient::default(); crate::laser::COOLING_BEAM_LIMIT];
+                rate_coefficient.contents = [RateCoefficient::default(); crate::laser::BEAM_LIMIT];
             });
     }
 }
@@ -195,12 +194,12 @@ pub mod tests {
                     detuning_sigma_plus: detuning,
                     detuning_sigma_minus: detuning,
                     detuning_pi: detuning,
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(LaserIntensitySamplers {
                 contents: [crate::laser::intensity::LaserIntensitySampler {
                     intensity: intensity,
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::strontium())
             .with(MagneticFieldSampler {
@@ -208,7 +207,7 @@ pub mod tests {
                 magnitude: 1.0,
             })
             .with(RateCoefficients {
-                contents: [RateCoefficient::default(); crate::laser::COOLING_BEAM_LIMIT],
+                contents: [RateCoefficient::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
 

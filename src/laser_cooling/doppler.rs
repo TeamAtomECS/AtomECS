@@ -79,7 +79,7 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
 /// and is indext via `CoolingLightIndex`
 pub struct DopplerShiftSamplers {
     /// List of all `DopplerShiftSampler`s
-    pub contents: [DopplerShiftSampler; crate::laser::COOLING_BEAM_LIMIT],
+    pub contents: [DopplerShiftSampler; crate::laser::BEAM_LIMIT],
 }
 impl Component for DopplerShiftSamplers {
     type Storage = VecStorage<Self>;
@@ -96,7 +96,7 @@ impl<'a> System<'a> for InitialiseDopplerShiftSamplersSystem {
         use specs::ParJoin;
 
         (&mut samplers).par_join().for_each(|mut sampler| {
-            sampler.contents = [DopplerShiftSampler::default(); crate::laser::COOLING_BEAM_LIMIT];
+            sampler.contents = [DopplerShiftSampler::default(); crate::laser::BEAM_LIMIT];
         });
     }
 }
@@ -151,7 +151,7 @@ pub mod tests {
                 vel: Vector3::new(atom_velocity, 0.0, 0.0),
             })
             .with(DopplerShiftSamplers {
-                contents: [DopplerShiftSampler::default(); crate::laser::COOLING_BEAM_LIMIT],
+                contents: [DopplerShiftSampler::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
 

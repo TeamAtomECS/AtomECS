@@ -91,7 +91,7 @@ pub mod tests {
             .with(LaserIntensityGradientSamplers {
                 contents: [crate::dipole::intensity_gradient::LaserIntensityGradientSampler {
                     gradient: Vector3::new(0.0, 1.0, -2.0),
-                }; crate::dipole::DIPOLE_BEAM_LIMIT],
+                }; crate::dipole::BEAM_LIMIT],
             })
             .with(transition)
             .build();
@@ -142,7 +142,7 @@ pub mod tests {
             .with(LaserIntensityGradientSamplers {
                 contents: [crate::dipole::intensity_gradient::LaserIntensityGradientSampler {
                     gradient: Vector3::new(-8.4628e+7, -4.33992902e+13, -4.33992902e+13),
-                }; crate::dipole::DIPOLE_BEAM_LIMIT],
+                }; crate::dipole::BEAM_LIMIT],
             })
             .with(transition)
             .build();
@@ -231,7 +231,7 @@ pub mod tests {
             })
             .with(LaserIntensityGradientSamplers {
                 contents: [dipole::intensity_gradient::LaserIntensityGradientSampler::default();
-                    crate::dipole::DIPOLE_BEAM_LIMIT],
+                    crate::dipole::BEAM_LIMIT],
             })
             .with(transition)
             .build();

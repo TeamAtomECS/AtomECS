@@ -8,7 +8,7 @@ extern crate specs;
 use crate::initiate::NewlyCreated;
 use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System, World};
 
-pub const DIPOLE_BEAM_LIMIT: usize = 16;
+pub const BEAM_LIMIT: usize = 16;
 
 /// Attaches components used for dipole force calculation to newly created atoms.
 ///
@@ -29,7 +29,7 @@ impl<'a> System<'a> for AttachDipoleComponentsToNewlyCreatedAtomsSystem {
                 ent,
                 intensity_gradient::LaserIntensityGradientSamplers {
                     contents: [intensity_gradient::LaserIntensityGradientSampler::default();
-                        DIPOLE_BEAM_LIMIT],
+                        BEAM_LIMIT],
                 },
             );
         }

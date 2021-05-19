@@ -238,7 +238,7 @@ pub mod tests {
             .with(ActualPhotonsScatteredVector {
                 contents: [crate::laser::photons_scattered::ActualPhotonsScattered {
                     scattered: number_scattered,
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(Force::new())
             .build();
@@ -275,7 +275,7 @@ pub mod tests {
             .with(ActualPhotonsScatteredVector {
                 contents: [crate::laser::photons_scattered::ActualPhotonsScattered {
                     scattered: number_scattered,
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(Force::new())
             .with(AtomicTransition::strontium())

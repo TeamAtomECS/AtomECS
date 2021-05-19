@@ -11,7 +11,7 @@ use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System, World};
 
-pub const COOLING_BEAM_LIMIT: usize = 16;
+pub const BEAM_LIMIT: usize = 16;
 
 /// Attaches components used for optical force calculation to newly created atoms.
 ///
@@ -31,31 +31,31 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 			updater.insert(
 				ent,
 				sampler::LaserSamplerMasks {
-					contents: [sampler::LaserSamplerMask::default(); COOLING_BEAM_LIMIT],
+					contents: [sampler::LaserSamplerMask::default(); BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				doppler::DopplerShiftSamplers {
-					contents: [doppler::DopplerShiftSampler::default(); COOLING_BEAM_LIMIT],
+					contents: [doppler::DopplerShiftSampler::default(); BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				intensity::LaserIntensitySamplers {
-					contents: [intensity::LaserIntensitySampler::default(); COOLING_BEAM_LIMIT],
+					contents: [intensity::LaserIntensitySampler::default(); BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				sampler::LaserDetuningSamplers {
-					contents: [sampler::LaserDetuningSampler::default(); COOLING_BEAM_LIMIT],
+					contents: [sampler::LaserDetuningSampler::default(); BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				rate::RateCoefficients {
-					contents: [rate::RateCoefficient::default(); COOLING_BEAM_LIMIT],
+					contents: [rate::RateCoefficient::default(); BEAM_LIMIT],
 				},
 			);
 			updater.insert(ent, twolevel::TwoLevelPopulation::default());
@@ -63,15 +63,13 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 			updater.insert(
 				ent,
 				photons_scattered::ExpectedPhotonsScatteredVector {
-					contents: [photons_scattered::ExpectedPhotonsScattered::default();
-						COOLING_BEAM_LIMIT],
+					contents: [photons_scattered::ExpectedPhotonsScattered::default(); BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				photons_scattered::ActualPhotonsScatteredVector {
-					contents: [photons_scattered::ActualPhotonsScattered::default();
-						COOLING_BEAM_LIMIT],
+					contents: [photons_scattered::ActualPhotonsScattered::default(); BEAM_LIMIT],
 				},
 			);
 		}

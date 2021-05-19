@@ -26,7 +26,7 @@ impl Default for LaserSamplerMask {
 /// Component that holds a vector of `LaserSamplerMask`
 pub struct LaserSamplerMasks {
     /// List of `LaserSamplerMask`s
-    pub contents: [LaserSamplerMask; crate::laser::COOLING_BEAM_LIMIT],
+    pub contents: [LaserSamplerMask; crate::laser::BEAM_LIMIT],
 }
 impl Component for LaserSamplerMasks {
     type Storage = VecStorage<Self>;
@@ -42,7 +42,7 @@ impl<'a> System<'a> for InitialiseLaserSamplerMasksSystem {
         use specs::ParJoin;
 
         (&mut masks).par_join().for_each(|mask| {
-            mask.contents = [LaserSamplerMask::default(); crate::laser::COOLING_BEAM_LIMIT];
+            mask.contents = [LaserSamplerMask::default(); crate::laser::BEAM_LIMIT];
         });
     }
 }
@@ -71,7 +71,7 @@ impl<'a> System<'a> for FillLaserSamplerMasksSystem {
 pub struct LaserDetuningSampler {
     /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_plus: f64,
-    /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of rad/s 
+    /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_minus: f64,
     /// Laser detuning of the pi transition with respect to laser beam, in SI units of rad/s
     pub detuning_pi: f64,
@@ -90,7 +90,7 @@ impl Default for LaserDetuningSampler {
 /// Component that holds a vector of `LaserDetuningSampler`
 pub struct LaserDetuningSamplers {
     /// List of `LaserDetuningSampler`s
-    pub contents: [LaserDetuningSampler; crate::laser::COOLING_BEAM_LIMIT],
+    pub contents: [LaserDetuningSampler; crate::laser::BEAM_LIMIT],
 }
 impl Component for LaserDetuningSamplers {
     type Storage = VecStorage<Self>;
@@ -107,7 +107,7 @@ impl<'a> System<'a> for InitialiseLaserDetuningSamplersSystem {
         use specs::ParJoin;
 
         (&mut samplers).par_join().for_each(|mut sampler| {
-            sampler.contents = [LaserDetuningSampler::default(); crate::laser::COOLING_BEAM_LIMIT];
+            sampler.contents = [LaserDetuningSampler::default(); crate::laser::BEAM_LIMIT];
         });
     }
 }
@@ -167,7 +167,9 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
                     |(detuning_sampler, doppler_samplers, zeeman_sampler, atom_info)| {
                         for i in 0..number_in_iteration {
                             let (index, cooling) = laser_array[i];
-                            let without_zeeman = 2.0 * constant::PI * (constant::C / cooling.wavelength - atom_info.frequency)
+                            let without_zeeman = 2.0
+                                * constant::PI
+                                * (constant::C / cooling.wavelength - atom_info.frequency)
                                 - doppler_samplers.contents[index.index].doppler_shift;
 
                             detuning_sampler.contents[index.index].detuning_sigma_plus =
@@ -221,7 +223,7 @@ pub mod tests {
             .with(DopplerShiftSamplers {
                 contents: [crate::laser::doppler::DopplerShiftSampler {
                     doppler_shift: 10.0e6, //rad/s
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::strontium())
             .with(ZeemanShiftSampler {
@@ -230,7 +232,7 @@ pub mod tests {
                 sigma_pi: 0.0,        //rad/s
             })
             .with(LaserDetuningSamplers {
-                contents: [LaserDetuningSampler::default(); crate::laser::COOLING_BEAM_LIMIT],
+                contents: [LaserDetuningSampler::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
 

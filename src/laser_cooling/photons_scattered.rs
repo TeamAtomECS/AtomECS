@@ -89,7 +89,7 @@ impl Default for ExpectedPhotonsScattered {
 /// The List that holds an `ExpectedPhotonsScattered` for each laser
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ExpectedPhotonsScatteredVector {
-    pub contents: [ExpectedPhotonsScattered; crate::laser::COOLING_BEAM_LIMIT],
+    pub contents: [ExpectedPhotonsScattered; crate::laser::BEAM_LIMIT],
 }
 
 impl Component for ExpectedPhotonsScatteredVector {
@@ -117,8 +117,7 @@ impl<'a> System<'a> for InitialiseExpectedPhotonsScatteredVectorSystem {
         use specs::ParJoin;
 
         (&mut expected_photons).par_join().for_each(|mut expected| {
-            expected.contents =
-                [ExpectedPhotonsScattered::default(); crate::laser::COOLING_BEAM_LIMIT];
+            expected.contents = [ExpectedPhotonsScattered::default(); crate::laser::BEAM_LIMIT];
         });
     }
 }
@@ -196,7 +195,7 @@ impl Default for ActualPhotonsScattered {
 /// The ist that holds an `ActualPhotonsScattered` for each CoolingLight entity
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ActualPhotonsScatteredVector {
-    pub contents: [ActualPhotonsScattered; crate::laser::COOLING_BEAM_LIMIT],
+    pub contents: [ActualPhotonsScattered; crate::laser::BEAM_LIMIT],
 }
 
 impl ActualPhotonsScatteredVector {
@@ -235,7 +234,7 @@ impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
         use specs::ParJoin;
 
         (&mut actual_photons).par_join().for_each(|mut actual| {
-            actual.contents = [ActualPhotonsScattered::default(); crate::laser::COOLING_BEAM_LIMIT];
+            actual.contents = [ActualPhotonsScattered::default(); crate::laser::BEAM_LIMIT];
         });
     }
 }
@@ -378,14 +377,14 @@ pub mod tests {
             .with(TotalPhotonsScattered { total: 8.0 })
             .with(LaserSamplerMasks {
                 contents: [crate::laser::sampler::LaserSamplerMask { filled: true };
-                    crate::laser::COOLING_BEAM_LIMIT],
+                    crate::laser::BEAM_LIMIT],
             })
             .with(RateCoefficients {
                 contents: [crate::laser::rate::RateCoefficient { rate: 1_000_000.0 };
-                    crate::laser::COOLING_BEAM_LIMIT],
+                    crate::laser::BEAM_LIMIT],
             })
             .with(ExpectedPhotonsScatteredVector {
-                contents: [ExpectedPhotonsScattered::default(); crate::laser::COOLING_BEAM_LIMIT],
+                contents: [ExpectedPhotonsScattered::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
         let mut system = CalculateExpectedPhotonsScatteredSystem;
@@ -393,7 +392,7 @@ pub mod tests {
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<ExpectedPhotonsScatteredVector>();
 
-        let scattered = 8.0 / crate::laser::COOLING_BEAM_LIMIT as f64;
+        let scattered = 8.0 / crate::laser::BEAM_LIMIT as f64;
 
         assert_approx_eq!(
             sampler_storage
