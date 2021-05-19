@@ -1,8 +1,12 @@
 //! Calculation of the total detuning for specific atoms and CoolingLight entities
 
-extern crate specs;
-use crate::laser::cooling::CoolingLightIndex;
-use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
+use crate::atom::AtomicTransition;
+use crate::constant;
+use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+use crate::laser::doppler::DopplerShiftSamplers;
+use crate::magnetic::zeeman::ZeemanShiftSampler;
+use specs::prelude::*;
+use std::f64;
 extern crate nalgebra;
 
 /// Tracks whether slots in the laser sampler arrays are currently used.
@@ -32,7 +36,6 @@ impl<'a> System<'a> for InitialiseLaserSamplerMasksSystem {
 
     fn run(&mut self, (mut masks,): Self::SystemData) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         (&mut masks).par_join().for_each(|mask| {
             mask.contents = [LaserSamplerMask::default(); crate::laser::BEAM_LIMIT];
@@ -49,7 +52,6 @@ impl<'a> System<'a> for FillLaserSamplerMasksSystem {
     );
     fn run(&mut self, (light_index, mut masks): Self::SystemData) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         for light_index in (&light_index).join() {
             (&mut masks).par_join().for_each(|masks| {

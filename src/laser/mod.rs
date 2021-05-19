@@ -8,10 +8,9 @@ pub mod intensity;
 pub mod intensity_gradient;
 pub mod sampler;
 
-extern crate specs;
 use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
-use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System, World};
+use specs::prelude::*;
 
 pub const BEAM_LIMIT: usize = 16;
 

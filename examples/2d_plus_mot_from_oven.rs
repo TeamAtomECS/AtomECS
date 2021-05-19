@@ -18,7 +18,7 @@ use lib::output::file::Text;
 use lib::shapes::Cuboid;
 use lib::sim_region::{SimulationVolume, VolumeType};
 use nalgebra::Vector3;
-use specs::{Builder, World};
+use specs::prelude::*;
 use std::time::Instant;
 
 fn main() {
@@ -43,7 +43,7 @@ fn main() {
     );
 
     let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     // Create magnetic field.
     world
@@ -166,7 +166,7 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.insert(Timestep { delta: 1.0e-6 });
 
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation.
     world
@@ -197,11 +197,11 @@ fn main() {
         .build();
 
     // Also use a velocity cap so that fast atoms are not even simulated.
-    world.add_resource(VelocityCap { value: 200.0 });
+    world.insert(VelocityCap { value: 200.0 });
 
     // Run the simulation for a number of steps.
     for _i in 0..10000 {
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
     }
 

@@ -5,12 +5,11 @@
 // gaussian.rs since other beam profiles (although they're less common) should not be excluded.
 
 extern crate rayon;
-extern crate specs;
+
+use specs::prelude::*;
 
 use super::gaussian::{get_gaussian_beam_intensity, CircularMask, GaussianBeam};
 use crate::atom::Position;
-use crate::laser::cooling::CoolingLightIndex;
-use specs::{Component, Entities, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 const LASER_CACHE_SIZE: usize = 16;
 
@@ -47,7 +46,6 @@ impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
     type SystemData = (WriteStorage<'a, LaserIntensitySamplers>,);
     fn run(&mut self, (mut samplers,): Self::SystemData) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         (&mut samplers).par_join().for_each(|mut sampler| {
             sampler.contents = [LaserIntensitySampler::default(); crate::laser::BEAM_LIMIT];
@@ -77,7 +75,6 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
         (entities, indices, gaussian, masks, position, mut intensity_samplers): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         // There are typically only a small number of lasers in a simulation.
         // For a speedup, cache the required components into thread memory,
@@ -119,11 +116,8 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
 pub mod tests {
 
     use super::*;
-
-    extern crate specs;
     use crate::laser::cooling::CoolingLightIndex;
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
     extern crate nalgebra;
     use crate::laser::gaussian;
     use nalgebra::Vector3;
@@ -163,7 +157,7 @@ pub mod tests {
             .build();
 
         let mut system = SampleLaserIntensitySystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<LaserIntensitySamplers>();
 

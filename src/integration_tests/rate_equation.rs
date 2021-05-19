@@ -12,10 +12,9 @@ pub mod tests {
     use crate::laser::gaussian::GaussianBeam;
     use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
     extern crate nalgebra;
-    use nalgebra::Vector3;
-    extern crate specs;
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, World};
+    use nalgebra::Vector3;
+    use specs::prelude::*;
 
     #[test]
     fn single_beam_scattering_rates_v_detuning() {
@@ -49,7 +48,7 @@ pub mod tests {
         ecs::register_components(&mut world);
         ecs::register_resources(&mut world);
         let mut dispatcher = ecs::create_simulation_dispatcher_builder().build();
-        dispatcher.setup(&mut world.res);
+        dispatcher.setup(&mut world);
 
         // add laser to test world.
         world
@@ -71,7 +70,7 @@ pub mod tests {
 
         // Configure timestep to be one us so that calculated rates are MHz.
         let dt = 1.0e-6;
-        world.add_resource(Timestep { delta: dt });
+        world.insert(Timestep { delta: dt });
 
         // add an atom to the world. We don't add force nor mass, because we don't need them.
         let atom = world
@@ -97,7 +96,7 @@ pub mod tests {
             .build();
 
         // The first dispatch is to add required components to new atoms.
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
 
         // Reset position and velocity to zero.
@@ -121,7 +120,7 @@ pub mod tests {
             .is_ok());
 
         // Second dispatch to calculate values over completed atoms.
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
 
         let expected_scattered =
             analytic_scattering_rate(intensity, i_sat, delta, transition.gamma());

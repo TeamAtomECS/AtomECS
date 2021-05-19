@@ -12,7 +12,7 @@ use lib::laser_cooling::photons_scattered::ExpectedPhotonsScatteredVector;
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;
-use specs::{Builder, World};
+use specs::prelude::*;
 
 fn main() {
     let mut world = World::new();
@@ -33,7 +33,7 @@ fn main() {
     );
 
     let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     // Set the intensity equal to Isat.
     let radius = 0.01; // 1cm
@@ -68,7 +68,7 @@ fn main() {
     //     .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.insert(Timestep { delta: 1.0e-6 });
 
     // Create atoms
     for i in 0..200 {
@@ -88,12 +88,12 @@ fn main() {
             .build();
     }
 
-    // Run the simulation twice
-    dispatcher.dispatch(&mut world.res);
+    // Run the simulation
+    dispatcher.dispatch(&mut world);
     world.maintain();
-    dispatcher.dispatch(&mut world.res);
+    dispatcher.dispatch(&mut world);
     world.maintain();
-    dispatcher.dispatch(&mut world.res);
+    dispatcher.dispatch(&mut world);
     world.maintain();
-    dispatcher.dispatch(&mut world.res);
+    dispatcher.dispatch(&mut world);
 }

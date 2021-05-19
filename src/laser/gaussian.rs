@@ -11,6 +11,7 @@ use crate::atom::Position;
 use crate::constant::EXP;
 use crate::constant::PI;
 use crate::maths;
+use crate::ramp::Lerp;
 use serde::{Deserialize, Serialize};
 
 /// A component representing an intensity distribution with a gaussian profile.
@@ -20,7 +21,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Also, attenuation effects are not yet implemented but they might come in a version
 /// that accounts for atom-atom intereactions in the future.
-#[derive(Deserialize, Serialize, Clone, Copy)]
+#[derive(Deserialize, Serialize, Clone, Copy, Lerp)]
 pub struct GaussianBeam {
 	/// A point that the laser beam intersects
 	pub intersection: Vector3<f64>,

@@ -1,7 +1,6 @@
 //! Calculation of the forces exerted on the atom by the CoolingLight entities
 
 extern crate rayon;
-extern crate specs;
 use crate::atom::AtomicTransition;
 use crate::constant;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
@@ -9,9 +8,10 @@ use crate::laser::gaussian::GaussianBeam;
 use crate::laser_cooling::photons_scattered::ActualPhotonsScatteredVector;
 use crate::maths;
 use rand::distributions::{Distribution, Normal};
-use specs::{Join, Read, ReadExpect, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
 use nalgebra::Vector3;
+
+use specs::prelude::*;
 
 use crate::atom::Force;
 use crate::constant::HBAR;
@@ -52,7 +52,6 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
         ): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         // There are typically only a small number of lasers in a simulation.
         // For a speedup, cache the required components into thread memory,
@@ -137,7 +136,6 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
         (rand_opt, mut force, actual_scattered_vector, atom_info, timestep): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         match rand_opt {
             None => (),
@@ -186,12 +184,9 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
 pub mod tests {
 
     use super::*;
-
-    extern crate specs;
     use crate::constant::{HBAR, PI};
     use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
     extern crate nalgebra;
     use crate::laser::gaussian;
     use nalgebra::Vector3;
@@ -209,7 +204,7 @@ pub mod tests {
         test_world.register::<ActualPhotonsScatteredVector>();
         test_world.register::<Force>();
         test_world.register::<Dark>();
-        test_world.add_resource(Timestep { delta: time_delta });
+        test_world.insert(Timestep { delta: time_delta });
 
         let wavelength = 461e-9;
         test_world
@@ -244,7 +239,7 @@ pub mod tests {
             .build();
 
         let mut system = CalculateAbsorptionForcesSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
 
@@ -266,8 +261,8 @@ pub mod tests {
         test_world.register::<ActualPhotonsScatteredVector>();
         test_world.register::<Force>();
         test_world.register::<AtomicTransition>();
-        test_world.add_resource(EmissionForceOption::default());
-        test_world.add_resource(Timestep { delta: time_delta });
+        test_world.insert(EmissionForceOption::default());
+        test_world.insert(Timestep { delta: time_delta });
         let number_scattered = 1_000_000.0;
 
         let atom1 = test_world
@@ -282,7 +277,7 @@ pub mod tests {
             .build();
 
         let mut system = ApplyEmissionForceSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
 
