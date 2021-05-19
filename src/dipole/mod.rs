@@ -4,7 +4,6 @@ pub mod dipole_beam;
 pub mod dipole_force;
 pub mod gaussian_e;
 pub mod intensity_gradient;
-pub mod interference;
 pub mod transition_switcher;
 
 extern crate specs;
