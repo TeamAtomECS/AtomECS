@@ -10,6 +10,7 @@ use specs::prelude::*;
 
 use super::gaussian::{get_gaussian_beam_intensity, CircularMask, GaussianBeam};
 use crate::atom::Position;
+use crate::laser::cooling::CoolingLightIndex;
 
 const LASER_CACHE_SIZE: usize = 16;
 

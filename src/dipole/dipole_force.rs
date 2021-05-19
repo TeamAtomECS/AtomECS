@@ -1,7 +1,6 @@
-extern crate rayon;
-extern crate specs;
 use crate::constant;
 use crate::laser::intensity_gradient::LaserIntensityGradientSamplers;
+use specs::prelude::*;
 use specs::{Join, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
 use crate::atom::Force;
@@ -27,8 +26,6 @@ impl<'a> System<'a> for ApplyDipoleForceSystem {
         &mut self,
         (dipole_light, dipole_index,atomic_transition, gradient_sampler, mut force): Self::SystemData,
     ) {
-        use rayon::prelude::ParallelIterator;
-        use specs::ParJoin;
         (&mut force, &atomic_transition, &gradient_sampler)
             .par_join()
             .for_each(|(mut force, atominfo, sampler)| {
@@ -94,7 +91,7 @@ pub mod tests {
             .with(transition)
             .build();
         let mut system = ApplyDipoleForceSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
         let sim_result_force = sampler_storage.get(atom1).expect("Entity not found!").force;
@@ -145,7 +142,7 @@ pub mod tests {
             .with(transition)
             .build();
         let mut system = ApplyDipoleForceSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
         let sim_result_force = sampler_storage.get(atom1).expect("Entity not found!").force;
@@ -235,9 +232,9 @@ pub mod tests {
             .build();
         let mut grad_system = laser::intensity_gradient::SampleLaserIntensityGradientSystem;
         let mut force_system = ApplyDipoleForceSystem;
-        grad_system.run_now(&test_world.res);
+        grad_system.run_now(&test_world);
         test_world.maintain();
-        force_system.run_now(&test_world.res);
+        force_system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
         let grad_sampler_storage = test_world.read_storage::<LaserIntensityGradientSamplers>();

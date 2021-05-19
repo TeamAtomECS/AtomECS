@@ -4,8 +4,7 @@
 // This file exists because - in the spirit of keeping things general - I thought that the intensity sampler should not be in
 // gaussian.rs since other beam profiles (although they're less common) should not be excluded.
 
-extern crate rayon;
-extern crate specs;
+use specs::prelude::*;
 
 use crate::atom::Position;
 use crate::laser::dipole_beam::DipoleLightIndex;
@@ -63,7 +62,6 @@ impl<'a> System<'a> for SampleLaserIntensityGradientSystem {
         (dipole_index, gaussian, reference_frame, pos, mut sampler): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         for (index, beam, reference) in (&dipole_index, &gaussian, &reference_frame).join() {
             (&pos, &mut sampler).par_join().for_each(|(pos, sampler)| {
@@ -128,7 +126,7 @@ pub mod tests {
             })
             .build();
         let mut system = SampleLaserIntensityGradientSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<LaserIntensityGradientSamplers>();
         let sim_result_gradient = sampler_storage
@@ -211,7 +209,7 @@ pub mod tests {
             })
             .build();
         let mut system = SampleLaserIntensityGradientSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<LaserIntensityGradientSamplers>();
         let sim_result_gradient = sampler_storage

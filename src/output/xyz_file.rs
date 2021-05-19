@@ -1,11 +1,9 @@
-extern crate rayon;
-extern crate specs;
 use crate::atom::{Atom, Position, Velocity};
 use crate::integrator::Step;
 use nalgebra::Vector3;
+use specs::prelude::*;
 use specs::{Component, HashMapStorage, Join, ReadExpect, ReadStorage, System, WriteStorage};
 use std::fs::OpenOptions;
-use std::io::prelude::*;
 
 pub struct XYZWriteHelper {
     pub overwrite: bool,
@@ -88,9 +86,6 @@ impl<'a> System<'a> for WriteToXYZFileSystem {
                         .as_str(),
                     );
                 }
-                if let Err(e) = write!(file, "{}", data_string) {
-                    eprintln!("Couldn't write to file: {}", e);
-                }
             }
         }
     }
@@ -121,8 +116,8 @@ pub mod tests {
         test_world.register::<XYZWriteHelper>();
         test_world.register::<Force>();
         test_world.register::<Mass>();
-        test_world.add_resource(Step { n: 0 });
-        test_world.add_resource(Timestep { delta: 1.0e-6 });
+        test_world.insert(Step { n: 0 });
+        test_world.insert(Timestep { delta: 1.0e-6 });
 
         let atom1 = test_world
             .create_entity()
@@ -154,8 +149,8 @@ pub mod tests {
         let mut write_system = WriteToXYZFileSystem;
         let mut int_system = EulerIntegrationSystem;
         for _ in 0..1000 {
-            int_system.run_now(&test_world.res);
-            write_system.run_now(&test_world.res);
+            int_system.run_now(&test_world);
+            write_system.run_now(&test_world);
             test_world.maintain();
         }
         let sampler_storage = test_world.read_storage::<Position>();

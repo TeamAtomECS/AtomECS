@@ -1,12 +1,8 @@
 //! Calculation of the total detuning for specific atoms and CoolingLight entities
 
-use crate::atom::AtomicTransition;
-use crate::constant;
-use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
-use crate::laser::doppler::DopplerShiftSamplers;
-use crate::magnetic::zeeman::ZeemanShiftSampler;
+use crate::laser::cooling::CoolingLightIndex;
+
 use specs::prelude::*;
-use std::f64;
 extern crate nalgebra;
 
 /// Tracks whether slots in the laser sampler arrays are currently used.
