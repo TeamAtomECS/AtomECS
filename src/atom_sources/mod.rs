@@ -8,7 +8,7 @@ pub mod oven;
 pub mod precalc;
 pub mod surface;
 
-use specs::{DispatcherBuilder, World};
+use specs::prelude::*;
 
 extern crate rand;
 use rand::distributions::Distribution;

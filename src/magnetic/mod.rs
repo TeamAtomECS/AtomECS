@@ -1,7 +1,9 @@
 //! Magnetic fields and zeeman shift
 
 extern crate nalgebra;
-extern crate specs;
+
+use specs::prelude::*;
+
 use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use nalgebra::Vector3;
@@ -66,7 +68,6 @@ impl<'a> System<'a> for ClearMagneticFieldSamplerSystem {
 	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
 	fn run(&mut self, mut sampler: Self::SystemData) {
 		use rayon::prelude::*;
-		use specs::ParJoin;
 
 		(&mut sampler).par_join().for_each(|mut sampler| {
 			sampler.magnitude = 0.;
@@ -85,7 +86,6 @@ impl<'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
 	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
 	fn run(&mut self, mut sampler: Self::SystemData) {
 		use rayon::prelude::*;
-		use specs::ParJoin;
 
 		(&mut sampler).par_join().for_each(|mut sampler| {
 			sampler.magnitude = sampler.field.norm();
@@ -195,11 +195,8 @@ pub fn register_components(world: &mut World) {
 
 #[cfg(test)]
 pub mod tests {
-
 	use super::*;
-	extern crate specs;
 	use crate::atom::Position;
-	use specs::{Builder, DispatcherBuilder, World};
 
 	/// Tests the correct implementation of the magnetics systems and dispatcher.
 	/// This is done by setting up a test world and ensuring that the magnetic systems perform the correct operations on test entities.
@@ -217,9 +214,9 @@ pub mod tests {
 		);
 		add_systems_to_dispatch(&mut builder, &[]);
 		let mut dispatcher = builder.build();
-		dispatcher.setup(&mut test_world.res);
-		test_world.add_resource(crate::integrator::Step { n: 0 });
-		test_world.add_resource(crate::integrator::Timestep { delta: 1.0e-6 });
+		dispatcher.setup(&mut test_world);
+		test_world.insert(crate::integrator::Step { n: 0 });
+		test_world.insert(crate::integrator::Timestep { delta: 1.0e-6 });
 
 		test_world
 			.create_entity()
@@ -243,7 +240,7 @@ pub mod tests {
 			.with(MagneticFieldSampler::default())
 			.build();
 
-		dispatcher.dispatch(&mut test_world.res);
+		dispatcher.dispatch(&mut test_world);
 
 		let samplers = test_world.read_storage::<MagneticFieldSampler>();
 		let sampler = samplers.get(sampler_entity);
@@ -268,13 +265,13 @@ pub mod tests {
 		);
 		add_systems_to_dispatch(&mut builder, &[]);
 		let mut dispatcher = builder.build();
-		dispatcher.setup(&mut test_world.res);
-		test_world.add_resource(crate::integrator::Step { n: 0 });
-		test_world.add_resource(crate::integrator::Timestep { delta: 1.0e-6 });
+		dispatcher.setup(&mut test_world);
+		test_world.insert(crate::integrator::Step { n: 0 });
+		test_world.insert(crate::integrator::Timestep { delta: 1.0e-6 });
 
 		let sampler_entity = test_world.create_entity().with(NewlyCreated).build();
 
-		dispatcher.dispatch(&mut test_world.res);
+		dispatcher.dispatch(&mut test_world);
 		test_world.maintain();
 
 		let samplers = test_world.read_storage::<MagneticFieldSampler>();

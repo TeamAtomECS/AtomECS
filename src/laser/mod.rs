@@ -11,10 +11,9 @@ pub mod repump;
 pub mod sampler;
 pub mod twolevel;
 
-extern crate specs;
 use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
-use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System, World};
+use specs::prelude::*;
 
 pub const COOLING_BEAM_LIMIT: usize = 16;
 
