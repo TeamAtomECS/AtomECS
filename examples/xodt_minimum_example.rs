@@ -10,6 +10,7 @@ use lib::laser::gaussian::GaussianBeam;
 use lib::output::file::Text;
 use lib::output::{file, xyz_file};
 use nalgebra::Vector3;
+use specs::prelude::*;
 use specs::{Builder, World};
 use std::time::Instant;
 
@@ -36,7 +37,7 @@ fn main() {
     builder = builder.with(xyz_file::WriteToXYZFileSystem, "", &[]);
 
     let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     world
         .create_entity()
@@ -97,7 +98,7 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-5 });
+    world.insert(Timestep { delta: 1.0e-5 });
 
     // Create a single test atom
     world
@@ -117,7 +118,7 @@ fn main() {
 
     // Run the simulation for a number of steps.
     for _i in 0..1_00_000 {
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
     }
 

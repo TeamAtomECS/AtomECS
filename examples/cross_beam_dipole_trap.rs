@@ -1,5 +1,5 @@
 //! Loading a Sr cross beam dipole trap from center.
-
+use specs::prelude::*;
 extern crate atomecs as lib;
 extern crate nalgebra;
 use atomecs::laser::cooling::CoolingLight;
@@ -48,7 +48,7 @@ fn main() {
     builder = builder.with(xyz_file::WriteToXYZFileSystem, "", &[]);
 
     let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     world
         .create_entity()
@@ -185,8 +185,8 @@ fn main() {
             1,
         ))
         .build();
-    world.add_resource(EmissionForceOption::default());
-    world.add_resource(ScatteringFluctuationsOption::default());
+    world.insert(EmissionForceOption::default());
+    world.insert(ScatteringFluctuationsOption::default());
 
     // Create dipole laser.
     let power = 10.0;
@@ -256,7 +256,7 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-5 });
+    world.insert(Timestep { delta: 1.0e-5 });
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
         .create_entity()
@@ -275,8 +275,8 @@ fn main() {
         dipole::transition_switcher::AttachAtomicDipoleTransitionToAtomsSystem;
     // Run the simulation for a number of steps.
     for _i in 0..100_000 {
-        dispatcher.dispatch(&mut world.res);
-        switcher_system.run_now(&world.res);
+        dispatcher.dispatch(&mut world);
+        switcher_system.run_now(&world);
         world.maintain();
     }
 

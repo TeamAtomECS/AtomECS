@@ -67,7 +67,7 @@ impl<'a> System<'a> for WriteToXYZFileSystem {
                     }
                     helper.initialized = true;
                 }
-                let mut file = OpenOptions::new()
+                let file = OpenOptions::new()
                     .write(true)
                     .append(true)
                     .create(true)

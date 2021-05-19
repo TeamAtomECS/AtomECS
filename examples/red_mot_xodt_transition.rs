@@ -22,6 +22,7 @@ use lib::output::{file, xyz_file};
 use lib::shapes::Cuboid;
 use lib::sim_region::{SimulationVolume, VolumeType};
 use nalgebra::Vector3;
+use specs::prelude::*;
 use specs::{Builder, RunNow, World};
 use std::time::Instant;
 
@@ -48,7 +49,7 @@ fn main() {
     builder = builder.with(xyz_file::WriteToXYZFileSystem, "", &[]);
 
     let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     world
         .create_entity()
@@ -186,8 +187,8 @@ fn main() {
             1,
         ))
         .build();
-    world.add_resource(EmissionForceOption::default());
-    world.add_resource(ScatteringFluctuationsOption::default());
+    world.insert(EmissionForceOption::default());
+    world.insert(ScatteringFluctuationsOption::default());
 
     // END MOT part
 
@@ -259,10 +260,10 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-5 });
+    world.insert(Timestep { delta: 1.0e-5 });
 
     //enable gravity
-    world.add_resource(lib::gravity::ApplyGravityOption);
+    world.insert(lib::gravity::ApplyGravityOption);
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
         .create_entity()
@@ -279,31 +280,31 @@ fn main() {
 
     // Run the simulation for a number of steps.
     for _i in 0..2_000 {
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
     }
     let mut ramp_down_system = dipole::transition_switcher::RampMOTBeamsSystem;
-    world.add_resource(dipole::transition_switcher::MOTAbsoluteDetuningRampRate {
+    world.insert(dipole::transition_switcher::MOTAbsoluteDetuningRampRate {
         absolute_rate: 2.0e6, // Hz / s
     });
-    world.add_resource(dipole::transition_switcher::MOTRelativePowerRampRate {
+    world.insert(dipole::transition_switcher::MOTRelativePowerRampRate {
         relative_rate: 1.0e-60, // 1 / s
     });
 
     let mut switcher_system =
         dipole::transition_switcher::AttachAtomicDipoleTransitionToAtomsSystem;
-    switcher_system.run_now(&world.res);
+    switcher_system.run_now(&world);
     for _i in 0..10_000 {
-        dispatcher.dispatch(&mut world.res);
-        ramp_down_system.run_now(&world.res);
+        dispatcher.dispatch(&mut world);
+        ramp_down_system.run_now(&world);
         world.maintain();
     }
-    world.add_resource(EmissionForceOption::Off);
+    world.insert(EmissionForceOption::Off);
     let mut delete_beams_system = dipole::transition_switcher::DisableMOTBeamsSystem;
-    delete_beams_system.run_now(&world.res);
+    delete_beams_system.run_now(&world);
     println!("Switched from MOT to Dipole setup");
     for _i in 0..20_000 {
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
     }
 

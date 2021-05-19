@@ -19,6 +19,7 @@ use lib::output::file::Text;
 use lib::shapes::Cuboid;
 use lib::sim_region::{SimulationVolume, VolumeType};
 use nalgebra::Vector3;
+use specs::prelude::*;
 use specs::{Builder, World};
 use std::time::Instant;
 
@@ -44,7 +45,7 @@ fn main() {
     );
 
     let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     // Create magnetic field.
     world
@@ -180,13 +181,13 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.insert(Timestep { delta: 1.0e-6 });
     // enable the usage of the emission system
-    world.add_resource(EmissionForceOption::default());
+    world.insert(EmissionForceOption::default());
     //enable gravity
-    world.add_resource(lib::gravity::ApplyGravityOption);
+    world.insert(lib::gravity::ApplyGravityOption);
     //enable the fluctuations in Photon numbers
-    world.add_resource(ScatteringFluctuationsOption::default());
+    world.insert(ScatteringFluctuationsOption::default());
 
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
@@ -204,7 +205,7 @@ fn main() {
 
     // Run the simulation for a number of steps.
     for _i in 0..100_000 {
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
     }
 
