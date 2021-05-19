@@ -5,36 +5,9 @@ pub mod dipole_force;
 pub mod transition_switcher;
 
 extern crate specs;
-use crate::initiate::NewlyCreated;
-use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System, World};
+use specs::{DispatcherBuilder, World};
 
 pub const BEAM_LIMIT: usize = 16;
-
-/// Attaches components used for dipole force calculation to newly created atoms.
-///
-/// They are recognized as newly created if they are associated with
-/// the `NewlyCreated` component.
-pub struct AttachDipoleComponentsToNewlyCreatedAtomsSystem;
-
-impl<'a> System<'a> for AttachDipoleComponentsToNewlyCreatedAtomsSystem {
-    type SystemData = (
-        Entities<'a>,
-        ReadStorage<'a, NewlyCreated>,
-        Read<'a, LazyUpdate>,
-    );
-
-    fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
-        for (ent, _) in (&ent, &newly_created).join() {
-            updater.insert(
-                ent,
-                intensity_gradient::LaserIntensityGradientSamplers {
-                    contents: [intensity_gradient::LaserIntensityGradientSampler::default();
-                        BEAM_LIMIT],
-                },
-            );
-        }
-    }
-}
 
 /// Adds the systems required by the module to the dispatcher.
 ///
@@ -45,11 +18,6 @@ impl<'a> System<'a> for AttachDipoleComponentsToNewlyCreatedAtomsSystem {
 /// `deps`: any dependencies that must be completed before the systems run.
 pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>, deps: &[&str]) {
     builder.add(
-        AttachDipoleComponentsToNewlyCreatedAtomsSystem,
-        "attach_atom_dipole_components",
-        deps,
-    );
-    builder.add(
         dipole_beam::AttachIndexToDipoleLightSystem,
         "attach_dipole_index",
         deps,
@@ -58,11 +26,6 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
         dipole_beam::IndexDipoleLightsSystem,
         "index_dipole_lights",
         &["attach_dipole_index"],
-    );
-    builder.add(
-        intensity_gradient::SampleLaserIntensityGradientSystem,
-        "sample_intensity_gradient",
-        &["index_dipole_lights"],
     );
     builder.add(
         dipole_force::ApplyDipoleForceSystem,
