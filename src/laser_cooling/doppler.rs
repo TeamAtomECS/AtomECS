@@ -2,8 +2,8 @@
 extern crate rayon;
 extern crate specs;
 
-use super::cooling::{CoolingLight, CoolingLightIndex};
 use crate::atom::Velocity;
+use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::gaussian::GaussianBeam;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
@@ -108,7 +108,7 @@ pub mod tests {
 
     extern crate specs;
     use crate::constant::PI;
-    use crate::laser_cooling::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;

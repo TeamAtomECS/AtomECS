@@ -18,6 +18,7 @@ use crate::integrator::{
 	INTEGRATE_VELOCITY_SYSTEM_NAME,
 };
 use crate::laser;
+use crate::laser_cooling;
 use crate::laser_cooling::repump::Dark;
 use crate::magnetic;
 use crate::output::console_output::ConsoleOutputSystem;
@@ -29,7 +30,6 @@ pub fn register_components(world: &mut World) {
 	atom::register_components(world);
 	magnetic::register_components(world);
 	laser::register_components(world);
-	dipole::register_components(world);
 	atom_sources::register_components(world);
 	sim_region::register_components(world);
 	world.register::<Dark>();
@@ -62,6 +62,7 @@ impl AtomecsDispatcherBuilder {
 
 		magnetic::add_systems_to_dispatch(&mut self.builder, &[]);
 		laser::add_systems_to_dispatch(&mut self.builder, &[]);
+		laser_cooling::add_systems_to_dispatch(&mut self.builder, &[]);
 		dipole::add_systems_to_dispatch(&mut self.builder, &[]);
 		atom_sources::add_systems_to_dispatch(&mut self.builder, &[]);
 		self.builder.add(

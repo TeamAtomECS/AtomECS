@@ -1,7 +1,7 @@
 //! Calculation of the total detuning for specific atoms and CoolingLight entities
 
 extern crate specs;
-use crate::laser_cooling::cooling::CoolingLightIndex;
+use crate::laser::cooling::CoolingLightIndex;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 extern crate nalgebra;
 

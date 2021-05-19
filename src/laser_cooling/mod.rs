@@ -1,4 +1,3 @@
-pub mod cooling;
 pub mod doppler;
 pub mod force;
 pub mod photons_scattered;
@@ -11,7 +10,7 @@ extern crate specs;
 use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use crate::laser::BEAM_LIMIT;
-use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System, World};
+use specs::{DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System};
 
 /// Attaches components used for optical force calculation to newly created atoms.
 ///
@@ -74,17 +73,7 @@ impl<'a> System<'a> for AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem {
 pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>, deps: &[&str]) {
     builder.add(
         AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem,
-        "attach_atom_laser_components",
-        deps,
-    );
-    builder.add(
-        cooling::AttachIndexToCoolingLightSystem,
-        "attach_cooling_index",
-        deps,
-    );
-    builder.add(
-        cooling::IndexCoolingLightsSystem,
-        "index_cooling_lights",
+        "attach_laser_cooling_components",
         deps,
     );
     builder.add(
@@ -144,9 +133,4 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
             INTEGRATE_POSITION_SYSTEM_NAME,
         ],
     );
-}
-
-pub fn register_components(world: &mut World) {
-    world.register::<cooling::CoolingLight>();
-    world.register::<cooling::CoolingLightIndex>();
 }

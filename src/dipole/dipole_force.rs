@@ -6,7 +6,7 @@ use specs::{Join, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
 use crate::atom::Force;
 use crate::dipole::atom::AtomicDipoleTransition;
-use crate::dipole::dipole_beam::{DipoleLight, DipoleLightIndex};
+use crate::laser::dipole_beam::{DipoleLight, DipoleLightIndex};
 use nalgebra::Vector3;
 
 /// System that calculates the forces exerted onto the atoms by the dipole laser beams
@@ -58,8 +58,6 @@ pub mod tests {
     use crate::laser;
     use crate::laser::gaussian::GaussianBeam;
     use nalgebra::Vector3;
-
-    use crate::dipole;
 
     #[test]
     fn test_apply_dipole_force_system() {
@@ -183,7 +181,7 @@ pub mod tests {
         test_world
             .create_entity()
             .with(gaussian_beam)
-            .with(dipole::dipole_beam::DipoleLight {
+            .with(laser::dipole_beam::DipoleLight {
                 wavelength: 1064.0e-9,
             })
             .with(DipoleLightIndex {
@@ -206,7 +204,7 @@ pub mod tests {
         test_world
             .create_entity()
             .with(gaussian_beam)
-            .with(dipole::dipole_beam::DipoleLight {
+            .with(laser::dipole_beam::DipoleLight {
                 wavelength: 1064.0e-9,
             })
             .with(DipoleLightIndex {

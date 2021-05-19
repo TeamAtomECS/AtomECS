@@ -3,8 +3,8 @@
 extern crate rayon;
 extern crate specs;
 
-use super::cooling::{CoolingLight, CoolingLightIndex};
 use crate::atom::AtomicTransition;
+use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::intensity::LaserIntensitySamplers;
 use crate::laser_cooling::sampler::LaserDetuningSamplers;
@@ -139,7 +139,7 @@ pub mod tests {
     use super::*;
 
     extern crate specs;
-    use crate::laser_cooling::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;

@@ -9,7 +9,7 @@ extern crate specs;
 
 use super::gaussian::{get_gaussian_beam_intensity, CircularMask, GaussianBeam};
 use crate::atom::Position;
-use crate::laser_cooling::cooling::CoolingLightIndex;
+use crate::laser::cooling::CoolingLightIndex;
 use specs::{Component, Entities, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 const LASER_CACHE_SIZE: usize = 16;
@@ -121,7 +121,7 @@ pub mod tests {
     use super::*;
 
     extern crate specs;
-    use crate::laser_cooling::cooling::CoolingLightIndex;
+    use crate::laser::cooling::CoolingLightIndex;
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;

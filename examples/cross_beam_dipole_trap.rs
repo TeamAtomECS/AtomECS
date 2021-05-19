@@ -2,7 +2,7 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
-use atomecs::laser_cooling::cooling::CoolingLight;
+use atomecs::laser::cooling::CoolingLight;
 use atomecs::laser_cooling::force::EmissionForceOption;
 use atomecs::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use atomecs::magnetic::quadrupole::QuadrupoleField3D;
@@ -202,7 +202,7 @@ fn main() {
     world
         .create_entity()
         .with(gaussian_beam)
-        .with(dipole::dipole_beam::DipoleLight {
+        .with(laser::dipole_beam::DipoleLight {
             wavelength: 1064.0e-9,
         })
         .with(laser::gaussian::GaussianReferenceFrame {
@@ -222,7 +222,7 @@ fn main() {
     world
         .create_entity()
         .with(gaussian_beam)
-        .with(dipole::dipole_beam::DipoleLight {
+        .with(laser::dipole_beam::DipoleLight {
             wavelength: 1064.0e-9,
         })
         .with(laser::gaussian::GaussianReferenceFrame {

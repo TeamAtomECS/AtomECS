@@ -8,7 +8,7 @@ extern crate rayon;
 extern crate specs;
 
 use crate::atom::Position;
-use crate::dipole::dipole_beam::DipoleLightIndex;
+use crate::laser::dipole_beam::DipoleLightIndex;
 use crate::laser::gaussian::{
     get_gaussian_beam_intensity_gradient, GaussianBeam, GaussianReferenceFrame,
 };

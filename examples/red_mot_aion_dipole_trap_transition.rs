@@ -14,8 +14,8 @@ use lib::dipole;
 use lib::ecs;
 use lib::integrator::Timestep;
 use lib::laser;
+use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
-use lib::laser_cooling::cooling::CoolingLight;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file::Text;
 use lib::output::{file, xyz_file};
@@ -205,7 +205,7 @@ fn main() {
     world
         .create_entity()
         .with(gaussian_beam)
-        .with(dipole::dipole_beam::DipoleLight {
+        .with(laser::dipole_beam::DipoleLight {
             wavelength: 1064.0e-9,
         })
         .with(laser::gaussian::GaussianReferenceFrame {
@@ -225,7 +225,7 @@ fn main() {
     world
         .create_entity()
         .with(gaussian_beam)
-        .with(dipole::dipole_beam::DipoleLight {
+        .with(laser::dipole_beam::DipoleLight {
             wavelength: 1064.0e-9,
         })
         .with(laser::gaussian::GaussianReferenceFrame {

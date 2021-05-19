@@ -3,7 +3,7 @@
 extern crate specs;
 use crate::atom::AtomicTransition;
 use crate::constant;
-use crate::laser_cooling::cooling::{CoolingLight, CoolingLightIndex};
+use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser_cooling::doppler::DopplerShiftSamplers;
 use crate::magnetic::zeeman::ZeemanShiftSampler;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};

@@ -4,8 +4,8 @@ extern crate rayon;
 extern crate specs;
 use crate::atom::AtomicTransition;
 use crate::constant;
+use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::gaussian::GaussianBeam;
-use crate::laser_cooling::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser_cooling::photons_scattered::ActualPhotonsScatteredVector;
 use crate::maths;
 use rand::distributions::{Distribution, Normal};
@@ -189,7 +189,7 @@ pub mod tests {
 
     extern crate specs;
     use crate::constant::{HBAR, PI};
-    use crate::laser_cooling::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;

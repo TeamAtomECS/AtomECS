@@ -8,9 +8,9 @@ use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
-use lib::laser::force::EmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
-use lib::laser::photons_scattered::ScatteringFluctuationsOption;
+use lib::laser_cooling::force::EmissionForceOption;
+use lib::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use nalgebra::Vector3;
 use rand::distributions::{Distribution, Normal};
@@ -177,7 +177,11 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     // Now bench just a specific system.
     let mut bench_builder = DispatcherBuilder::new();
-    bench_builder.add(lib::laser::rate::CalculateRateCoefficientsSystem, "", &[]);
+    bench_builder.add(
+        lib::laser_cooling::rate::CalculateRateCoefficientsSystem,
+        "",
+        &[],
+    );
     // Configure thread pool.
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(12)

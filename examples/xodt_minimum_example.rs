@@ -66,7 +66,7 @@ fn main() {
     world
         .create_entity()
         .with(gaussian_beam)
-        .with(dipole::dipole_beam::DipoleLight {
+        .with(laser::dipole_beam::DipoleLight {
             wavelength: wavelength,
         })
         .with(laser::gaussian::GaussianReferenceFrame {
@@ -86,7 +86,7 @@ fn main() {
     world
         .create_entity()
         .with(gaussian_beam)
-        .with(dipole::dipole_beam::DipoleLight {
+        .with(laser::dipole_beam::DipoleLight {
             wavelength: wavelength,
         })
         .with(laser::gaussian::GaussianReferenceFrame {
