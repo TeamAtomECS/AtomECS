@@ -192,7 +192,7 @@ fn main() {
     // END MOT part
 
     // Create dipole laser.
-    let power = 1.;
+    let power = 10.;
     let e_radius = 100.0e-6 / (2.0_f64.sqrt());
 
     let gaussian_beam = GaussianBeam {
