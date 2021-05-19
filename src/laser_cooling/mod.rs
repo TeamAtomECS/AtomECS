@@ -88,16 +88,6 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
         deps,
     );
     builder.add(
-        sampler::InitialiseLaserSamplerMasksSystem,
-        "initialise_laser_sampler_masks",
-        deps,
-    );
-    builder.add(
-        sampler::FillLaserSamplerMasksSystem,
-        "fill_laser_sampler_masks",
-        &["index_cooling_lights", "initialise_laser_sampler_masks"],
-    );
-    builder.add(
         doppler::CalculateDopplerShiftSystem,
         "calculate_doppler_shift",
         &["index_cooling_lights"],

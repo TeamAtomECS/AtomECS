@@ -9,9 +9,9 @@ use specs::Read;
 
 use crate::atom::AtomicTransition;
 use crate::integrator::Timestep;
-use crate::laser::rate::RateCoefficients;
 use crate::laser::sampler::LaserSamplerMasks;
-use crate::laser::twolevel::TwoLevelPopulation;
+use crate::laser_cooling::rate::RateCoefficients;
+use crate::laser_cooling::twolevel::TwoLevelPopulation;
 use serde::{Deserialize, Serialize};
 use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteStorage};
 use std::fmt;
@@ -380,7 +380,7 @@ pub mod tests {
                     crate::laser::BEAM_LIMIT],
             })
             .with(RateCoefficients {
-                contents: [crate::laser::rate::RateCoefficient { rate: 1_000_000.0 };
+                contents: [crate::laser_cooling::rate::RateCoefficient { rate: 1_000_000.0 };
                     crate::laser::BEAM_LIMIT],
             })
             .with(ExpectedPhotonsScatteredVector {

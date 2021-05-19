@@ -8,9 +8,9 @@ pub mod tests {
     use crate::ecs;
     use crate::initiate::NewlyCreated;
     use crate::integrator::Timestep;
-    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
     use crate::laser::gaussian::GaussianBeam;
-    use crate::laser::photons_scattered::TotalPhotonsScattered;
+    use crate::laser_cooling::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
     extern crate nalgebra;
     use nalgebra::Vector3;
     extern crate specs;

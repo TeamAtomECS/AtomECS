@@ -7,7 +7,7 @@ use super::cooling::{CoolingLight, CoolingLightIndex};
 use crate::atom::AtomicTransition;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::intensity::LaserIntensitySamplers;
-use crate::laser::sampler::LaserDetuningSamplers;
+use crate::laser_cooling::sampler::LaserDetuningSamplers;
 use crate::magnetic::MagneticFieldSampler;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
@@ -139,14 +139,14 @@ pub mod tests {
     use super::*;
 
     extern crate specs;
-    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser_cooling::cooling::{CoolingLight, CoolingLightIndex};
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;
     use nalgebra::Vector3;
 
     use crate::laser::intensity::LaserIntensitySamplers;
-    use crate::laser::sampler::LaserDetuningSamplers;
+    use crate::laser_cooling::sampler::LaserDetuningSamplers;
     use crate::magnetic::MagneticFieldSampler;
 
     /// Tests the correct implementation of the `RateCoefficients`
@@ -190,7 +190,7 @@ pub mod tests {
         let atom1 = test_world
             .create_entity()
             .with(LaserDetuningSamplers {
-                contents: [crate::laser::sampler::LaserDetuningSampler {
+                contents: [crate::laser_cooling::sampler::LaserDetuningSampler {
                     detuning_sigma_plus: detuning,
                     detuning_sigma_minus: detuning,
                     detuning_pi: detuning,

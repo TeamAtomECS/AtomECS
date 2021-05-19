@@ -1,7 +1,7 @@
 extern crate rayon;
 extern crate specs;
 use crate::constant;
-use crate::dipole::intensity_gradient::LaserIntensityGradientSamplers;
+use crate::laser::intensity_gradient::LaserIntensityGradientSamplers;
 use specs::{Join, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
 use crate::atom::Force;
@@ -89,7 +89,7 @@ pub mod tests {
                 force: Vector3::new(0.0, 0.0, 0.0),
             })
             .with(LaserIntensityGradientSamplers {
-                contents: [crate::dipole::intensity_gradient::LaserIntensityGradientSampler {
+                contents: [crate::laser::intensity_gradient::LaserIntensityGradientSampler {
                     gradient: Vector3::new(0.0, 1.0, -2.0),
                 }; crate::dipole::BEAM_LIMIT],
             })
@@ -140,7 +140,7 @@ pub mod tests {
                 force: Vector3::new(0.0, 0.0, 0.0),
             })
             .with(LaserIntensityGradientSamplers {
-                contents: [crate::dipole::intensity_gradient::LaserIntensityGradientSampler {
+                contents: [crate::laser::intensity_gradient::LaserIntensityGradientSampler {
                     gradient: Vector3::new(-8.4628e+7, -4.33992902e+13, -4.33992902e+13),
                 }; crate::dipole::BEAM_LIMIT],
             })
@@ -230,12 +230,12 @@ pub mod tests {
                 force: Vector3::new(0.0, 0.0, 0.0),
             })
             .with(LaserIntensityGradientSamplers {
-                contents: [dipole::intensity_gradient::LaserIntensityGradientSampler::default();
+                contents: [laser::intensity_gradient::LaserIntensityGradientSampler::default();
                     crate::dipole::BEAM_LIMIT],
             })
             .with(transition)
             .build();
-        let mut grad_system = dipole::intensity_gradient::SampleLaserIntensityGradientSystem;
+        let mut grad_system = laser::intensity_gradient::SampleLaserIntensityGradientSystem;
         let mut force_system = ApplyDipoleForceSystem;
         grad_system.run_now(&test_world.res);
         test_world.maintain();

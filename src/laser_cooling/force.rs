@@ -4,9 +4,9 @@ extern crate rayon;
 extern crate specs;
 use crate::atom::AtomicTransition;
 use crate::constant;
-use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::gaussian::GaussianBeam;
-use crate::laser::photons_scattered::ActualPhotonsScatteredVector;
+use crate::laser_cooling::cooling::{CoolingLight, CoolingLightIndex};
+use crate::laser_cooling::photons_scattered::ActualPhotonsScatteredVector;
 use crate::maths;
 use rand::distributions::{Distribution, Normal};
 use specs::{Join, Read, ReadExpect, ReadStorage, System, WriteStorage};
@@ -17,7 +17,7 @@ use crate::atom::Force;
 use crate::constant::HBAR;
 use crate::integrator::Timestep;
 
-use crate::laser::repump::*;
+use crate::laser_cooling::repump::*;
 
 const LASER_CACHE_SIZE: usize = 16;
 
@@ -189,7 +189,7 @@ pub mod tests {
 
     extern crate specs;
     use crate::constant::{HBAR, PI};
-    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser_cooling::cooling::{CoolingLight, CoolingLightIndex};
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;
@@ -236,7 +236,7 @@ pub mod tests {
         let atom1 = test_world
             .create_entity()
             .with(ActualPhotonsScatteredVector {
-                contents: [crate::laser::photons_scattered::ActualPhotonsScattered {
+                contents: [crate::laser_cooling::photons_scattered::ActualPhotonsScattered {
                     scattered: number_scattered,
                 }; crate::laser::BEAM_LIMIT],
             })
@@ -273,7 +273,7 @@ pub mod tests {
         let atom1 = test_world
             .create_entity()
             .with(ActualPhotonsScatteredVector {
-                contents: [crate::laser::photons_scattered::ActualPhotonsScattered {
+                contents: [crate::laser_cooling::photons_scattered::ActualPhotonsScattered {
                     scattered: number_scattered,
                 }; crate::laser::BEAM_LIMIT],
             })

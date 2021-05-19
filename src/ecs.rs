@@ -18,7 +18,7 @@ use crate::integrator::{
 	INTEGRATE_VELOCITY_SYSTEM_NAME,
 };
 use crate::laser;
-use crate::laser::repump::Dark;
+use crate::laser_cooling::repump::Dark;
 use crate::magnetic;
 use crate::output::console_output::ConsoleOutputSystem;
 use crate::sim_region;

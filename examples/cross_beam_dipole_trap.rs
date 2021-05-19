@@ -2,9 +2,9 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
-use atomecs::laser::cooling::CoolingLight;
-use atomecs::laser::force::EmissionForceOption;
-use atomecs::laser::photons_scattered::ScatteringFluctuationsOption;
+use atomecs::laser_cooling::cooling::CoolingLight;
+use atomecs::laser_cooling::force::EmissionForceOption;
+use atomecs::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use atomecs::magnetic::quadrupole::QuadrupoleField3D;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::central_creator::CentralCreator;

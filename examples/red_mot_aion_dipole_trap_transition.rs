@@ -2,9 +2,8 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
-use crate::laser::cooling::CoolingLight;
-use crate::lib::laser::force::EmissionForceOption;
-use atomecs::laser::photons_scattered::ScatteringFluctuationsOption;
+use crate::lib::laser_cooling::force::EmissionForceOption;
+use atomecs::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::central_creator::CentralCreator;
 use lib::atom_sources::emit::AtomNumberToEmit;
@@ -16,6 +15,7 @@ use lib::ecs;
 use lib::integrator::Timestep;
 use lib::laser;
 use lib::laser::gaussian::GaussianBeam;
+use lib::laser_cooling::cooling::CoolingLight;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file::Text;
 use lib::output::{file, xyz_file};

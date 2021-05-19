@@ -4,8 +4,8 @@ extern crate rayon;
 extern crate specs;
 
 use crate::atom::AtomicTransition;
-use crate::laser::rate::RateCoefficients;
 use crate::laser::sampler::LaserSamplerMasks;
+use crate::laser_cooling::rate::RateCoefficients;
 use serde::{Deserialize, Serialize};
 use specs::{Component, ReadStorage, System, VecStorage, WriteStorage};
 use std::fmt;
@@ -108,15 +108,15 @@ pub mod tests {
         test_world.register::<TwoLevelPopulation>();
 
         // this test runs with two lasers only and we have to tell this the mask
-        let mut active_lasers = [crate::laser::sampler::LaserSamplerMask { filled: false };
-            crate::laser::BEAM_LIMIT];
+        let mut active_lasers =
+            [crate::laser::sampler::LaserSamplerMask { filled: false }; crate::laser::BEAM_LIMIT];
         active_lasers[0] = crate::laser::sampler::LaserSamplerMask { filled: true };
         active_lasers[1] = crate::laser::sampler::LaserSamplerMask { filled: true };
 
         let atom1 = test_world
             .create_entity()
             .with(RateCoefficients {
-                contents: [crate::laser::rate::RateCoefficient { rate: 1_000_000.0 };
+                contents: [crate::laser_cooling::rate::RateCoefficient { rate: 1_000_000.0 };
                     crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::strontium())
@@ -158,14 +158,14 @@ pub mod tests {
         test_world.register::<TwoLevelPopulation>();
 
         // this test runs with two lasers only and we have to tell this the mask
-        let mut active_lasers = [crate::laser::sampler::LaserSamplerMask { filled: false };
-            crate::laser::BEAM_LIMIT];
+        let mut active_lasers =
+            [crate::laser::sampler::LaserSamplerMask { filled: false }; crate::laser::BEAM_LIMIT];
         active_lasers[0] = crate::laser::sampler::LaserSamplerMask { filled: true };
 
         let atom1 = test_world
             .create_entity()
             .with(RateCoefficients {
-                contents: [crate::laser::rate::RateCoefficient { rate: 1.0e9 };
+                contents: [crate::laser_cooling::rate::RateCoefficient { rate: 1.0e9 };
                     crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::rubidium())
