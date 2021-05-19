@@ -1,15 +1,10 @@
 //! Calculation and initialization of optical forces and quantities exerted on the atoms
 
-pub mod cooling;
-pub mod doppler;
-pub mod force;
+pub mod frame;
 pub mod gaussian;
 pub mod intensity;
-pub mod photons_scattered;
-pub mod rate;
-pub mod repump;
+pub mod intensity_gradient;
 pub mod sampler;
-pub mod twolevel;
 
 extern crate specs;
 use crate::initiate::NewlyCreated;
