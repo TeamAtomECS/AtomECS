@@ -11,7 +11,7 @@ use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 const LASER_CACHE_SIZE: usize = 16;
 
 /// Represents the Dopplershift of the atom with respect to each beam due to the atom velocity
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
 pub struct DopplerShiftSampler {
     /// detuning value in rad/s
     pub doppler_shift: f64,
@@ -77,6 +77,7 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
 ///
 /// Each list entry corresponds to the detuning with respect to a CoolingLight entity
 /// and is indext via `CoolingLightIndex`
+#[derive(Clone, Copy, Serialize)]
 pub struct DopplerShiftSamplers {
     /// List of all `DopplerShiftSampler`s
     pub contents: [DopplerShiftSampler; crate::laser::BEAM_LIMIT],

@@ -6,7 +6,7 @@ use specs::prelude::*;
 extern crate nalgebra;
 
 /// Tracks whether slots in the laser sampler arrays are currently used.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
 pub struct LaserSamplerMask {
     /// Marks whether a cooling light exists for this slot in the laser sampler array.
     pub filled: bool,

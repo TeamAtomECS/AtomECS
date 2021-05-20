@@ -1,8 +1,10 @@
 //! Magnetic quadrupole fields
 
 extern crate nalgebra;
+extern crate serde;
 extern crate specs;
 use crate::atom::Position;
+use serde::Serialize;
 
 use crate::magnetic::MagneticFieldSampler;
 use crate::ramp::Lerp;
@@ -10,7 +12,7 @@ use nalgebra::{Unit, Vector3};
 use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 
 /// A component representing a 3D quadrupole field.
-#[derive(Clone, Lerp)]
+#[derive(Serialize, Clone, Copy, Lerp)]
 pub struct QuadrupoleField3D {
     /// Gradient of the quadrupole field, in units of Tesla/m
     gradient: f64,

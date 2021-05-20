@@ -19,7 +19,7 @@ use std::fmt;
 ///
 /// This is an early estimation used to determine the more precise `ExpectedPhotonsScattered`
 /// afterwards.
-#[derive(Clone)]
+#[derive(Clone, Copy, Serialize)]
 pub struct TotalPhotonsScattered {
     /// Number of photons scattered from all beams
     pub total: f64,

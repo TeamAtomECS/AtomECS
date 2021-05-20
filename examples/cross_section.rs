@@ -22,12 +22,12 @@ fn main() {
 
     // Output scattering rate and velocity
     builder = builder.with(
-        file::new::<ExpectedPhotonsScatteredVector, Text>("scattered.txt".to_string(), 1),
+        file::new::<ExpectedPhotonsScatteredVector, Text, Atom>("scattered.txt".to_string(), 1),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 1),
+        file::new::<Velocity, Text, Atom>("vel.txt".to_string(), 1),
         "",
         &[],
     );

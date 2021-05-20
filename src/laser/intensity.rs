@@ -15,7 +15,7 @@ use crate::laser::cooling::CoolingLightIndex;
 const LASER_CACHE_SIZE: usize = 16;
 
 /// Represents the laser intensity at the position of the atom with respect to a certain laser beam
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
 pub struct LaserIntensitySampler {
     /// Intensity in SI units of W/m^2
     pub intensity: f64,
@@ -31,6 +31,7 @@ impl Default for LaserIntensitySampler {
 }
 
 /// Component that holds a list of `LaserIntensitySamplers`
+#[derive(Copy, Clone, Serialize)]
 pub struct LaserIntensitySamplers {
     /// List of laser samplers
     pub contents: [LaserIntensitySampler; crate::laser::BEAM_LIMIT],
