@@ -7,6 +7,29 @@ use rand::Rng;
 extern crate nalgebra;
 use nalgebra::Vector3;
 
+/// Get relative coordinates between a point and a line.
+///
+/// # Arguments
+///
+/// `pos`: position of the point
+///
+/// `line_point`: a point on the line
+///
+/// `dir`: vector pointing along the line.
+pub fn get_relative_coordinates_line_point(
+	pos: &Vector3<f64>,
+	line_point: &Vector3<f64>,
+	dir: &Vector3<f64>,
+	frame: &crate::laser::frame::Frame,
+) -> (f64, f64, f64) {
+	let rela_cood = pos - line_point;
+	let z = rela_cood.dot(&dir) / dir.norm();
+	let r_vec = rela_cood - z * dir;
+	let x = r_vec.dot(&frame.x_vector);
+	let y = r_vec.dot(&frame.y_vector);
+	(x, y, z)
+}
+
 /// Get miniminum distance between a point and a line.
 ///
 /// # Arguments
@@ -30,8 +53,8 @@ pub fn get_minimum_distance_line_point(
 /// A normalised gaussian distribution.
 ///
 /// The distribution is normalised such that the 2D area underneath a gaussian dist with sigma_x=sigma_y=std is equal to 1.
-pub fn gaussian_dis(std: f64, distance: f64) -> f64 {
-	1.0 / (2.0 * PI * std * std) * EXP.powf(-distance * distance / 2.0 / (std * std))
+pub fn gaussian_dis(std: f64, distance_squared: f64) -> f64 {
+	1.0 / (2.0 * PI * std * std) * EXP.powf(-distance_squared / 2.0 / (std * std))
 }
 
 /// generate a uniform random direction

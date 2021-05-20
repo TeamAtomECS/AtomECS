@@ -113,6 +113,38 @@ impl GaussianBeam {
 			ellipticity: 0.0,
 		}
 	}
+	/// Create a GaussianBeam component by specifying the peak intensity, rather than power.
+	///
+	/// # Arguments:
+	///
+	/// `intersection`: as per component.
+	///
+	/// `direction`: as per component.
+	///
+	/// `power`: power of the beam in W
+	///
+	/// `e_radius`: radius of beam in units of m.
+	///
+	/// `wavelength`: wavelength of the electromagnetic light
+	///
+	/// `ellipticity`: sqrt(1-(b/a)^2) measures the ellipticity of the intensity profile. Is zero for symmetric beams.
+	pub fn from_power_with_ellipticity_and_rayleigh_range(
+		intersection: Vector3<f64>,
+		direction: Vector3<f64>,
+		power: f64,
+		e_radius: f64,
+		wavelength: f64,
+		ellipiticity: f64,
+	) -> Self {
+		GaussianBeam {
+			intersection: intersection,
+			direction: direction.normalize(),
+			power: power,
+			e_radius: e_radius,
+			rayleigh_range: calculate_rayleigh_range(&wavelength, &e_radius),
+			ellipticity: ellipiticity,
+		}
+	}
 }
 
 /// A component that covers the central portion of a laser beam.
@@ -132,12 +164,36 @@ pub fn get_gaussian_beam_intensity(
 	beam: &GaussianBeam,
 	pos: &Position,
 	mask: Option<&CircularMask>,
+	frame: Option<&Frame>,
 ) -> f64 {
-	let (min_dist, z) =
-		maths::get_minimum_distance_line_point(&pos.pos, &beam.intersection, &beam.direction);
+	let (z, distance_squared) = match frame {
+		Some(frame) => {
+			let (x, y, z) = maths::get_relative_coordinates_line_point(
+				&pos.pos,
+				&beam.intersection,
+				&beam.direction,
+				&frame,
+			);
+			let semi_major_axis = beam.e_radius / (1.0 - beam.ellipticity.powf(2.0)).powf(0.5);
+			(
+				z,
+				(semi_major_axis * semi_major_axis)
+					* ((x / beam.e_radius).powf(2.0) + (y / semi_major_axis).powf(2.0)),
+			)
+		}
+		// ellipticity will be ignored (i.e. treated as zero) if no `Frame` is supplied.
+		None => {
+			let (distance, z) = maths::get_minimum_distance_line_point(
+				&pos.pos,
+				&beam.intersection,
+				&beam.direction,
+			);
+			(z, distance * distance)
+		}
+	};
 	let power = match mask {
 		Some(mask) => {
-			if min_dist < mask.radius {
+			if distance_squared.powf(0.5) < mask.radius {
 				0.0
 			} else {
 				beam.power
@@ -146,7 +202,9 @@ pub fn get_gaussian_beam_intensity(
 		None => beam.power,
 	};
 	let broadening_factor = 1. / (1. + z.powf(2.0) / beam.rayleigh_range.powf(2.0));
-	power * broadening_factor * maths::gaussian_dis(beam.e_radius / 2.0_f64.powf(0.5), min_dist)
+	power
+		* broadening_factor
+		* maths::gaussian_dis(beam.e_radius / 2.0_f64.powf(0.5), distance_squared)
 }
 /// Computes the rayleigh range for a given beam and wavelength
 pub fn calculate_rayleigh_range(wavelength: &f64, e_radius: &f64) -> f64 {
@@ -228,7 +286,7 @@ pub mod tests {
 			beam.power
 				/ (PI.powf(0.5) * beam.e_radius).powf(2.0)
 				/ (1.0 + 1.0 / calculate_rayleigh_range(&1064.0e-9, &2.0).powf(2.0)),
-			get_gaussian_beam_intensity(&beam, &pos1, None),
+			get_gaussian_beam_intensity(&beam, &pos1, None, None),
 			1e-6_f64
 		);
 
@@ -236,7 +294,7 @@ pub mod tests {
 		assert_approx_eq!(
 			1.0 / (PI.powf(0.5) * beam.e_radius).powf(2.0)
 				* (-pos2.pos[1] / beam.e_radius.powf(2.0)).exp(),
-			get_gaussian_beam_intensity(&beam, &pos2, None),
+			get_gaussian_beam_intensity(&beam, &pos2, None, None),
 			1e-6_f64
 		);
 
@@ -244,14 +302,14 @@ pub mod tests {
 			beam.power
 				/ (PI.powf(0.5) * beam.e_radius).powf(2.0)
 				/ (1.0 + 1.0 / calculate_rayleigh_range(&1064.0e-9, &2.0).powf(2.0)),
-			get_gaussian_beam_intensity(&beam, &pos1, None),
+			get_gaussian_beam_intensity(&beam, &pos1, None, None),
 			1e-6_f64
 		);
 
 		assert_approx_eq!(
 			1.0 / (PI.powf(0.5) * beam.e_radius).powf(2.0)
 				* (-pos2.pos[1] / beam.e_radius.powf(2.0)).exp(),
-			get_gaussian_beam_intensity(&beam, &pos2, None),
+			get_gaussian_beam_intensity(&beam, &pos2, None, None),
 			1e-6_f64
 		);
 		let rayleigh_range_2 = calculate_rayleigh_range(&1064.0e-6, &beam.e_radius);
@@ -259,9 +317,34 @@ pub mod tests {
 		let pos3 = Position {
 			pos: Vector3::x() * rayleigh_range_2,
 		};
+
+		let frame = Frame::from_direction(beam.direction, Vector3::new(0.0, 1.0, 0.0));
 		assert_approx_eq!(
 			beam.power / (PI.powf(0.5) * beam.e_radius).powf(2.0),
-			get_gaussian_beam_intensity(&beam, &pos3, None),
+			get_gaussian_beam_intensity(&beam, &pos3, None, Some(&frame)),
+			1e-6_f64
+		);
+		let pos4 = Position {
+			pos: Vector3::x() + Vector3::y(),
+		};
+		assert_approx_eq!(
+			0.061974997154826385,
+			get_gaussian_beam_intensity(&beam, &pos4, None, Some(&frame)),
+			1e-6_f64
+		);
+
+		let beam = GaussianBeam {
+			direction: Vector3::x(),
+			intersection: Vector3::new(0.0, 0.0, 0.0),
+			e_radius: 2.0,
+			power: 1.0,
+			rayleigh_range: calculate_rayleigh_range(&1064.0e-9, &2.0),
+			ellipticity: 0.5,
+		};
+
+		assert_approx_eq!(
+			beam.power / (PI.powf(0.5) * beam.e_radius).powf(2.0),
+			get_gaussian_beam_intensity(&beam, &pos3, None, Some(&frame)),
 			1e-6_f64
 		);
 	}
