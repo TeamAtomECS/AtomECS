@@ -3,8 +3,8 @@
 extern crate nalgebra;
 extern crate rayon;
 extern crate specs;
+use crate::laser::frame::Frame;
 use nalgebra::Vector3;
-use specs::VecStorage;
 use specs::{Component, HashMapStorage};
 
 use crate::atom::Position;
@@ -153,24 +153,12 @@ pub fn calculate_rayleigh_range(wavelength: &f64, e_radius: &f64) -> f64 {
 	2.0 * PI * e_radius.powf(2.0) / wavelength
 }
 
-/// A component that stores additional information about a given beam
-/// entity, such as internal reference frame and ellipticity
-#[derive(Clone, Copy)]
-pub struct GaussianReferenceFrame {
-	pub x_vector: Vector3<f64>,
-	pub y_vector: Vector3<f64>,
-	pub ellipticity: f64,
-}
-impl Component for GaussianReferenceFrame {
-	type Storage = VecStorage<Self>;
-}
-
 /// Computes the intensity gradient of a given beam with and returns it as
 /// a three-dimensional vector
 pub fn get_gaussian_beam_intensity_gradient(
 	beam: &GaussianBeam,
 	pos: &Position,
-	reference_frame: &GaussianReferenceFrame,
+	reference_frame: &Frame,
 ) -> Vector3<f64> {
 	let rela_coord = pos.pos - beam.intersection;
 	let x = rela_coord.dot(&reference_frame.x_vector);
@@ -213,10 +201,9 @@ pub mod tests {
 		let pos1 = Position {
 			pos: Vector3::new(10.0e-6, 0.0, 30.0e-6),
 		};
-		let grf = GaussianReferenceFrame {
+		let grf = Frame {
 			x_vector: Vector3::x(),
 			y_vector: Vector3::y(),
-			ellipticity: 0.0,
 		};
 
 		let gradient = get_gaussian_beam_intensity_gradient(&beam, &pos1, &grf);

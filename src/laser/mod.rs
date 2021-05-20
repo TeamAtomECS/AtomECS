@@ -111,7 +111,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 pub fn register_components(world: &mut World) {
 	world.register::<gaussian::GaussianBeam>();
 	world.register::<gaussian::CircularMask>();
-	world.register::<gaussian::GaussianReferenceFrame>();
+	world.register::<frame::Frame>();
 	world.register::<dipole_beam::DipoleLight>();
 	world.register::<dipole_beam::DipoleLightIndex>();
 }

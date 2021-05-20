@@ -8,9 +8,8 @@ use specs::prelude::*;
 
 use crate::atom::Position;
 use crate::laser::dipole_beam::DipoleLightIndex;
-use crate::laser::gaussian::{
-    get_gaussian_beam_intensity_gradient, GaussianBeam, GaussianReferenceFrame,
-};
+use crate::laser::frame::Frame;
+use crate::laser::gaussian::{get_gaussian_beam_intensity_gradient, GaussianBeam};
 use nalgebra::Vector3;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
@@ -44,7 +43,7 @@ impl Component for LaserIntensityGradientSamplers {
 ///
 /// So far, the only intensity distribution implemented is`GaussianBeam`. Additionally
 /// the system also uses `GaussianRayleighRange` for axial divergence and
-/// `GaussianReferenceFrame` to account for different ellipiticies in the future.
+/// `Frame` to account for different ellipiticies in the future.
 /// The result is stored in the `LaserIntensityGradientSamplers` component that each
 /// atom is associated with.
 pub struct SampleLaserIntensityGradientSystem;
@@ -52,7 +51,7 @@ impl<'a> System<'a> for SampleLaserIntensityGradientSystem {
     type SystemData = (
         ReadStorage<'a, DipoleLightIndex>,
         ReadStorage<'a, GaussianBeam>,
-        ReadStorage<'a, GaussianReferenceFrame>,
+        ReadStorage<'a, Frame>,
         ReadStorage<'a, Position>,
         WriteStorage<'a, LaserIntensityGradientSamplers>,
     );
@@ -89,7 +88,7 @@ pub mod tests {
         test_world.register::<GaussianBeam>();
         test_world.register::<Position>();
         test_world.register::<LaserIntensityGradientSamplers>();
-        test_world.register::<GaussianReferenceFrame>();
+        test_world.register::<Frame>();
 
         let beam = GaussianBeam {
             direction: Vector3::z(),
@@ -110,10 +109,9 @@ pub mod tests {
                 initiated: true,
             })
             .with(beam)
-            .with(GaussianReferenceFrame {
+            .with(Frame {
                 x_vector: Vector3::x(),
                 y_vector: Vector3::y(),
-                ellipticity: 0.0,
             })
             .build();
 
@@ -142,10 +140,9 @@ pub mod tests {
                 &Position {
                     pos: Vector3::new(10.0e-6, 0.0, 30.0e-6),
                 },
-                &GaussianReferenceFrame {
+                &Frame {
                     x_vector: Vector3::x(),
                     y_vector: Vector3::y(),
-                    ellipticity: 0.0,
                 },
             );
 
@@ -173,7 +170,7 @@ pub mod tests {
         test_world.register::<GaussianBeam>();
         test_world.register::<Position>();
         test_world.register::<LaserIntensityGradientSamplers>();
-        test_world.register::<GaussianReferenceFrame>();
+        test_world.register::<Frame>();
 
         let beam = GaussianBeam {
             direction: Vector3::x(),
@@ -194,10 +191,9 @@ pub mod tests {
                 initiated: true,
             })
             .with(beam)
-            .with(GaussianReferenceFrame {
+            .with(Frame {
                 x_vector: Vector3::y(),
                 y_vector: Vector3::z(),
-                ellipticity: 0.0,
             })
             .build();
 

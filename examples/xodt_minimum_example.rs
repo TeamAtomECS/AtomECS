@@ -63,10 +63,9 @@ fn main() {
         .with(laser::dipole_beam::DipoleLight {
             wavelength: wavelength,
         })
-        .with(laser::gaussian::GaussianReferenceFrame {
+        .with(laser::frame::Frame {
             x_vector: Vector3::y(),
             y_vector: Vector3::z(),
-            ellipticity: 0.0,
         })
         .build();
 
@@ -84,10 +83,9 @@ fn main() {
         .with(laser::dipole_beam::DipoleLight {
             wavelength: wavelength,
         })
-        .with(laser::gaussian::GaussianReferenceFrame {
+        .with(laser::frame::Frame {
             x_vector: Vector3::x(),
             y_vector: Vector3::z(),
-            ellipticity: 0.0,
         })
         .build();
 

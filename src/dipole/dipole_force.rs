@@ -163,7 +163,7 @@ pub mod tests {
         test_world.register::<AtomicDipoleTransition>();
         test_world.register::<crate::atom::Position>();
         test_world.register::<crate::laser::gaussian::GaussianBeam>();
-        test_world.register::<crate::laser::gaussian::GaussianReferenceFrame>();
+        test_world.register::<crate::laser::frame::Frame>();
 
         let power = 10.0;
         let e_radius = 60.0e-6 / (2.0_f64.sqrt());
@@ -174,6 +174,7 @@ pub mod tests {
             power: power,
             direction: Vector3::x(),
             rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
+            ellipticity: 0.0,
         };
         test_world
             .create_entity()
@@ -185,10 +186,9 @@ pub mod tests {
                 index: 0,
                 initiated: true,
             })
-            .with(laser::gaussian::GaussianReferenceFrame {
+            .with(laser::frame::Frame {
                 x_vector: Vector3::y(),
                 y_vector: Vector3::z(),
-                ellipticity: 0.0,
             })
             .build();
         let gaussian_beam = GaussianBeam {
@@ -197,6 +197,7 @@ pub mod tests {
             power: power,
             direction: Vector3::y(),
             rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
+            ellipticity: 0.0,
         };
         test_world
             .create_entity()
@@ -208,10 +209,9 @@ pub mod tests {
                 index: 1,
                 initiated: true,
             })
-            .with(laser::gaussian::GaussianReferenceFrame {
+            .with(laser::frame::Frame {
                 x_vector: Vector3::x(),
                 y_vector: Vector3::z(),
-                ellipticity: 0.0,
             })
             .build();
 

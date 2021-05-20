@@ -210,10 +210,9 @@ fn main() {
         .with(laser::dipole_beam::DipoleLight {
             wavelength: 1064.0e-9,
         })
-        .with(laser::gaussian::GaussianReferenceFrame {
+        .with(laser::frame::Frame {
             x_vector: Vector3::y(),
             y_vector: Vector3::z(),
-            ellipticity: 0.0,
         })
         .build();
 
@@ -231,10 +230,9 @@ fn main() {
         .with(laser::dipole_beam::DipoleLight {
             wavelength: 1064.0e-9,
         })
-        .with(laser::gaussian::GaussianReferenceFrame {
+        .with(laser::frame::Frame {
             x_vector: Vector3::x(),
             y_vector: Vector3::z(),
-            ellipticity: 0.0,
         })
         .build();
     // creating the entity that represents the source
