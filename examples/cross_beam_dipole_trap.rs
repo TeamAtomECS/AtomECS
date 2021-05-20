@@ -18,8 +18,8 @@ use lib::ecs;
 use lib::integrator::Timestep;
 use lib::laser;
 use lib::laser::gaussian::GaussianBeam;
-use lib::output::file::Text;
-use lib::output::{file, xyz_file};
+use lib::output::file;
+use lib::output::file::{Text, XYZ};
 use lib::shapes::Cuboid;
 use lib::sim_region::{SimulationVolume, VolumeType};
 use nalgebra::Vector3;
@@ -46,22 +46,14 @@ fn main() {
         "",
         &[],
     );
-    builder = builder.with(xyz_file::WriteToXYZFileSystem, "", &[]);
+    builder = builder.with(
+        file::new::<Position, XYZ, Atom>("position.xyz".to_string(), 100),
+        "",
+        &[],
+    );
 
     let mut dispatcher = builder.build();
     dispatcher.setup(&mut world);
-
-    world
-        .create_entity()
-        .with(xyz_file::XYZWriteHelper {
-            overwrite: true,
-            initialized: false,
-            write_every: 100,
-            scale_factor: 20000.,
-            discard_place: Vector3::new(2., 2., 2.),
-            name: format!("{}", "cross_beam_basic_heating_escape"),
-        })
-        .build();
 
     world
         .create_entity()

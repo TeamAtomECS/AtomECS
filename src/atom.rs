@@ -2,6 +2,7 @@
 
 use crate::constant::{BOHRMAG, C};
 use crate::output::file::BinaryConversion;
+use crate::output::file::XYZPosition;
 use crate::ramp::Lerp;
 use nalgebra::Vector3;
 use specs::prelude::*;
@@ -38,6 +39,11 @@ impl fmt::Display for Position {
 impl BinaryConversion for Position {
 	fn data(&self) -> Vec<f64> {
 		vec![self.pos[0], self.pos[1], self.pos[2]]
+	}
+}
+impl XYZPosition for Position {
+	fn pos(&self) -> Vector3<f64> {
+		self.pos
 	}
 }
 
