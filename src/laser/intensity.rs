@@ -147,6 +147,7 @@ pub mod tests {
                 e_radius: 2.0,
                 power: 1.0,
                 rayleigh_range: gaussian::calculate_rayleigh_range(&461.0e-9, &2.0),
+                ellipticity: 0.0,
             })
             .build();
 
@@ -170,6 +171,7 @@ pub mod tests {
                 e_radius: 2.0,
                 power: 1.0,
                 rayleigh_range: gaussian::calculate_rayleigh_range(&461.0e-9, &2.0),
+                ellipticity: 0.0,
             },
             &Position { pos: Vector3::y() },
             None,

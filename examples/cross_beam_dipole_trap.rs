@@ -79,6 +79,7 @@ fn main() {
                 &(constant::C / AtomicTransition::strontium_red().frequency),
                 &radius,
             ),
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
@@ -97,6 +98,7 @@ fn main() {
                 &(constant::C / AtomicTransition::strontium_red().frequency),
                 &radius,
             ),
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
@@ -117,6 +119,7 @@ fn main() {
                 &(constant::C / AtomicTransition::strontium_red().frequency),
                 &radius,
             ),
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
@@ -135,6 +138,7 @@ fn main() {
                 &(constant::C / AtomicTransition::strontium_red().frequency),
                 &radius,
             ),
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
@@ -153,6 +157,7 @@ fn main() {
                 &(constant::C / AtomicTransition::strontium_red().frequency),
                 &radius,
             ),
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
@@ -171,6 +176,7 @@ fn main() {
                 &(constant::C / AtomicTransition::strontium_red().frequency),
                 &radius,
             ),
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium_red(),
@@ -191,6 +197,7 @@ fn main() {
         power: power,
         direction: Vector3::x(),
         rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
+        ellipticity: 0.0,
     };
     world
         .create_entity()
@@ -211,6 +218,7 @@ fn main() {
         power: power,
         direction: Vector3::y(),
         rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
+        ellipticity: 0.0,
     };
     world
         .create_entity()

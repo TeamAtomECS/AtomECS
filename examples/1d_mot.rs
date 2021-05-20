@@ -55,6 +55,7 @@ fn main() {
             power: power,
             direction: -Vector3::z(),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -70,6 +71,7 @@ fn main() {
             power: power,
             direction: Vector3::z(),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),

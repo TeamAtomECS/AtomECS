@@ -43,6 +43,9 @@ pub struct GaussianBeam {
 	/// The distance along the propagation direction of a beam from the
 	///  waist to the place where the area of the cross section is doubled in units of metres
 	pub rayleigh_range: f64,
+
+	/// ellipticity
+	pub ellipticity: f64,
 }
 impl Component for GaussianBeam {
 	type Storage = HashMapStorage<Self>;
@@ -73,6 +76,8 @@ impl GaussianBeam {
 			power: power,
 			e_radius: e_radius,
 			rayleigh_range: f64::INFINITY,
+			ellipticity: 0.0,
+			ellipticity: 0.0,
 		}
 	}
 }
@@ -106,6 +111,7 @@ impl GaussianBeam {
 			power: power,
 			e_radius: e_radius,
 			rayleigh_range: calculate_rayleigh_range(&wavelength, &e_radius),
+			ellipticity: 0.0,
 		}
 	}
 }
@@ -203,6 +209,7 @@ pub mod tests {
 			e_radius: 70.71067812e-6,
 			power: 100.0,
 			rayleigh_range: calculate_rayleigh_range(&1064.0e-9, &70.71067812e-6),
+			ellipticity: 0.0,
 		};
 		let pos1 = Position {
 			pos: Vector3::new(10.0e-6, 0.0, 30.0e-6),
@@ -227,6 +234,7 @@ pub mod tests {
 			e_radius: 2.0,
 			power: 1.0,
 			rayleigh_range: calculate_rayleigh_range(&1064.0e-9, &2.0),
+			ellipticity: 0.0,
 		};
 
 		let pos1 = Position { pos: Vector3::x() };

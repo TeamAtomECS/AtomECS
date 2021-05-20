@@ -85,6 +85,7 @@ fn main() {
             power: push_beam_power,
             direction: Vector3::z(),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -105,6 +106,7 @@ fn main() {
             power: power,
             direction: Vector3::new(1.0, 1.0, 0.0).normalize(),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -120,6 +122,7 @@ fn main() {
             power: power,
             direction: Vector3::new(1.0, -1.0, 0.0).normalize(),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -135,6 +138,7 @@ fn main() {
             power: power,
             direction: Vector3::new(-1.0, 1.0, 0.0).normalize(),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -150,6 +154,7 @@ fn main() {
             power: power,
             direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),

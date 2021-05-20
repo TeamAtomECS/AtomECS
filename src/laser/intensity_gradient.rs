@@ -100,6 +100,7 @@ pub mod tests {
                 &1064.0e-9,
                 &70.71067812e-6,
             ),
+            ellipticity: 0.0,
         };
 
         test_world
@@ -183,6 +184,7 @@ pub mod tests {
                 &1064.0e-9,
                 &70.71067812e-6,
             ),
+            ellipticity: 0.0,
         };
 
         test_world

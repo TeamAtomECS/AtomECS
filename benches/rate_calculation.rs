@@ -48,6 +48,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             power: power,
             direction: Vector3::new(0.0, 0.0, 1.0),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -63,6 +64,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             power: power,
             direction: Vector3::new(0.0, 0.0, -1.0),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -78,6 +80,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             power: power,
             direction: Vector3::new(-1.0, 0.0, 0.0),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -93,6 +96,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             power: power,
             direction: Vector3::new(1.0, 0.0, 0.0),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -108,6 +112,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             power: power,
             direction: Vector3::new(0.0, 1.0, 0.0),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -123,6 +128,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             power: power,
             direction: Vector3::new(0.0, -1.0, 0.0),
             rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),

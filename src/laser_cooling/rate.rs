@@ -179,6 +179,7 @@ pub mod tests {
                 e_radius: 2.0,
                 power: 1.0,
                 rayleigh_range: 1.0,
+                ellipticity: 0.0,
             })
             .build();
 
