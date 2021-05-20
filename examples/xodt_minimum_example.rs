@@ -2,6 +2,7 @@
 extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom;
+use lib::atom::Atom;
 use lib::dipole;
 use lib::ecs;
 use lib::integrator::Timestep;
@@ -25,12 +26,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<atom::Position, Text>("pos_dipole.txt".to_string(), 100),
+        file::new::<atom::Position, Text, Atom>("pos_dipole.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<atom::Velocity, Text>("vel_dipole.txt".to_string(), 100),
+        file::new::<atom::Velocity, Text, Atom>("vel_dipole.txt".to_string(), 100),
         "",
         &[],
     );

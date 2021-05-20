@@ -3,14 +3,14 @@
 
 // This file exists because - in the spirit of keeping things general - I thought that the intensity sampler should not be in
 // gaussian.rs since other beam profiles (although they're less common) should not be excluded.
-
 extern crate rayon;
-
-use specs::prelude::*;
+extern crate serde;
 
 use super::gaussian::{get_gaussian_beam_intensity, CircularMask, GaussianBeam};
 use crate::atom::Position;
 use crate::laser::cooling::CoolingLightIndex;
+use serde::Serialize;
+use specs::prelude::*;
 
 const LASER_CACHE_SIZE: usize = 16;
 

@@ -4,6 +4,7 @@ extern crate atomecs as lib;
 extern crate nalgebra;
 use crate::lib::laser_cooling::force::EmissionForceOption;
 use atomecs::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
+use lib::atom::Atom;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::central_creator::CentralCreator;
 use lib::atom_sources::emit::AtomNumberToEmit;
@@ -37,12 +38,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos_dipole_red_xodt_gravity.txt".to_string(), 100),
+        file::new::<Position, Text, Atom>("pos_dipole_red_xodt_gravity.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel_dipole_red_xodt_gravity.txt".to_string(), 100),
+        file::new::<Velocity, Text, Atom>("vel_dipole_red_xodt_gravity.txt".to_string(), 100),
         "",
         &[],
     );

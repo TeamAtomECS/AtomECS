@@ -1,11 +1,12 @@
 //! Calculations of the Doppler shift.
 extern crate rayon;
-
+extern crate serde;
 use specs::prelude::*;
 
 use crate::atom::Velocity;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::gaussian::GaussianBeam;
+use serde::Serialize;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 const LASER_CACHE_SIZE: usize = 16;

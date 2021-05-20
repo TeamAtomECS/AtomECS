@@ -2,6 +2,7 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
+use atomecs::atom::Atom;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
@@ -34,12 +35,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos_animation1.txt".to_string(), 100),
+        file::new::<Position, Text, Atom>("pos_animation1.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel_animation1.txt".to_string(), 100),
+        file::new::<Velocity, Text, Atom>("vel_animation1.txt".to_string(), 100),
         "",
         &[],
     );

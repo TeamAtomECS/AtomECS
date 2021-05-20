@@ -10,6 +10,7 @@ use crate::laser::gaussian::GaussianBeam;
 use crate::laser::intensity::LaserIntensitySamplers;
 use crate::laser_cooling::sampler::LaserDetuningSamplers;
 use crate::magnetic::MagneticFieldSampler;
+use serde::Serialize;
 use specs::prelude::*;
 
 /// Represents the rate coefficient of the atom with respect to a specific CoolingLight entity

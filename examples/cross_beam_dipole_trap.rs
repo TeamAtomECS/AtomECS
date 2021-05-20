@@ -6,6 +6,7 @@ use atomecs::laser::cooling::CoolingLight;
 use atomecs::laser_cooling::force::EmissionForceOption;
 use atomecs::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use atomecs::magnetic::quadrupole::QuadrupoleField3D;
+use lib::atom::Atom;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::central_creator::CentralCreator;
 use lib::atom_sources::emit::AtomNumberToEmit;
@@ -36,12 +37,12 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos_dipole.txt".to_string(), 100),
+        file::new::<Position, Text, Atom>("pos_dipole.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel_dipole.txt".to_string(), 100),
+        file::new::<Velocity, Text, Atom>("vel_dipole.txt".to_string(), 100),
         "",
         &[],
     );

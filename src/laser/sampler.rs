@@ -1,7 +1,7 @@
 //! Calculation of the total detuning for specific atoms and CoolingLight entities
-
+extern crate serde;
 use crate::laser::cooling::CoolingLightIndex;
-
+use serde::Serialize;
 use specs::prelude::*;
 extern crate nalgebra;
 
