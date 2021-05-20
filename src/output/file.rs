@@ -1,6 +1,7 @@
 //! Writes output files containing atomic trajectories.
 use crate::atom::Atom;
 use crate::integrator::Step;
+use nalgebra::Vector3;
 use specs::{Component, Entities, Entity, Join, ReadExpect, ReadStorage, System};
 use std::fmt::Display;
 use std::fs::File;
@@ -142,6 +143,32 @@ where
             atom.gen().id(),
             atom.id(),
             serialized
+        )?;
+        Ok(())
+    }
+}
+pub trait XYZPosition {
+    fn pos(&self) -> Vector3<f64>;
+}
+
+pub struct XYZ {}
+impl<C, W> Format<C, W> for XYZ
+where
+    C: Component + Clone + XYZPosition,
+    W: Write,
+{
+    fn write_frame_header(writer: &mut W, _step: u64, atom_number: usize) -> Result<(), io::Error> {
+        write!(writer, "{:?}\n\n", atom_number)?;
+        Ok(())
+    }
+
+    fn write_atom(writer: &mut W, _atom: Entity, data: C) -> Result<(), io::Error> {
+        // the scale factor is 20000
+        let position = 20000.0 * data.pos();
+        write!(
+            writer,
+            "H\t{}\t{}\t{}\n",
+            position[0], position[1], position[2]
         )?;
         Ok(())
     }
