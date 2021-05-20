@@ -77,7 +77,6 @@ impl GaussianBeam {
 			e_radius: e_radius,
 			rayleigh_range: f64::INFINITY,
 			ellipticity: 0.0,
-			ellipticity: 0.0,
 		}
 	}
 }
