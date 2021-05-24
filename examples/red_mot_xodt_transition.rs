@@ -48,7 +48,7 @@ fn main() {
         &[],
     );
     builder = builder.with(
-        file::new::<Position, XYZ, Atom>("position.xyz".to_string(), 100),
+        file::new::<Position, XYZ, Atom>("position_red_xodt_std.xyz".to_string(), 100),
         "",
         &[],
     );
@@ -196,7 +196,7 @@ fn main() {
     let power = 10.0;
     let e_radius = 100.0e-6 / (2.0_f64.sqrt());
 
-    let gaussian_beam = GaussianBeam {
+    let gaussian_beam_1 = GaussianBeam {
         intersection: Vector3::new(0.0, 0.0, 0.0),
         e_radius: e_radius,
         power: power,
@@ -206,7 +206,7 @@ fn main() {
     };
     world
         .create_entity()
-        .with(gaussian_beam)
+        .with(gaussian_beam_1)
         .with(laser::dipole_beam::DipoleLight {
             wavelength: 1064.0e-9,
         })
@@ -216,7 +216,7 @@ fn main() {
         })
         .build();
 
-    let gaussian_beam = GaussianBeam {
+    let gaussian_beam_2 = GaussianBeam {
         intersection: Vector3::new(0.0, 0.0, 0.0),
         e_radius: e_radius,
         power: power,
@@ -226,7 +226,7 @@ fn main() {
     };
     world
         .create_entity()
-        .with(gaussian_beam)
+        .with(gaussian_beam_2)
         .with(laser::dipole_beam::DipoleLight {
             wavelength: 1064.0e-9,
         })
@@ -277,6 +277,37 @@ fn main() {
             volume_type: VolumeType::Inclusive,
         })
         .build();
+
+    let mut gaussian_1_frames = Vec::new();
+    gaussian_1_frames.push((0.0, gaussian_beam_1));
+    gaussian_1_frames.push((0.0, gaussian_beam_1));
+    gaussian_1_frames.push((
+        1.0,
+        GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: e_radius,
+            power: gaussian_beam_1.power * 0.001,
+            direction: Vector3::x(),
+            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
+            ellipticity: 0.0,
+        },
+    ));
+
+    let mut gaussian_2_frames = Vec::new();
+    gaussian_2_frames.push((0.0, gaussian_beam_2));
+    gaussian_2_frames.push((
+        1.0,
+        GaussianBeam {
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: e_radius,
+            power: power,
+            direction: Vector3::y(),
+            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
+            ellipticity: 0.0,
+        },
+    ));
+    let ramp1 = lib::ramp::Ramp::new(gaussian_1_frames);
+    let ramp2 = lib::ramp::Ramp::new(gaussian_2_frames);
 
     // Run the simulation for a number of steps.
     for _i in 0..2_000 {
