@@ -214,7 +214,7 @@ pub fn calculate_rayleigh_range(wavelength: &f64, e_radius: &f64) -> f64 {
 	2.0 * PI * e_radius.powf(2.0) / wavelength
 }
 
-/// Computes the intensity gradient of a given beam with and returns it as
+/// Computes the intensity gradient of a given beam and returns it as
 /// a three-dimensional vector
 pub fn get_gaussian_beam_intensity_gradient(
 	beam: &GaussianBeam,
@@ -222,8 +222,12 @@ pub fn get_gaussian_beam_intensity_gradient(
 	reference_frame: &Frame,
 ) -> Vector3<f64> {
 	let rela_coord = pos.pos - beam.intersection;
-	let x = rela_coord.dot(&reference_frame.x_vector);
-	let y = rela_coord.dot(&reference_frame.y_vector);
+
+	// ellipticity treatment
+	let semi_major_axis = 1.0 / (1.0 - beam.ellipticity.powf(2.0)).powf(0.5);
+
+	let x = rela_coord.dot(&reference_frame.x_vector) / semi_major_axis.powf(0.5);
+	let y = rela_coord.dot(&reference_frame.y_vector) * semi_major_axis.powf(0.5);
 	let z = rela_coord.dot(&beam.direction);
 
 	let spot_size_squared =
