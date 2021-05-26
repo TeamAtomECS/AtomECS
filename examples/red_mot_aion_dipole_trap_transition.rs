@@ -2,6 +2,7 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
+use crate::file::SerdeJson;
 use crate::lib::laser_cooling::force::EmissionForceOption;
 use atomecs::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use lib::atom::Atom;
@@ -17,6 +18,7 @@ use lib::integrator::Timestep;
 use lib::laser;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
+use lib::laser_cooling::photons_scattered::ExpectedPhotonsScatteredVector;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::{Text, XYZ};
@@ -44,6 +46,14 @@ fn main() {
     );
     builder = builder.with(
         file::new::<Velocity, Text, Atom>("vel_dipole_aion_low.txt".to_string(), 100),
+        "",
+        &[],
+    );
+    builder = builder.with(
+        file::new::<ExpectedPhotonsScatteredVector, SerdeJson, Atom>(
+            "position.xyz".to_string(),
+            100,
+        ),
         "",
         &[],
     );
