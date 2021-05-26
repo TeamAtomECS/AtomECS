@@ -10,7 +10,8 @@ atomecs-derive = { git = "https://github.com/TeamAtomECS/AtomECS-derive" }
 rayon = "1.5.0"
 specs={ version="0.16.1", features=["rayon"] }
 specs-derive = "0.4.1"
-rand = "0.6.5"
+rand = "0.8.3"
+rand_distr = "0.4.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.8.9"

@@ -204,17 +204,6 @@ fn main() {
         rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
         ellipticity: 0.0,
     };
-    world
-        .create_entity()
-        .with(gaussian_beam_1)
-        .with(laser::dipole_beam::DipoleLight {
-            wavelength: 1064.0e-9,
-        })
-        .with(laser::frame::Frame {
-            x_vector: Vector3::y(),
-            y_vector: Vector3::z(),
-        })
-        .build();
 
     let gaussian_beam_2 = GaussianBeam {
         intersection: Vector3::new(0.0, 0.0, 0.0),
@@ -224,17 +213,6 @@ fn main() {
         rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
         ellipticity: 0.0,
     };
-    world
-        .create_entity()
-        .with(gaussian_beam_2)
-        .with(laser::dipole_beam::DipoleLight {
-            wavelength: 1064.0e-9,
-        })
-        .with(laser::frame::Frame {
-            x_vector: Vector3::x(),
-            y_vector: Vector3::z(),
-        })
-        .build();
     // creating the entity that represents the source
     //
     // contains a central creator
