@@ -1,15 +1,14 @@
 //! Calculation of the forces exerted on the atom by the CoolingLight entities
 
-extern crate rayon;
 use crate::atom::AtomicTransition;
 use crate::constant;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::gaussian::GaussianBeam;
-use crate::laser::photons_scattered::ActualPhotonsScatteredVector;
-use crate::maths;
-use rand::distributions::{Distribution, Normal};
-extern crate nalgebra;
+use crate::laser_cooling::photons_scattered::ActualPhotonsScatteredVector;
 use nalgebra::Vector3;
+use rand_distr;
+use rand_distr::{Distribution, Normal, UnitSphere};
+use rayon;
 
 use specs::prelude::*;
 
@@ -157,7 +156,8 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
                                     let normal = Normal::new(
                                         0.0,
                                         (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
-                                    );
+                                    )
+                                    .unwrap();
 
                                     let force_n_kicks = Vector3::new(
                                         normal.sample(&mut rng),
@@ -168,8 +168,9 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
                                 } else {
                                     // explicit random walk implementation
                                     for _i in 0..total {
+                                        let v: [f64; 3] = UnitSphere.sample(&mut rng);
                                         force.force = force.force
-                                            + force_one_kick * maths::random_direction();
+                                            + force_one_kick * Vector3::new(v[0], v[1], v[2]);
                                     }
                                 }
                             });

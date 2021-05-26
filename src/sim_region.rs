@@ -238,9 +238,9 @@ pub mod tests {
 
     #[test]
     fn test_sphere_contains() {
-        use specs::Entity;
-        extern crate rand;
+        use rand;
         use rand::Rng;
+        use specs::Entity;
         let mut rng = rand::thread_rng();
 
         let mut test_world = World::new();
@@ -264,9 +264,9 @@ pub mod tests {
         let mut tests = Vec::<(Entity, bool)>::new();
         for _ in 1..100 {
             let pos = Vector3::new(
-                rng.gen_range(-2.0, 2.0),
-                rng.gen_range(-2.0, 2.0),
-                rng.gen_range(-2.0, 2.0),
+                rng.gen_range(-2.0..2.0),
+                rng.gen_range(-2.0..2.0),
+                rng.gen_range(-2.0..2.0),
             );
             let entity = test_world
                 .create_entity()
@@ -298,9 +298,9 @@ pub mod tests {
 
     #[test]
     fn test_cuboid_contains() {
-        use specs::Entity;
-        extern crate rand;
+        use rand;
         use rand::Rng;
+        use specs::Entity;
         let mut rng = rand::thread_rng();
 
         let mut test_world = World::new();
@@ -324,9 +324,9 @@ pub mod tests {
         let mut tests = Vec::<(Entity, bool)>::new();
         for _ in 1..100 {
             let pos = Vector3::new(
-                rng.gen_range(-2.0, 2.0),
-                rng.gen_range(-2.0, 2.0),
-                rng.gen_range(-2.0, 2.0),
+                rng.gen_range(-2.0..2.0),
+                rng.gen_range(-2.0..2.0),
+                rng.gen_range(-2.0..2.0),
             );
             let entity = test_world
                 .create_entity()
