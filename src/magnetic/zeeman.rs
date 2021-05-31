@@ -1,14 +1,12 @@
 //! Shift in an atom's transition frequency due to a magnetic field (zeeman effect)
 extern crate serde;
 use serde::Serialize;
-use specs::{
-    Component, Entities, Join, LazyUpdate, Read, ReadStorage, System, VecStorage, WriteStorage,
-};
 
 use super::MagneticFieldSampler;
 use crate::atom::AtomicTransition;
 use crate::constant::HBAR;
 use crate::initiate::NewlyCreated;
+use specs::prelude::*;
 
 /// Represents the (angular) Zeemanshift of the atom depending on the magnetic field it experiences
 #[derive(Clone, Copy, Serialize)]
@@ -69,7 +67,6 @@ impl<'a> System<'a> for CalculateZeemanShiftSystem {
         (mut zeeman_sampler, magnetic_field_sampler, atomic_transition): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         (
             &mut zeeman_sampler,
@@ -93,7 +90,6 @@ pub mod tests {
     extern crate specs;
     use crate::constant::HBAR;
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
     extern crate nalgebra;
     use nalgebra::Vector3;
 
@@ -115,7 +111,7 @@ pub mod tests {
             .build();
 
         let mut system = CalculateZeemanShiftSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<ZeemanShiftSampler>();
 

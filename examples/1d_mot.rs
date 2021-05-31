@@ -14,7 +14,7 @@ use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;
-use specs::{Builder, World};
+use specs::prelude::*;
 
 fn main() {
     let mut world = World::new();
@@ -35,7 +35,7 @@ fn main() {
     );
 
     let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     // Create magnetic field.
     world
@@ -95,11 +95,11 @@ fn main() {
     }
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.insert(Timestep { delta: 1.0e-6 });
 
     // Run the simulation for a number of steps.
     for _i in 0..5000 {
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
     }
 }

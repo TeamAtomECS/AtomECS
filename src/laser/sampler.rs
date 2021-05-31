@@ -1,14 +1,13 @@
 //! Calculation of the total detuning for specific atoms and CoolingLight entities
 
 extern crate serde;
-extern crate specs;
 use crate::atom::AtomicTransition;
 use crate::constant;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::doppler::DopplerShiftSamplers;
 use crate::magnetic::zeeman::ZeemanShiftSampler;
 use serde::Serialize;
-use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
+use specs::prelude::*;
 use std::f64;
 extern crate nalgebra;
 
@@ -41,7 +40,6 @@ impl<'a> System<'a> for InitialiseLaserSamplerMasksSystem {
 
     fn run(&mut self, (mut masks,): Self::SystemData) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         (&mut masks).par_join().for_each(|mask| {
             mask.contents = [LaserSamplerMask::default(); crate::laser::COOLING_BEAM_LIMIT];
@@ -58,7 +56,6 @@ impl<'a> System<'a> for FillLaserSamplerMasksSystem {
     );
     fn run(&mut self, (light_index, mut masks): Self::SystemData) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         for light_index in (&light_index).join() {
             (&mut masks).par_join().for_each(|masks| {
@@ -107,7 +104,6 @@ impl<'a> System<'a> for InitialiseLaserDetuningSamplersSystem {
     type SystemData = (WriteStorage<'a, LaserDetuningSamplers>,);
     fn run(&mut self, (mut samplers,): Self::SystemData) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         (&mut samplers).par_join().for_each(|mut sampler| {
             sampler.contents = [LaserDetuningSampler::default(); crate::laser::COOLING_BEAM_LIMIT];
@@ -140,7 +136,6 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
         ): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         // There are typically only a small number of lasers in a simulation.
         // For a speedup, cache the required components into thread memory,
@@ -192,10 +187,7 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
 pub mod tests {
 
     use super::*;
-
-    extern crate specs;
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
     extern crate nalgebra;
 
     #[test]
@@ -240,7 +232,7 @@ pub mod tests {
             .build();
 
         let mut system = CalculateLaserDetuningSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<LaserDetuningSamplers>();
 

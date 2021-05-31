@@ -9,10 +9,9 @@
 //! This is accomplished by 5 different types of distributions, 3 scalar and 2 vector.
 
 extern crate nalgebra;
-use rand::Rng;
-extern crate specs;
 use nalgebra::Vector3;
-use specs::{Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System};
+use rand::Rng;
+use specs::prelude::*;
 
 use super::emit::AtomNumberToEmit;
 use super::mass::MassDistribution;
@@ -251,9 +250,6 @@ impl<'a> System<'a> for CentralCreatorCreateAtomsSystem {
 pub mod tests {
 
     use super::*;
-
-    extern crate specs;
-    use specs::{Builder, RunNow, World};
     extern crate nalgebra;
     use nalgebra::Vector3;
 
@@ -298,7 +294,7 @@ pub mod tests {
             .build();
 
         let mut system = CentralCreatorCreateAtomsSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         pub struct CheckerComponent {
             everything_allright: bool,
@@ -342,7 +338,7 @@ pub mod tests {
                 }
             }
         }
-        TestSystem.run_now(&test_world.res);
+        TestSystem.run_now(&test_world);
         test_world.maintain();
 
         let sampler_storage = test_world.read_storage::<CheckerComponent>();

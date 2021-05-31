@@ -2,6 +2,10 @@
 
 #[macro_use]
 extern crate specs_derive;
+
+#[macro_use]
+extern crate atomecs_derive;
+
 pub mod atom;
 pub mod atom_sources;
 pub mod constant;
@@ -16,5 +20,6 @@ pub mod laser;
 pub mod magnetic;
 pub mod maths;
 pub mod output;
+pub mod ramp;
 pub mod shapes;
 pub mod sim_region;

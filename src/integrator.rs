@@ -5,13 +5,11 @@
 
 extern crate nalgebra;
 extern crate rand;
-extern crate specs;
 
 use crate::atom::*;
 use crate::constant;
 use crate::initiate::NewlyCreated;
-use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteExpect, WriteStorage};
-use specs::{Entities, Join, LazyUpdate, Read};
+use specs::prelude::*;
 
 /// Tracks the number of the current integration step.
 pub struct Step {
@@ -51,7 +49,6 @@ impl<'a> System<'a> for EulerIntegrationSystem {
 
 	fn run(&mut self, (mut pos, mut vel, t, mut step, force, mass): Self::SystemData) {
 		use rayon::prelude::*;
-		use specs::ParJoin;
 
 		step.n = step.n + 1;
 		(&mut vel, &mut pos, &force, &mass).par_join().for_each(
@@ -84,7 +81,6 @@ impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
 
 	fn run(&mut self, (mut pos, vel, t, mut step, force, mut oldforce, mass): Self::SystemData) {
 		use rayon::prelude::*;
-		use specs::ParJoin;
 
 		step.n = step.n + 1;
 		let dt = t.delta;
@@ -119,7 +115,6 @@ impl<'a> System<'a> for VelocityVerletIntegrateVelocitySystem {
 
 	fn run(&mut self, (mut vel, t, force, oldforce, mass): Self::SystemData) {
 		use rayon::prelude::*;
-		use specs::ParJoin;
 
 		let dt = t.delta;
 
@@ -204,7 +199,7 @@ pub mod tests {
 		let mut dispatcher = DispatcherBuilder::new()
 			.with(EulerIntegrationSystem, "integrator", &[])
 			.build();
-		dispatcher.setup(&mut world.res);
+		dispatcher.setup(&mut world);
 
 		// create a particle with known force and mass
 		let force = Vector3::new(1.0, 0.0, 0.0);
@@ -224,13 +219,13 @@ pub mod tests {
 			.build();
 
 		let dt = 1.0e-3;
-		world.add_resource(Timestep { delta: dt });
-		world.add_resource(Step { n: 0 });
+		world.insert(Timestep { delta: dt });
+		world.insert(Step { n: 0 });
 
 		// run simulation loop 1_000 times.
 		let n_steps = 1_000;
 		for _i in 0..n_steps {
-			dispatcher.dispatch(&mut world.res);
+			dispatcher.dispatch(&mut world);
 			world.maintain();
 		}
 
@@ -268,12 +263,12 @@ pub mod tests {
 		let mut dispatcher = DispatcherBuilder::new()
 			.with(AddOldForceToNewAtomsSystem, "", &[])
 			.build();
-		dispatcher.setup(&mut test_world.res);
+		dispatcher.setup(&mut test_world);
 		test_world.register::<OldForce>();
 
 		let test_entity = test_world.create_entity().with(NewlyCreated {}).build();
 
-		dispatcher.dispatch(&mut test_world.res);
+		dispatcher.dispatch(&mut test_world);
 		test_world.maintain();
 
 		let old_forces = test_world.read_storage::<OldForce>();
@@ -300,7 +295,7 @@ pub mod tests {
 				&["integrate_position"],
 			)
 			.build();
-		dispatcher.setup(&mut world.res);
+		dispatcher.setup(&mut world);
 
 		// create a particle with known force and mass
 		let force = Vector3::new(1.0, 0.0, 0.0);
@@ -323,13 +318,13 @@ pub mod tests {
 			.build();
 
 		let dt = 1.0e-3;
-		world.add_resource(Timestep { delta: dt });
-		world.add_resource(Step { n: 0 });
+		world.insert(Timestep { delta: dt });
+		world.insert(Step { n: 0 });
 
 		// run simulation loop 1_000 times.
 		let n_steps = 1_000;
 		for _i in 0..n_steps {
-			dispatcher.dispatch(&mut world.res);
+			dispatcher.dispatch(&mut world);
 			world.maintain();
 		}
 

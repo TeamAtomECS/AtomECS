@@ -2,7 +2,10 @@
 
 use crate::constant::{BOHRMAG, C};
 use crate::output::file::BinaryConversion;
+use crate::ramp::Lerp;
 use nalgebra::Vector3;
+use specs::prelude::*;
+
 use serde::{Deserialize, Serialize};
 use specs::{Component, NullStorage, System, VecStorage, World, WriteStorage};
 use std::fmt;
@@ -10,7 +13,7 @@ use std::fmt;
 /// Position of an entity in space, with respect to cartesian x,y,z axes.
 ///
 /// SI units (metres)
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Lerp)]
 pub struct Position {
 	/// position in 3D in units of m
 	pub pos: Vector3<f64>,
@@ -234,7 +237,6 @@ impl<'a> System<'a> for ClearForceSystem {
 	type SystemData = WriteStorage<'a, Force>;
 	fn run(&mut self, mut force: Self::SystemData) {
 		use rayon::prelude::*;
-		use specs::ParJoin;
 
 		(&mut force).par_join().for_each(|force| {
 			force.force = Vector3::new(0.0, 0.0, 0.0);
