@@ -51,17 +51,6 @@ fn main() {
         &[INTEGRATE_VELOCITY_SYSTEM_NAME],
     );
 
-    builder =
-        builder.with(
-            file::new::<
-                lib::laser::gaussian::GaussianBeam,
-                SerdeJson,
-                lib::laser::cooling::CoolingLight,
-            >("gaussian.txt".to_string(), 100),
-            "",
-            &[INTEGRATE_VELOCITY_SYSTEM_NAME],
-        );
-
     let mut dispatcher = builder.build();
     dispatcher.setup(&mut world);
 

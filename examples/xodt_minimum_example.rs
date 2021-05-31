@@ -109,7 +109,7 @@ fn main() {
         .build();
 
     // Run the simulation for a number of steps.
-    for _i in 0..1_00_000 {
+    for _i in 0..100_000 {
         dispatcher.dispatch(&mut world);
         world.maintain();
     }

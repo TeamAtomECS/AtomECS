@@ -2,7 +2,6 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
-use crate::file::SerdeJson;
 use crate::lib::laser_cooling::force::EmissionForceOption;
 use atomecs::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use lib::atom::Atom;
@@ -18,7 +17,6 @@ use lib::integrator::Timestep;
 use lib::laser;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
-use lib::laser_cooling::photons_scattered::ExpectedPhotonsScatteredVector;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::{Text, XYZ};
@@ -50,14 +48,6 @@ fn main() {
         &[],
     );
     builder = builder.with(
-        file::new::<ExpectedPhotonsScatteredVector, SerdeJson, Atom>(
-            "position.xyz".to_string(),
-            100,
-        ),
-        "",
-        &[],
-    );
-    builder = builder.with(
         file::new::<Position, XYZ, Atom>("position.xyz".to_string(), 100),
         "",
         &[],
@@ -76,7 +66,7 @@ fn main() {
         .build();
 
     let detuning = -0.2; //MHz
-    let power = 0.01; //W total power of all Lasers together
+    let power = 0.001; //W total power of all Lasers together
     let radius = 1.0e-2 / (2.0 * 2.0_f64.sqrt()); // 10mm 1/e^2 diameter
 
     // Horizontal beams along z
@@ -288,30 +278,24 @@ fn main() {
         .build();
 
     // Run the simulation for a number of steps.
-    for _i in 0..2_000 {
+    for _i in 0..10_000 {
         dispatcher.dispatch(&mut world);
         world.maintain();
     }
-    let mut ramp_down_system = dipole::transition_switcher::RampMOTBeamsSystem;
-    world.insert(dipole::transition_switcher::MOTAbsoluteDetuningRampRate {
-        absolute_rate: 2.0e6, // Hz / s
-    });
-    world.insert(dipole::transition_switcher::MOTRelativePowerRampRate {
-        relative_rate: 1.0e-60, // 1 / s
-    });
 
     let mut switcher_system =
         dipole::transition_switcher::AttachAtomicDipoleTransitionToAtomsSystem;
     switcher_system.run_now(&world);
-    for _i in 0..10_000 {
+
+    for _i in 0..20_000 {
         dispatcher.dispatch(&mut world);
-        ramp_down_system.run_now(&world);
         world.maintain();
     }
-    world.insert(EmissionForceOption::Off);
+
     let mut delete_beams_system = dipole::transition_switcher::DisableMOTBeamsSystem;
     delete_beams_system.run_now(&world);
     println!("Switched from MOT to Dipole setup");
+
     for _i in 0..20_000 {
         dispatcher.dispatch(&mut world);
         world.maintain();
