@@ -220,21 +220,6 @@ impl Component for ActualPhotonsScatteredVector {
     type Storage = VecStorage<Self>;
 }
 
-/// This system initialises all `ActualPhotonsScatteredVector` to a NAN value.
-///
-/// It also ensures that the size of the `ActualPhotonsScatteredVector` components match the number of CoolingLight entities in the world.
-pub struct InitialiseActualPhotonsScatteredVectorSystem;
-impl<'a> System<'a> for InitialiseActualPhotonsScatteredVectorSystem {
-    type SystemData = (WriteStorage<'a, ActualPhotonsScatteredVector>,);
-    fn run(&mut self, (mut actual_photons,): Self::SystemData) {
-        use rayon::prelude::*;
-
-        (&mut actual_photons).par_join().for_each(|mut actual| {
-            actual.contents = [ActualPhotonsScattered::default(); crate::laser::COOLING_BEAM_LIMIT];
-        });
-    }
-}
-
 /// If this is added as a resource, the number of actual photons will be drawn from a poisson distribution.
 ///
 /// Otherwise, the entries of `ActualPhotonsScatteredVector` will be identical with those of

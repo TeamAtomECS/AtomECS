@@ -121,11 +121,6 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		deps,
 	);
 	builder.add(
-		photons_scattered::InitialiseActualPhotonsScatteredVectorSystem,
-		"initialise_actual_photons",
-		deps,
-	);
-	builder.add(
 		rate::InitialiseRateCoefficientsSystem,
 		"initialise_rate_coefficients",
 		deps,
@@ -185,7 +180,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		photons_scattered::CalculateActualPhotonsScatteredSystem,
 		"calculate_actual_photons",
-		&["calculate_expected_photons", "initialise_actual_photons"],
+		&["calculate_expected_photons"],
 	);
 	builder.add(
 		force::CalculateAbsorptionForcesSystem,
