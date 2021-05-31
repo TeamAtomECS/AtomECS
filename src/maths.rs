@@ -2,8 +2,6 @@
 
 use crate::constant::EXP;
 use crate::constant::PI;
-use rand;
-use rand::Rng;
 extern crate nalgebra;
 use nalgebra::Vector3;
 
