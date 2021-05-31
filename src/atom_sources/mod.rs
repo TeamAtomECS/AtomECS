@@ -10,7 +10,7 @@ pub mod surface;
 
 use specs::prelude::*;
 
-extern crate rand;
+use rand;
 use rand::distributions::Distribution;
 use rand::distributions::WeightedIndex;
 use rand::Rng;

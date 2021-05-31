@@ -4,7 +4,6 @@
 //! which uses the euler method to integrate classical equations of motion.
 
 extern crate nalgebra;
-extern crate rand;
 
 use crate::atom::*;
 use crate::constant;

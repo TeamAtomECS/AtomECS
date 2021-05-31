@@ -22,7 +22,7 @@ use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;
-use rand::distributions::{Distribution, Normal};
+use rand_distr::{Distribution, Normal};
 use specs::prelude::*;
 use std::fs::read_to_string;
 use std::time::Instant;
@@ -175,8 +175,8 @@ fn main() {
     // Define timestep
     world.insert(Timestep { delta: 1.0e-6 });
 
-    let vel_dist = Normal::new(0.0, 0.22);
-    let pos_dist = Normal::new(0.0, 1.2e-4);
+    let vel_dist = Normal::new(0.0, 0.22).unwrap();
+    let pos_dist = Normal::new(0.0, 1.2e-4).unwrap();
     let mut rng = rand::thread_rng();
 
     // Add atoms

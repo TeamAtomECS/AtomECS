@@ -2,8 +2,8 @@
 
 extern crate rayon;
 
-extern crate rand;
-use rand::distributions::{Distribution, Poisson};
+use rand;
+use rand_distr::{Distribution, Poisson};
 
 use crate::atom::AtomicTransition;
 use crate::integrator::Timestep;
@@ -297,7 +297,7 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
                                     if lambda <= 1.0e-5 || lambda.is_nan() {
                                         0.0
                                     } else {
-                                        let poisson = Poisson::new(lambda);
+                                        let poisson = Poisson::new(lambda).unwrap();
                                         let drawn_number = poisson.sample(&mut rand::thread_rng());
                                         drawn_number as f64
                                     }

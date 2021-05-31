@@ -2,8 +2,6 @@
 
 use crate::constant::EXP;
 use crate::constant::PI;
-extern crate rand;
-use rand::Rng;
 extern crate nalgebra;
 use nalgebra::Vector3;
 
@@ -33,19 +31,6 @@ pub fn gaussian_dis(std: f64, distance: f64) -> f64 {
 	1.0 / (2.0 * PI * std * std) * EXP.powf(-distance * distance / 2.0 / (std * std))
 }
 
-/// generate a uniform random direction
-pub fn random_direction() -> Vector3<f64> {
-	let mut rng = rand::thread_rng();
-	let angle1 = rng.gen_range(0.0, PI);
-	let angle2 = rng.gen_range(0., 2. * PI);
-	let result = Vector3::new(
-		angle1.cos(),
-		angle1.sin() * angle2.sin(),
-		angle1.sin() * angle2.cos(),
-	);
-	//println!("{:?}",result);
-	result
-}
 #[cfg(test)]
 mod tests {
 	use super::*;
