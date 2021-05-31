@@ -96,16 +96,6 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		deps,
 	);
 	builder.add(
-		photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem,
-		"initialise_expected_photons",
-		deps,
-	);
-	builder.add(
-		rate::InitialiseRateCoefficientsSystem,
-		"initialise_rate_coefficients",
-		deps,
-	);
-	builder.add(
 		sampler::FillLaserSamplerMasksSystem,
 		"fill_laser_sampler_masks",
 		&["index_cooling_lights", "initialise_laser_sampler_masks"],

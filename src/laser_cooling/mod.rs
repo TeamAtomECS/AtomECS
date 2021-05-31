@@ -77,6 +77,16 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
         deps,
     );
     builder.add(
+        photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem,
+        "initialise_expected_photons",
+        deps,
+    );
+    builder.add(
+        rate::InitialiseRateCoefficientsSystem,
+        "initialise_rate_coefficients",
+        deps,
+    );
+    builder.add(
         doppler::CalculateDopplerShiftSystem,
         "calculate_doppler_shift",
         &["index_cooling_lights"],
@@ -93,7 +103,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
     builder.add(
         rate::CalculateRateCoefficientsSystem,
         "calculate_rate_coefficients",
-        &["calculate_laser_detuning"],
+        &["calculate_laser_detuning", "initialise_rate_coefficients"],
     );
     builder.add(
         twolevel::CalculateTwoLevelPopulationSystem,
@@ -108,7 +118,11 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
     builder.add(
         photons_scattered::CalculateExpectedPhotonsScatteredSystem,
         "calculate_expected_photons",
-        &["calculate_total_photons", "fill_laser_sampler_masks"],
+        &[
+            "calculate_total_photons",
+            "fill_laser_sampler_masks",
+            "initialise_expected_photons",
+        ],
     );
     builder.add(
         photons_scattered::CalculateActualPhotonsScatteredSystem,
