@@ -91,6 +91,21 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		deps,
 	);
 	builder.add(
+		intensity::InitialiseLaserIntensitySamplersSystem,
+		"initialise_laser_intensity",
+		deps,
+	);
+	builder.add(
+		photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem,
+		"initialise_expected_photons",
+		deps,
+	);
+	builder.add(
+		rate::InitialiseRateCoefficientsSystem,
+		"initialise_rate_coefficients",
+		deps,
+	);
+	builder.add(
 		sampler::FillLaserSamplerMasksSystem,
 		"fill_laser_sampler_masks",
 		&["index_cooling_lights", "initialise_laser_sampler_masks"],
@@ -98,7 +113,11 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		intensity::SampleLaserIntensitySystem,
 		"sample_laser_intensity",
-		&["index_cooling_lights", INTEGRATE_POSITION_SYSTEM_NAME],
+		&[
+			"index_cooling_lights",
+			"initialise_laser_intensity",
+			INTEGRATE_POSITION_SYSTEM_NAME,
+		],
 	);
 	builder.add(
 		intensity_gradient::SampleLaserIntensityGradientSystem,
