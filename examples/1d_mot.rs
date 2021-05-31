@@ -97,7 +97,6 @@ fn main() {
             .with(Mass { value: 87.0 })
             .build();
     }
-
     // Define timestep
     world.insert(Timestep { delta: 1.0e-6 });
 

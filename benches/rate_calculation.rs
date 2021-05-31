@@ -13,7 +13,7 @@ use lib::laser_cooling::force::EmissionForceOption;
 use lib::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use nalgebra::Vector3;
-use rand::distributions::{Distribution, Normal};
+use rand_distr::{Distribution, Normal};
 use specs::prelude::*;
 use specs::{Builder, DispatcherBuilder, World};
 
