@@ -4,7 +4,7 @@ use crate::atom::AtomicTransition;
 use crate::constant;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::gaussian::GaussianBeam;
-use crate::laser_cooling::photons_scattered::ActualPhotonsScatteredVector;
+use crate::laser::photons_scattered::ActualPhotonsScatteredVector;
 use nalgebra::Vector3;
 use rand_distr;
 use rand_distr::{Distribution, Normal, UnitSphere};
