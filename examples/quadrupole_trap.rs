@@ -9,12 +9,12 @@ use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::magnetic::force::{ApplyMagneticForceSystem, MagneticDipole};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use rand::distributions::{Distribution, Normal};
+use rand_distr::{Distribution, Normal};
 
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;
-use specs::{Builder, World};
+use specs::prelude::*;
 use std::time::Instant;
 
 fn main() {
@@ -50,7 +50,7 @@ fn main() {
     );
 
     let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     // Create magnetic field.
     world
@@ -59,8 +59,8 @@ fn main() {
         .with(Position::new())
         .build();
 
-    let p_dist = Normal::new(0.0, 0.5e-3);
-    let v_dist = Normal::new(0.0, 0.09); //80uK
+    let p_dist = Normal::new(0.0, 0.5e-3).unwrap();
+    let v_dist = Normal::new(0.0, 0.09).unwrap(); //80uK
 
     for _i in 0..1000 {
         world
@@ -92,7 +92,7 @@ fn main() {
 
     // Run the simulation for a number of steps.
     for _i in 0..10000 {
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
     }
 
