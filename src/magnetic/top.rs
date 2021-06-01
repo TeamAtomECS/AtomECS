@@ -1,5 +1,7 @@
 //! Time-Orbiting Potential trap
-//!
+//! A rotating uniform bias field that creates an axially symmetric approximately harmonic trap when time-averaged. The rotation frequency of the TOP should
+//! be much more than the oscillation frequency of the atoms, and much less than the Larmor frequency of the atoms to avoid non-adiabatic loss (not modelled).
+//! For more detail see e.g. W. Petrich, M. Anderson, J. Ensher, E. Cornell PRL 74, 3352, doi: https://doi.org/10.1103/PhysRevLett.74.3352
 
 extern crate nalgebra;
 extern crate specs;
