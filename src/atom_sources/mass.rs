@@ -1,7 +1,7 @@
 //! Masses and isotopes of atoms
 
 use crate::atom::Mass;
-extern crate rand;
+use rand;
 use rand::Rng;
 extern crate specs;
 
@@ -59,7 +59,7 @@ impl MassDistribution {
         assert!(self.normalised);
         let mut level = 0.;
         let mut rng = rand::thread_rng();
-        let luck = rng.gen_range(0.0, 1.0);
+        let luck = rng.gen_range(0.0..1.0);
         let mut finalmass = 0.;
         for masspercent in self.distribution.iter() {
             level = level + masspercent.ratio;

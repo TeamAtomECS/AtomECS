@@ -1,12 +1,11 @@
 //! Calculation of the total detuning for specific atoms and CoolingLight entities
 
-extern crate specs;
 use crate::atom::AtomicTransition;
 use crate::constant;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::doppler::DopplerShiftSamplers;
 use crate::magnetic::zeeman::ZeemanShiftSampler;
-use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
+use specs::prelude::*;
 use std::f64;
 extern crate nalgebra;
 
@@ -39,7 +38,6 @@ impl<'a> System<'a> for InitialiseLaserSamplerMasksSystem {
 
     fn run(&mut self, (mut masks,): Self::SystemData) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         (&mut masks).par_join().for_each(|mask| {
             mask.contents = [LaserSamplerMask::default(); crate::laser::COOLING_BEAM_LIMIT];
@@ -56,7 +54,6 @@ impl<'a> System<'a> for FillLaserSamplerMasksSystem {
     );
     fn run(&mut self, (light_index, mut masks): Self::SystemData) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         for light_index in (&light_index).join() {
             (&mut masks).par_join().for_each(|masks| {
@@ -71,7 +68,7 @@ impl<'a> System<'a> for FillLaserSamplerMasksSystem {
 pub struct LaserDetuningSampler {
     /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_plus: f64,
-    /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of rad/s 
+    /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_minus: f64,
     /// Laser detuning of the pi transition with respect to laser beam, in SI units of rad/s
     pub detuning_pi: f64,
@@ -104,7 +101,6 @@ impl<'a> System<'a> for InitialiseLaserDetuningSamplersSystem {
     type SystemData = (WriteStorage<'a, LaserDetuningSamplers>,);
     fn run(&mut self, (mut samplers,): Self::SystemData) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         (&mut samplers).par_join().for_each(|mut sampler| {
             sampler.contents = [LaserDetuningSampler::default(); crate::laser::COOLING_BEAM_LIMIT];
@@ -137,7 +133,6 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
         ): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         // There are typically only a small number of lasers in a simulation.
         // For a speedup, cache the required components into thread memory,
@@ -167,7 +162,9 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
                     |(detuning_sampler, doppler_samplers, zeeman_sampler, atom_info)| {
                         for i in 0..number_in_iteration {
                             let (index, cooling) = laser_array[i];
-                            let without_zeeman = 2.0 * constant::PI * (constant::C / cooling.wavelength - atom_info.frequency)
+                            let without_zeeman = 2.0
+                                * constant::PI
+                                * (constant::C / cooling.wavelength - atom_info.frequency)
                                 - doppler_samplers.contents[index.index].doppler_shift;
 
                             detuning_sampler.contents[index.index].detuning_sigma_plus =
@@ -187,10 +184,7 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
 pub mod tests {
 
     use super::*;
-
-    extern crate specs;
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
     extern crate nalgebra;
 
     #[test]
@@ -235,7 +229,7 @@ pub mod tests {
             .build();
 
         let mut system = CalculateLaserDetuningSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<LaserDetuningSamplers>();
 

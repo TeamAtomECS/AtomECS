@@ -1,14 +1,11 @@
 //! Emission of atoms (over time)
 
 extern crate nalgebra;
-extern crate rand;
 use crate::integrator::Timestep;
+use rand;
 use rand::Rng;
-
-extern crate specs;
 use serde::{Deserialize, Serialize};
-
-use specs::{Component, HashMapStorage, Join, ReadExpect, ReadStorage, System, WriteStorage};
+use specs::prelude::*;
 
 /// Component which indicates the oven should emit a number of atoms per frame.
 #[derive(Serialize, Deserialize, Clone)]
@@ -125,14 +122,14 @@ pub mod tests {
             .with(AtomNumberToEmit { number: 0 })
             .build();
 
-        test_world.add_resource(Timestep { delta: 1.0 });
+        test_world.insert(Timestep { delta: 1.0 });
 
         let mut system = EmitFixedRateSystem;
 
         let n = 1000;
         let mut total = 0;
         for _ in 1..n {
-            system.run_now(&test_world.res);
+            system.run_now(&test_world);
             let emits = test_world.read_storage::<AtomNumberToEmit>();
             let number = emits.get(emitter).expect("Could not get entity").number;
             assert_eq!(number == 3 || number == 4, true);
@@ -157,7 +154,7 @@ pub mod tests {
 
         let mut system = EmitNumberPerFrameSystem;
 
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         let emits = test_world.read_storage::<AtomNumberToEmit>();
         let emitted_number = emits.get(emitter).expect("Could not get entity").number;
         assert_eq!(number, emitted_number);
