@@ -15,8 +15,6 @@ use specs::{Component, HashMapStorage, Join, ReadExpect, ReadStorage, System, Wr
 pub struct TimeOrbitingPotential {
     /// Amplitude of the field in T
     pub amplitude: f64,
-    /// A unit vector pointing along the rotational axis of the TOP.
-    pub direction: Vector3<f64>,
     ///Frequency of rotation in Hz
     pub frequency: f64,
 }
@@ -25,7 +23,6 @@ impl TimeOrbitingPotential {
     pub fn gauss(amplitude: f64, frequency: f64) -> Self {
         Self {
             amplitude: amplitude * 1e-4,
-            direction: Vector3::z(),
             frequency: frequency,
         }
     }
@@ -48,7 +45,6 @@ impl<'a> System<'a> for TimeOrbitingPotentialSystem {
 
         for top in (&tops).join() {
             (&mut samplers).par_join().for_each(|sampler| {
-                //TODO: allow rotation around arbitrary axis
                 let time = timestep.delta * step.n as f64;
                 let top_field = top.amplitude
                     * Vector3::new(
