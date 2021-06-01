@@ -67,77 +67,6 @@ impl CollisionBox<'_> {
             return;
         }
 
-        ///// pairwise O(N)
-        // let mut vsum = 0.0;
-        // for i in 0..self.velocities.len() {
-        //     vsum = vsum + self.velocities[i].vel.norm();
-        // }
-        // let vbar = vsum / self.velocities.len() as f64;
-        // let v_rel_max = 1.414 * vbar;
-
-        // // rescale collision probability and number for computational efficiency
-        // let n_pairs = (self.particle_number * (self.particle_number - 1) / 2) as f64;
-        // let n_coll_max = n_pairs * params.macroparticle * dt * v_rel_max * params.sigma
-        //     / params.box_width.powi(3);
-
-        // let mut n_pairs_tested = n_coll_max.ceil();
-        // if n_pairs_tested < 1.0 {
-        //     n_pairs_tested = 1.0;
-        // } else if n_pairs_tested > (self.particle_number as f64 / 2.0).floor() {
-        //     n_pairs_tested = self.particle_number as f64 / 2.0;
-        // }
-
-        // let correction = n_coll_max / n_pairs_tested;
-
-        // for _i in 0..n_pairs_tested as usize {
-        //     let idx1 = rng.gen_range(0, self.velocities.len());
-        //     let mut idx2 = idx1;
-        //     while idx2 == idx1 {
-        //         idx2 = rng.gen_range(0, self.velocities.len())
-        //     }
-
-        //     let v_rel = (self.velocities[idx1].vel - self.velocities[idx2].vel).norm();
-        //     let collision_prob = v_rel / v_rel_max * correction;
-
-        //     let p = rng.gen::<f64>();
-        //     // println!(
-        //     //     "p: {}, collision_prob: {}, correction: {}, n_coll_max: {}, n_tested: {}",
-        //     //     p, collision_prob, correction, n_coll_max, n_pairs_tested
-        //     // );
-        //     if p < collision_prob {
-        //         let v1 = self.velocities[idx1].vel;
-        //         let v2 = self.velocities[idx2].vel;
-        //         let (v1new, v2new) = do_collision(v1, v2);
-        //         self.velocities[idx1].vel = v1new;
-        //         self.velocities[idx2].vel = v2new;
-        //         self.collision_number += 1;
-        //     }
-        // }
-        /////
-        ///// pairwise O(N^2)
-        // for idx1 in 0..self.particle_number as usize {
-        //     for idx2 in 0..idx1 {
-        //         let v_rel = (self.velocities[idx1].vel - self.velocities[idx2].vel).norm();
-        //         let collision_prob =
-        //             params.macroparticle * dt * v_rel * params.sigma / params.box_width.powi(3);
-
-        //         let p = rng.gen::<f64>();
-        //         // println!(
-        //         //     "p: {}, collision_prob: {}, correction: {}, n_coll_max: {}, n_tested: {}",
-        //         //     p, collision_prob, correction, n_coll_max, n_pairs_tested
-        //         // );
-        //         if p < collision_prob {
-        //             let v1 = self.velocities[idx1].vel;
-        //             let v2 = self.velocities[idx2].vel;
-        //             let (v1new, v2new) = do_collision(v1, v2);
-        //             self.velocities[idx1].vel = v1new;
-        //             self.velocities[idx2].vel = v2new;
-        //             self.collision_number += 1;
-        //         }
-        //     }
-        // }
-        /////
-
         ///// n*sigma*v total collisions
         // vbar is the average _speed_, not the average _velocity_.
         let mut vsum = 0.0;
@@ -147,15 +76,18 @@ impl CollisionBox<'_> {
         let vbar = vsum / self.velocities.len() as f64;
 
         // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
+        // probability of one particle colliding is n*sigma*vrel*dt where n is the atom density, sigma cross section and vrel the average relative velocity
+        // vrel = SQRT(2)*vbar, and since we assume these are identical particles we must divide by two since otherwise we count each collision twice
+        // so total number of collisions is N_particles * probability = N_p*n*sigma*vbar*dt/SQRT(2)
         let density = self.atom_number / params.box_width.powi(3);
         self.expected_collision_number =
-            self.atom_number * density * params.sigma * vbar * dt * (1.0 / SQRT2);
+            self.particle_number as f64 * density * params.sigma * vbar * dt * (1.0 / SQRT2);
 
         let mut num_collisions_left: f64 = self.expected_collision_number;
 
         if num_collisions_left > params.collision_limit {
             panic!("Number of collisions in a box in a single frame exceeds limit. Number of collisions={}, limit={}, particles={}.", num_collisions_left, params.collision_limit, self.particle_number);
-        }     
+        }
 
         while num_collisions_left > 0.0 {
             let collide = if num_collisions_left > 1.0 {
@@ -332,7 +264,6 @@ fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
     } else if pos[2].abs() > bound {
         id = i64::MAX;
     } else {
-
         let xp: i64;
         let yp: i64;
         let zp: i64;
@@ -344,8 +275,6 @@ fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
         xp = (pos[0] / width + 0.5 * (n as f64)).floor() as i64;
         yp = (pos[1] / width + 0.5 * (n as f64)).floor() as i64;
         zp = (pos[2] / width + 0.5 * (n as f64)).floor() as i64;
-        
-       
         //convert position to box id
         id = xp + n * yp + n.pow(2) * zp;
     }
@@ -423,7 +352,7 @@ pub mod tests {
             let energyf = 0.5 * (v1new.norm_squared() + v2new.norm_squared());
 
             assert!((ptoti - ptotf) <= Vector3::new(1e-6, 1e-6, 1e-6));
-            assert!((energyi - energyf) <= 1e-6);
+            assert!((energyi - energyf) / energyi <= 1e-12);
             assert_ne!(v1, v1new);
             assert_ne!(v2, v2new);
         }
