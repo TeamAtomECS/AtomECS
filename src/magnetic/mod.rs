@@ -115,7 +115,6 @@ impl<'a> System<'a> for CalculateMagneticMagnitudeGradientSystem {
 	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
 	fn run(&mut self, mut sampler: Self::SystemData) {
 		use rayon::prelude::*;
-		use specs::ParJoin;
 
 		(&mut sampler).par_join().for_each(|mut sampler| {
 			let mut gradient = Vector3::new(0.0, 0.0, 0.0);
@@ -224,7 +223,7 @@ pub mod tests {
 	use crate::atom::Position;
 	use crate::magnetic::quadrupole::{QuadrupoleField3D, Sample3DQuadrupoleFieldSystem};
 	use assert_approx_eq::assert_approx_eq;
-	use specs::{Builder, DispatcherBuilder, RunNow, World};
+	use specs::prelude::*;
 
 	/// Tests the correct implementation of the magnetics systems and dispatcher.
 	/// This is done by setting up a test world and ensuring that the magnetic systems perform the correct operations on test entities.
@@ -341,12 +340,12 @@ pub mod tests {
 			.build();
 
 		let mut quad_system = Sample3DQuadrupoleFieldSystem;
-		quad_system.run_now(&test_world.res);
+		quad_system.run_now(&test_world);
 
 		let mut magnitude_system = CalculateMagneticFieldMagnitudeSystem;
-		magnitude_system.run_now(&test_world.res);
+		magnitude_system.run_now(&test_world);
 		let mut gradient_system = CalculateMagneticMagnitudeGradientSystem;
-		gradient_system.run_now(&test_world.res);
+		gradient_system.run_now(&test_world);
 
 		test_world.maintain();
 		let sampler_storage = test_world.read_storage::<MagneticFieldSampler>();
