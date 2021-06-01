@@ -1,15 +1,12 @@
 //! Calculation of RateCoefficients for the rate equation approach
 
-extern crate rayon;
-extern crate specs;
-
 use super::cooling::{CoolingLight, CoolingLightIndex};
 use crate::atom::AtomicTransition;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::intensity::LaserIntensitySamplers;
 use crate::laser::sampler::LaserDetuningSamplers;
 use crate::magnetic::MagneticFieldSampler;
-use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
+use specs::prelude::*;
 
 /// Represents the rate coefficient of the atom with respect to a specific CoolingLight entity
 #[derive(Clone, Copy)]
@@ -44,7 +41,6 @@ impl<'a> System<'a> for InitialiseRateCoefficientsSystem {
     type SystemData = (WriteStorage<'a, RateCoefficients>,);
     fn run(&mut self, (mut rate_coefficients,): Self::SystemData) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         (&mut rate_coefficients)
             .par_join()
@@ -90,7 +86,6 @@ impl<'a> System<'a> for CalculateRateCoefficientsSystem {
         ): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         for (cooling, index, gaussian) in (&cooling_light, &cooling_index, &gaussian_beam).join() {
             (
@@ -139,10 +134,8 @@ pub mod tests {
 
     use super::*;
 
-    extern crate specs;
     use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
     extern crate nalgebra;
     use nalgebra::{Matrix3, Vector3};
 
@@ -214,7 +207,7 @@ pub mod tests {
             .build();
 
         let mut system = CalculateRateCoefficientsSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<RateCoefficients>();
 

@@ -1,5 +1,7 @@
 # AtomECS
 > Simulate laser cooling with rust.
+ 
+**New:** Paper out now on [arxiv](https://arxiv.org/abs/2105.06447)
 
 [![build](https://github.com/TeamAtomECS/AtomECS/actions/workflows/build.yml/badge.svg)](https://github.com/TeamAtomECS/AtomECS/actions/workflows/build.yml) [![unit_tests](https://github.com/TeamAtomECS/AtomECS/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/TeamAtomECS/AtomECS/actions/workflows/unit-tests.yml)
 

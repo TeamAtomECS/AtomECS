@@ -22,8 +22,8 @@ use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;
-use rand::distributions::{Distribution, Normal};
-use specs::{Builder, World};
+use rand_distr::{Distribution, Normal};
+use specs::prelude::*;
 use std::fs::read_to_string;
 use std::time::Instant;
 
@@ -70,7 +70,7 @@ fn main() {
     );
 
     let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     // Create magnetic field.
     world
@@ -173,10 +173,10 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.insert(Timestep { delta: 1.0e-6 });
 
-    let vel_dist = Normal::new(0.0, 0.22);
-    let pos_dist = Normal::new(0.0, 1.2e-4);
+    let vel_dist = Normal::new(0.0, 0.22).unwrap();
+    let pos_dist = Normal::new(0.0, 1.2e-4).unwrap();
     let mut rng = rand::thread_rng();
 
     // Add atoms
@@ -208,14 +208,14 @@ fn main() {
     // Enable fluctuation options
     //  * Allow photon numbers to fluctuate.
     //  * Allow random force from emission of photons.
-    world.add_resource(EmissionForceOption::On(EmissionForceConfiguration {
+    world.insert(EmissionForceOption::On(EmissionForceConfiguration {
         explicit_threshold: 5,
     }));
-    world.add_resource(ScatteringFluctuationsOption::On);
+    world.insert(ScatteringFluctuationsOption::On);
 
     // Run the simulation for a number of steps.
     for _i in 0..configuration.number_of_steps {
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
     }
 

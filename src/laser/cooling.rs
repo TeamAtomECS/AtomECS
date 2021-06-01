@@ -1,13 +1,9 @@
 //! Components for the CoolingLight entities and their initilization
 
-extern crate specs;
 use crate::atom::AtomicTransition;
-use serde::{Deserialize, Serialize};
-use specs::{
-	Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System, WriteStorage,
-};
-
 use crate::constant;
+use serde::{Deserialize, Serialize};
+use specs::prelude::*;
 
 /// A component representing light properties used for laser cooling.
 ///
@@ -135,8 +131,6 @@ pub mod tests {
 
 	use super::*;
 	use assert_approx_eq::assert_approx_eq;
-	extern crate specs;
-	use specs::{Builder, RunNow, World};
 
 	#[test]
 	fn test_index_cooling_lights() {
@@ -162,7 +156,7 @@ pub mod tests {
 			.build();
 
 		let mut system = IndexCoolingLightsSystem;
-		system.run_now(&test_world.res);
+		system.run_now(&test_world);
 		test_world.maintain();
 
 		let cooling_storage = test_world.read_storage::<CoolingLightIndex>();
@@ -191,7 +185,7 @@ pub mod tests {
 			.build();
 
 		let mut system = AttachIndexToCoolingLightSystem;
-		system.run_now(&test_world.res);
+		system.run_now(&test_world);
 		test_world.maintain();
 
 		assert_eq!(

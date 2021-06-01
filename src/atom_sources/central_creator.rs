@@ -9,10 +9,9 @@
 //! This is accomplished by 5 different types of distributions, 3 scalar and 2 vector.
 
 extern crate nalgebra;
-use rand::Rng;
-extern crate specs;
 use nalgebra::Vector3;
-use specs::{Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System};
+use rand::Rng;
+use specs::prelude::*;
 
 use super::emit::AtomNumberToEmit;
 use super::mass::MassDistribution;
@@ -113,9 +112,9 @@ impl CentralCreator {
         let pos_vector = match self.position_density_distribution {
             PositionDensityDistribution::UniformCuboidic { size } => {
                 let size = size.clone();
-                let pos1 = rng.gen_range(-0.5 * size[0], 0.5 * size[0]);
-                let pos2 = rng.gen_range(-0.5 * size[1], 0.5 * size[1]);
-                let pos3 = rng.gen_range(-0.5 * size[2], 0.5 * size[2]);
+                let pos1 = rng.gen_range(-0.5 * size[0]..0.5 * size[0]);
+                let pos2 = rng.gen_range(-0.5 * size[1]..0.5 * size[1]);
+                let pos3 = rng.gen_range(-0.5 * size[2]..0.5 * size[2]);
                 nalgebra::Vector3::new(pos1, pos2, pos3)
             }
             PositionDensityDistribution::UniformSpheric { radius: _ } => {
@@ -142,7 +141,7 @@ impl CentralCreator {
         let speed: f64 = match self.speed_density_distribution {
             SpeedDensityDistribution::UniformCentral { width } => {
                 let min: f64 = (0.0f64).max(characteristic_speed - width);
-                rng.gen_range(min, characteristic_speed + width)
+                rng.gen_range(min..characteristic_speed + width)
             }
         };
 
@@ -154,9 +153,9 @@ impl CentralCreator {
 
         let vector: Vector3<f64> = match self.vector_density_distribution {
             VectorDensityDistribution::Uniform {} => {
-                let vec1 = rng.gen_range(-1.0, 1.0);
-                let vec2 = rng.gen_range(-1.0, 1.0);
-                let vec3 = rng.gen_range(-1.0, 1.0);
+                let vec1 = rng.gen_range(-1.0..1.0);
+                let vec2 = rng.gen_range(-1.0..1.0);
+                let vec3 = rng.gen_range(-1.0..1.0);
                 (nalgebra::Vector3::new(vec1, vec2, vec3)).normalize()
             }
         };
@@ -251,9 +250,6 @@ impl<'a> System<'a> for CentralCreatorCreateAtomsSystem {
 pub mod tests {
 
     use super::*;
-
-    extern crate specs;
-    use specs::{Builder, RunNow, World};
     extern crate nalgebra;
     use nalgebra::Vector3;
 
@@ -298,7 +294,7 @@ pub mod tests {
             .build();
 
         let mut system = CentralCreatorCreateAtomsSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         pub struct CheckerComponent {
             everything_allright: bool,
@@ -342,7 +338,7 @@ pub mod tests {
                 }
             }
         }
-        TestSystem.run_now(&test_world.res);
+        TestSystem.run_now(&test_world);
         test_world.maintain();
 
         let sampler_storage = test_world.read_storage::<CheckerComponent>();
