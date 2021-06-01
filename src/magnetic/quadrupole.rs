@@ -214,7 +214,7 @@ pub mod tests {
     extern crate specs;
     use assert_approx_eq::assert_approx_eq;
     use nalgebra::Vector3;
-    use specs::{Builder, RunNow, World};
+    use specs::prelude::*;
 
     /// Tests the correct implementation of the quadrupole 3D field
     #[test]
@@ -267,7 +267,7 @@ pub mod tests {
             .build();
 
         let mut system = Sample3DQuadrupoleFieldSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<MagneticFieldSampler>();
 

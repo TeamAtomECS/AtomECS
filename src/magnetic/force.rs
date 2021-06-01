@@ -45,7 +45,7 @@ pub mod tests {
     extern crate specs;
 
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
+    use specs::prelude::*;
     extern crate nalgebra;
     use nalgebra::{Matrix3, Vector3};
 
@@ -69,7 +69,7 @@ pub mod tests {
             .build();
 
         let mut system = ApplyMagneticForceSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let force_storage = test_world.read_storage::<Force>();
         let force = force_storage.get(atom1).expect("entity not found").force;
