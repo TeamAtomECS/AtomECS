@@ -1,8 +1,6 @@
 //! Calculation of RateCoefficients for the rate equation approach
 
-extern crate rayon;
 extern crate serde;
-extern crate specs;
 
 use crate::atom::AtomicTransition;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};

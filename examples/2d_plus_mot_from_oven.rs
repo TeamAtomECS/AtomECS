@@ -35,18 +35,18 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text, Atom>("pos.txt".to_string(), 100),
+        file::new::<Position, Text>("pos.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text, Atom>("vel.txt".to_string(), 100),
+        file::new::<Velocity, Text>("vel.txt".to_string(), 100),
         "",
         &[],
     );
 
     builder = builder.with(
-        file::new::<lib::atom::Force, SerdeJson, Atom>("force.txt".to_string(), 100),
+        file::new_with_filter::<lib::atom::Force, SerdeJson, Atom>("force.txt".to_string(), 100),
         "",
         &[INTEGRATE_VELOCITY_SYSTEM_NAME],
     );

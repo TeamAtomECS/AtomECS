@@ -15,7 +15,6 @@ use lib::magnetic::quadrupole::QuadrupoleField3D;
 use nalgebra::Vector3;
 use rand_distr::{Distribution, Normal};
 use specs::prelude::*;
-use specs::{Builder, DispatcherBuilder, World};
 
 fn criterion_benchmark(c: &mut Criterion) {
     // Mock up a simulation world and dispatcher

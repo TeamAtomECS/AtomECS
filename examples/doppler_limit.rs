@@ -64,7 +64,7 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Velocity, Text, Atom>("vel.txt".to_string(), 10),
+        file::new::<Velocity, Text>("vel.txt".to_string(), 10),
         "",
         &[],
     );
