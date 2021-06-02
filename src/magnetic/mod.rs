@@ -146,17 +146,17 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		&["magnetics_uniform", INTEGRATE_POSITION_SYSTEM_NAME],
 	);
 	builder.add(
-		dipole::SampleDipoleFieldSystem,
+		dipole::SampleMagneticDipoleFieldSystem,
 		"magnetics_dipole",
 		&["magnetics_grid"],
 	);
 	builder.add(
-		wire::SampleWireFieldSystem,
+		wire::SampleMagneticWireFieldSystem,
 		"magnetics_wire",
 		&["magnetics_dipole"],
 	);
 	builder.add(
-		coil::SampleCoilFieldSystem,
+		coil::SampleMagneticCoilFieldSystem,
 		"magnetics_coil",
 		&["magnetics_wire"],
 	);
@@ -187,8 +187,8 @@ pub fn register_components(world: &mut World) {
 	world.register::<uniform::UniformMagneticField>();
 	world.register::<quadrupole::QuadrupoleField3D>();
 	world.register::<quadrupole::QuadrupoleField2D>();
-	world.register::<dipole::MagneticDipole>();
-	world.register::<wire::MagneticWire>();
+	world.register::<dipole::MagneticDipoleField>();
+	world.register::<wire::MagneticWireField>();
 	world.register::<MagneticFieldSampler>();
 	world.register::<grid::PrecalculatedMagneticFieldGrid>();
 }

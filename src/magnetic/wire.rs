@@ -13,7 +13,7 @@ use crate::magnetic::MagneticFieldSampler;
 /// For example, it is possible to represent a rectangular coil by
 /// adding four wires end-to-end.
 #[derive(Serialize, Deserialize)]
-pub struct MagneticWire {
+pub struct MagneticWireField {
     /// Length of the wire, in m
     pub length: f64,
     /// Current in the wire, in Ampere
@@ -22,14 +22,14 @@ pub struct MagneticWire {
     pub direction: Vector3<f64>,
 }
 
-impl Component for MagneticWire {
+impl Component for MagneticWireField {
     type Storage = HashMapStorage<Self>;
 }
 
 /// Updates the values of magnetic field samplers to include wires in the world.
-pub struct SampleWireFieldSystem;
+pub struct SampleMagneticWireFieldSystem;
 
-impl SampleWireFieldSystem {
+impl SampleMagneticWireFieldSystem {
     /// Calculates the magnetic field of the wire.
     ///
     /// # Arguments
@@ -64,11 +64,11 @@ impl SampleWireFieldSystem {
     }
 }
 
-impl<'a> System<'a> for SampleWireFieldSystem {
+impl<'a> System<'a> for SampleMagneticWireFieldSystem {
     type SystemData = (
         WriteStorage<'a, MagneticFieldSampler>,
         ReadStorage<'a, Position>,
-        ReadStorage<'a, MagneticWire>,
+        ReadStorage<'a, MagneticWireField>,
     );
     fn run(&mut self, (mut sampler, positions, wires): Self::SystemData) {
         use rayon::prelude::*;
@@ -78,7 +78,7 @@ impl<'a> System<'a> for SampleWireFieldSystem {
             (&positions, &mut sampler)
                 .par_join()
                 .for_each(|(location, mut sampler)| {
-                    let field = SampleWireFieldSystem::calculate_field(
+                    let field = SampleMagneticWireFieldSystem::calculate_field(
                         location.pos,
                         position.pos,
                         wire.length,
@@ -109,7 +109,7 @@ pub mod tests {
         let current = 1e7;
         let direction = Vector3::z();
         let field =
-            SampleWireFieldSystem::calculate_field(location, position, length, current, direction);
+            SampleMagneticWireFieldSystem::calculate_field(location, position, length, current, direction);
         assert_approx_eq!(field.x, 0.0);
         assert_approx_eq!(field.y, 2f64.sqrt(), 1e-5);
         assert_approx_eq!(field.z, 0.0);

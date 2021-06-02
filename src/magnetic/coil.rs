@@ -13,7 +13,7 @@ use crate::magnetic::MagneticFieldSampler;
 
 /// A component representing a circular coil made of a single loop.
 #[derive(Serialize, Deserialize)]
-pub struct MagneticCoil {
+pub struct MagneticCoilField {
     /// Radius of the coil, in m.
     pub radius: f64,
     /// Current in the coil, in Ampere.
@@ -23,14 +23,14 @@ pub struct MagneticCoil {
     pub normal: Vector3<f64>,
 }
 
-impl Component for MagneticCoil {
+impl Component for MagneticCoilField {
     type Storage = HashMapStorage<Self>;
 }
 
 /// Updates the values of magnetic field samplers to include coils in the world.
-pub struct SampleCoilFieldSystem;
+pub struct SampleMagneticCoilFieldSystem;
 
-impl SampleCoilFieldSystem {
+impl SampleMagneticCoilFieldSystem {
     /// Calculates the magnetic field of the coil.
     ///
     /// # Arguments
@@ -80,11 +80,11 @@ impl SampleCoilFieldSystem {
     }
 }
 
-impl<'a> System<'a> for SampleCoilFieldSystem {
+impl<'a> System<'a> for SampleMagneticCoilFieldSystem {
     type SystemData = (
         WriteStorage<'a, MagneticFieldSampler>,
         ReadStorage<'a, Position>,
-        ReadStorage<'a, MagneticCoil>,
+        ReadStorage<'a, MagneticCoilField>,
     );
     fn run(&mut self, (mut sampler, positions, coils): Self::SystemData) {
         use rayon::prelude::*;
@@ -94,7 +94,7 @@ impl<'a> System<'a> for SampleCoilFieldSystem {
             (&positions, &mut sampler)
                 .par_join()
                 .for_each(|(location, mut sampler)| {
-                    let field = SampleCoilFieldSystem::calculate_field(
+                    let field = SampleMagneticCoilFieldSystem::calculate_field(
                         location.pos,
                         position.pos,
                         coil.radius,
@@ -173,7 +173,7 @@ pub mod tests {
         let current = 3e7;
         let normal = Vector3::z();
         let field =
-            SampleCoilFieldSystem::calculate_field(pos, centre, radius, current, normal);
+            SampleMagneticCoilFieldSystem::calculate_field(pos, centre, radius, current, normal);
         assert_approx_eq!(field.x, 0.1119068);
         assert_approx_eq!(field.y, 0.0);
         assert_approx_eq!(field.z, 2.9372828);
