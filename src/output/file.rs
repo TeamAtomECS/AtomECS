@@ -29,6 +29,22 @@ pub struct OutputSystem<C: Component + Clone, W: Write, F: Format<C, W>, A = Ato
     marker: PhantomData<C>,
 }
 
+/// Creates a new [OutputSystem](struct.OutputSystem.html) to write per-atom [Component](specs::Component) data
+/// according to the specified [Format](struct.Format.html).
+///
+/// The interval specifies how often, in integration steps, the file should be written.
+///
+/// Only component data of entities associated with `Atom` is written down.
+///
+/// For example, `new::<Position, Text>("pos.txt", 10).
+pub fn new<C, F>(file_name: String, interval: u64) -> OutputSystem<C, BufWriter<File>, F, Atom>
+where
+    C: Component + Clone,
+    F: Format<C, BufWriter<File>>,
+{
+    new_with_filter::<C, F, Atom>(file_name, interval)
+}
+
 /// Creates a new [OutputSystem](struct.OutputSystem.html) to write per-entity [Component](specs::Component) data
 /// according to the specified [Format](struct.Format.html).
 ///
@@ -36,8 +52,11 @@ pub struct OutputSystem<C: Component + Clone, W: Write, F: Format<C, W>, A = Ato
 ///
 /// Only component data of entities associated with a component given by `A` is written down.
 ///
-/// For example, `new::<Position, Text, Atom>("pos.txt", 10).
-pub fn new<C, F, A>(file_name: String, interval: u64) -> OutputSystem<C, BufWriter<File>, F, A>
+/// For example, `new_with_filter::<Position, Text, Atom>("pos.txt", 10).
+pub fn new_with_filter<C, F, A>(
+    file_name: String,
+    interval: u64,
+) -> OutputSystem<C, BufWriter<File>, F, A>
 where
     C: Component + Clone,
     A: Component,

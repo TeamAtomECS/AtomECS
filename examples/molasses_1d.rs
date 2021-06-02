@@ -20,13 +20,13 @@ fn main() {
 
     // Add some output to the simulation
     builder = builder.with(
-        file::new::<Velocity, Text, Atom>("vel.txt".to_string(), 10),
+        file::new::<Velocity, Text>("vel.txt".to_string(), 10),
         "",
         &[],
     );
 
     builder = builder.with(
-        file::new::<ActualPhotonsScatteredVector, Text, Atom>("scattered.txt".to_string(), 10),
+        file::new::<ActualPhotonsScatteredVector, Text>("scattered.txt".to_string(), 10),
         "",
         &[],
     );
