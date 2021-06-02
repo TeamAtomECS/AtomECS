@@ -6,8 +6,6 @@ pub mod transition_switcher;
 extern crate specs;
 use specs::DispatcherBuilder;
 
-pub const BEAM_LIMIT: usize = 16;
-
 /// Adds the systems required by the module to the dispatcher.
 ///
 /// #Arguments

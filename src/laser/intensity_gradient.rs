@@ -32,7 +32,7 @@ impl Default for LaserIntensityGradientSampler {
 /// Component that holds a list of `LaserIntensityGradientSampler`s
 pub struct LaserIntensityGradientSamplers {
     /// List of laser gradient samplers
-    pub contents: [LaserIntensityGradientSampler; crate::dipole::BEAM_LIMIT],
+    pub contents: [LaserIntensityGradientSampler; crate::laser::BEAM_LIMIT],
 }
 impl Component for LaserIntensityGradientSamplers {
     type Storage = VecStorage<Self>;
@@ -121,7 +121,7 @@ pub mod tests {
                 pos: Vector3::new(10.0e-6, 0.0, 30.0e-6),
             })
             .with(LaserIntensityGradientSamplers {
-                contents: [LaserIntensityGradientSampler::default(); crate::dipole::BEAM_LIMIT],
+                contents: [LaserIntensityGradientSampler::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
         let mut system = SampleLaserIntensityGradientSystem;
@@ -203,7 +203,7 @@ pub mod tests {
                 pos: Vector3::new(20.0e-6, 20.0e-6, 20.0e-6),
             })
             .with(LaserIntensityGradientSamplers {
-                contents: [LaserIntensityGradientSampler::default(); crate::dipole::BEAM_LIMIT],
+                contents: [LaserIntensityGradientSampler::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
         let mut system = SampleLaserIntensityGradientSystem;
