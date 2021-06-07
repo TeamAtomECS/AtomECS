@@ -15,9 +15,9 @@ use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
-use lib::laser::force::{EmissionForceConfiguration, EmissionForceOption};
 use lib::laser::gaussian::GaussianBeam;
-use lib::laser::photons_scattered::ScatteringFluctuationsOption;
+use lib::laser_cooling::force::{EmissionForceConfiguration, EmissionForceOption};
+use lib::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
@@ -94,6 +94,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, 0.0, 1.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -108,6 +110,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, 0.0, -1.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -122,6 +126,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(-1.0, 0.0, 0.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -136,6 +142,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(1.0, 0.0, 0.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -150,6 +158,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, 1.0, 0.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -164,6 +174,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, -1.0, 0.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),

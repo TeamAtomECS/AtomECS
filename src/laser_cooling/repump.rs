@@ -2,7 +2,7 @@
 
 use rand;
 extern crate specs;
-use crate::laser::photons_scattered::TotalPhotonsScattered;
+use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
 use rand::Rng;
 use specs::{Component, Entities, LazyUpdate, Read, ReadStorage, System, VecStorage};
 

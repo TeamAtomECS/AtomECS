@@ -10,7 +10,7 @@ pub mod tests {
     use crate::integrator::Timestep;
     use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
     use crate::laser::gaussian::GaussianBeam;
-    use crate::laser::photons_scattered::TotalPhotonsScattered;
+    use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
     extern crate nalgebra;
     use assert_approx_eq::assert_approx_eq;
     use nalgebra::Vector3;
@@ -59,11 +59,12 @@ pub mod tests {
                 1,
             ))
             .with(CoolingLightIndex::default())
-            .with(GaussianBeam::from_peak_intensity(
+            .with(GaussianBeam::from_peak_intensity_with_rayleigh_range(
                 Vector3::new(0.0, 0.0, 0.0),
                 Vector3::new(-1.0, 0.0, 0.0),
                 intensity,
                 0.01,
+                780.0e-9,
             ))
             .build();
 
