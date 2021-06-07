@@ -1,10 +1,12 @@
 //! Calculation of the total detuning for specific atoms and CoolingLight entities
 
+extern crate serde;
 use crate::atom::AtomicTransition;
 use crate::constant;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::doppler::DopplerShiftSamplers;
 use crate::magnetic::zeeman::ZeemanShiftSampler;
+use serde::Serialize;
 use specs::prelude::*;
 use std::f64;
 extern crate nalgebra;
@@ -12,7 +14,7 @@ extern crate nalgebra;
 const LASER_CACHE_SIZE: usize = 16;
 
 /// Tracks whether slots in the laser sampler arrays are currently used.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
 pub struct LaserSamplerMask {
     /// Marks whether a cooling light exists for this slot in the laser sampler array.
     pub filled: bool,
@@ -64,7 +66,7 @@ impl<'a> System<'a> for FillLaserSamplerMasksSystem {
 }
 
 /// Represents total detuning of the atom's transition with respect to each beam
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
 pub struct LaserDetuningSampler {
     /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_plus: f64,
@@ -85,6 +87,7 @@ impl Default for LaserDetuningSampler {
 }
 
 /// Component that holds a vector of `LaserDetuningSampler`
+#[derive(Clone, Copy, Serialize)]
 pub struct LaserDetuningSamplers {
     /// List of `LaserDetuningSampler`s
     pub contents: [LaserDetuningSampler; crate::laser::COOLING_BEAM_LIMIT],
