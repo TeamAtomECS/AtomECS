@@ -38,17 +38,17 @@ fn main() {
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text, Atom>("pos_dipole_aion_low.txt".to_string(), 100),
+        file::new::<Position, Text>("pos_dipole_aion_low.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text, Atom>("vel_dipole_aion_low.txt".to_string(), 100),
+        file::new::<Velocity, Text>("vel_dipole_aion_low.txt".to_string(), 100),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Position, XYZ, Atom>("position.xyz".to_string(), 100),
+        file::new_with_filter::<Position, XYZ, Atom>("position.xyz".to_string(), 100),
         "",
         &[],
     );
