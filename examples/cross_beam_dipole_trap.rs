@@ -2,18 +2,12 @@
 use specs::prelude::*;
 extern crate atomecs as lib;
 extern crate nalgebra;
-use atomecs::laser::cooling::CoolingLight;
-use atomecs::laser_cooling::force::EmissionForceOption;
-use atomecs::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
-use atomecs::magnetic::quadrupole::QuadrupoleField3D;
 use lib::atom::Atom;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::central_creator::CentralCreator;
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
-use lib::constant;
 use lib::destructor::ToBeDestroyed;
-use lib::dipole::atom::AtomicDipoleTransition;
 use lib::ecs;
 use lib::integrator::Timestep;
 use lib::laser;
@@ -53,138 +47,6 @@ fn main() {
 
     let mut dispatcher = builder.build();
     dispatcher.setup(&mut world);
-
-    world
-        .create_entity()
-        .with(QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
-        .with(Position {
-            pos: Vector3::new(0.0, 0.0, 0.0e-6),
-        })
-        .build();
-
-    let detuning = -20.0; //MHz
-    let power = 0.01; //W total power of all Lasers together
-    let radius = 1.0e-2 / (2.0 * 2.0_f64.sqrt()); // 10mm 1/e^2 diameter
-
-    // Horizontal beams along z
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.0,
-            direction: Vector3::z(),
-            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium_red().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium_red(),
-            detuning,
-            -1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.0,
-            direction: -Vector3::z(),
-            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium_red().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium_red(),
-            detuning,
-            -1,
-        ))
-        .build();
-
-    // Angled vertical beams
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.,
-            direction: Vector3::new(1.0, 1.0, 0.0).normalize(),
-            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium_red().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium_red(),
-            detuning,
-            1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.,
-            direction: Vector3::new(1.0, -1.0, 0.0).normalize(),
-            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium_red().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium_red(),
-            detuning,
-            1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.,
-            direction: Vector3::new(-1.0, 1.0, 0.0).normalize(),
-            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium_red().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium_red(),
-            detuning,
-            1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.,
-            direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
-            rayleigh_range: lib::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium_red().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium_red(),
-            detuning,
-            1,
-        ))
-        .build();
-    world.insert(EmissionForceOption::default());
-    world.insert(ScatteringFluctuationsOption::default());
 
     // Create dipole laser.
     let power = 10.0;
@@ -247,7 +109,6 @@ fn main() {
             ratio: 1.0,
         }]))
         .with(AtomicTransition::strontium_red())
-        .with(AtomicDipoleTransition::strontium())
         .with(AtomNumberToEmit {
             number: number_to_emit,
         })
@@ -269,6 +130,13 @@ fn main() {
             volume_type: VolumeType::Inclusive,
         })
         .build();
+
+    let mut switcher_system =
+        atomecs::dipole::transition_switcher::AttachAtomicDipoleTransitionToAtomsSystem;
+
+    dispatcher.dispatch(&mut world);
+    world.maintain();
+    switcher_system.run_now(&world);
 
     // Run the simulation for a number of steps.
     for _i in 0..100_000 {
