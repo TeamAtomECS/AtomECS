@@ -93,6 +93,10 @@ where
     );
 
     fn run(&mut self, (entities, data, atom_flags, step): Self::SystemData) {
+        if step.n == 2 {
+            let atom_number = (&atom_flags).join().count();
+            F::write_file_header(&mut self.stream, atom_number).expect("Could not write.");
+        }
         if step.n % self.interval == 0 {
             let atom_number = (&atom_flags).join().count();
             F::write_frame_header(&mut self.stream, step.n, atom_number).expect("Could not write.");
@@ -111,6 +115,8 @@ where
     C: Component + Clone,
     W: Write,
 {
+    /// /// Writes data indicating the start of a file.
+    fn write_file_header(writer: &mut W, atom_number: usize) -> Result<(), io::Error>;
     /// Writes data indicating the start of a frame.
     fn write_frame_header(writer: &mut W, step: u64, atom_number: usize) -> Result<(), io::Error>;
     /// Writes data associated with an atom.
@@ -132,6 +138,9 @@ where
     C: Component + Clone + Display,
     W: Write,
 {
+    fn write_file_header(_writer: &mut W, _atom_number: usize) -> Result<(), io::Error> {
+        Ok(())
+    }
     fn write_frame_header(writer: &mut W, step: u64, atom_number: usize) -> Result<(), io::Error> {
         write!(writer, "step-{:?}, {:?}\n", step, atom_number)?;
         Ok(())
@@ -149,6 +158,9 @@ where
     C: Component + serde::Serialize + Clone,
     W: Write,
 {
+    fn write_file_header(_writer: &mut W, _atom_number: usize) -> Result<(), io::Error> {
+        Ok(())
+    }
     fn write_frame_header(writer: &mut W, step: u64, atom_number: usize) -> Result<(), io::Error> {
         write!(writer, "step-{:?}, {:?}\n", step, atom_number)?;
         Ok(())
@@ -176,6 +188,14 @@ where
     C: Component + Clone + XYZPosition,
     W: Write,
 {
+    fn write_file_header(writer: &mut W, atom_number: usize) -> Result<(), io::Error> {
+        write!(writer, "{:?}\n\n", atom_number)?;
+        for _i in 0..atom_number {
+            write!(writer, "H\t{}\t{}\t{}\n", 0.0, 0.0, 500.0)?;
+        }
+        Ok(())
+    }
+
     fn write_frame_header(writer: &mut W, _step: u64, atom_number: usize) -> Result<(), io::Error> {
         write!(writer, "{:?}\n\n", atom_number)?;
         Ok(())
@@ -205,6 +225,9 @@ where
     C: Component + Clone + BinaryConversion,
     W: Write,
 {
+    fn write_file_header(_writer: &mut W, _atom_number: usize) -> Result<(), io::Error> {
+        Ok(())
+    }
     fn write_frame_header(writer: &mut W, step: u64, atom_number: usize) -> Result<(), io::Error> {
         writer.write_u64::<Endianness>(step)?;
         writer.write_u64::<Endianness>(atom_number as u64)?;
