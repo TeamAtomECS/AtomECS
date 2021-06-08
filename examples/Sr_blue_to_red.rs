@@ -87,7 +87,7 @@ fn main() {
     let mut magnetic_frames = Vec::new();
     magnetic_frames.push((0.0, QuadrupoleField3D::gauss_per_cm(60.0, Vector3::x())));
     magnetic_frames.push((0.01, QuadrupoleField3D::gauss_per_cm(60.0, Vector3::x())));
-    magnetic_frames.push((0.02, QuadrupoleField3D::gauss_per_cm(1.0, Vector3::x())));
+    magnetic_frames.push((0.011, QuadrupoleField3D::gauss_per_cm(1.0, Vector3::x())));
     let magnetic_ramp = Ramp::new(magnetic_frames);
 
     world
@@ -99,251 +99,11 @@ fn main() {
         .with(magnetic_ramp)
         .build();
 
-    let detuning = -30.0; //MHz
-    let power = 0.024; //W total power of all Lasers together
-    let radius = 5.0e-3 / (2.0 * 2.0_f64.sqrt()); // 10mm 1/e^2 diameter
-
     // BLUE MOT
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.0,
-            direction: Vector3::x(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium(),
-            detuning,
-            -1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.0,
-            direction: -Vector3::x(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium(),
-            detuning,
-            -1,
-        ))
-        .build();
+    lib::helper_files::blue_beams::add_blue_mot_beams(&mut world);
 
-    // Angled vertical beams
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.,
-            direction: Vector3::new(0.0, 1.0, 1.0).normalize(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium(),
-            detuning,
-            1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.,
-            direction: Vector3::new(0.0, -1.0, -1.0).normalize(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium(),
-            detuning,
-            1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.,
-            direction: Vector3::new(0.0, 1.0, -1.0).normalize(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium(),
-            detuning,
-            1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.,
-            direction: Vector3::new(0.0, -1.0, 1.0).normalize(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium(),
-            detuning,
-            1,
-        ))
-        .build();
-    world.insert(EmissionForceOption::default());
-    world.insert(ScatteringFluctuationsOption::default());
-
-    // RED MOT
-    let detuning = -0.05; //MHz
-    let power = 0.001; //W total power of all Lasers together
-    let radius = 3.0e-3 / (2.0 * 2.0_f64.sqrt()); // 10mm 1/e^2 diameter
-
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.0,
-            direction: Vector3::x(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium_red().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium_red(),
-            detuning,
-            -1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.0,
-            direction: -Vector3::x(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium_red().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium_red(),
-            detuning,
-            -1,
-        ))
-        .build();
-
-    // Angled vertical beams
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.,
-            direction: Vector3::new(0.0, 1.0, 1.0).normalize(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium_red().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium_red(),
-            detuning,
-            1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.,
-            direction: Vector3::new(0.0, -1.0, -1.0).normalize(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium_red().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium_red(),
-            detuning,
-            1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.,
-            direction: Vector3::new(0.0, 1.0, -1.0).normalize(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium_red().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium_red(),
-            detuning,
-            1,
-        ))
-        .build();
-    world
-        .create_entity()
-        .with(GaussianBeam {
-            intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
-            power: power / 6.,
-            direction: Vector3::new(0.0, -1.0, 1.0).normalize(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
-                &(constant::C / AtomicTransition::strontium_red().frequency),
-                &radius,
-            ),
-            ellipticity: 0.0,
-        })
-        .with(CoolingLight::for_species(
-            AtomicTransition::strontium_red(),
-            detuning,
-            1,
-        ))
-        .build();
+    // RED MOT,
+    lib::helper_files::red_beams::add_red_mot_beams(&mut world);
     world.insert(EmissionForceOption::default());
     world.insert(ScatteringFluctuationsOption::default());
 
@@ -385,7 +145,7 @@ fn main() {
             pos: Vector3::new(0.0, 0.0, 0.0),
         })
         .with(Cuboid {
-            half_width: Vector3::new(0.01, 0.01, 0.01),
+            half_width: Vector3::new(0.003, 0.003, 0.003),
         })
         .with(SimulationVolume {
             volume_type: VolumeType::Inclusive,
@@ -402,7 +162,7 @@ fn main() {
     delete_beams_system.run_now(&world);
     println!("Switched off blue MOT");
 
-    for _i in 0..10_000 {
+    for _i in 0..1_000 {
         dispatcher.dispatch(&mut world);
         world.maintain();
     }
@@ -412,7 +172,7 @@ fn main() {
     switcher_system.run_now(&world);
     println!("Switched to red MOT");
 
-    for _i in 0..50_000 {
+    for _i in 0..80_000 {
         dispatcher.dispatch(&mut world);
         world.maintain();
     }

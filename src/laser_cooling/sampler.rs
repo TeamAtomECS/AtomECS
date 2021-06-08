@@ -10,7 +10,7 @@ use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 use std::f64;
 extern crate nalgebra;
 
-const LASER_CACHE_SIZE: usize = 16;
+const LASER_CACHE_SIZE: usize = crate::laser::BEAM_LIMIT;
 
 /// Represents total detuning of the atom's transition with respect to each beam
 #[derive(Clone, Copy)]

@@ -9,7 +9,7 @@ use crate::laser::gaussian::GaussianBeam;
 use serde::Serialize;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
-const LASER_CACHE_SIZE: usize = 16;
+const LASER_CACHE_SIZE: usize = crate::laser::BEAM_LIMIT;
 
 /// Represents the Dopplershift of the atom with respect to each beam due to the atom velocity
 #[derive(Clone, Copy, Serialize)]
