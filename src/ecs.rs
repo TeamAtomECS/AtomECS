@@ -81,6 +81,11 @@ impl AtomecsDispatcherBuilder {
 				"add_gravity",
 			],
 		);
+		&self.builder.add(
+			crate::ramp::RampUpdateSystem::<crate::magnetic::quadrupole::QuadrupoleField3D>::default(),
+			"ramp_update_system",
+			&[INTEGRATE_VELOCITY_SYSTEM_NAME],
+		);
 	}
 
 	pub fn add_frame_end_systems(&mut self) {

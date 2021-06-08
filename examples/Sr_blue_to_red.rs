@@ -82,10 +82,12 @@ fn main() {
     dispatcher.setup(&mut world);
     // BEGIN MOT PART
 
-    
+    world.register::<Ramp<QuadrupoleField3D>>();
+
     let mut magnetic_frames = Vec::new();
+    magnetic_frames.push((0.0, QuadrupoleField3D::gauss_per_cm(60.0, Vector3::x())));
     magnetic_frames.push((0.01, QuadrupoleField3D::gauss_per_cm(60.0, Vector3::x())));
-    magnetic_frames.push((0.011, QuadrupoleField3D::gauss_per_cm(1.0, Vector3::x())));
+    magnetic_frames.push((0.02, QuadrupoleField3D::gauss_per_cm(1.0, Vector3::x())));
     let magnetic_ramp = Ramp::new(magnetic_frames);
 
     world
@@ -400,7 +402,7 @@ fn main() {
     delete_beams_system.run_now(&world);
     println!("Switched off blue MOT");
 
-    for _i in 0..1_000 {
+    for _i in 0..10_000 {
         dispatcher.dispatch(&mut world);
         world.maintain();
     }
@@ -410,7 +412,7 @@ fn main() {
     switcher_system.run_now(&world);
     println!("Switched to red MOT");
 
-    for _i in 0..10_000 {
+    for _i in 0..50_000 {
         dispatcher.dispatch(&mut world);
         world.maintain();
     }
