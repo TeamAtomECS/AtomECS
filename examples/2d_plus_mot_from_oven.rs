@@ -51,16 +51,6 @@ fn main() {
         &[INTEGRATE_VELOCITY_SYSTEM_NAME],
     );
 
-    builder = builder.with(
-        file::new_with_filter::<
-            lib::laser::gaussian::GaussianBeam,
-            SerdeJson,
-            lib::laser::cooling::CoolingLight,
-        >("gaussian.txt".to_string(), 100),
-        "",
-        &[INTEGRATE_VELOCITY_SYSTEM_NAME],
-    );
-
     let mut dispatcher = builder.build();
     dispatcher.setup(&mut world);
 
@@ -83,6 +73,8 @@ fn main() {
             e_radius: push_beam_radius,
             power: push_beam_power,
             direction: Vector3::z(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -102,6 +94,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(1.0, 1.0, 0.0).normalize(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -116,6 +110,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(1.0, -1.0, 0.0).normalize(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -130,6 +126,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(-1.0, 1.0, 0.0).normalize(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -144,6 +142,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),

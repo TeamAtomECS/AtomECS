@@ -4,7 +4,7 @@ use crate::atom::AtomicTransition;
 use crate::constant;
 use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::gaussian::GaussianBeam;
-use crate::laser::photons_scattered::ActualPhotonsScatteredVector;
+use crate::laser_cooling::photons_scattered::ActualPhotonsScatteredVector;
 use nalgebra::Vector3;
 use rand_distr;
 use rand_distr::{Distribution, Normal, UnitSphere};
@@ -16,7 +16,7 @@ use crate::atom::Force;
 use crate::constant::HBAR;
 use crate::integrator::Timestep;
 
-use crate::laser::repump::*;
+use crate::laser_cooling::repump::*;
 
 const LASER_CACHE_SIZE: usize = 16;
 
@@ -189,6 +189,7 @@ pub mod tests {
     use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
+    use crate::laser::gaussian;
     use nalgebra::Vector3;
 
     /// Tests the correct implementation of the `CalculateAbsorptionForceSystem`
@@ -222,6 +223,8 @@ pub mod tests {
                 intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
+                rayleigh_range: gaussian::calculate_rayleigh_range(&wavelength, &2.0),
+                ellipticity: 0.0,
             })
             .build();
 
@@ -230,9 +233,9 @@ pub mod tests {
         let atom1 = test_world
             .create_entity()
             .with(ActualPhotonsScatteredVector {
-                contents: [crate::laser::photons_scattered::ActualPhotonsScattered {
+                contents: [crate::laser_cooling::photons_scattered::ActualPhotonsScattered {
                     scattered: number_scattered,
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(Force::new())
             .build();
@@ -267,9 +270,9 @@ pub mod tests {
         let atom1 = test_world
             .create_entity()
             .with(ActualPhotonsScatteredVector {
-                contents: [crate::laser::photons_scattered::ActualPhotonsScattered {
+                contents: [crate::laser_cooling::photons_scattered::ActualPhotonsScattered {
                     scattered: number_scattered,
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(Force::new())
             .with(AtomicTransition::strontium())

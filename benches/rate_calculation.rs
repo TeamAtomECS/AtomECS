@@ -1,5 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 extern crate atomecs as lib;
+extern crate specs;
 
 extern crate nalgebra;
 use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
@@ -7,12 +8,12 @@ use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
-use lib::laser::force::EmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
-use lib::laser::photons_scattered::ScatteringFluctuationsOption;
+use lib::laser_cooling::force::EmissionForceOption;
+use lib::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use nalgebra::Vector3;
-use rand::distributions::{Distribution, Normal};
+use rand_distr::{Distribution, Normal};
 use specs::prelude::*;
 
 fn criterion_benchmark(c: &mut Criterion) {
@@ -45,6 +46,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, 0.0, 1.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -59,6 +62,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, 0.0, -1.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -73,6 +78,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             e_radius: radius,
             power: power,
             direction: Vector3::new(-1.0, 0.0, 0.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -87,6 +94,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             e_radius: radius,
             power: power,
             direction: Vector3::new(1.0, 0.0, 0.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -101,6 +110,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, 1.0, 0.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -115,6 +126,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, -1.0, 0.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -170,7 +183,11 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     // Now bench just a specific system.
     let mut bench_builder = DispatcherBuilder::new();
-    bench_builder.add(lib::laser::rate::CalculateRateCoefficientsSystem, "", &[]);
+    bench_builder.add(
+        lib::laser_cooling::rate::CalculateRateCoefficientsSystem,
+        "",
+        &[],
+    );
     // Configure thread pool.
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(12)

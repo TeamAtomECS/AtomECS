@@ -54,6 +54,8 @@ fn main() {
             e_radius: 0.01,
             power: power,
             direction: -Vector3::z(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -68,6 +70,8 @@ fn main() {
             e_radius: 0.01,
             power: power,
             direction: Vector3::z(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -93,7 +97,6 @@ fn main() {
             .with(Mass { value: 87.0 })
             .build();
     }
-
     // Define timestep
     world.insert(Timestep { delta: 1.0e-6 });
 
