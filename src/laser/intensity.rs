@@ -13,7 +13,7 @@ use crate::laser::cooling::CoolingLightIndex;
 use serde::Serialize;
 use specs::prelude::*;
 
-const LASER_CACHE_SIZE: usize = crate::laser::BEAM_LIMIT;
+const LASER_CACHE_SIZE: usize = 16;
 
 /// Represents the laser intensity at the position of the atom with respect to a certain laser beam
 #[derive(Clone, Copy, Serialize)]

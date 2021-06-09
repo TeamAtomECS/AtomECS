@@ -18,7 +18,7 @@ use crate::integrator::Timestep;
 
 use crate::laser_cooling::repump::*;
 
-const LASER_CACHE_SIZE: usize = crate::laser::BEAM_LIMIT;
+const LASER_CACHE_SIZE: usize = 16;
 
 /// This sytem calculates the forces from absorbing photons from the CoolingLight entities.
 ///
