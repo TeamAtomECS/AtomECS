@@ -25,7 +25,7 @@ use specs::{Builder, World};
 use std::time::Instant;
 
 fn main() {
-    let delays = [1500, 3000, 4000];
+    let delays = [1000, 3000, 7500, 12500, 20000, 50000];
 
     for i in 0..delays.len() {
         let now = Instant::now();
@@ -37,9 +37,9 @@ fn main() {
         ecs::register_resources(&mut world);
         let mut builder = ecs::create_simulation_dispatcher_builder();
 
-        let posname = format!("pos-{}.txt", delays[i]);
-        let velname = format!("vel-{}.txt", delays[i]);
-        let xyzname = format!("pos-{}.xyz", delays[i]);
+        let posname = format!("pos_lb5-{}.txt", delays[i]);
+        let velname = format!("vel_lb5-{}.txt", delays[i]);
+        let xyzname = format!("pos_lb5-{}.xyz", delays[i]);
         // Configure simulation output.
         builder = builder.with(file::new::<Position, Text>(posname, 100), "", &[]);
         builder = builder.with(file::new::<Velocity, Text>(velname, 100), "", &[]);
@@ -132,12 +132,16 @@ fn main() {
             world.maintain();
         }
 
+        for _i in 0..delays[i] / 2 as i64 {
+            dispatcher.dispatch(&mut world);
+            world.maintain();
+        }
         let mut delete_beams_system =
             atomecs::dipole::transition_switcher::DisableBlueMOTBeamsSystem;
         delete_beams_system.run_now(&world);
         println!("Switched off blue MOT");
 
-        for _i in 0..delays[i] {
+        for _i in 0..delays[i] / 2 as i64 {
             dispatcher.dispatch(&mut world);
             world.maintain();
         }

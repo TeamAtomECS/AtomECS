@@ -74,7 +74,7 @@ impl<'a> System<'a> for CalculateRateCoefficientsSystem {
         ReadStorage<'a, AtomicTransition>,
         ReadStorage<'a, GaussianBeam>,
         ReadStorage<'a, MagneticFieldSampler>,
-        Option<Read<'a, DetuningModulation>>,
+        ReadStorage<'a, DetuningModulation>,
         WriteStorage<'a, RateCoefficients>,
     );
     fn run(
@@ -87,136 +87,92 @@ impl<'a> System<'a> for CalculateRateCoefficientsSystem {
             atomic_transition,
             gaussian_beam,
             magnetic_field_sampler,
-            detuning_modulation_opt,
+            detuning_modulation,
             mut rate_coefficients,
         ): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        match detuning_modulation_opt {
-            None => {
-                for (cooling, index, gaussian) in
-                    (&cooling_light, &cooling_index, &gaussian_beam).join()
-                {
-                    (
-                        &laser_detunings,
-                        &laser_intensities,
-                        &atomic_transition,
-                        &magnetic_field_sampler,
-                        &mut rate_coefficients,
-                    )
-                        .par_join()
-                        .for_each(
-                            |(detunings, intensities, atominfo, bfield, rates)| {
-                                let beam_direction_vector = gaussian.direction.normalize();
-                                let costheta =
-                                    if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
-                                        0.0
-                                    } else {
-                                        beam_direction_vector
-                                            .normalize()
-                                            .dot(&bfield.field.normalize())
-                                    };
 
-                                let prefactor = atominfo.rate_prefactor
-                                    * intensities.contents[index.index].intensity;
-                                let gamma = atominfo.gamma();
+        for (cooling, index, gaussian, detuning_modulation_opt) in (
+            &cooling_light,
+            &cooling_index,
+            &gaussian_beam,
+            (&detuning_modulation).maybe(),
+        )
+            .join()
+        {
+            (
+                &laser_detunings,
+                &laser_intensities,
+                &atomic_transition,
+                &magnetic_field_sampler,
+                &mut rate_coefficients,
+            )
+                .par_join()
+                .for_each(|(detunings, intensities, atominfo, bfield, rates)| {
+                    let beam_direction_vector = gaussian.direction.normalize();
+                    let costheta = if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
+                        0.0
+                    } else {
+                        beam_direction_vector
+                            .normalize()
+                            .dot(&bfield.field.normalize())
+                    };
 
-                                let scatter1 = 0.25
-                                    * (cooling.polarization as f64 * costheta + 1.).powf(2.)
-                                    * prefactor
-                                    / (detunings.contents[index.index].detuning_sigma_plus.powi(2)
-                                        + (gamma / 2.0).powi(2));
+                    let prefactor = match detuning_modulation_opt {
+                        None => {
+                            atominfo.rate_prefactor * intensities.contents[index.index].intensity
+                        }
+                        Some(detuning_mod) => {
+                            atominfo.rate_prefactor * intensities.contents[index.index].intensity
+                                / detuning_mod.steps as f64
+                        }
+                    };
+                    let gamma = atominfo.gamma();
 
-                                let scatter2 = 0.25
-                                    * (cooling.polarization as f64 * costheta - 1.).powi(2)
-                                    * prefactor
-                                    / (detunings.contents[index.index]
-                                        .detuning_sigma_minus
-                                        .powi(2)
-                                        + (gamma / 2.0).powi(2));
+                    let mut frac1 = 0.0;
+                    let mut frac2 = 0.0;
+                    let mut frac3 = 0.0;
 
-                                let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor
-                                    / (detunings.contents[index.index].detuning_pi.powi(2)
-                                        + (gamma / 2.0).powi(2));
-                                rates.contents[index.index].rate = scatter1 + scatter2 + scatter3;
-                            },
-                        );
-                }
-            }
+                    let (steps, spacing) = match detuning_modulation_opt {
+                        None => (1, 0.0),
+                        Some(detuning_mod) => (detuning_mod.steps, detuning_mod.spacing),
+                    };
+                    for i in 0..steps {
+                        frac1 = frac1
+                            + 1.0
+                                / ((detunings.contents[index.index].detuning_sigma_plus
+                                    - i as f64 * spacing)
+                                    .powi(2)
+                                    + (gamma / 2.0).powi(2));
+                        frac2 = frac2
+                            + 1.0
+                                / ((detunings.contents[index.index].detuning_sigma_minus
+                                    - i as f64 * spacing)
+                                    .powi(2)
+                                    + (gamma / 2.0).powi(2));
+                        frac3 = frac3
+                            + 1.0
+                                / ((detunings.contents[index.index].detuning_pi
+                                    - i as f64 * spacing)
+                                    .powi(2)
+                                    + (gamma / 2.0).powi(2));
+                    }
 
-            Some(detuning_mod) => {
-                for (cooling, index, gaussian) in
-                    (&cooling_light, &cooling_index, &gaussian_beam).join()
-                {
-                    (
-                        &laser_detunings,
-                        &laser_intensities,
-                        &atomic_transition,
-                        &magnetic_field_sampler,
-                        &mut rate_coefficients,
-                    )
-                        .par_join()
-                        .for_each(
-                            |(detunings, intensities, atominfo, bfield, rates)| {
-                                let beam_direction_vector = gaussian.direction.normalize();
-                                let costheta =
-                                    if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
-                                        0.0
-                                    } else {
-                                        beam_direction_vector
-                                            .normalize()
-                                            .dot(&bfield.field.normalize())
-                                    };
+                    let scatter1 = 0.25
+                        * (cooling.polarization as f64 * costheta + 1.).powf(2.)
+                        * prefactor
+                        * frac1;
 
-                                let prefactor = atominfo.rate_prefactor
-                                    * intensities.contents[index.index].intensity
-                                    / detuning_mod.steps as f64;
-                                let gamma = atominfo.gamma();
+                    let scatter2 = 0.25
+                        * (cooling.polarization as f64 * costheta - 1.).powi(2)
+                        * prefactor
+                        * frac2;
 
-                                let mut frac1 = 0.0;
-                                let mut frac2 = 0.0;
-                                let mut frac3 = 0.0;
+                    let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor * frac3;
 
-                                for i in 0..detuning_mod.steps {
-                                    frac1 = frac1
-                                        + 1.0
-                                            / ((detunings.contents[index.index]
-                                                .detuning_sigma_plus
-                                                - i as f64 * detuning_mod.spacing)
-                                                .powi(2)
-                                                + (gamma / 2.0).powi(2));
-                                    frac2 = frac2
-                                        + 1.0
-                                            / ((detunings.contents[index.index]
-                                                .detuning_sigma_minus
-                                                - i as f64 * detuning_mod.spacing)
-                                                .powi(2)
-                                                + (gamma / 2.0).powi(2));
-                                    frac3 = frac3
-                                        + 1.0
-                                            / ((detunings.contents[index.index].detuning_pi
-                                                - i as f64 * detuning_mod.spacing)
-                                                .powi(2)
-                                                + (gamma / 2.0).powi(2));
-                                }
-
-                                let scatter1 = 0.25
-                                    * (cooling.polarization as f64 * costheta + 1.).powf(2.)
-                                    * prefactor
-                                    * frac1;
-
-                                let scatter2 = 0.25
-                                    * (cooling.polarization as f64 * costheta - 1.).powi(2)
-                                    * prefactor
-                                    * frac2;
-
-                                let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor * frac3;
-
-                                rates.contents[index.index].rate = scatter1 + scatter2 + scatter3;
-                            },
-                        );
-                }
-            }
+                    rates.contents[index.index].rate = scatter1 + scatter2 + scatter3;
+                });
         }
     }
 }
@@ -248,6 +204,7 @@ pub mod tests {
         test_world.register::<AtomicTransition>();
         test_world.register::<MagneticFieldSampler>();
         test_world.register::<RateCoefficients>();
+        test_world.register::<DetuningModulation>();
 
         let wavelength = 461e-9;
         test_world

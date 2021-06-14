@@ -142,6 +142,10 @@ pub struct DetuningModulation {
 	pub spacing: f64, // in rad/s
 }
 
+impl Component for DetuningModulation {
+	type Storage = HashMapStorage<Self>;
+}
+
 #[cfg(test)]
 pub mod tests {
 

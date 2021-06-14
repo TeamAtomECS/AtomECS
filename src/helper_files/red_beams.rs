@@ -31,6 +31,10 @@ pub fn add_red_mot_beams(world: &mut World) {
             detuning,
             -1,
         ))
+        .with(lib::laser::cooling::DetuningModulation {
+            steps: 392,
+            spacing: 2.0 * constant::PI * 20_000.0,
+        })
         .build();
     world
         .create_entity()
@@ -50,6 +54,10 @@ pub fn add_red_mot_beams(world: &mut World) {
             detuning,
             -1,
         ))
+        .with(lib::laser::cooling::DetuningModulation {
+            steps: 392,
+            spacing: 2.0 * constant::PI * 20_000.0,
+        })
         .build();
 
     // Angled vertical beams
@@ -71,6 +79,10 @@ pub fn add_red_mot_beams(world: &mut World) {
             detuning,
             1,
         ))
+        .with(lib::laser::cooling::DetuningModulation {
+            steps: 392,
+            spacing: 2.0 * constant::PI * 20_000.0,
+        })
         .build();
     world
         .create_entity()
@@ -90,6 +102,10 @@ pub fn add_red_mot_beams(world: &mut World) {
             detuning,
             1,
         ))
+        .with(lib::laser::cooling::DetuningModulation {
+            steps: 392,
+            spacing: 2.0 * constant::PI * 20_000.0,
+        })
         .build();
     world
         .create_entity()
@@ -109,6 +125,10 @@ pub fn add_red_mot_beams(world: &mut World) {
             detuning,
             1,
         ))
+        .with(lib::laser::cooling::DetuningModulation {
+            steps: 392,
+            spacing: 2.0 * constant::PI * 20_000.0,
+        })
         .build();
     world
         .create_entity()
@@ -128,5 +148,9 @@ pub fn add_red_mot_beams(world: &mut World) {
             detuning,
             1,
         ))
+        .with(lib::laser::cooling::DetuningModulation {
+            steps: 392,
+            spacing: 2.0 * constant::PI * 20_000.0,
+        })
         .build();
 }
