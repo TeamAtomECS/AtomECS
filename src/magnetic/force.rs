@@ -1,4 +1,8 @@
 //! Magnetic dipole force applied to an atom in an external magnetic field
+//! Applies a force based on gradient of energy from the linear Zeeman effect to any
+//! entity with a MagneticDipole component.
+//! The magnetic force is not added by default to the builder so must be explicitly included and
+//! must depend on the magnetics_gradient system.
 #![allow(non_snake_case)]
 
 use super::MagneticFieldSampler;
