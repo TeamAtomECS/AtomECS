@@ -149,10 +149,7 @@ fn main() {
         let mut switcher_system =
             atomecs::dipole::transition_switcher::AttachNewAtomicTransitionToAtomsSystem;
         switcher_system.run_now(&world);
-        world.insert(atomecs::laser::cooling::DetuningModulation {
-            steps: 392,
-            spacing: 2.0 * constant::PI * 20_000.0,
-        });
+
         println!("Switched to red MOT");
 
         for _i in 0..80_000 {
