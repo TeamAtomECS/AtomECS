@@ -10,10 +10,7 @@
 use crate::atom::Position;
 use crate::initiate::NewlyCreated;
 use crate::shapes::{Cuboid, Cylinder, Sphere, Volume};
-use specs::{
-    Component, DispatcherBuilder, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage,
-    System, VecStorage, World, WriteStorage,
-};
+use specs::prelude::*;
 use std::marker::PhantomData;
 
 pub enum VolumeType {
@@ -229,7 +226,7 @@ pub mod tests {
             .build();
 
         let mut system = ClearRegionTestSystem {};
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
 
         let tests = test_world.read_storage::<RegionTest>();
         let test = tests.get(tester).expect("Could not find entity");
@@ -241,9 +238,9 @@ pub mod tests {
 
     #[test]
     fn test_sphere_contains() {
-        use specs::Entity;
-        extern crate rand;
+        use rand;
         use rand::Rng;
+        use specs::Entity;
         let mut rng = rand::thread_rng();
 
         let mut test_world = World::new();
@@ -267,9 +264,9 @@ pub mod tests {
         let mut tests = Vec::<(Entity, bool)>::new();
         for _ in 1..100 {
             let pos = Vector3::new(
-                rng.gen_range(-2.0, 2.0),
-                rng.gen_range(-2.0, 2.0),
-                rng.gen_range(-2.0, 2.0),
+                rng.gen_range(-2.0..2.0),
+                rng.gen_range(-2.0..2.0),
+                rng.gen_range(-2.0..2.0),
             );
             let entity = test_world
                 .create_entity()
@@ -286,7 +283,7 @@ pub mod tests {
         let mut system = RegionTestSystem::<Sphere> {
             marker: PhantomData,
         };
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
 
         let test_results = test_world.read_storage::<RegionTest>();
         for (entity, result) in tests {
@@ -301,9 +298,9 @@ pub mod tests {
 
     #[test]
     fn test_cuboid_contains() {
-        use specs::Entity;
-        extern crate rand;
+        use rand;
         use rand::Rng;
+        use specs::Entity;
         let mut rng = rand::thread_rng();
 
         let mut test_world = World::new();
@@ -327,9 +324,9 @@ pub mod tests {
         let mut tests = Vec::<(Entity, bool)>::new();
         for _ in 1..100 {
             let pos = Vector3::new(
-                rng.gen_range(-2.0, 2.0),
-                rng.gen_range(-2.0, 2.0),
-                rng.gen_range(-2.0, 2.0),
+                rng.gen_range(-2.0..2.0),
+                rng.gen_range(-2.0..2.0),
+                rng.gen_range(-2.0..2.0),
             );
             let entity = test_world
                 .create_entity()
@@ -351,7 +348,7 @@ pub mod tests {
         let mut system = RegionTestSystem::<Cuboid> {
             marker: PhantomData,
         };
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
 
         let test_results = test_world.read_storage::<RegionTest>();
         for (entity, result) in tests {
@@ -372,11 +369,11 @@ pub mod tests {
         let mut builder = DispatcherBuilder::new();
         add_systems_to_dispatch(&mut builder, &[]);
         let mut dispatcher = builder.build();
-        dispatcher.setup(&mut test_world.res);
+        dispatcher.setup(&mut test_world);
 
         let sampler_entity = test_world.create_entity().with(NewlyCreated).build();
 
-        dispatcher.dispatch(&mut test_world.res);
+        dispatcher.dispatch(&mut test_world);
         test_world.maintain();
 
         let samplers = test_world.read_storage::<RegionTest>();

@@ -6,11 +6,11 @@ use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
-use lib::laser::photons_scattered::ActualPhotonsScatteredVector;
+use lib::laser_cooling::photons_scattered::ActualPhotonsScatteredVector;
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;
-use specs::{Builder, World};
+use specs::prelude::*;
 
 fn main() {
     let mut world = World::new();
@@ -32,7 +32,7 @@ fn main() {
     );
 
     let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     // Create atoms
     for i in 0..20 {
@@ -60,6 +60,8 @@ fn main() {
             e_radius: 0.01,
             power: 0.01,
             direction: -Vector3::z(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -74,6 +76,8 @@ fn main() {
             e_radius: 0.01,
             power: 0.01,
             direction: Vector3::z(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -83,11 +87,11 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.insert(Timestep { delta: 1.0e-6 });
 
     // Run the simulation for a number of steps.
     for _i in 0..1600 {
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
     }
 }

@@ -8,13 +8,13 @@ use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::cooling::CoolingLight;
-use lib::laser::force::EmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
-use lib::laser::photons_scattered::ScatteringFluctuationsOption;
+use lib::laser_cooling::force::EmissionForceOption;
+use lib::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use nalgebra::Vector3;
-use rand::distributions::{Distribution, Normal};
-use specs::{Builder, DispatcherBuilder, World};
+use rand_distr::{Distribution, Normal};
+use specs::prelude::*;
 
 fn criterion_benchmark(c: &mut Criterion) {
     // Mock up a simulation world and dispatcher
@@ -22,7 +22,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     ecs::register_components(&mut world);
     ecs::register_resources(&mut world);
     let mut dispatcher = ecs::create_simulation_dispatcher_builder().build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     // Create magnetic field.
     world
@@ -46,6 +46,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, 0.0, 1.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -60,6 +62,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, 0.0, -1.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -74,6 +78,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             e_radius: radius,
             power: power,
             direction: Vector3::new(-1.0, 0.0, 0.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -88,6 +94,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             e_radius: radius,
             power: power,
             direction: Vector3::new(1.0, 0.0, 0.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -102,6 +110,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, 1.0, 0.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -116,6 +126,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             e_radius: radius,
             power: power,
             direction: Vector3::new(0.0, -1.0, 0.0),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),
@@ -125,7 +137,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.insert(Timestep { delta: 1.0e-6 });
 
     let vel_dist = Normal::new(0.0, 0.22);
     let pos_dist = Normal::new(0.0, 1.2e-4);
@@ -160,18 +172,22 @@ fn criterion_benchmark(c: &mut Criterion) {
     // Enable fluctuation options
     //  * Allow photon numbers to fluctuate.
     //  * Allow random force from emission of photons.
-    world.add_resource(EmissionForceOption::default());
-    world.add_resource(ScatteringFluctuationsOption::default());
+    world.insert(EmissionForceOption::default());
+    world.insert(ScatteringFluctuationsOption::default());
 
     // Run a few times with the standard dispatcher to create atoms, initialise components, etc.
     for _ in 0..5 {
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
     }
 
     // Now bench just a specific system.
     let mut bench_builder = DispatcherBuilder::new();
-    bench_builder.add(lib::laser::rate::CalculateRateCoefficientsSystem, "", &[]);
+    bench_builder.add(
+        lib::laser_cooling::rate::CalculateRateCoefficientsSystem,
+        "",
+        &[],
+    );
     // Configure thread pool.
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(12)
@@ -182,7 +198,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     let mut bench_dispatcher = bench_builder.build();
 
     c.bench_function("rate_calculation", |b| {
-        b.iter(|| bench_dispatcher.dispatch(&mut world.res))
+        b.iter(|| bench_dispatcher.dispatch(&mut world))
     });
 }
 

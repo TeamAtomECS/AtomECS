@@ -4,8 +4,8 @@ extern crate nalgebra;
 use nalgebra::Vector3;
 
 use super::emit::AtomNumberToEmit;
-extern crate rand;
 use super::VelocityCap;
+use rand;
 use rand::Rng;
 
 use super::precalc::{MaxwellBoltzmannSource, PrecalculatedSpeciesInformation};
@@ -94,17 +94,17 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
 				// lambert cosine emission
 				let direction = -normal.normalize();
 				let random_dir = Vector3::new(
-					rng.gen_range(-1.0, 1.0),
-					rng.gen_range(-1.0, 1.0),
-					rng.gen_range(-1.0, 1.0),
+					rng.gen_range(-1.0..1.0),
+					rng.gen_range(-1.0..1.0),
+					rng.gen_range(-1.0..1.0),
 				)
 				.normalize();
 				let perp_a = direction.cross(&random_dir);
 				let perp_b = direction.cross(&perp_a);
 
 				let domain: bool = rng.gen();
-				let var: f64 = rng.gen_range(0.0, 1.0);
-				let phi: f64 = rng.gen_range(0.0, 2.0 * std::f64::consts::PI);
+				let var: f64 = rng.gen_range(0.0..1.0);
+				let phi: f64 = rng.gen_range(0.0..2.0 * std::f64::consts::PI);
 				let theta: f64;
 				if domain {
 					theta = var.acos() / 2.0;

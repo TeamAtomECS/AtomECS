@@ -9,6 +9,7 @@ use crate::atom_sources;
 use crate::destructor::DeleteToBeDestroyedEntitiesSystem;
 //use crate::detector;
 //use crate::detector::DetectingInfo;
+use crate::dipole;
 use crate::gravity::ApplyGravitationalForceSystem;
 use crate::initiate::DeflagNewAtomsSystem;
 use crate::integrator::{
@@ -17,11 +18,13 @@ use crate::integrator::{
 	INTEGRATE_VELOCITY_SYSTEM_NAME,
 };
 use crate::laser;
-use crate::laser::repump::Dark;
+use crate::laser_cooling;
+use crate::laser_cooling::repump::Dark;
 use crate::magnetic;
 use crate::output::console_output::ConsoleOutputSystem;
 use crate::sim_region;
-use specs::{Dispatcher, DispatcherBuilder, World};
+
+use specs::prelude::*;
 
 /// Registers all components used by the modules of the program.
 pub fn register_components(world: &mut World) {
@@ -60,6 +63,8 @@ impl AtomecsDispatcherBuilder {
 
 		magnetic::add_systems_to_dispatch(&mut self.builder, &[]);
 		laser::add_systems_to_dispatch(&mut self.builder, &[]);
+		laser_cooling::add_systems_to_dispatch(&mut self.builder, &[]);
+		dipole::add_systems_to_dispatch(&mut self.builder, &[]);
 		atom_sources::add_systems_to_dispatch(&mut self.builder, &[]);
 		self.builder.add(
 			ApplyGravitationalForceSystem,
@@ -111,5 +116,5 @@ pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'sta
 
 /// Add required resources to the world
 pub fn register_resources(world: &mut World) {
-	world.add_resource(Step { n: 0 });
+	world.insert(Step { n: 0 });
 }

@@ -10,8 +10,7 @@
 //! [DeflagNewAtomsSystem](struct.DeflagNewAtomsSystem.html) which is responsible for cleaning
 //! up these components each integration step.
 
-extern crate specs;
-use specs::{Component, Entities, Join, LazyUpdate, NullStorage, Read, ReadStorage, System};
+use specs::prelude::*;
 
 /// A marker component that indicates an entity has been `NewlyCreated`.
 /// The main use of this component is to allow different modules to identify when an atom has been created and to attach any appropriate components required.
@@ -62,11 +61,11 @@ pub mod tests {
 		let mut dispatcher = DispatcherBuilder::new()
 			.with(DeflagNewAtomsSystem, "deflagger", &[])
 			.build();
-		dispatcher.setup(&mut test_world.res);
+		dispatcher.setup(&mut test_world);
 
 		let test_entity = test_world.create_entity().with(NewlyCreated).build();
 
-		dispatcher.dispatch(&mut test_world.res);
+		dispatcher.dispatch(&mut test_world);
 		test_world.maintain();
 
 		let created_flags = test_world.read_storage::<NewlyCreated>();

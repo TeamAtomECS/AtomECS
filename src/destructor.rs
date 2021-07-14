@@ -4,7 +4,8 @@
 //! world resource will be deleted by the [DestroyOutOfBoundAtomsSystem](struct.DestroyOutOfBoundAtomsSystem.html).
 //! Removing atoms that will not be of interest for further simulation (eg, those that escape the trapping region)
 //! ensures that CPU time will not be wasted simulating them.
-use specs::{Component, Entities, Join, NullStorage, ReadStorage, System};
+extern crate specs;
+use specs::prelude::*;
 
 /// A system that deletes entities which have been marked for destruction using the [ToBeDestroyed](struct.ToBeDestroyed.html) component.
 pub struct DeleteToBeDestroyedEntitiesSystem;
@@ -54,7 +55,7 @@ pub mod tests {
             .build();
 
         let mut system = DeleteToBeDestroyedEntitiesSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
 
         let positions = test_world.read_storage::<Position>();

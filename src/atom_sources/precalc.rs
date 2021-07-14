@@ -4,7 +4,7 @@ use super::mass::MassDistribution;
 use super::WeightedProbabilityDistribution;
 use crate::constant::{AMU, BOLTZCONST, EXP};
 
-extern crate rand;
+use rand;
 use rand::distributions::Distribution;
 use rand::distributions::WeightedIndex;
 use rand::Rng;

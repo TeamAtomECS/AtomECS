@@ -2,8 +2,11 @@
 
 use crate::constant::{BOHRMAG, C};
 use crate::output::file::BinaryConversion;
+use crate::output::file::XYZPosition;
 use crate::ramp::Lerp;
 use nalgebra::Vector3;
+use specs::prelude::*;
+
 use serde::{Deserialize, Serialize};
 use specs::{Component, NullStorage, System, VecStorage, World, WriteStorage};
 use std::fmt;
@@ -38,11 +41,16 @@ impl BinaryConversion for Position {
 		vec![self.pos[0], self.pos[1], self.pos[2]]
 	}
 }
+impl XYZPosition for Position {
+	fn pos(&self) -> Vector3<f64> {
+		self.pos
+	}
+}
 
 /// Velocity of an entity in space, with respect to cartesian x,y,z axes.
 ///
 /// SI units (metres/second)
-#[derive(Clone)]
+#[derive(Clone, Copy, Serialize)]
 pub struct Velocity {
 	/// velocity vector in 3D in units of m/s
 	pub vel: Vector3<f64>,
@@ -76,7 +84,7 @@ impl Component for InitialVelocity {
 /// Force applies to an entity, with respect to cartesian x,y,z axes.
 ///
 /// SI units (Newtons)
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Serialize)]
 pub struct Force {
 	/// force vector in 3D in units of N
 	pub force: Vector3<f64>,
@@ -114,7 +122,18 @@ impl Component for Atom {
 	type Storage = NullStorage<Self>;
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+/// Helper enum to identify the kind of atomic transition later in match operators
+/// Could be integrated in the Atom component, maybe.
+#[derive(Deserialize, Serialize, Clone, Copy)]
+pub enum Kind {
+	Rubidium,
+	Strontium,
+	StrontiumRed,
+	Erbium,
+	Erbium401,
+}
+
+#[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct AtomicTransition {
 	/// The dependence of the sigma_+ transition on magnetic fields.
 	/// The sigma_+ transition is shifted by `mup * field.magnitude / h` Hz.
@@ -136,6 +155,8 @@ pub struct AtomicTransition {
 	pub saturation_intensity: f64,
 	/// Precalculate prefactor used in the determination of rate coefficients.
 	pub rate_prefactor: f64,
+	/// Nametag for match control operators to identify later on
+	pub kind: Kind,
 }
 
 impl Component for AtomicTransition {
@@ -162,6 +183,7 @@ impl AtomicTransition {
 			linewidth: 6.065e6,          // [Steck, Rubidium87]
 			saturation_intensity: 16.69, // [Steck, Rubidium 87, D2 cycling transition]
 			rate_prefactor: 0.0,         // set in calculate
+			kind: Kind::Rubidium,
 		}
 		.calculate()
 	}
@@ -177,6 +199,7 @@ impl AtomicTransition {
 			linewidth: 32e6,             // [Nosske2017]
 			saturation_intensity: 430.0, // [Nosske2017, 43mW/cm^2]
 			rate_prefactor: 0.0,         // set in calculate
+			kind: Kind::Strontium,
 		}
 		.calculate()
 	}
@@ -192,12 +215,13 @@ impl AtomicTransition {
 			linewidth: 7_400.,               // [Schreck2013]
 			saturation_intensity: 0.0295,    // [SChreck2013, 3 µW/cm^2]
 			rate_prefactor: 0.0,             // set in calculate
+			kind: Kind::StrontiumRed,
 		}
 		.calculate()
 	}
 
 	/// Creates an `AtomicTransition` component populated with parameters for Erbium.
-	pub fn erbiurm() -> Self {
+	pub fn erbium() -> Self {
 		AtomicTransition {
 			mup: BOHRMAG,
 			mum: -BOHRMAG,
@@ -206,6 +230,7 @@ impl AtomicTransition {
 			linewidth: 190e3,
 			saturation_intensity: 0.13,
 			rate_prefactor: 0.0, // set in calculate
+			kind: Kind::Erbium,
 		}
 		.calculate()
 	}
@@ -219,6 +244,7 @@ impl AtomicTransition {
 			linewidth: 30e6,
 			saturation_intensity: 56.0,
 			rate_prefactor: 0.0, // set in calculate
+			kind: Kind::Erbium401,
 		}
 		.calculate()
 	}
@@ -235,7 +261,6 @@ impl<'a> System<'a> for ClearForceSystem {
 	type SystemData = WriteStorage<'a, Force>;
 	fn run(&mut self, mut force: Self::SystemData) {
 		use rayon::prelude::*;
-		use specs::ParJoin;
 
 		(&mut force).par_join().for_each(|force| {
 			force.force = Vector3::new(0.0, 0.0, 0.0);
