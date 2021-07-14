@@ -48,6 +48,7 @@ pub mod tests {
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;
     use nalgebra::{Matrix3, Vector3};
+    use specs::prelude::*;
 
     //Test correct force in an external magnetic gradient
     #[test]
@@ -69,7 +70,7 @@ pub mod tests {
             .build();
 
         let mut system = ApplyMagneticForceSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let force_storage = test_world.read_storage::<Force>();
         let force = force_storage.get(atom1).expect("entity not found").force;

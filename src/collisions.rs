@@ -13,6 +13,7 @@ use crate::integrator::Timestep;
 use hashbrown::HashMap;
 use nalgebra::Vector3;
 use rand::Rng;
+use specs::prelude::*;
 use specs::{
     Component, Entities, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System, VecStorage,
     WriteExpect, WriteStorage,
@@ -97,10 +98,10 @@ impl CollisionBox<'_> {
             };
 
             if collide {
-                let idx1 = rng.gen_range(0, self.velocities.len());
+                let idx1 = rng.gen_range(0..self.velocities.len());
                 let mut idx2 = idx1;
                 while idx2 == idx1 {
-                    idx2 = rng.gen_range(0, self.velocities.len())
+                    idx2 = rng.gen_range(0..self.velocities.len())
                 }
 
                 let v1 = self.velocities[idx1].vel;
@@ -175,7 +176,6 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
         ): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         match collisions_option {
             None => (),
@@ -236,9 +236,9 @@ fn do_collision<'a>(mut v1: Vector3<f64>, mut v2: Vector3<f64>) -> (Vector3<f64>
     let vcm = 0.5 * (v1 + v2);
     let energy: f64 = 0.5 * ((v1 - vcm).norm().powi(2) + (v2 - vcm).norm().powi(2));
 
-    let cos_theta: f64 = rng.gen_range(-1.0, 1.0);
+    let cos_theta: f64 = rng.gen_range(-1.0..1.0);
     let sin_theta: f64 = (1.0 - cos_theta.powi(2)).sqrt();
-    let phi: f64 = rng.gen_range(0.0, 2.0 * PI);
+    let phi: f64 = rng.gen_range(0.0..2.0 * PI);
 
     let v_prime = Vector3::new(
         energy.sqrt() * sin_theta * phi.cos(),
@@ -400,7 +400,7 @@ pub mod tests {
         }
     }
 
-    //#[test]
+    /*     //#[test]
     fn test_collisions() {
         let mut test_world = World::new();
 
@@ -417,7 +417,7 @@ pub mod tests {
 
         let builder = atomecs_builder.builder;
         let mut dispatcher = builder.build();
-        dispatcher.setup(&mut test_world.res);
+        dispatcher.setup(&mut test_world);
 
         let vel1 = Vector3::new(1.0, 0.0, 0.0);
         let vel2 = Vector3::new(-1.0, 0.0, 0.0);
@@ -448,9 +448,9 @@ pub mod tests {
             .build();
 
         let dt = 1.0;
-        test_world.add_resource(Timestep { delta: dt });
-        test_world.add_resource(ApplyCollisionsOption);
-        test_world.add_resource(CollisionParameters {
+        test_world.insert(Timestep { delta: dt });
+        test_world.insert(ApplyCollisionsOption);
+        test_world.insert(CollisionParameters {
             macroparticle: 1.0,
             box_number: 10,
             box_width: 2.0,
@@ -459,7 +459,7 @@ pub mod tests {
         });
 
         for _i in 0..10 {
-            dispatcher.dispatch(&mut test_world.res);
+            dispatcher.dispatch(&mut test_world);
             test_world.maintain();
         }
 
@@ -476,5 +476,5 @@ pub mod tests {
 
         assert_ne!(vel1 - vel1new.vel, Vector3::new(0.0, 0.0, 0.0));
         assert_ne!(vel2 - vel2new.vel, Vector3::new(0.0, 0.0, 0.0));
-    }
+    } */
 }

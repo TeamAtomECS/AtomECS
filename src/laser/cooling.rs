@@ -28,15 +28,6 @@ pub struct CoolingLight {
 	pub wavelength: f64,
 }
 
-impl Lerp<CoolingLight> for CoolingLight {
-	fn lerp(&self, b: &CoolingLight, amount: f64) -> Self {
-		return CoolingLight {
-			polarization: self.polarization,
-			wavelength: self.wavelength - (self.wavelength - b.wavelength) * amount,
-		};
-	}
-}
-
 impl CoolingLight {
 	/// Frequency of the cooling light in units of Hz
 	pub fn frequency(&self) -> f64 {
