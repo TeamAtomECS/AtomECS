@@ -17,6 +17,7 @@ impl Default for LaserSamplerMask {
     }
 }
 /// Component that holds a vector of `LaserSamplerMask`
+#[derive(Clone, Copy, Serialize)]
 pub struct LaserSamplerMasks {
     /// List of `LaserSamplerMask`s
     pub contents: [LaserSamplerMask; crate::laser::BEAM_LIMIT],

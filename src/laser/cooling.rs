@@ -139,6 +139,15 @@ impl<'a> System<'a> for AttachIndexToCoolingLightSystem {
 		}
 	}
 }
+#[derive(Clone, Copy, Serialize)]
+pub struct DetuningModulation {
+	pub steps: usize,
+	pub spacing: f64, // in rad/s
+}
+
+impl Component for DetuningModulation {
+	type Storage = HashMapStorage<Self>;
+}
 
 #[cfg(test)]
 pub mod tests {

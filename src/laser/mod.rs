@@ -12,7 +12,7 @@ use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use specs::prelude::*;
 
-pub const BEAM_LIMIT: usize = 16;
+pub const BEAM_LIMIT: usize = 20;
 
 /// Attaches components used for optical force calculation to newly created atoms.
 ///
