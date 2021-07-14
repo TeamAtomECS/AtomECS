@@ -8,10 +8,9 @@ extern crate nalgebra;
 use crate::atom::*;
 use crate::constant;
 use crate::initiate::NewlyCreated;
-use nalgebra::Vector3;
+use specs::prelude::*;
 use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteExpect, WriteStorage};
 use specs::{Entities, Join, LazyUpdate, Read};
-use specs::prelude::*;
 
 /// Tracks the number of the current integration step.
 pub struct Step {

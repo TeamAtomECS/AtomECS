@@ -6,6 +6,7 @@
 use crate::atom;
 use crate::atom::ClearForceSystem;
 use crate::atom_sources;
+use crate::collisions::ApplyCollisionsSystem;
 use crate::destructor::DeleteToBeDestroyedEntitiesSystem;
 //use crate::detector;
 //use crate::detector::DetectingInfo;
@@ -80,6 +81,11 @@ impl AtomecsDispatcherBuilder {
 				"calculate_emission_forces",
 				"add_gravity",
 			],
+		);
+		&self.builder.add(
+			ApplyCollisionsSystem,
+			"collisions",
+			&[INTEGRATE_VELOCITY_SYSTEM_NAME],
 		);
 	}
 

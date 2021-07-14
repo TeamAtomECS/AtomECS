@@ -400,7 +400,7 @@ pub mod tests {
         }
     }
 
-    /*     //#[test]
+    #[test]
     fn test_collisions() {
         let mut test_world = World::new();
 
@@ -476,5 +476,5 @@ pub mod tests {
 
         assert_ne!(vel1 - vel1new.vel, Vector3::new(0.0, 0.0, 0.0));
         assert_ne!(vel2 - vel2new.vel, Vector3::new(0.0, 0.0, 0.0));
-    } */
+    }
 }

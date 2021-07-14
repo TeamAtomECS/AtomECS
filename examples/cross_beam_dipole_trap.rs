@@ -1,4 +1,7 @@
 //! Loading a Sr cross beam dipole trap from center.
+use atomecs::collisions::ApplyCollisionsOption;
+use atomecs::collisions::CollisionParameters;
+use atomecs::collisions::CollisionsTracker;
 use specs::prelude::*;
 extern crate atomecs as lib;
 extern crate nalgebra;
@@ -49,7 +52,7 @@ fn main() {
     dispatcher.setup(&mut world);
 
     // Create dipole laser.
-    let power = 10.0;
+    let power = 5.0;
     let e_radius = 60.0e-6 / (2.0_f64.sqrt());
 
     let gaussian_beam = GaussianBeam {
@@ -124,12 +127,27 @@ fn main() {
             pos: Vector3::new(0.0, 0.0, 0.0),
         })
         .with(Cuboid {
-            half_width: Vector3::new(0.0005, 0.0005, 0.0005), //(0.1, 0.01, 0.01)
+            half_width: Vector3::new(0.0002, 0.0002, 0.0002),
         })
         .with(SimulationVolume {
             volume_type: VolumeType::Inclusive,
         })
         .build();
+
+    world.insert(ApplyCollisionsOption);
+
+    world.insert(CollisionParameters {
+        macroparticle: 10000.0,
+        box_number: 1000000,
+        box_width: 10.0e-10,
+        sigma: 4.0 * lib::constant::PI * (96.0 * 5.291e-11 as f64).powi(2),
+        collision_limit: 10_000_000.0,
+    });
+    world.insert(CollisionsTracker {
+        num_collisions: Vec::new(),
+        num_atoms: Vec::new(),
+        num_particles: Vec::new(),
+    });
 
     let mut switcher_system =
         atomecs::dipole::transition_switcher::AttachAtomicDipoleTransitionToAtomsSystem;
@@ -139,7 +157,7 @@ fn main() {
     switcher_system.run_now(&world);
 
     // Run the simulation for a number of steps.
-    for _i in 0..100_000 {
+    for _i in 0..200_000 {
         dispatcher.dispatch(&mut world);
         world.maintain();
     }
