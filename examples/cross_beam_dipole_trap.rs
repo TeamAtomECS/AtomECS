@@ -52,7 +52,7 @@ fn main() {
     dispatcher.setup(&mut world);
 
     // Create dipole laser.
-    let power = 5.0;
+    let power = 10.0;
     let e_radius = 60.0e-6 / (2.0_f64.sqrt());
 
     let gaussian_beam = GaussianBeam {
@@ -139,7 +139,7 @@ fn main() {
     world.insert(CollisionParameters {
         macroparticle: 10000.0,
         box_number: 1000000,
-        box_width: 10.0e-10,
+        box_width: 10.0e-6,
         sigma: 4.0 * lib::constant::PI * (96.0 * 5.291e-11 as f64).powi(2),
         collision_limit: 10_000_000.0,
     });
@@ -157,7 +157,7 @@ fn main() {
     switcher_system.run_now(&world);
 
     // Run the simulation for a number of steps.
-    for _i in 0..200_000 {
+    for _i in 0..50_000 {
         dispatcher.dispatch(&mut world);
         world.maintain();
     }
