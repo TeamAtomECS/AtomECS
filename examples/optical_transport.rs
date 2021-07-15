@@ -2,6 +2,9 @@
 use atomecs::collisions::ApplyCollisionsOption;
 use atomecs::collisions::CollisionParameters;
 use atomecs::collisions::CollisionsTracker;
+use atomecs::laser::dipole_beam::DipoleLight;
+use atomecs::output::file::SerdeJson;
+use atomecs::ramp::Ramp;
 use specs::prelude::*;
 extern crate atomecs as lib;
 extern crate nalgebra;
@@ -12,6 +15,7 @@ use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
+use lib::helper_files::custom_ramp;
 use lib::integrator::Timestep;
 use lib::laser;
 use lib::laser::gaussian::GaussianBeam;
@@ -28,6 +32,7 @@ fn main() {
     // Create the simulation world and builder for the ECS dispatcher.
     let mut world = World::new();
     ecs::register_components(&mut world);
+    world.register::<Ramp<GaussianBeam>>();
     ecs::register_resources(&mut world);
     let mut builder = ecs::create_simulation_dispatcher_builder();
 
@@ -44,6 +49,14 @@ fn main() {
     );
     builder = builder.with(
         file::new_with_filter::<Position, XYZ, Atom>("position.xyz".to_string(), 100),
+        "",
+        &[],
+    );
+    builder = builder.with(
+        file::new_with_filter::<GaussianBeam, SerdeJson, DipoleLight>(
+            "gaussian.txt".to_string(),
+            100,
+        ),
         "",
         &[],
     );
@@ -73,6 +86,12 @@ fn main() {
             x_vector: Vector3::y(),
             y_vector: Vector3::z(),
         })
+        .with(custom_ramp::get_gaussian_eth_ramp(
+            0.5,
+            150,
+            0.03,
+            gaussian_beam,
+        ))
         .build();
 
     // creating the entity that represents the source
@@ -100,7 +119,7 @@ fn main() {
         .build();
 
     // Define timestep
-    world.insert(Timestep { delta: 1.0e-6 });
+    world.insert(Timestep { delta: 1.0e-5 });
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
         .create_entity()
@@ -108,7 +127,7 @@ fn main() {
             pos: Vector3::new(0.0, 0.0, 0.0),
         })
         .with(Cuboid {
-            half_width: Vector3::new(0.0002, 0.0002, 0.0002),
+            half_width: Vector3::new(0.08, 0.0002, 0.0002),
         })
         .with(SimulationVolume {
             volume_type: VolumeType::Inclusive,
@@ -118,7 +137,7 @@ fn main() {
     world.insert(ApplyCollisionsOption);
 
     world.insert(CollisionParameters {
-        macroparticle: 10000.0,
+        macroparticle: 1000.0,
         box_number: 1000000,
         box_width: 5.0e-6,
         sigma: 4.0 * lib::constant::PI * (96.0 * 5.291e-11 as f64).powi(2),
@@ -138,7 +157,7 @@ fn main() {
     switcher_system.run_now(&world);
 
     // Run the simulation for a number of steps.
-    for _i in 0..50_000 {
+    for _i in 0..100_000 {
         dispatcher.dispatch(&mut world);
         world.maintain();
     }

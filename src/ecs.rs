@@ -89,7 +89,12 @@ impl AtomecsDispatcherBuilder {
 		);
 		&self.builder.add(
 			crate::ramp::RampUpdateSystem::<crate::magnetic::quadrupole::QuadrupoleField3D>::default(),
-			"ramp_update_system",
+			"ramp_update_system_mag",
+			&[INTEGRATE_VELOCITY_SYSTEM_NAME],
+		);
+		&self.builder.add(
+			crate::ramp::RampUpdateSystem::<crate::laser::gaussian::GaussianBeam>::default(),
+			"ramp_update_system_gauss",
 			&[INTEGRATE_VELOCITY_SYSTEM_NAME],
 		);
 	}
