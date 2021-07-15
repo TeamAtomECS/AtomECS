@@ -382,25 +382,17 @@ pub mod tests {
         let atom_number = params.macroparticle * MACRO_ATOM_NUMBER as f64;
         assert_eq!(collision_box.atom_number, atom_number);
         let density = atom_number / params.box_width.powi(3);
-        let expected_number = atom_number * density * params.sigma * vel.norm() * dt;
+        let expected_number =
+            (1.0 / SQRT2) * MACRO_ATOM_NUMBER as f64 * density * params.sigma * vel.norm() * dt;
         assert_approx_eq!(
             collision_box.expected_collision_number,
             expected_number,
             0.01
         );
-        if (collision_box.collision_number
-            != collision_box.expected_collision_number.floor() as i32)
-            && (collision_box.collision_number
-                != collision_box.expected_collision_number.ceil() as i32)
-        {
-            panic!(
-                "number of collisions invalid. Expected={}, Actual={}.",
-                collision_box.expected_collision_number, collision_box.collision_number
-            );
-        }
     }
 
-    //#[test]
+    /// Test that the system runs and causes nearby atoms to collide. More of an integration test than a unit test.
+    #[test]
     fn test_collisions() {
         let mut test_world = World::new();
 
@@ -450,6 +442,11 @@ pub mod tests {
         let dt = 1.0;
         test_world.add_resource(Timestep { delta: dt });
         test_world.add_resource(ApplyCollisionsOption);
+        test_world.add_resource(CollisionsTracker {
+            num_collisions: Vec::new(),
+            num_atoms: Vec::new(),
+            num_particles: Vec::new(),
+        });
         test_world.add_resource(CollisionParameters {
             macroparticle: 1.0,
             box_number: 10,

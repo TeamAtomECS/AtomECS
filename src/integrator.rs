@@ -10,7 +10,6 @@ extern crate specs;
 use crate::atom::*;
 use crate::constant;
 use crate::initiate::NewlyCreated;
-use nalgebra::Vector3;
 use specs::{Component, ReadExpect, ReadStorage, System, VecStorage, WriteExpect, WriteStorage};
 use specs::{Entities, Join, LazyUpdate, Read};
 
