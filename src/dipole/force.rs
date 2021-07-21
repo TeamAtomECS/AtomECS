@@ -8,7 +8,8 @@ use crate::dipole::atom::AtomicDipoleTransition;
 use crate::laser::dipole_beam::{DipoleLight, DipoleLightIndex};
 use nalgebra::Vector3;
 
-/// System that calculates the forces exerted onto the atoms by the dipole laser beams
+/// Calculates forces exerted onto the atoms by dipole laser beams.
+///
 /// It uses the `LaserIntensityGradientSamplers` and the properties of the `DipoleLight`
 /// to add the respective amount of force to `Force`
 pub struct ApplyDipoleForceSystem;
@@ -230,7 +231,7 @@ pub mod tests {
             })
             .with(transition)
             .build();
-        let mut grad_system = laser::intensity_gradient::SampleLaserIntensityGradientSystem;
+        let mut grad_system = laser::intensity_gradient::SampleGaussianLaserIntensityGradientSystem;
         let mut force_system = ApplyDipoleForceSystem;
         grad_system.run_now(&test_world);
         test_world.maintain();

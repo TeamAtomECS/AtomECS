@@ -7,8 +7,8 @@ use nalgebra::Vector3;
 use specs::Component;
 use specs::VecStorage;
 
-/// A component that stores the orthonormal basis vectors of a reference frame orthogonal to the beam
-/// It may be used to express ellipticity or Polarization via a 2D Jones Vector
+/// A component that stores the orthonormal basis vectors of a reference frame orthogonal to the beam.
+/// It may be used to express both ellipticity and polarization via a 2D Jones Vector
 #[derive(Clone, Copy)]
 pub struct Frame {
     pub x_vector: Vector3<f64>,

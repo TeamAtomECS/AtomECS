@@ -110,7 +110,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		],
 	);
 	builder.add(
-		intensity_gradient::SampleLaserIntensityGradientSystem,
+		intensity_gradient::SampleGaussianLaserIntensityGradientSystem,
 		"sample_intensity_gradient",
 		&["index_dipole_lights"],
 	);

@@ -1,8 +1,4 @@
-//! Calculation of the intensity of CoolingLight entities at a specific position
-//!
-
-// This file exists because - in the spirit of keeping things general - I thought that the intensity sampler should not be in
-// gaussian.rs since other beam profiles (although they're less common) should not be excluded.
+//! A module to calculate laser beam intensity gradients.
 
 use specs::prelude::*;
 
@@ -38,16 +34,15 @@ impl Component for LaserIntensityGradientSamplers {
     type Storage = VecStorage<Self>;
 }
 
-/// System that calculates the intensity gradient of entities that represent
-/// a dipole laser beam
+/// Calculates the intensity gradient of each laser beam. The result is stored in the `LaserIntensityGradientSamplers` .
 ///
-/// So far, the only intensity distribution implemented is`GaussianBeam`. Additionally
+/// So far, the only intensity distribution implemented is `GaussianBeam`. Additionally
 /// the system also uses `GaussianRayleighRange` for axial divergence and
 /// `Frame` to account for different ellipiticies in the future.
 /// The result is stored in the `LaserIntensityGradientSamplers` component that each
 /// atom is associated with.
-pub struct SampleLaserIntensityGradientSystem;
-impl<'a> System<'a> for SampleLaserIntensityGradientSystem {
+pub struct SampleGaussianLaserIntensityGradientSystem;
+impl<'a> System<'a> for SampleGaussianLaserIntensityGradientSystem {
     type SystemData = (
         ReadStorage<'a, DipoleLightIndex>,
         ReadStorage<'a, GaussianBeam>,
@@ -124,7 +119,7 @@ pub mod tests {
                 contents: [LaserIntensityGradientSampler::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
-        let mut system = SampleLaserIntensityGradientSystem;
+        let mut system = SampleGaussianLaserIntensityGradientSystem;
         system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<LaserIntensityGradientSamplers>();
@@ -206,7 +201,7 @@ pub mod tests {
                 contents: [LaserIntensityGradientSampler::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
-        let mut system = SampleLaserIntensityGradientSystem;
+        let mut system = SampleGaussianLaserIntensityGradientSystem;
         system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<LaserIntensityGradientSamplers>();
