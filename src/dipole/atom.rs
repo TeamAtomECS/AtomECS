@@ -1,18 +1,18 @@
-use crate::atom::Kind;
+//!
+
 use crate::constant::C;
 use serde::{Deserialize, Serialize};
 use specs::{Component, VecStorage};
 
-/// Component which holds information about the physical properties of the main
-/// transition that is relevant for dipole cooling. Similar to `atom::AtomicTransition`.
+/// A component which holds information about the physical properties of a transition used for dipole cooling.
+///
+///
 #[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct AtomicDipoleTransition {
     /// Frequency of the laser cooling transition, Hz.
     pub frequency: f64,
     /// Linewidth of the laser cooling transition, Hz
     pub linewidth: f64,
-    /// Nametag for match control operators to identify later on
-    pub kind: Kind,
 }
 
 impl Component for AtomicDipoleTransition {
@@ -26,7 +26,6 @@ impl AtomicDipoleTransition {
         AtomicDipoleTransition {
             frequency: C / 780.0e-9,
             linewidth: 6.065e6, // [Steck, Rubidium87]
-            kind: Kind::Rubidium,
         }
     }
 
@@ -36,7 +35,6 @@ impl AtomicDipoleTransition {
         AtomicDipoleTransition {
             frequency: 650_759_219_088_937.,
             linewidth: 32e6, // [Nosske2017]
-            kind: Kind::Strontium,
         }
     }
 
@@ -46,7 +44,6 @@ impl AtomicDipoleTransition {
         AtomicDipoleTransition {
             frequency: 434_829_121_311_000., // NIST, doi:10.1063/1.344917
             linewidth: 7_400.,               // [Schreck2013]
-            kind: Kind::StrontiumRed,
         }
     }
 
@@ -55,7 +52,6 @@ impl AtomicDipoleTransition {
         AtomicDipoleTransition {
             frequency: 5.142e14,
             linewidth: 190e3,
-            kind: Kind::Erbium,
         }
     }
     /// Creates an `AtomicDipoleTransition` component populated with parameters for Erbium 401 .
@@ -63,7 +59,6 @@ impl AtomicDipoleTransition {
         AtomicDipoleTransition {
             frequency: 7.476e14,
             linewidth: 30e6,
-            kind: Kind::Erbium401,
         }
     }
 

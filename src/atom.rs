@@ -122,17 +122,6 @@ impl Component for Atom {
 	type Storage = NullStorage<Self>;
 }
 
-/// Helper enum to identify the kind of atomic transition later in match operators
-/// Could be integrated in the Atom component, maybe.
-#[derive(Deserialize, Serialize, Clone, Copy)]
-pub enum Kind {
-	Rubidium,
-	Strontium,
-	StrontiumRed,
-	Erbium,
-	Erbium401,
-}
-
 #[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct AtomicTransition {
 	/// The dependence of the sigma_+ transition on magnetic fields.
@@ -155,8 +144,6 @@ pub struct AtomicTransition {
 	pub saturation_intensity: f64,
 	/// Precalculate prefactor used in the determination of rate coefficients.
 	pub rate_prefactor: f64,
-	/// Nametag for match control operators to identify later on
-	pub kind: Kind,
 }
 
 impl Component for AtomicTransition {
@@ -183,7 +170,6 @@ impl AtomicTransition {
 			linewidth: 6.065e6,          // [Steck, Rubidium87]
 			saturation_intensity: 16.69, // [Steck, Rubidium 87, D2 cycling transition]
 			rate_prefactor: 0.0,         // set in calculate
-			kind: Kind::Rubidium,
 		}
 		.calculate()
 	}
@@ -199,7 +185,6 @@ impl AtomicTransition {
 			linewidth: 32e6,             // [Nosske2017]
 			saturation_intensity: 430.0, // [Nosske2017, 43mW/cm^2]
 			rate_prefactor: 0.0,         // set in calculate
-			kind: Kind::Strontium,
 		}
 		.calculate()
 	}
@@ -215,7 +200,6 @@ impl AtomicTransition {
 			linewidth: 7_400.,               // [Schreck2013]
 			saturation_intensity: 0.0295,    // [SChreck2013, 3 µW/cm^2]
 			rate_prefactor: 0.0,             // set in calculate
-			kind: Kind::StrontiumRed,
 		}
 		.calculate()
 	}
@@ -230,7 +214,6 @@ impl AtomicTransition {
 			linewidth: 190e3,
 			saturation_intensity: 0.13,
 			rate_prefactor: 0.0, // set in calculate
-			kind: Kind::Erbium,
 		}
 		.calculate()
 	}
@@ -244,7 +227,6 @@ impl AtomicTransition {
 			linewidth: 30e6,
 			saturation_intensity: 56.0,
 			rate_prefactor: 0.0, // set in calculate
-			kind: Kind::Erbium401,
 		}
 		.calculate()
 	}
