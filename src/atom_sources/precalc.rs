@@ -94,7 +94,7 @@ impl PrecalculatedSpeciesInformation {
         (species.mass, species.v_distribution.sample(rng))
     }
 
-    fn create(temperature: f64, mass_distribution: &MassDistribution, power: f64) -> Self {
+    pub fn create(temperature: f64, mass_distribution: &MassDistribution, power: f64) -> Self {
         let mut species = Vec::<Species>::new();
         let mut ratios = Vec::<f64>::new();
         for mr in &mass_distribution.distribution {
