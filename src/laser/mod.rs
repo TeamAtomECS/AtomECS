@@ -1,7 +1,5 @@
-//! Calculation and initialization of optical forces and quantities exerted on the atoms
+//! Calculation and initialization of laser quantities, eg intensities and indexing.
 
-pub mod cooling;
-pub mod dipole_beam;
 pub mod frame;
 pub mod gaussian;
 pub mod index;
@@ -66,17 +64,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		"attach_laser_components",
 		deps,
 	);
-	builder.add(
-		cooling::AttachIndexToCoolingLightSystem,
-		"attach_cooling_index",
-		deps,
-	);
 	builder.add(index::IndexLasersSystem, "index_lasers", deps);
-	builder.add(
-		dipole_beam::AttachIndexToDipoleLightSystem,
-		"attach_dipole_index",
-		deps,
-	);
 	builder.add(
 		sampler::InitialiseLaserSamplerMasksSystem,
 		"initialise_laser_sampler_masks",
@@ -113,5 +101,4 @@ pub fn register_components(world: &mut World) {
 	world.register::<gaussian::GaussianBeam>();
 	world.register::<gaussian::CircularMask>();
 	world.register::<frame::Frame>();
-	world.register::<dipole_beam::DipoleLight>();
 }

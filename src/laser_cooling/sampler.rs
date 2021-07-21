@@ -1,8 +1,8 @@
 //! Calculation of the total detuning for specific atoms and CoolingLight entities
 
+use super::CoolingLight;
 use crate::atom::AtomicTransition;
 use crate::constant;
-use crate::laser::cooling::CoolingLight;
 use crate::laser::index::LaserIndex;
 use crate::laser_cooling::doppler::DopplerShiftSamplers;
 use crate::magnetic::zeeman::ZeemanShiftSampler;

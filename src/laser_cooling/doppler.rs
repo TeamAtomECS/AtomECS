@@ -3,8 +3,8 @@ extern crate rayon;
 extern crate serde;
 use specs::prelude::*;
 
+use super::CoolingLight;
 use crate::atom::Velocity;
-use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
 use serde::Serialize;
@@ -108,7 +108,7 @@ pub mod tests {
 
     use super::*;
     use crate::constant::PI;
-    use crate::laser::cooling::CoolingLight;
+    use crate::laser_cooling::CoolingLight;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
     use crate::laser::gaussian;

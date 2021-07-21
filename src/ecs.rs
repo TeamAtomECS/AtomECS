@@ -34,6 +34,7 @@ pub fn register_components(world: &mut World) {
 	atom_sources::register_components(world);
 	sim_region::register_components(world);
 	world.register::<Dark>();
+	dipole::register_components(world);
 }
 
 /// Struct that creates the ECS Dispatcher builder used in AtomECS.

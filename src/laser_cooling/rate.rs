@@ -2,8 +2,8 @@
 
 extern crate serde;
 
+use super::CoolingLight;
 use crate::atom::AtomicTransition;
-use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
 use crate::laser::intensity::LaserIntensitySamplers;
@@ -138,8 +138,8 @@ pub mod tests {
 
     use super::*;
 
-    use crate::laser::cooling::CoolingLight;
     use crate::laser::index::LaserIndex;
+    use crate::laser_cooling::CoolingLight;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
     use nalgebra::Vector3;

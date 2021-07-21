@@ -5,7 +5,7 @@
 use specs::prelude::*;
 
 use crate::atom::Position;
-use crate::laser::dipole_beam::DipoleLight;
+use crate::dipole::DipoleLight;
 use crate::laser::frame::Frame;
 use crate::laser::gaussian::{get_gaussian_beam_intensity_gradient, GaussianBeam};
 use crate::laser::index::LaserIndex;

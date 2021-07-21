@@ -1,8 +1,8 @@
 //! Calculation of the forces exerted on the atom by the CoolingLight entities
 
+use super::CoolingLight;
 use crate::atom::AtomicTransition;
 use crate::constant;
-use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
 use crate::laser_cooling::photons_scattered::ActualPhotonsScatteredVector;
@@ -185,9 +185,9 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
 #[cfg(test)]
 pub mod tests {
 
+    use super::CoolingLight;
     use super::*;
     use crate::constant::{HBAR, PI};
-    use crate::laser::cooling::CoolingLight;
     use crate::laser::index::LaserIndex;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;

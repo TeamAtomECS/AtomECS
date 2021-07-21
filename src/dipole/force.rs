@@ -5,7 +5,7 @@ use specs::{Join, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
 use crate::atom::Force;
 use crate::dipole::atom::AtomicDipoleTransition;
-use crate::laser::dipole_beam::DipoleLight;
+use crate::dipole::DipoleLight;
 use crate::laser::index::LaserIndex;
 use nalgebra::Vector3;
 
@@ -181,7 +181,7 @@ pub mod tests {
         test_world
             .create_entity()
             .with(gaussian_beam)
-            .with(laser::dipole_beam::DipoleLight {
+            .with(DipoleLight {
                 wavelength: 1064.0e-9,
             })
             .with(LaserIndex {
@@ -204,7 +204,7 @@ pub mod tests {
         test_world
             .create_entity()
             .with(gaussian_beam)
-            .with(laser::dipole_beam::DipoleLight {
+            .with(DipoleLight {
                 wavelength: 1064.0e-9,
             })
             .with(LaserIndex {
