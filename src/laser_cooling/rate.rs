@@ -3,8 +3,9 @@
 extern crate serde;
 
 use crate::atom::AtomicTransition;
-use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
+use crate::laser::index::LaserIndex;
 use crate::laser::intensity::LaserIntensitySamplers;
 use crate::laser_cooling::sampler::LaserDetuningSamplers;
 use crate::magnetic::MagneticFieldSampler;
@@ -67,7 +68,7 @@ pub struct CalculateRateCoefficientsSystem;
 impl<'a> System<'a> for CalculateRateCoefficientsSystem {
     type SystemData = (
         ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, LaserDetuningSamplers>,
         ReadStorage<'a, LaserIntensitySamplers>,
         ReadStorage<'a, AtomicTransition>,
@@ -137,7 +138,8 @@ pub mod tests {
 
     use super::*;
 
-    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser::cooling::CoolingLight;
+    use crate::laser::index::LaserIndex;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
     use nalgebra::Vector3;
@@ -151,7 +153,7 @@ pub mod tests {
     fn test_calculate_rate_coefficients_system() {
         let mut test_world = World::new();
 
-        test_world.register::<CoolingLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
         test_world.register::<LaserDetuningSamplers>();
@@ -167,7 +169,7 @@ pub mod tests {
                 polarization: 1,
                 wavelength: wavelength,
             })
-            .with(CoolingLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })

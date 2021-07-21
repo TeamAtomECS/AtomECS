@@ -1,6 +1,6 @@
 //! Calculation of the total detuning for specific atoms and CoolingLight entities
 extern crate serde;
-use crate::laser::cooling::CoolingLightIndex;
+use crate::laser::index::LaserIndex;
 use serde::Serialize;
 use specs::prelude::*;
 extern crate nalgebra;
@@ -43,7 +43,7 @@ impl<'a> System<'a> for InitialiseLaserSamplerMasksSystem {
 pub struct FillLaserSamplerMasksSystem;
 impl<'a> System<'a> for FillLaserSamplerMasksSystem {
     type SystemData = (
-        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, LaserIndex>,
         WriteStorage<'a, LaserSamplerMasks>,
     );
     fn run(&mut self, (light_index, mut masks): Self::SystemData) {

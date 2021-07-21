@@ -2,7 +2,8 @@
 
 use crate::atom::AtomicTransition;
 use crate::constant;
-use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+use crate::laser::cooling::CoolingLight;
+use crate::laser::index::LaserIndex;
 use crate::laser_cooling::doppler::DopplerShiftSamplers;
 use crate::magnetic::zeeman::ZeemanShiftSampler;
 use specs::prelude::*;
@@ -63,7 +64,7 @@ pub struct CalculateLaserDetuningSystem;
 impl<'a> System<'a> for CalculateLaserDetuningSystem {
     type SystemData = (
         ReadStorage<'a, AtomicTransition>,
-        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, DopplerShiftSamplers>,
         ReadStorage<'a, ZeemanShiftSampler>,
@@ -86,7 +87,7 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
         // There are typically only a small number of lasers in a simulation.
         // For a speedup, cache the required components into thread memory,
         // so they can be distributed to parallel workers during the atom loop.
-        type CachedLaser = (CoolingLightIndex, CoolingLight);
+        type CachedLaser = (LaserIndex, CoolingLight);
         let laser_cache: Vec<CachedLaser> = (&indices, &cooling_light)
             .join()
             .map(|(index, cooling)| (index.clone(), cooling.clone()))
@@ -143,7 +144,7 @@ pub mod tests {
     fn test_calculate_laser_detuning_system() {
         let mut test_world = World::new();
         test_world.register::<CoolingLight>();
-        test_world.register::<CoolingLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<DopplerShiftSamplers>();
         test_world.register::<LaserDetuningSamplers>();
         test_world.register::<AtomicTransition>();
@@ -156,7 +157,7 @@ pub mod tests {
                 polarization: 1,
                 wavelength: wavelength,
             })
-            .with(CoolingLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })

@@ -5,7 +5,8 @@ use specs::{Join, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
 use crate::atom::Force;
 use crate::dipole::atom::AtomicDipoleTransition;
-use crate::laser::dipole_beam::{DipoleLight, DipoleLightIndex};
+use crate::laser::dipole_beam::DipoleLight;
+use crate::laser::index::LaserIndex;
 use nalgebra::Vector3;
 
 /// Calculates forces exerted onto the atoms by dipole laser beams.
@@ -17,7 +18,7 @@ pub struct ApplyDipoleForceSystem;
 impl<'a> System<'a> for ApplyDipoleForceSystem {
     type SystemData = (
         ReadStorage<'a, DipoleLight>,
-        ReadStorage<'a, DipoleLightIndex>,
+        ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, AtomicDipoleTransition>,
         ReadStorage<'a, LaserIntensityGradientSamplers>,
         WriteStorage<'a, Force>,
@@ -61,7 +62,7 @@ pub mod tests {
     fn test_apply_dipole_force_system() {
         let mut test_world = World::new();
 
-        test_world.register::<DipoleLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<DipoleLight>();
         test_world.register::<Force>();
         test_world.register::<LaserIntensityGradientSamplers>();
@@ -69,7 +70,7 @@ pub mod tests {
 
         test_world
             .create_entity()
-            .with(DipoleLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })
@@ -112,7 +113,7 @@ pub mod tests {
     fn test_apply_dipole_force_again_system() {
         let mut test_world = World::new();
 
-        test_world.register::<DipoleLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<DipoleLight>();
         test_world.register::<Force>();
         test_world.register::<LaserIntensityGradientSamplers>();
@@ -120,7 +121,7 @@ pub mod tests {
 
         test_world
             .create_entity()
-            .with(DipoleLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })
@@ -157,7 +158,7 @@ pub mod tests {
     fn test_apply_dipole_force_and_gradient_system() {
         let mut test_world = World::new();
 
-        test_world.register::<DipoleLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<DipoleLight>();
         test_world.register::<Force>();
         test_world.register::<LaserIntensityGradientSamplers>();
@@ -183,7 +184,7 @@ pub mod tests {
             .with(laser::dipole_beam::DipoleLight {
                 wavelength: 1064.0e-9,
             })
-            .with(DipoleLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })
@@ -206,7 +207,7 @@ pub mod tests {
             .with(laser::dipole_beam::DipoleLight {
                 wavelength: 1064.0e-9,
             })
-            .with(DipoleLightIndex {
+            .with(LaserIndex {
                 index: 1,
                 initiated: true,
             })

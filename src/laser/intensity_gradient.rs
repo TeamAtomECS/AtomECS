@@ -1,11 +1,14 @@
 //! A module to calculate laser beam intensity gradients.
+//!
+//! Gradients are currently only calculated for beams marked as [DipoleLight](DipoleLight.struct.html).
 
 use specs::prelude::*;
 
 use crate::atom::Position;
-use crate::laser::dipole_beam::DipoleLightIndex;
+use crate::laser::dipole_beam::DipoleLight;
 use crate::laser::frame::Frame;
 use crate::laser::gaussian::{get_gaussian_beam_intensity_gradient, GaussianBeam};
+use crate::laser::index::LaserIndex;
 use nalgebra::Vector3;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
@@ -44,7 +47,8 @@ impl Component for LaserIntensityGradientSamplers {
 pub struct SampleGaussianLaserIntensityGradientSystem;
 impl<'a> System<'a> for SampleGaussianLaserIntensityGradientSystem {
     type SystemData = (
-        ReadStorage<'a, DipoleLightIndex>,
+        ReadStorage<'a, DipoleLight>,
+        ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, GaussianBeam>,
         ReadStorage<'a, Frame>,
         ReadStorage<'a, Position>,
@@ -53,11 +57,13 @@ impl<'a> System<'a> for SampleGaussianLaserIntensityGradientSystem {
 
     fn run(
         &mut self,
-        (dipole_index, gaussian, reference_frame, pos, mut sampler): Self::SystemData,
+        (dipole, index, gaussian, reference_frame, pos, mut sampler): Self::SystemData,
     ) {
         use rayon::prelude::*;
 
-        for (index, beam, reference) in (&dipole_index, &gaussian, &reference_frame).join() {
+        for (_dipole, index, beam, reference) in
+            (&dipole, &index, &gaussian, &reference_frame).join()
+        {
             (&pos, &mut sampler).par_join().for_each(|(pos, sampler)| {
                 sampler.contents[index.index].gradient =
                     get_gaussian_beam_intensity_gradient(beam, pos, reference);
@@ -79,7 +85,7 @@ pub mod tests {
     fn test_sample_laser_intensity_gradient_system() {
         let mut test_world = World::new();
 
-        test_world.register::<DipoleLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<GaussianBeam>();
         test_world.register::<Position>();
         test_world.register::<LaserIntensityGradientSamplers>();
@@ -99,7 +105,7 @@ pub mod tests {
 
         test_world
             .create_entity()
-            .with(DipoleLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })
@@ -161,7 +167,7 @@ pub mod tests {
     fn test_sample_laser_intensity_gradient_again_system() {
         let mut test_world = World::new();
 
-        test_world.register::<DipoleLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<GaussianBeam>();
         test_world.register::<Position>();
         test_world.register::<LaserIntensityGradientSamplers>();
@@ -181,7 +187,7 @@ pub mod tests {
 
         test_world
             .create_entity()
-            .with(DipoleLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })

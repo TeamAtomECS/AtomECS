@@ -4,6 +4,7 @@ pub mod cooling;
 pub mod dipole_beam;
 pub mod frame;
 pub mod gaussian;
+pub mod index;
 pub mod intensity;
 pub mod intensity_gradient;
 pub mod sampler;
@@ -70,20 +71,11 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		"attach_cooling_index",
 		deps,
 	);
-	builder.add(
-		cooling::IndexCoolingLightsSystem,
-		"index_cooling_lights",
-		deps,
-	);
+	builder.add(index::IndexLasersSystem, "index_lasers", deps);
 	builder.add(
 		dipole_beam::AttachIndexToDipoleLightSystem,
 		"attach_dipole_index",
 		deps,
-	);
-	builder.add(
-		dipole_beam::IndexDipoleLightsSystem,
-		"index_dipole_lights",
-		&["attach_dipole_index"],
 	);
 	builder.add(
 		sampler::InitialiseLaserSamplerMasksSystem,
@@ -98,13 +90,13 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		sampler::FillLaserSamplerMasksSystem,
 		"fill_laser_sampler_masks",
-		&["index_cooling_lights", "initialise_laser_sampler_masks"],
+		&["index_lasers", "initialise_laser_sampler_masks"],
 	);
 	builder.add(
 		intensity::SampleLaserIntensitySystem,
 		"sample_laser_intensity",
 		&[
-			"index_cooling_lights",
+			"index_lasers",
 			"initialise_laser_intensity",
 			INTEGRATE_POSITION_SYSTEM_NAME,
 		],
@@ -112,7 +104,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	builder.add(
 		intensity_gradient::SampleGaussianLaserIntensityGradientSystem,
 		"sample_intensity_gradient",
-		&["index_dipole_lights"],
+		&["index_lasers"],
 	);
 }
 
@@ -122,5 +114,4 @@ pub fn register_components(world: &mut World) {
 	world.register::<gaussian::CircularMask>();
 	world.register::<frame::Frame>();
 	world.register::<dipole_beam::DipoleLight>();
-	world.register::<dipole_beam::DipoleLightIndex>();
 }

@@ -2,6 +2,7 @@
 
 use crate::atom::AtomicTransition;
 use crate::constant;
+use crate::laser::index::LaserIndex;
 use crate::ramp::Lerp;
 use serde::{Deserialize, Serialize};
 use specs::prelude::*;
@@ -69,70 +70,19 @@ impl Component for CoolingLight {
 	type Storage = HashMapStorage<Self>;
 }
 
-/// An index that uniquely identifies this cooling light in the interaction list for each atom.
-/// The index value corresponds to the position of each cooling light in the per-atom interaction list array.
-///
-/// Default `CoolingLightIndex`s are created with `initiated: false`.
-/// Once the index is set, initiated is set to true.
-/// This is used to detect if all lasers in the simulation are correctly indexed, in case new lasers are added.
-#[derive(Clone, Copy)]
-pub struct CoolingLightIndex {
-	pub index: usize,
-	pub initiated: bool,
-}
-impl Component for CoolingLightIndex {
-	type Storage = HashMapStorage<Self>;
-}
-impl Default for CoolingLightIndex {
-	fn default() -> Self {
-		CoolingLightIndex {
-			index: 0,
-			initiated: false,
-		}
-	}
-}
-
-/// Assigns unique indices to cooling light entities.
-///
-/// The indices are used to uniquely identify each cooling light when populating the interaction list.
-pub struct IndexCoolingLightsSystem;
-impl<'a> System<'a> for IndexCoolingLightsSystem {
-	type SystemData = (
-		ReadStorage<'a, CoolingLight>,
-		WriteStorage<'a, CoolingLightIndex>,
-	);
-
-	fn run(&mut self, (cooling_light, mut indices): Self::SystemData) {
-		let mut iter = 0;
-		let mut need_to_assign_indices = false;
-		for (_, index) in (&cooling_light, &indices).join() {
-			if index.initiated == false {
-				need_to_assign_indices = true;
-			}
-		}
-		if need_to_assign_indices {
-			for (_, mut index) in (&cooling_light, &mut indices).join() {
-				index.index = iter;
-				index.initiated = true;
-				iter = iter + 1;
-			}
-		}
-	}
-}
-
-/// A system that attaches `CoolingLightIndex` components to entities which have `CoolingLight` but no index.
+/// A system that attaches `LaserIndex` components to entities which have `CoolingLight` but no index.
 pub struct AttachIndexToCoolingLightSystem;
 impl<'a> System<'a> for AttachIndexToCoolingLightSystem {
 	type SystemData = (
 		Entities<'a>,
 		ReadStorage<'a, CoolingLight>,
-		ReadStorage<'a, CoolingLightIndex>,
+		ReadStorage<'a, LaserIndex>,
 		Read<'a, LazyUpdate>,
 	);
 
 	fn run(&mut self, (ent, cooling_light, cooling_light_index, updater): Self::SystemData) {
 		for (ent, _, _) in (&ent, &cooling_light, !&cooling_light_index).join() {
-			updater.insert(ent, CoolingLightIndex::default());
+			updater.insert(ent, LaserIndex::default());
 		}
 	}
 }
@@ -142,49 +92,10 @@ pub mod tests {
 
 	use super::*;
 	use assert_approx_eq::assert_approx_eq;
-
-	#[test]
-	fn test_index_cooling_lights() {
-		let mut test_world = World::new();
-		test_world.register::<CoolingLightIndex>();
-		test_world.register::<CoolingLight>();
-
-		let test_entity_1 = test_world
-			.create_entity()
-			.with(CoolingLightIndex::default())
-			.with(CoolingLight {
-				polarization: 1,
-				wavelength: 780e-9,
-			})
-			.build();
-		let test_entity_2 = test_world
-			.create_entity()
-			.with(CoolingLightIndex::default())
-			.with(CoolingLight {
-				polarization: 1,
-				wavelength: 780e-9,
-			})
-			.build();
-
-		let mut system = IndexCoolingLightsSystem;
-		system.run_now(&test_world);
-		test_world.maintain();
-
-		let cooling_storage = test_world.read_storage::<CoolingLightIndex>();
-		let index_1 = cooling_storage
-			.get(test_entity_1)
-			.expect("entity not found");
-		let index_2 = cooling_storage
-			.get(test_entity_2)
-			.expect("entity not found");
-
-		assert_ne!(index_1.index, index_2.index);
-	}
-
 	#[test]
 	fn test_add_index_component_to_cooling_lights() {
 		let mut test_world = World::new();
-		test_world.register::<CoolingLightIndex>();
+		test_world.register::<LaserIndex>();
 		test_world.register::<CoolingLight>();
 
 		let test_entity = test_world
@@ -201,7 +112,7 @@ pub mod tests {
 
 		assert_eq!(
 			test_world
-				.read_storage::<CoolingLightIndex>()
+				.read_storage::<LaserIndex>()
 				.get(test_entity)
 				.is_none(),
 			false

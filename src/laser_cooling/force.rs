@@ -2,8 +2,9 @@
 
 use crate::atom::AtomicTransition;
 use crate::constant;
-use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
+use crate::laser::index::LaserIndex;
 use crate::laser_cooling::photons_scattered::ActualPhotonsScatteredVector;
 use nalgebra::Vector3;
 use rand_distr;
@@ -29,7 +30,7 @@ const LASER_CACHE_SIZE: usize = 16;
 pub struct CalculateAbsorptionForcesSystem;
 impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
     type SystemData = (
-        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, GaussianBeam>,
         ReadStorage<'a, ActualPhotonsScatteredVector>,
@@ -55,7 +56,7 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
         // There are typically only a small number of lasers in a simulation.
         // For a speedup, cache the required components into thread memory,
         // so they can be distributed to parallel workers during the atom loop.
-        type CachedLaser = (CoolingLight, CoolingLightIndex, GaussianBeam);
+        type CachedLaser = (CoolingLight, LaserIndex, GaussianBeam);
         let laser_cache: Vec<CachedLaser> = (&cooling_light, &cooling_index, &gaussian_beam)
             .join()
             .map(|(cooling, index, gaussian)| (cooling.clone(), index.clone(), gaussian.clone()))
@@ -186,7 +187,8 @@ pub mod tests {
 
     use super::*;
     use crate::constant::{HBAR, PI};
-    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser::cooling::CoolingLight;
+    use crate::laser::index::LaserIndex;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
     use crate::laser::gaussian;
@@ -199,7 +201,7 @@ pub mod tests {
 
         let time_delta = 1.0e-5;
 
-        test_world.register::<CoolingLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
         test_world.register::<ActualPhotonsScatteredVector>();
@@ -214,7 +216,7 @@ pub mod tests {
                 polarization: 1,
                 wavelength: wavelength,
             })
-            .with(CoolingLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })

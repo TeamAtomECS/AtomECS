@@ -4,8 +4,9 @@ extern crate serde;
 use specs::prelude::*;
 
 use crate::atom::Velocity;
-use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+use crate::laser::cooling::CoolingLight;
 use crate::laser::gaussian::GaussianBeam;
+use crate::laser::index::LaserIndex;
 use serde::Serialize;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
@@ -34,7 +35,7 @@ pub struct CalculateDopplerShiftSystem;
 impl<'a> System<'a> for CalculateDopplerShiftSystem {
     type SystemData = (
         ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, GaussianBeam>,
         WriteStorage<'a, DopplerShiftSamplers>,
         ReadStorage<'a, Velocity>,
@@ -46,7 +47,7 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
         // There are typically only a small number of lasers in a simulation.
         // For a speedup, cache the required components into thread memory,
         // so they can be distributed to parallel workers during the atom loop.
-        type CachedLaser = (CoolingLight, CoolingLightIndex, GaussianBeam);
+        type CachedLaser = (CoolingLight, LaserIndex, GaussianBeam);
         let laser_cache: Vec<CachedLaser> = (&cooling, &indices, &gaussian)
             .join()
             .map(|(cooling, index, gaussian)| (cooling.clone(), index.clone(), gaussian.clone()))
@@ -107,7 +108,7 @@ pub mod tests {
 
     use super::*;
     use crate::constant::PI;
-    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser::cooling::CoolingLight;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
     use crate::laser::gaussian;
@@ -116,7 +117,7 @@ pub mod tests {
     #[test]
     fn test_calculate_doppler_shift_system() {
         let mut test_world = World::new();
-        test_world.register::<CoolingLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
         test_world.register::<Velocity>();
@@ -129,7 +130,7 @@ pub mod tests {
                 polarization: 1,
                 wavelength: wavelength,
             })
-            .with(CoolingLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })

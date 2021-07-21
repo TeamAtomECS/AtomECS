@@ -9,7 +9,7 @@ extern crate serde;
 use super::frame::Frame;
 use super::gaussian::{get_gaussian_beam_intensity, CircularMask, GaussianBeam};
 use crate::atom::Position;
-use crate::laser::cooling::CoolingLightIndex;
+use crate::laser::index::LaserIndex;
 use serde::Serialize;
 use specs::prelude::*;
 
@@ -66,7 +66,7 @@ pub struct SampleLaserIntensitySystem;
 impl<'a> System<'a> for SampleLaserIntensitySystem {
     type SystemData = (
         Entities<'a>,
-        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, GaussianBeam>,
         ReadStorage<'a, CircularMask>,
         ReadStorage<'a, Frame>,
@@ -84,7 +84,7 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
         // For a speedup, cache the required components into thread memory,
         // so they can be distributed to parallel workers during the atom loop.
         type CachedLaser = (
-            CoolingLightIndex,
+            LaserIndex,
             GaussianBeam,
             Option<CircularMask>,
             Option<Frame>,
@@ -130,7 +130,7 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
 pub mod tests {
 
     use super::*;
-    use crate::laser::cooling::CoolingLightIndex;
+    use crate::laser::index::LaserIndex;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
     use crate::laser::gaussian;
@@ -141,7 +141,7 @@ pub mod tests {
     fn test_sample_laser_intensity_system() {
         let mut test_world = World::new();
 
-        test_world.register::<CoolingLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<GaussianBeam>();
         test_world.register::<CircularMask>();
         test_world.register::<Frame>();
@@ -150,7 +150,7 @@ pub mod tests {
 
         test_world
             .create_entity()
-            .with(CoolingLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })
