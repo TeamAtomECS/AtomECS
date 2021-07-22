@@ -63,6 +63,9 @@ impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
 /// However, in the future, other components will be implemented and this System can then be expanded
 /// to handle them as well.
 pub struct SampleLaserIntensitySystem;
+impl SampleLaserIntensitySystem {
+    pub const NAME: &'static str = "sample_laser_intensity";
+}
 impl<'a> System<'a> for SampleLaserIntensitySystem {
     type SystemData = (
         Entities<'a>,

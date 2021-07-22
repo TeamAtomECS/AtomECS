@@ -16,6 +16,7 @@ pub mod photons_scattered;
 pub mod rate;
 pub mod repump;
 pub mod sampler;
+pub mod stark;
 pub mod twolevel;
 
 /// A component representing light properties used for laser cooling.
@@ -178,9 +179,19 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
         &["index_lasers"],
     );
     builder.add(
+        stark::CalculateCoolingTransitionACStarkShiftSystem,
+        "calculate_AC_stark_shift",
+        &[crate::laser::intensity::SampleLaserIntensitySystem::NAME],
+    );
+    builder.add(
         sampler::CalculateLaserDetuningSystem,
         "calculate_laser_detuning",
-        &["calculate_doppler_shift", "zeeman_shift", "index_lasers"],
+        &[
+            "calculate_doppler_shift",
+            "zeeman_shift",
+            "calculate_AC_stark_shift",
+            "index_lasers",
+        ],
     );
     builder.add(
         rate::CalculateRateCoefficientsSystem,

@@ -5,6 +5,7 @@ use crate::atom::AtomicTransition;
 use crate::constant;
 use crate::laser::index::LaserIndex;
 use crate::laser_cooling::doppler::DopplerShiftSamplers;
+use crate::laser_cooling::stark::CoolingTransitionACStarkShiftSampler;
 use crate::magnetic::zeeman::ZeemanShiftSampler;
 use specs::prelude::*;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
@@ -68,6 +69,7 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, DopplerShiftSamplers>,
         ReadStorage<'a, ZeemanShiftSampler>,
+        ReadStorage<'a, CoolingTransitionACStarkShiftSampler>,
         WriteStorage<'a, LaserDetuningSamplers>,
     );
 
@@ -79,6 +81,7 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
             cooling_light,
             doppler_samplers,
             zeeman_sampler,
+            stark_shift_sampler,
             mut detuning_samplers,
         ): Self::SystemData,
     ) {
@@ -105,17 +108,28 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
                 &mut detuning_samplers,
                 &doppler_samplers,
                 &zeeman_sampler,
+                (&stark_shift_sampler).maybe(),
                 &atom_info,
             )
                 .par_join()
                 .for_each(
-                    |(detuning_sampler, doppler_samplers, zeeman_sampler, atom_info)| {
+                    |(
+                        detuning_sampler,
+                        doppler_samplers,
+                        zeeman_sampler,
+                        stark_shift_sampler,
+                        atom_info,
+                    )| {
                         for i in 0..number_in_iteration {
                             let (index, cooling) = laser_array[i];
                             let without_zeeman = 2.0
                                 * constant::PI
                                 * (constant::C / cooling.wavelength - atom_info.frequency)
-                                - doppler_samplers.contents[index.index].doppler_shift;
+                                - doppler_samplers.contents[index.index].doppler_shift
+                                - match stark_shift_sampler {
+                                    Some(stark_shift) => stark_shift.shift,
+                                    None => 0.0,
+                                };
 
                             detuning_sampler.contents[index.index].detuning_sigma_plus =
                                 without_zeeman.clone() - zeeman_sampler.sigma_plus;
@@ -149,6 +163,7 @@ pub mod tests {
         test_world.register::<LaserDetuningSamplers>();
         test_world.register::<AtomicTransition>();
         test_world.register::<ZeemanShiftSampler>();
+        test_world.register::<CoolingTransitionACStarkShiftSampler>();
 
         let wavelength = constant::C / AtomicTransition::strontium().frequency;
         test_world

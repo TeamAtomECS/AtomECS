@@ -82,7 +82,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 	);
 	builder.add(
 		intensity::SampleLaserIntensitySystem,
-		"sample_laser_intensity",
+		intensity::SampleLaserIntensitySystem::NAME,
 		&[
 			"index_lasers",
 			"initialise_laser_intensity",
