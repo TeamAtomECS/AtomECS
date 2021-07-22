@@ -175,16 +175,12 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
     builder.add(
         doppler::CalculateDopplerShiftSystem,
         "calculate_doppler_shift",
-        &["index_cooling_lights"],
+        &["index_lasers"],
     );
     builder.add(
         sampler::CalculateLaserDetuningSystem,
         "calculate_laser_detuning",
-        &[
-            "calculate_doppler_shift",
-            "zeeman_shift",
-            "index_cooling_lights",
-        ],
+        &["calculate_doppler_shift", "zeeman_shift", "index_lasers"],
     );
     builder.add(
         rate::CalculateRateCoefficientsSystem,

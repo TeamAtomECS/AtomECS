@@ -90,6 +90,7 @@ pub mod tests {
         test_world.register::<Position>();
         test_world.register::<LaserIntensityGradientSamplers>();
         test_world.register::<Frame>();
+        test_world.register::<DipoleLight>();
 
         let beam = GaussianBeam {
             direction: Vector3::z(),
@@ -113,6 +114,9 @@ pub mod tests {
             .with(Frame {
                 x_vector: Vector3::x(),
                 y_vector: Vector3::y(),
+            })
+            .with(DipoleLight {
+                wavelength: 1064e-9,
             })
             .build();
 
@@ -172,6 +176,7 @@ pub mod tests {
         test_world.register::<Position>();
         test_world.register::<LaserIntensityGradientSamplers>();
         test_world.register::<Frame>();
+        test_world.register::<DipoleLight>();
 
         let beam = GaussianBeam {
             direction: Vector3::x(),
@@ -195,6 +200,9 @@ pub mod tests {
             .with(Frame {
                 x_vector: Vector3::y(),
                 y_vector: Vector3::z(),
+            })
+            .with(DipoleLight {
+                wavelength: 1064.0e-9,
             })
             .build();
 

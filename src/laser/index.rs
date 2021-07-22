@@ -29,18 +29,18 @@ impl Default for LaserIndex {
 /// Assigns unique indices to laser entities.
 pub struct IndexLasersSystem;
 impl<'a> System<'a> for IndexLasersSystem {
-    type SystemData = (ReadStorage<'a, LaserIndex>, WriteStorage<'a, LaserIndex>);
+    type SystemData = WriteStorage<'a, LaserIndex>;
 
-    fn run(&mut self, (cooling_light, mut indices): Self::SystemData) {
+    fn run(&mut self, mut indices: Self::SystemData) {
         let mut iter = 0;
         let mut need_to_assign_indices = false;
-        for (_, index) in (&cooling_light, &indices).join() {
+        for index in (&indices).join() {
             if index.initiated == false {
                 need_to_assign_indices = true;
             }
         }
         if need_to_assign_indices {
-            for (_, mut index) in (&cooling_light, &mut indices).join() {
+            for mut index in (&mut indices).join() {
                 index.index = iter;
                 index.initiated = true;
                 iter = iter + 1;
@@ -55,7 +55,7 @@ pub mod tests {
     use super::*;
 
     #[test]
-    fn test_index_cooling_lights() {
+    fn test_index_lasers() {
         let mut test_world = World::new();
         test_world.register::<LaserIndex>();
 

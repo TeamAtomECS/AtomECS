@@ -8,10 +8,10 @@ pub mod tests {
     use crate::ecs;
     use crate::initiate::NewlyCreated;
     use crate::integrator::Timestep;
-    use crate::laser::cooling::CoolingLight;
     use crate::laser::gaussian::GaussianBeam;
     use crate::laser::index::LaserIndex;
     use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
+    use crate::laser_cooling::CoolingLight;
     extern crate nalgebra;
     use assert_approx_eq::assert_approx_eq;
     use nalgebra::Vector3;
