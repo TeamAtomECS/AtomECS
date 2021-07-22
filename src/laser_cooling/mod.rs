@@ -1,4 +1,4 @@
-//! A module that implements systems and components for laser cooling in AtomECS.
+//! A module that implements systems and components for calculating optical scattering forces in AtomECS.
 
 use crate::atom::AtomicTransition;
 use crate::constant;

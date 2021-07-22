@@ -103,7 +103,9 @@ fn main() {
         .with(atom::Velocity {
             vel: Vector3::new(0.0, 0.0, 0.0),
         })
-        .with(dipole::atom::AtomicDipoleTransition::strontium())
+        .with(dipole::Polarizability::calculate_for(
+            wavelength, 461e-9, 32.0e6,
+        ))
         .with(atom::Atom)
         .with(lib::initiate::NewlyCreated)
         .build();

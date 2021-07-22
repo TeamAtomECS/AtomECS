@@ -1,13 +1,11 @@
-use crate::constant;
 use crate::laser::intensity_gradient::LaserIntensityGradientSamplers;
 use specs::prelude::*;
 use specs::{Join, ReadStorage, System, WriteStorage};
 extern crate nalgebra;
 use crate::atom::Force;
-use crate::dipole::atom::AtomicDipoleTransition;
 use crate::dipole::DipoleLight;
+use crate::dipole::Polarizability;
 use crate::laser::index::LaserIndex;
-use nalgebra::Vector3;
 
 /// Calculates forces exerted onto the atoms by dipole laser beams.
 ///
@@ -19,29 +17,22 @@ impl<'a> System<'a> for ApplyDipoleForceSystem {
     type SystemData = (
         ReadStorage<'a, DipoleLight>,
         ReadStorage<'a, LaserIndex>,
-        ReadStorage<'a, AtomicDipoleTransition>,
+        ReadStorage<'a, Polarizability>,
         ReadStorage<'a, LaserIntensityGradientSamplers>,
         WriteStorage<'a, Force>,
     );
 
     fn run(
         &mut self,
-        (dipole_light, dipole_index,atomic_transition, gradient_sampler, mut force): Self::SystemData,
+        (dipole_light, dipole_index, polarizability, gradient_sampler, mut force): Self::SystemData,
     ) {
-        (&mut force, &atomic_transition, &gradient_sampler)
+        (&mut force, &polarizability, &gradient_sampler)
             .par_join()
-            .for_each(|(mut force, atominfo, sampler)| {
-                let prefactor = -3. * constant::PI * constant::C.powf(2.0)
-                    / (2. * (2. * constant::PI * atominfo.frequency).powf(3.0))
-                    * atominfo.linewidth;
-                let mut temp_force_coeff = Vector3::new(0.0, 0.0, 0.0);
-                for (index, dipole) in (&dipole_index, &dipole_light).join() {
-                    temp_force_coeff = temp_force_coeff
-                        - (1. / (atominfo.frequency - dipole.frequency())
-                            + 1. / (atominfo.frequency + dipole.frequency()))
-                            * sampler.contents[index.index].gradient;
+            .for_each(|(mut force, polarizability, sampler)| {
+                for (index, _dipole) in (&dipole_index, &dipole_light).join() {
+                    force.force = force.force
+                        + polarizability.prefactor * sampler.contents[index.index].gradient;
                 }
-                force.force = force.force + prefactor * temp_force_coeff;
             });
     }
 }
@@ -54,6 +45,7 @@ pub mod tests {
     use assert_approx_eq::assert_approx_eq;
     use specs::{Builder, RunNow, World};
     extern crate nalgebra;
+    use crate::constant;
     use crate::laser;
     use crate::laser::gaussian::GaussianBeam;
     use nalgebra::Vector3;
@@ -66,8 +58,10 @@ pub mod tests {
         test_world.register::<DipoleLight>();
         test_world.register::<Force>();
         test_world.register::<LaserIntensityGradientSamplers>();
-        test_world.register::<AtomicDipoleTransition>();
+        test_world.register::<Polarizability>();
 
+        let transition_linewidth = 32e6;
+        let transition_lambda = 461e-9;
         test_world
             .create_entity()
             .with(LaserIndex {
@@ -79,7 +73,8 @@ pub mod tests {
             })
             .build();
 
-        let transition = AtomicDipoleTransition::strontium();
+        let transition =
+            Polarizability::calculate_for(1064e-9, transition_lambda, transition_linewidth);
         let atom1 = test_world
             .create_entity()
             .with(Force {
@@ -98,10 +93,11 @@ pub mod tests {
         let sampler_storage = test_world.read_storage::<Force>();
         let sim_result_force = sampler_storage.get(atom1).expect("Entity not found!").force;
 
+        let transition_f = constant::C / transition_lambda;
         let actual_force = 3. * constant::PI * constant::C.powf(2.0)
-            / (2. * (2. * constant::PI * transition.frequency).powf(3.0))
-            * transition.linewidth
-            * (1. / (transition.frequency - 1064.0e-9) + 1. / (transition.frequency + 1064.0e-9))
+            / (2. * (2. * constant::PI * transition_f).powf(3.0))
+            * transition_linewidth
+            * (1. / (transition_f - 1064.0e-9) + 1. / (transition_f + 1064.0e-9))
             * Vector3::new(0.0, 1.0, -2.0);
 
         assert_approx_eq!(actual_force[0], sim_result_force[0], 1e+8_f64);
@@ -117,7 +113,7 @@ pub mod tests {
         test_world.register::<DipoleLight>();
         test_world.register::<Force>();
         test_world.register::<LaserIntensityGradientSamplers>();
-        test_world.register::<AtomicDipoleTransition>();
+        test_world.register::<Polarizability>();
 
         test_world
             .create_entity()
@@ -130,7 +126,7 @@ pub mod tests {
             })
             .build();
 
-        let transition = AtomicDipoleTransition::strontium();
+        let transition = Polarizability::calculate_for(1064e-9, 461e-9, 32e6);
         let atom1 = test_world
             .create_entity()
             .with(Force {
@@ -162,7 +158,7 @@ pub mod tests {
         test_world.register::<DipoleLight>();
         test_world.register::<Force>();
         test_world.register::<LaserIntensityGradientSamplers>();
-        test_world.register::<AtomicDipoleTransition>();
+        test_world.register::<Polarizability>();
         test_world.register::<crate::atom::Position>();
         test_world.register::<crate::laser::gaussian::GaussianBeam>();
         test_world.register::<crate::laser::frame::Frame>();
@@ -217,7 +213,7 @@ pub mod tests {
             })
             .build();
 
-        let transition = AtomicDipoleTransition::strontium();
+        let transition = Polarizability::calculate_for(1064e-9, 460.7e-9, 32e6);
         let atom1 = test_world
             .create_entity()
             .with(crate::atom::Position {
@@ -250,17 +246,17 @@ pub mod tests {
         //println!("gradient 2 is: {}", sim_result_grad[1].gradient);
 
         assert_approx_eq!(
-            0.00000000000000000000000000000000012747566586448897,
+            0.0000000000000000000000000000000001274847191667004,
             sim_result_force[0],
             3e-46_f64
         );
         assert_approx_eq!(
-            0.00000000000000000000000000000000012747566586448897,
+            0.0000000000000000000000000000000001274847191667004,
             sim_result_force[1],
             2e-46_f64
         );
         assert_approx_eq!(
-            0.0000000000000000000000000000000005101243283409891,
+            0.0000000000000000000000000000000005101605572924407,
             sim_result_force[2],
             2e-46_f64
         );
