@@ -2,11 +2,12 @@
 
 extern crate serde;
 
-use super::cooling::{CoolingLight, CoolingLightIndex};
+use super::CoolingLight;
 use crate::atom::AtomicTransition;
 use crate::laser::gaussian::GaussianBeam;
+use crate::laser::index::LaserIndex;
 use crate::laser::intensity::LaserIntensitySamplers;
-use crate::laser::sampler::LaserDetuningSamplers;
+use crate::laser_cooling::sampler::LaserDetuningSamplers;
 use crate::magnetic::MagneticFieldSampler;
 use serde::Serialize;
 use specs::prelude::*;
@@ -31,7 +32,7 @@ impl Default for RateCoefficient {
 #[derive(Clone, Copy, Serialize)]
 pub struct RateCoefficients {
     /// Vector of `RateCoefficient` where each entry corresponds to a different CoolingLight entity
-    pub contents: [RateCoefficient; crate::laser::COOLING_BEAM_LIMIT],
+    pub contents: [RateCoefficient; crate::laser::BEAM_LIMIT],
 }
 impl Component for RateCoefficients {
     type Storage = VecStorage<Self>;
@@ -49,8 +50,7 @@ impl<'a> System<'a> for InitialiseRateCoefficientsSystem {
         (&mut rate_coefficients)
             .par_join()
             .for_each(|mut rate_coefficient| {
-                rate_coefficient.contents =
-                    [RateCoefficient::default(); crate::laser::COOLING_BEAM_LIMIT];
+                rate_coefficient.contents = [RateCoefficient::default(); crate::laser::BEAM_LIMIT];
             });
     }
 }
@@ -68,7 +68,7 @@ pub struct CalculateRateCoefficientsSystem;
 impl<'a> System<'a> for CalculateRateCoefficientsSystem {
     type SystemData = (
         ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, LaserDetuningSamplers>,
         ReadStorage<'a, LaserIntensitySamplers>,
         ReadStorage<'a, AtomicTransition>,
@@ -138,13 +138,14 @@ pub mod tests {
 
     use super::*;
 
-    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser::index::LaserIndex;
+    use crate::laser_cooling::CoolingLight;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
     use nalgebra::Vector3;
 
     use crate::laser::intensity::LaserIntensitySamplers;
-    use crate::laser::sampler::LaserDetuningSamplers;
+    use crate::laser_cooling::sampler::LaserDetuningSamplers;
     use crate::magnetic::MagneticFieldSampler;
 
     /// Tests the correct implementation of the `RateCoefficients`
@@ -152,7 +153,7 @@ pub mod tests {
     fn test_calculate_rate_coefficients_system() {
         let mut test_world = World::new();
 
-        test_world.register::<CoolingLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
         test_world.register::<LaserDetuningSamplers>();
@@ -168,7 +169,7 @@ pub mod tests {
                 polarization: 1,
                 wavelength: wavelength,
             })
-            .with(CoolingLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })
@@ -177,6 +178,8 @@ pub mod tests {
                 intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
+                rayleigh_range: 1.0,
+                ellipticity: 0.0,
             })
             .build();
 
@@ -187,16 +190,16 @@ pub mod tests {
         let atom1 = test_world
             .create_entity()
             .with(LaserDetuningSamplers {
-                contents: [crate::laser::sampler::LaserDetuningSampler {
+                contents: [crate::laser_cooling::sampler::LaserDetuningSampler {
                     detuning_sigma_plus: detuning,
                     detuning_sigma_minus: detuning,
                     detuning_pi: detuning,
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(LaserIntensitySamplers {
                 contents: [crate::laser::intensity::LaserIntensitySampler {
                     intensity: intensity,
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::strontium())
             .with(MagneticFieldSampler {
@@ -204,7 +207,7 @@ pub mod tests {
                 magnitude: 1.0,
             })
             .with(RateCoefficients {
-                contents: [RateCoefficient::default(); crate::laser::COOLING_BEAM_LIMIT],
+                contents: [RateCoefficient::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
 

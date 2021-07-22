@@ -3,15 +3,15 @@
 
 // This file exists because - in the spirit of keeping things general - I thought that the intensity sampler should not be in
 // gaussian.rs since other beam profiles (although they're less common) should not be excluded.
-
 extern crate rayon;
+extern crate serde;
 
-use specs::prelude::*;
-
-use super::cooling::CoolingLightIndex;
+use super::frame::Frame;
 use super::gaussian::{get_gaussian_beam_intensity, CircularMask, GaussianBeam};
 use crate::atom::Position;
+use crate::laser::index::LaserIndex;
 use serde::Serialize;
+use specs::prelude::*;
 
 const LASER_CACHE_SIZE: usize = 16;
 
@@ -35,7 +35,7 @@ impl Default for LaserIntensitySampler {
 #[derive(Copy, Clone, Serialize)]
 pub struct LaserIntensitySamplers {
     /// List of laser samplers
-    pub contents: [LaserIntensitySampler; crate::laser::COOLING_BEAM_LIMIT],
+    pub contents: [LaserIntensitySampler; crate::laser::BEAM_LIMIT],
 }
 impl Component for LaserIntensitySamplers {
     type Storage = VecStorage<Self>;
@@ -51,7 +51,7 @@ impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
         use rayon::prelude::*;
 
         (&mut samplers).par_join().for_each(|mut sampler| {
-            sampler.contents = [LaserIntensitySampler::default(); crate::laser::COOLING_BEAM_LIMIT];
+            sampler.contents = [LaserIntensitySampler::default(); crate::laser::BEAM_LIMIT];
         });
     }
 }
@@ -66,23 +66,29 @@ pub struct SampleLaserIntensitySystem;
 impl<'a> System<'a> for SampleLaserIntensitySystem {
     type SystemData = (
         Entities<'a>,
-        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, GaussianBeam>,
         ReadStorage<'a, CircularMask>,
+        ReadStorage<'a, Frame>,
         ReadStorage<'a, Position>,
         WriteStorage<'a, LaserIntensitySamplers>,
     );
 
     fn run(
         &mut self,
-        (entities, indices, gaussian, masks, position, mut intensity_samplers): Self::SystemData,
+        (entities, indices, gaussian, masks, frames, position, mut intensity_samplers): Self::SystemData,
     ) {
         use rayon::prelude::*;
 
         // There are typically only a small number of lasers in a simulation.
         // For a speedup, cache the required components into thread memory,
         // so they can be distributed to parallel workers during the atom loop.
-        type CachedLaser = (CoolingLightIndex, GaussianBeam, Option<CircularMask>);
+        type CachedLaser = (
+            LaserIndex,
+            GaussianBeam,
+            Option<CircularMask>,
+            Option<Frame>,
+        );
         let laser_cache: Vec<CachedLaser> = (&entities, &indices, &gaussian)
             .join()
             .map(|(laser_entity, index, gaussian)| {
@@ -90,6 +96,7 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
                     index.clone(),
                     gaussian.clone(),
                     masks.get(laser_entity).cloned(),
+                    frames.get(laser_entity).cloned(),
                 )
             })
             .collect();
@@ -106,9 +113,13 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
                 .par_join()
                 .for_each(|(samplers, pos)| {
                     for i in 0..number_in_iteration {
-                        let (index, gaussian, mask) = laser_array[i];
-                        samplers.contents[index.index].intensity =
-                            get_gaussian_beam_intensity(&gaussian, &pos, mask.as_ref());
+                        let (index, gaussian, mask, frame) = laser_array[i];
+                        samplers.contents[index.index].intensity = get_gaussian_beam_intensity(
+                            &gaussian,
+                            &pos,
+                            mask.as_ref(),
+                            frame.as_ref(),
+                        );
                     }
                 });
         }
@@ -119,9 +130,10 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
 pub mod tests {
 
     use super::*;
-    use crate::laser::cooling::CoolingLightIndex;
+    use crate::laser::index::LaserIndex;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
+    use crate::laser::gaussian;
     use nalgebra::Vector3;
 
     /// Tests the correct implementation of the `SampleLaserIntensitySystem`
@@ -129,15 +141,16 @@ pub mod tests {
     fn test_sample_laser_intensity_system() {
         let mut test_world = World::new();
 
-        test_world.register::<CoolingLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<GaussianBeam>();
         test_world.register::<CircularMask>();
+        test_world.register::<Frame>();
         test_world.register::<Position>();
         test_world.register::<LaserIntensitySamplers>();
 
         test_world
             .create_entity()
-            .with(CoolingLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })
@@ -146,6 +159,8 @@ pub mod tests {
                 intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
+                rayleigh_range: gaussian::calculate_rayleigh_range(&461.0e-9, &2.0),
+                ellipticity: 0.0,
             })
             .build();
 
@@ -153,7 +168,7 @@ pub mod tests {
             .create_entity()
             .with(Position { pos: Vector3::y() })
             .with(LaserIntensitySamplers {
-                contents: [LaserIntensitySampler::default(); crate::laser::COOLING_BEAM_LIMIT],
+                contents: [LaserIntensitySampler::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
 
@@ -162,14 +177,17 @@ pub mod tests {
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<LaserIntensitySamplers>();
 
-        let actual_intensity = crate::laser::gaussian::get_gaussian_beam_intensity(
+        let actual_intensity = gaussian::get_gaussian_beam_intensity(
             &GaussianBeam {
                 direction: Vector3::new(1.0, 0.0, 0.0),
                 intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
+                rayleigh_range: gaussian::calculate_rayleigh_range(&461.0e-9, &2.0),
+                ellipticity: 0.0,
             },
             &Position { pos: Vector3::y() },
+            None,
             None,
         );
 

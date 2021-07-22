@@ -122,7 +122,7 @@ impl Component for Atom {
 	type Storage = NullStorage<Self>;
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct AtomicTransition {
 	/// The dependence of the sigma_+ transition on magnetic fields.
 	/// The sigma_+ transition is shifted by `mup * field.magnitude / h` Hz.
@@ -205,7 +205,7 @@ impl AtomicTransition {
 	}
 
 	/// Creates an `AtomicTransition` component populated with parameters for Erbium.
-	pub fn erbiurm() -> Self {
+	pub fn erbium() -> Self {
 		AtomicTransition {
 			mup: BOHRMAG,
 			mum: -BOHRMAG,
