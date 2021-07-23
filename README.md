@@ -16,6 +16,7 @@
 * Thorough unit testing to ensure simulation results are correct.
 * Good parallel performance on modern multi-core CPUs
 * Simulations can be wrapped using python/matlab, as shown in the [source_optimisation_example](https://github.com/TeamAtomECS/source_optimisation_example) or the [matlab examples](https://github.com/TeamAtomECS/matlab_examples).
+* __new:__ optical dipole force traps
 
 # Getting Started
 
