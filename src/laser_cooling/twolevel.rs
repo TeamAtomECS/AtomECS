@@ -3,7 +3,7 @@
 extern crate rayon;
 
 use crate::atom::AtomicTransition;
-use crate::laser::sampler::LaserSamplerMasks;
+use crate::laser::sampler::CoolingLaserSamplerMasks;
 use crate::laser_cooling::rate::RateCoefficients;
 use serde::{Deserialize, Serialize};
 use specs::prelude::*;
@@ -56,7 +56,7 @@ impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
     type SystemData = (
         ReadStorage<'a, AtomicTransition>,
         ReadStorage<'a, RateCoefficients>,
-        ReadStorage<'a, LaserSamplerMasks>,
+        ReadStorage<'a, CoolingLaserSamplerMasks>,
         WriteStorage<'a, TwoLevelPopulation>,
     );
 
@@ -99,7 +99,7 @@ pub mod tests {
         let mut test_world = World::new();
         test_world.register::<RateCoefficients>();
         test_world.register::<AtomicTransition>();
-        test_world.register::<LaserSamplerMasks>();
+        test_world.register::<CoolingLaserSamplerMasks>();
         test_world.register::<TwoLevelPopulation>();
 
         // this test runs with two lasers only and we have to tell this the mask
@@ -115,7 +115,7 @@ pub mod tests {
                     crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::strontium())
-            .with(LaserSamplerMasks {
+            .with(CoolingLaserSamplerMasks {
                 contents: active_lasers,
             })
             .with(TwoLevelPopulation::default())
@@ -149,7 +149,7 @@ pub mod tests {
         let mut test_world = World::new();
         test_world.register::<RateCoefficients>();
         test_world.register::<AtomicTransition>();
-        test_world.register::<LaserSamplerMasks>();
+        test_world.register::<CoolingLaserSamplerMasks>();
         test_world.register::<TwoLevelPopulation>();
 
         // this test runs with two lasers only and we have to tell this the mask
@@ -164,7 +164,7 @@ pub mod tests {
                     crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::rubidium())
-            .with(LaserSamplerMasks {
+            .with(CoolingLaserSamplerMasks {
                 contents: active_lasers,
             })
             .with(TwoLevelPopulation::default())

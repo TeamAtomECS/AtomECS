@@ -7,7 +7,7 @@ use rand_distr::{Distribution, Poisson};
 
 use crate::atom::AtomicTransition;
 use crate::integrator::Timestep;
-use crate::laser::sampler::LaserSamplerMasks;
+use crate::laser::sampler::CoolingLaserSamplerMasks;
 use crate::laser_cooling::rate::RateCoefficients;
 use crate::laser_cooling::twolevel::TwoLevelPopulation;
 use serde::{Deserialize, Serialize};
@@ -128,7 +128,7 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
     type SystemData = (
         ReadStorage<'a, RateCoefficients>,
         ReadStorage<'a, TotalPhotonsScattered>,
-        ReadStorage<'a, LaserSamplerMasks>,
+        ReadStorage<'a, CoolingLaserSamplerMasks>,
         WriteStorage<'a, ExpectedPhotonsScatteredVector>,
     );
 
@@ -345,7 +345,7 @@ pub mod tests {
         let mut test_world = World::new();
 
         test_world.register::<RateCoefficients>();
-        test_world.register::<LaserSamplerMasks>();
+        test_world.register::<CoolingLaserSamplerMasks>();
         test_world.register::<TotalPhotonsScattered>();
         test_world.register::<ExpectedPhotonsScatteredVector>();
 
@@ -354,7 +354,7 @@ pub mod tests {
         let atom1 = test_world
             .create_entity()
             .with(TotalPhotonsScattered { total: 8.0 })
-            .with(LaserSamplerMasks {
+            .with(CoolingLaserSamplerMasks {
                 contents: [crate::laser::sampler::LaserSamplerMask { filled: true };
                     crate::laser::BEAM_LIMIT],
             })

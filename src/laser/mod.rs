@@ -30,7 +30,7 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 		for (ent, _) in (&ent, &newly_created).join() {
 			updater.insert(
 				ent,
-				sampler::LaserSamplerMasks {
+				sampler::CoolingLaserSamplerMasks {
 					contents: [sampler::LaserSamplerMask::default(); BEAM_LIMIT],
 				},
 			);
