@@ -1,9 +1,15 @@
 //! Implements s-wave scattering of atoms
+//! We use here a standard Direct Simulation Monte Carlo method of simulating collisions. For much greater detail on these alogrithms see e.g.
+//! Molecular Gas Dynamics and the Direct Simulation of Gas Flows 1998 by G.A. Bird.
+//! We here divide the space into a grid of collision cells within which collisiosn can occur. Based on simple kinetic theory we predict how many collisions
+//! should occur within each box based on density and average velocity, and randomly select this many pairs of atoms to collide.
 //!
 //! # Limitations
+//! We assume the atoms within a cell have an approximately thermal distribution in order to relate average velocity to average relative velocity.
+//! For cases where this approximation is poor, the collision rate may be wrong.
+//! We assume a single species of atom, with a constant (not velocity dependent) collisional cross-section.
 //!
-//! * Currently assumes that colliding particles have equal mass.
-//! * For accurate collision rates, make sure that there are on average >1 particles per box.
+//!
 //!
 
 extern crate multimap;
