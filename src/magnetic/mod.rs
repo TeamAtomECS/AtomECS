@@ -115,7 +115,6 @@ impl<'a> System<'a> for CalculateMagneticMagnitudeGradientSystem {
 	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
 	fn run(&mut self, mut sampler: Self::SystemData) {
 		use rayon::prelude::*;
-		use specs::ParJoin;
 
 		(&mut sampler).par_join().for_each(|mut sampler| {
 			let mut gradient = Vector3::new(0.0, 0.0, 0.0);
