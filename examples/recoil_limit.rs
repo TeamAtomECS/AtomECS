@@ -6,17 +6,17 @@ use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
 use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
-use lib::laser::cooling::CoolingLight;
-use lib::laser::force::EmissionForceOption;
 use lib::laser::gaussian::GaussianBeam;
-use lib::laser::photons_scattered::ScatteringFluctuationsOption;
+use lib::laser_cooling::force::EmissionForceOption;
+use lib::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
+use lib::laser_cooling::CoolingLight;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
 use lib::shapes::Cuboid;
 use lib::sim_region::{SimulationVolume, VolumeType};
 use nalgebra::Vector3;
-use specs::{Builder, World};
+use specs::prelude::*;
 use std::fs::read_to_string;
 use std::time::Instant;
 
@@ -78,7 +78,7 @@ fn main() {
     );
 
     let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     // Create magnetic field.
     world
@@ -181,7 +181,7 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 2e-6 });
+    world.insert(Timestep { delta: 2e-6 });
 
     // Add atoms
     for _ in 0..3000 {
@@ -204,9 +204,9 @@ fn main() {
     // Enable fluctuation options
     //  * Allow photon numbers to fluctuate.
     //  * Allow random force from emission of photons.
-    world.add_resource(EmissionForceOption::default());
-    world.add_resource(ScatteringFluctuationsOption::On);
-    world.add_resource(lib::gravity::ApplyGravityOption);
+    world.insert(EmissionForceOption::default());
+    world.insert(ScatteringFluctuationsOption::On);
+    world.insert(lib::gravity::ApplyGravityOption);
 
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation
     world
@@ -224,7 +224,7 @@ fn main() {
 
     // Run the simulation for a number of steps.
     for _i in 0..configuration.number_of_steps {
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
     }
 

@@ -8,9 +8,9 @@ use crate::constant;
 use crate::constant::PI;
 use crate::initiate::*;
 
-extern crate rand;
 use super::VelocityCap;
 use super::WeightedProbabilityDistribution;
+use rand;
 use rand::distributions::Distribution;
 use rand::Rng;
 
@@ -30,7 +30,7 @@ fn velocity_generate(
 	let dir_2 = new_dir.cross(&dir_1).normalize();
 	let mut rng = rand::thread_rng();
 	let theta = theta_distribution.sample(&mut rng);
-	let phi = rng.gen_range(0.0, 2.0 * PI);
+	let phi = rng.gen_range(0.0..2.0 * PI);
 	let dir_div = dir_1 * theta.sin() * phi.cos() + dir_2 * theta.sin() * phi.sin();
 	let dirf = dir * theta.cos() + dir_div;
 	let v_out = dirf * v_mag;
@@ -147,18 +147,18 @@ impl Oven {
 		match self.aperture {
 			OvenAperture::Cubic { size } => {
 				let size = size.clone();
-				let pos1 = rng.gen_range(-0.5 * size[0], 0.5 * size[0]);
-				let pos2 = rng.gen_range(-0.5 * size[1], 0.5 * size[1]);
-				let pos3 = rng.gen_range(-0.5 * size[2], 0.5 * size[2]);
+				let pos1 = rng.gen_range(-0.5 * size[0]..0.5 * size[0]);
+				let pos2 = rng.gen_range(-0.5 * size[1]..0.5 * size[1]);
+				let pos3 = rng.gen_range(-0.5 * size[2]..0.5 * size[2]);
 				Vector3::new(pos1, pos2, pos3)
 			}
 			OvenAperture::Circular { radius, thickness } => {
 				let dir = self.direction.normalize();
 				let dir_1 = dir.cross(&Vector3::new(2.0, 1.0, 0.5)).normalize();
 				let dir_2 = dir.cross(&dir_1).normalize();
-				let theta = rng.gen_range(0., 2. * constant::PI);
-				let r = rng.gen_range(0., radius);
-				let h = rng.gen_range(-0.5 * thickness, 0.5 * thickness);
+				let theta = rng.gen_range(0.0..2. * constant::PI);
+				let r = rng.gen_range(0.0..radius);
+				let h = rng.gen_range(-0.5 * thickness..0.5 * thickness);
 				dir * h + r * dir_1 * theta.sin() + r * dir_2 * theta.cos()
 			}
 		}

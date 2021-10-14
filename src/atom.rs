@@ -2,8 +2,11 @@
 
 use crate::constant::{BOHRMAG, C};
 use crate::output::file::BinaryConversion;
+use crate::output::file::XYZPosition;
 use crate::ramp::Lerp;
 use nalgebra::Vector3;
+use specs::prelude::*;
+
 use serde::{Deserialize, Serialize};
 use specs::{Component, NullStorage, System, VecStorage, World, WriteStorage};
 use std::fmt;
@@ -38,11 +41,16 @@ impl BinaryConversion for Position {
 		vec![self.pos[0], self.pos[1], self.pos[2]]
 	}
 }
+impl XYZPosition for Position {
+	fn pos(&self) -> Vector3<f64> {
+		self.pos
+	}
+}
 
 /// Velocity of an entity in space, with respect to cartesian x,y,z axes.
 ///
 /// SI units (metres/second)
-#[derive(Clone)]
+#[derive(Clone, Copy, Serialize)]
 pub struct Velocity {
 	/// velocity vector in 3D in units of m/s
 	pub vel: Vector3<f64>,
@@ -76,7 +84,7 @@ impl Component for InitialVelocity {
 /// Force applies to an entity, with respect to cartesian x,y,z axes.
 ///
 /// SI units (Newtons)
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Serialize)]
 pub struct Force {
 	/// force vector in 3D in units of N
 	pub force: Vector3<f64>,
@@ -114,7 +122,7 @@ impl Component for Atom {
 	type Storage = NullStorage<Self>;
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Copy)]
 pub struct AtomicTransition {
 	/// The dependence of the sigma_+ transition on magnetic fields.
 	/// The sigma_+ transition is shifted by `mup * field.magnitude / h` Hz.
@@ -197,7 +205,7 @@ impl AtomicTransition {
 	}
 
 	/// Creates an `AtomicTransition` component populated with parameters for Erbium.
-	pub fn erbiurm() -> Self {
+	pub fn erbium() -> Self {
 		AtomicTransition {
 			mup: BOHRMAG,
 			mum: -BOHRMAG,
@@ -235,7 +243,6 @@ impl<'a> System<'a> for ClearForceSystem {
 	type SystemData = WriteStorage<'a, Force>;
 	fn run(&mut self, mut force: Self::SystemData) {
 		use rayon::prelude::*;
-		use specs::ParJoin;
 
 		(&mut force).par_join().for_each(|force| {
 			force.force = Vector3::new(0.0, 0.0, 0.0);

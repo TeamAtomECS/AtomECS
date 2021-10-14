@@ -1,5 +1,7 @@
 # AtomECS
-> Simulate laser cooling with rust.
+> Simulate cold atoms & laser cooling with rust.
+ 
+**New:** Paper out now on [arxiv](https://arxiv.org/abs/2105.06447)
 
 [![build](https://github.com/TeamAtomECS/AtomECS/actions/workflows/build.yml/badge.svg)](https://github.com/TeamAtomECS/AtomECS/actions/workflows/build.yml) [![unit_tests](https://github.com/TeamAtomECS/AtomECS/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/TeamAtomECS/AtomECS/actions/workflows/unit-tests.yml)
 
@@ -14,32 +16,39 @@
 * Thorough unit testing to ensure simulation results are correct.
 * Good parallel performance on modern multi-core CPUs
 * Simulations can be wrapped using python/matlab, as shown in the [source_optimisation_example](https://github.com/TeamAtomECS/source_optimisation_example) or the [matlab examples](https://github.com/TeamAtomECS/matlab_examples).
+* __new:__ optical dipole force traps
 
-## Getting Started
+# Getting Started
 
-After cloning the repository, you can run examples using e.g. `cargo run --release --example 1d_mot`.
-If you would like to plot results, you may like to look at the [matlab examples](https://github.com/TeamAtomECS/matlab_examples) useful.
+After cloning the repository, you can run examples using the `cargo` rust command line tool, e.g. `cargo run --release --example 1d_mot`.
+The [matlab examples](https://github.com/TeamAtomECS/matlab_examples) show how to load and plot simulation results.
 
 You can build the program documentation using `cargo doc`.
 
-**Important note:** If you receive the error 'panicked while panicking' then see [this issue](https://github.com/TeamAtomECS/AtomECS/issues/2) - you may need to use an earlier toolchain.
-
-## Entity-Component-System (ECS)
+## Data-oriented design
 
 `atomecs` follows the data-oriented Entity-Component-System (ECS) pattern, which is implemented using [specs](https://github.com/slide-rs/specs).
-ECS is well suited to high-performance simulations, and is flexible enough to accomodate changing design goals.
-_If you are unfamiliar with this pattern, and come from an object-oriented background, it is strongly recommended that you read about it before diving into the code._
+ECS is well suited to high-performance simulations, and is sufficiently flexible to accomodate changing design goals.
 
-Some useful ECS resources:
-* For the advantages of the pattern, see Mike Acton's [GDC talk](https://www.youtube.com/watch?v=p65Yt20pw0g)
+_If you are unfamiliar with data-oriented design - for instance, if you come from an object-oriented background - it is strongly recommended that you read up before diving into the code._ Some useful ECS resources are:
+* Mike Acton's [GDC talk](https://www.youtube.com/watch?v=p65Yt20pw0g), which discusses the advantages of ECS + DOD (in the context of the Unity game engine).
+* The [specs book](https://specs.amethyst.rs/docs/tutorials/) which describes the ECS used in `atomecs`.
 * Although written for Unity/C#, the concepts in the [Unity Entities Package Documentation](https://docs.unity3d.com/Packages/com.unity.entities@0.14/manual/ecs_core.html) are very useful to understand.
-* See also the [specs book](https://specs.amethyst.rs/docs/tutorials/) which describes the ECS used in `atomecs`.
 
 ## Current Limitations
 
-* atom-atom interactions are not implemented. Most of our current work deals with atom sources, which have low steady-state number densities, so we haven't implemented this. Results for steady-state 3D MOTs should be interpreted carefully. This will be implemented in a future 
+* atom-atom interactions are not implemented. Most of our current work deals with atom sources, which have low steady-state number densities, so we haven't implemented this. Results for steady-state 3D MOTs should be interpreted carefully.
 
-## Getting Involved
+# Getting Involved
+
+Our goal is to make AtomECS user-friendly, with friendly developers! Please feel free to use the issue tracker to ask questions, or join the conversations happening within the issues. 
+
+If you would like to submit a contribution:
+* Take a look at the issues page to see if there is something suitable for a new user.
+* Freely develop and change your own fork.
+* When a feature is finished, raise a pull request to merge your changes back into the AtomECS repository. The team will openly review your code and suggest changes/improvements.
+
+## The Team
 
 The current developers of `atomecs` are:
 * [Xuhui Chen](https://github.com/Pi-sun), Oxford

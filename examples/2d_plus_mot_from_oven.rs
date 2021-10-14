@@ -2,6 +2,8 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
+use atomecs::output::file::SerdeJson;
+use lib::atom::Atom;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
@@ -10,15 +12,16 @@ use lib::atom_sources::VelocityCap;
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
-use lib::laser::cooling::CoolingLight;
+use lib::integrator::INTEGRATE_VELOCITY_SYSTEM_NAME;
 use lib::laser::gaussian::GaussianBeam;
+use lib::laser_cooling::CoolingLight;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
 use lib::shapes::Cuboid;
 use lib::sim_region::{SimulationVolume, VolumeType};
 use nalgebra::Vector3;
-use specs::{Builder, World};
+use specs::prelude::*;
 use std::time::Instant;
 
 fn main() {
@@ -42,8 +45,14 @@ fn main() {
         &[],
     );
 
+    builder = builder.with(
+        file::new_with_filter::<lib::atom::Force, SerdeJson, Atom>("force.txt".to_string(), 100),
+        "",
+        &[INTEGRATE_VELOCITY_SYSTEM_NAME],
+    );
+
     let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     // Create magnetic field.
     world
@@ -64,6 +73,8 @@ fn main() {
             e_radius: push_beam_radius,
             power: push_beam_power,
             direction: Vector3::z(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -83,6 +94,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(1.0, 1.0, 0.0).normalize(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -97,6 +110,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(1.0, -1.0, 0.0).normalize(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -111,6 +126,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(-1.0, 1.0, 0.0).normalize(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -125,6 +142,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -161,7 +180,7 @@ fn main() {
         .build();
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-6 });
+    world.insert(Timestep { delta: 1.0e-6 });
 
     // Use a simulation bound so that atoms that escape the capture region are deleted from the simulation.
     world
@@ -192,11 +211,11 @@ fn main() {
         .build();
 
     // Also use a velocity cap so that fast atoms are not even simulated.
-    world.add_resource(VelocityCap { value: 200.0 });
+    world.insert(VelocityCap { value: 200.0 });
 
     // Run the simulation for a number of steps.
     for _i in 0..10000 {
-        dispatcher.dispatch(&mut world.res);
+        dispatcher.dispatch(&mut world);
         world.maintain();
     }
 

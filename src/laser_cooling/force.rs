@@ -1,23 +1,23 @@
 //! Calculation of the forces exerted on the atom by the CoolingLight entities
 
-extern crate rayon;
-extern crate specs;
+use super::CoolingLight;
 use crate::atom::AtomicTransition;
 use crate::constant;
-use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
 use crate::laser::gaussian::GaussianBeam;
-use crate::laser::photons_scattered::ActualPhotonsScatteredVector;
-use crate::maths;
-use rand::distributions::{Distribution, Normal};
-use specs::{Join, Read, ReadExpect, ReadStorage, System, WriteStorage};
-extern crate nalgebra;
+use crate::laser::index::LaserIndex;
+use crate::laser_cooling::photons_scattered::ActualPhotonsScatteredVector;
 use nalgebra::Vector3;
+use rand_distr;
+use rand_distr::{Distribution, Normal, UnitSphere};
+use rayon;
+
+use specs::prelude::*;
 
 use crate::atom::Force;
 use crate::constant::HBAR;
 use crate::integrator::Timestep;
 
-use crate::laser::repump::*;
+use crate::laser_cooling::repump::*;
 
 const LASER_CACHE_SIZE: usize = 16;
 
@@ -30,7 +30,7 @@ const LASER_CACHE_SIZE: usize = 16;
 pub struct CalculateAbsorptionForcesSystem;
 impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
     type SystemData = (
-        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, GaussianBeam>,
         ReadStorage<'a, ActualPhotonsScatteredVector>,
@@ -52,12 +52,11 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
         ): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         // There are typically only a small number of lasers in a simulation.
         // For a speedup, cache the required components into thread memory,
         // so they can be distributed to parallel workers during the atom loop.
-        type CachedLaser = (CoolingLight, CoolingLightIndex, GaussianBeam);
+        type CachedLaser = (CoolingLight, LaserIndex, GaussianBeam);
         let laser_cache: Vec<CachedLaser> = (&cooling_light, &cooling_index, &gaussian_beam)
             .join()
             .map(|(cooling, index, gaussian)| (cooling.clone(), index.clone(), gaussian.clone()))
@@ -137,7 +136,6 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
         (rand_opt, mut force, actual_scattered_vector, atom_info, timestep): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         match rand_opt {
             None => (),
@@ -159,7 +157,8 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
                                     let normal = Normal::new(
                                         0.0,
                                         (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
-                                    );
+                                    )
+                                    .unwrap();
 
                                     let force_n_kicks = Vector3::new(
                                         normal.sample(&mut rng),
@@ -170,8 +169,9 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
                                 } else {
                                     // explicit random walk implementation
                                     for _i in 0..total {
+                                        let v: [f64; 3] = UnitSphere.sample(&mut rng);
                                         force.force = force.force
-                                            + force_one_kick * maths::random_direction();
+                                            + force_one_kick * Vector3::new(v[0], v[1], v[2]);
                                     }
                                 }
                             });
@@ -185,14 +185,13 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
 #[cfg(test)]
 pub mod tests {
 
+    use super::CoolingLight;
     use super::*;
-
-    extern crate specs;
     use crate::constant::{HBAR, PI};
-    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser::index::LaserIndex;
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
     extern crate nalgebra;
+    use crate::laser::gaussian;
     use nalgebra::Vector3;
 
     /// Tests the correct implementation of the `CalculateAbsorptionForceSystem`
@@ -202,13 +201,13 @@ pub mod tests {
 
         let time_delta = 1.0e-5;
 
-        test_world.register::<CoolingLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
         test_world.register::<ActualPhotonsScatteredVector>();
         test_world.register::<Force>();
         test_world.register::<Dark>();
-        test_world.add_resource(Timestep { delta: time_delta });
+        test_world.insert(Timestep { delta: time_delta });
 
         let wavelength = 461e-9;
         test_world
@@ -217,7 +216,7 @@ pub mod tests {
                 polarization: 1,
                 wavelength: wavelength,
             })
-            .with(CoolingLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })
@@ -226,6 +225,8 @@ pub mod tests {
                 intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
+                rayleigh_range: gaussian::calculate_rayleigh_range(&wavelength, &2.0),
+                ellipticity: 0.0,
             })
             .build();
 
@@ -234,15 +235,15 @@ pub mod tests {
         let atom1 = test_world
             .create_entity()
             .with(ActualPhotonsScatteredVector {
-                contents: [crate::laser::photons_scattered::ActualPhotonsScattered {
+                contents: [crate::laser_cooling::photons_scattered::ActualPhotonsScattered {
                     scattered: number_scattered,
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(Force::new())
             .build();
 
         let mut system = CalculateAbsorptionForcesSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
 
@@ -264,23 +265,23 @@ pub mod tests {
         test_world.register::<ActualPhotonsScatteredVector>();
         test_world.register::<Force>();
         test_world.register::<AtomicTransition>();
-        test_world.add_resource(EmissionForceOption::default());
-        test_world.add_resource(Timestep { delta: time_delta });
+        test_world.insert(EmissionForceOption::default());
+        test_world.insert(Timestep { delta: time_delta });
         let number_scattered = 1_000_000.0;
 
         let atom1 = test_world
             .create_entity()
             .with(ActualPhotonsScatteredVector {
-                contents: [crate::laser::photons_scattered::ActualPhotonsScattered {
+                contents: [crate::laser_cooling::photons_scattered::ActualPhotonsScattered {
                     scattered: number_scattered,
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(Force::new())
             .with(AtomicTransition::strontium())
             .build();
 
         let mut system = ApplyEmissionForceSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
 

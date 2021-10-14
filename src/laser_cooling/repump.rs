@@ -1,8 +1,8 @@
 //! Handling of dark states and repumping
 
-extern crate rand;
+use rand;
 extern crate specs;
-use crate::laser::photons_scattered::TotalPhotonsScattered;
+use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
 use rand::Rng;
 use specs::{Component, Entities, LazyUpdate, Read, ReadStorage, System, VecStorage};
 
@@ -22,7 +22,7 @@ pub struct RepumpLoss {
 impl RepumpLoss {
     pub fn if_loss(&self, number_scattering_events: f64) -> bool {
         let mut rng = rand::thread_rng();
-        let result = rng.gen_range(0.0, 1.0);
+        let result: f64 = rng.gen_range(0.0..1.0);
         return result < (1.0 - self.depump_chance).powf(number_scattering_events);
     }
 }

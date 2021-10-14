@@ -1,13 +1,12 @@
 //! Calculation of the steady-state twolevel populations
 
 extern crate rayon;
-extern crate specs;
 
 use crate::atom::AtomicTransition;
-use crate::laser::rate::RateCoefficients;
-use crate::laser::sampler::LaserSamplerMasks;
+use crate::laser::sampler::CoolingLaserSamplerMasks;
+use crate::laser_cooling::rate::RateCoefficients;
 use serde::{Deserialize, Serialize};
-use specs::{Component, ReadStorage, System, VecStorage, WriteStorage};
+use specs::prelude::*;
 use std::fmt;
 
 /// Represents the steady-state population density of the excited state and ground state
@@ -57,7 +56,7 @@ impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
     type SystemData = (
         ReadStorage<'a, AtomicTransition>,
         ReadStorage<'a, RateCoefficients>,
-        ReadStorage<'a, LaserSamplerMasks>,
+        ReadStorage<'a, CoolingLaserSamplerMasks>,
         WriteStorage<'a, TwoLevelPopulation>,
     );
 
@@ -66,7 +65,6 @@ impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
         (atomic_transition, rate_coefficients, masks, mut twolevel_population): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         (
             &atomic_transition,
@@ -93,10 +91,7 @@ impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
 pub mod tests {
 
     use super::*;
-
-    extern crate specs;
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
     extern crate nalgebra;
 
     #[test]
@@ -104,36 +99,36 @@ pub mod tests {
         let mut test_world = World::new();
         test_world.register::<RateCoefficients>();
         test_world.register::<AtomicTransition>();
-        test_world.register::<LaserSamplerMasks>();
+        test_world.register::<CoolingLaserSamplerMasks>();
         test_world.register::<TwoLevelPopulation>();
 
         // this test runs with two lasers only and we have to tell this the mask
-        let mut active_lasers = [crate::laser::sampler::LaserSamplerMask { filled: false };
-            crate::laser::COOLING_BEAM_LIMIT];
+        let mut active_lasers =
+            [crate::laser::sampler::LaserSamplerMask { filled: false }; crate::laser::BEAM_LIMIT];
         active_lasers[0] = crate::laser::sampler::LaserSamplerMask { filled: true };
         active_lasers[1] = crate::laser::sampler::LaserSamplerMask { filled: true };
 
         let atom1 = test_world
             .create_entity()
             .with(RateCoefficients {
-                contents: [crate::laser::rate::RateCoefficient { rate: 1_000_000.0 };
-                    crate::laser::COOLING_BEAM_LIMIT],
+                contents: [crate::laser_cooling::rate::RateCoefficient { rate: 1_000_000.0 };
+                    crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::strontium())
-            .with(LaserSamplerMasks {
+            .with(CoolingLaserSamplerMasks {
                 contents: active_lasers,
             })
             .with(TwoLevelPopulation::default())
             .build();
 
         let mut system = CalculateTwoLevelPopulationSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<TwoLevelPopulation>();
 
         let mut sum_rates = 0.0;
 
-        for i in 0..crate::laser::COOLING_BEAM_LIMIT {
+        for i in 0..crate::laser::BEAM_LIMIT {
             if active_lasers[i].filled {
                 sum_rates = sum_rates + 1_000_000.0;
             }
@@ -154,29 +149,29 @@ pub mod tests {
         let mut test_world = World::new();
         test_world.register::<RateCoefficients>();
         test_world.register::<AtomicTransition>();
-        test_world.register::<LaserSamplerMasks>();
+        test_world.register::<CoolingLaserSamplerMasks>();
         test_world.register::<TwoLevelPopulation>();
 
         // this test runs with two lasers only and we have to tell this the mask
-        let mut active_lasers = [crate::laser::sampler::LaserSamplerMask { filled: false };
-            crate::laser::COOLING_BEAM_LIMIT];
+        let mut active_lasers =
+            [crate::laser::sampler::LaserSamplerMask { filled: false }; crate::laser::BEAM_LIMIT];
         active_lasers[0] = crate::laser::sampler::LaserSamplerMask { filled: true };
 
         let atom1 = test_world
             .create_entity()
             .with(RateCoefficients {
-                contents: [crate::laser::rate::RateCoefficient { rate: 1.0e9 };
-                    crate::laser::COOLING_BEAM_LIMIT],
+                contents: [crate::laser_cooling::rate::RateCoefficient { rate: 1.0e9 };
+                    crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::rubidium())
-            .with(LaserSamplerMasks {
+            .with(CoolingLaserSamplerMasks {
                 contents: active_lasers,
             })
             .with(TwoLevelPopulation::default())
             .build();
 
         let mut system = CalculateTwoLevelPopulationSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<TwoLevelPopulation>();
 

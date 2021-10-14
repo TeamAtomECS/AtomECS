@@ -1,18 +1,19 @@
 //! Calculation of RateCoefficients for the rate equation approach
 
-extern crate rayon;
-extern crate specs;
+extern crate serde;
 
-use super::cooling::{CoolingLight, CoolingLightIndex};
+use super::CoolingLight;
 use crate::atom::AtomicTransition;
 use crate::laser::gaussian::GaussianBeam;
+use crate::laser::index::LaserIndex;
 use crate::laser::intensity::LaserIntensitySamplers;
-use crate::laser::sampler::LaserDetuningSamplers;
+use crate::laser_cooling::sampler::LaserDetuningSamplers;
 use crate::magnetic::MagneticFieldSampler;
-use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
+use serde::Serialize;
+use specs::prelude::*;
 
 /// Represents the rate coefficient of the atom with respect to a specific CoolingLight entity
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
 pub struct RateCoefficient {
     /// rate coefficient in Hz
     pub rate: f64,
@@ -28,9 +29,10 @@ impl Default for RateCoefficient {
 }
 
 /// Component that holds a Vector of `RateCoefficient`
+#[derive(Clone, Copy, Serialize)]
 pub struct RateCoefficients {
     /// Vector of `RateCoefficient` where each entry corresponds to a different CoolingLight entity
-    pub contents: [RateCoefficient; crate::laser::COOLING_BEAM_LIMIT],
+    pub contents: [RateCoefficient; crate::laser::BEAM_LIMIT],
 }
 impl Component for RateCoefficients {
     type Storage = VecStorage<Self>;
@@ -44,13 +46,11 @@ impl<'a> System<'a> for InitialiseRateCoefficientsSystem {
     type SystemData = (WriteStorage<'a, RateCoefficients>,);
     fn run(&mut self, (mut rate_coefficients,): Self::SystemData) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         (&mut rate_coefficients)
             .par_join()
             .for_each(|mut rate_coefficient| {
-                rate_coefficient.contents =
-                    [RateCoefficient::default(); crate::laser::COOLING_BEAM_LIMIT];
+                rate_coefficient.contents = [RateCoefficient::default(); crate::laser::BEAM_LIMIT];
             });
     }
 }
@@ -68,7 +68,7 @@ pub struct CalculateRateCoefficientsSystem;
 impl<'a> System<'a> for CalculateRateCoefficientsSystem {
     type SystemData = (
         ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, LaserDetuningSamplers>,
         ReadStorage<'a, LaserIntensitySamplers>,
         ReadStorage<'a, AtomicTransition>,
@@ -90,7 +90,6 @@ impl<'a> System<'a> for CalculateRateCoefficientsSystem {
         ): Self::SystemData,
     ) {
         use rayon::prelude::*;
-        use specs::ParJoin;
 
         for (cooling, index, gaussian) in (&cooling_light, &cooling_index, &gaussian_beam).join() {
             (
@@ -139,15 +138,14 @@ pub mod tests {
 
     use super::*;
 
-    extern crate specs;
-    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser::index::LaserIndex;
+    use crate::laser_cooling::CoolingLight;
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
     extern crate nalgebra;
     use nalgebra::{Matrix3, Vector3};
 
     use crate::laser::intensity::LaserIntensitySamplers;
-    use crate::laser::sampler::LaserDetuningSamplers;
+    use crate::laser_cooling::sampler::LaserDetuningSamplers;
     use crate::magnetic::MagneticFieldSampler;
 
     /// Tests the correct implementation of the `RateCoefficients`
@@ -155,7 +153,7 @@ pub mod tests {
     fn test_calculate_rate_coefficients_system() {
         let mut test_world = World::new();
 
-        test_world.register::<CoolingLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
         test_world.register::<LaserDetuningSamplers>();
@@ -171,7 +169,7 @@ pub mod tests {
                 polarization: 1,
                 wavelength: wavelength,
             })
-            .with(CoolingLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })
@@ -180,6 +178,8 @@ pub mod tests {
                 intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
+                rayleigh_range: 1.0,
+                ellipticity: 0.0,
             })
             .build();
 
@@ -190,16 +190,16 @@ pub mod tests {
         let atom1 = test_world
             .create_entity()
             .with(LaserDetuningSamplers {
-                contents: [crate::laser::sampler::LaserDetuningSampler {
+                contents: [crate::laser_cooling::sampler::LaserDetuningSampler {
                     detuning_sigma_plus: detuning,
                     detuning_sigma_minus: detuning,
                     detuning_pi: detuning,
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(LaserIntensitySamplers {
                 contents: [crate::laser::intensity::LaserIntensitySampler {
                     intensity: intensity,
-                }; crate::laser::COOLING_BEAM_LIMIT],
+                }; crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::strontium())
             .with(MagneticFieldSampler {
@@ -209,12 +209,12 @@ pub mod tests {
                 jacobian: Matrix3::zeros(),
             })
             .with(RateCoefficients {
-                contents: [RateCoefficient::default(); crate::laser::COOLING_BEAM_LIMIT],
+                contents: [RateCoefficient::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
 
         let mut system = CalculateRateCoefficientsSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<RateCoefficients>();
 

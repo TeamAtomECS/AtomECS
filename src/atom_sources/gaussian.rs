@@ -7,7 +7,7 @@ use crate::constant::EXP;
 use crate::initiate::*;
 use nalgebra::Vector3;
 
-extern crate rand;
+use rand;
 use rand::distributions::Distribution;
 use rand::Rng;
 
