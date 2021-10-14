@@ -1,5 +1,8 @@
 //! Time-Orbiting Potential trap
-//!
+//! A rotating uniform bias field that creates an axially symmetric approximately harmonic trap when combined with another magnetic field such as a quadrupole
+//! and time-averaged. The rotation frequency of the TOP should be much more than the oscillation frequency of the atoms, and much less than the Larmor frequency
+//! of the atoms to avoid non-adiabatic loss (not modelled).
+//! For more detail see e.g. W. Petrich, M. Anderson, J. Ensher, E. Cornell PRL 74, 3352, doi: https://doi.org/10.1103/PhysRevLett.74.3352
 
 extern crate nalgebra;
 extern crate specs;
@@ -15,8 +18,6 @@ use specs::{Component, HashMapStorage, Join, ReadExpect, ReadStorage, System, Wr
 pub struct TimeOrbitingPotential {
     /// Amplitude of the field in T
     pub amplitude: f64,
-    /// A unit vector pointing along the rotational axis of the TOP.
-    pub direction: Vector3<f64>,
     ///Frequency of rotation in Hz
     pub frequency: f64,
 }
@@ -25,7 +26,6 @@ impl TimeOrbitingPotential {
     pub fn gauss(amplitude: f64, frequency: f64) -> Self {
         Self {
             amplitude: amplitude * 1e-4,
-            direction: Vector3::z(),
             frequency: frequency,
         }
     }
@@ -48,7 +48,6 @@ impl<'a> System<'a> for TimeOrbitingPotentialSystem {
 
         for top in (&tops).join() {
             (&mut samplers).par_join().for_each(|sampler| {
-                //TODO: allow rotation around arbitrary axis
                 let time = timestep.delta * step.n as f64;
                 let top_field = top.amplitude
                     * Vector3::new(

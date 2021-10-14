@@ -1,4 +1,8 @@
 //! Magnetic dipole force applied to an atom in an external magnetic field
+//! Applies a force based on gradient of energy from the linear Zeeman effect to any
+//! entity with a MagneticDipole component.
+//! The magnetic force is not added by default to the builder so must be explicitly included and
+//! must depend on the magnetics_gradient system.
 #![allow(non_snake_case)]
 
 use super::MagneticFieldSampler;
@@ -45,7 +49,7 @@ pub mod tests {
     extern crate specs;
 
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
+    use specs::prelude::*;
     extern crate nalgebra;
     use nalgebra::{Matrix3, Vector3};
 
@@ -69,7 +73,7 @@ pub mod tests {
             .build();
 
         let mut system = ApplyMagneticForceSystem;
-        system.run_now(&test_world.res);
+        system.run_now(&test_world);
         test_world.maintain();
         let force_storage = test_world.read_storage::<Force>();
         let force = force_storage.get(atom1).expect("entity not found").force;
