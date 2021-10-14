@@ -15,16 +15,16 @@
 * Volumes that define bounds for the simulation.
 * File output in binary or text format.
 * Thorough unit testing to ensure simulation results are correct.
-* Good parallel performance on modern multi-core CPUs
+* Good parallel performance on modern multi-core CPUs.
 * Simulations can be wrapped using python/matlab, as shown in the [source_optimisation_example](https://github.com/TeamAtomECS/source_optimisation_example) or the [matlab examples](https://github.com/TeamAtomECS/matlab_examples).
-* __new:__ optical dipole force traps
+* Optical dipole force traps.
 * Confinement of atoms by magnetic fields, e.g. quadrupole and TOP traps.
 
 # Getting Started
 
 Instructions for installing rust can be found on the [rust website](https://www.rust-lang.org/tools/install), which includes the rust toolchain and `cargo` command line tool.
 
-After Cloning this repository using git, you can run examples using the `cargo` command line tool, e.g. `cargo run --release --example 1d_mot`.
+After cloning this repository using git, you can run examples using the `cargo` command line tool, e.g. `cargo run --release --example 1d_mot`.
 The [matlab examples](https://github.com/TeamAtomECS/matlab_examples) show how to load and plot simulation results.
 
 You can build the program documentation using `cargo doc`.
@@ -45,7 +45,7 @@ _If you are unfamiliar with data-oriented design - for instance, if you come fro
 
 # Getting Involved
 
-Our goal is to make AtomECS user-friendly, with friendly developers! Please feel free to use the issue tracker to ask questions, or join the conversations happening within the issues. 
+Our goal is to make AtomECS user-friendly, with friendly developers! Please feel free to use the issue tracker to ask questions, or join the conversations happening within the issues.
 
 If you would like to submit a contribution:
 * Take a look at the issues page to see if there is something suitable for a new user.
@@ -55,11 +55,11 @@ If you would like to submit a contribution:
 ## The Team
 
 The current developers of `atomecs` are:
+* Dr. [Elliot Bentine](https://github.com/ElliotB256), Oxford
+* Dr. [Tiffany Harte](https://github.com/tiffanyharte), Cambridge
 * [Xuhui Chen](https://github.com/Pi-sun), Oxford
-* [Elliot Bentine](https://github.com/ElliotB256), Oxford
 * [Maurice Zeuner](https://github.com/MauriceZeuner), Cambridge
-* [Tiffany Harte](https://github.com/tiffanyharte), Cambridge
 
-The long term goal for `atomecs` is to have a simulation suite for cold atom experiments.
+The long term goal for `atomecs` is to have a complete simulation suite for cold atom experiments.
 If you'd like to get involved in development, please do!
 Development is discussed through the issues. Feel free to fork, develop features, and raise a pull request to merge your changes back into the main repository.
