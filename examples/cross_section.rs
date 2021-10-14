@@ -6,9 +6,9 @@ use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
 use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
-use lib::laser::cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
-use lib::laser::photons_scattered::ExpectedPhotonsScatteredVector;
+use lib::laser_cooling::photons_scattered::ExpectedPhotonsScatteredVector;
+use lib::laser_cooling::CoolingLight;
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;
@@ -51,6 +51,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::x(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::rubidium(),

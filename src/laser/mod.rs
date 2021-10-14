@@ -1,21 +1,17 @@
-//! Calculation and initialization of optical forces and quantities exerted on the atoms
+//! Calculation and initialization of laser quantities, eg intensities and indexing.
 
-pub mod cooling;
-pub mod doppler;
-pub mod force;
+pub mod frame;
 pub mod gaussian;
+pub mod index;
 pub mod intensity;
-pub mod photons_scattered;
-pub mod rate;
-pub mod repump;
+pub mod intensity_gradient;
 pub mod sampler;
-pub mod twolevel;
 
 use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use specs::prelude::*;
 
-pub const COOLING_BEAM_LIMIT: usize = 16;
+pub const BEAM_LIMIT: usize = 16;
 
 /// Attaches components used for optical force calculation to newly created atoms.
 ///
@@ -34,48 +30,21 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 		for (ent, _) in (&ent, &newly_created).join() {
 			updater.insert(
 				ent,
-				sampler::LaserSamplerMasks {
-					contents: [sampler::LaserSamplerMask::default(); COOLING_BEAM_LIMIT],
-				},
-			);
-			updater.insert(
-				ent,
-				doppler::DopplerShiftSamplers {
-					contents: [doppler::DopplerShiftSampler::default(); COOLING_BEAM_LIMIT],
+				sampler::CoolingLaserSamplerMasks {
+					contents: [sampler::LaserSamplerMask::default(); BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
 				intensity::LaserIntensitySamplers {
-					contents: [intensity::LaserIntensitySampler::default(); COOLING_BEAM_LIMIT],
+					contents: [intensity::LaserIntensitySampler::default(); BEAM_LIMIT],
 				},
 			);
 			updater.insert(
 				ent,
-				sampler::LaserDetuningSamplers {
-					contents: [sampler::LaserDetuningSampler::default(); COOLING_BEAM_LIMIT],
-				},
-			);
-			updater.insert(
-				ent,
-				rate::RateCoefficients {
-					contents: [rate::RateCoefficient::default(); COOLING_BEAM_LIMIT],
-				},
-			);
-			updater.insert(ent, twolevel::TwoLevelPopulation::default());
-			updater.insert(ent, photons_scattered::TotalPhotonsScattered::default());
-			updater.insert(
-				ent,
-				photons_scattered::ExpectedPhotonsScatteredVector {
-					contents: [photons_scattered::ExpectedPhotonsScattered::default();
-						COOLING_BEAM_LIMIT],
-				},
-			);
-			updater.insert(
-				ent,
-				photons_scattered::ActualPhotonsScatteredVector {
-					contents: [photons_scattered::ActualPhotonsScattered::default();
-						COOLING_BEAM_LIMIT],
+				intensity_gradient::LaserIntensityGradientSamplers {
+					contents: [intensity_gradient::LaserIntensityGradientSampler::default();
+						BEAM_LIMIT],
 				},
 			);
 		}
@@ -92,19 +61,10 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>, deps: &[&str]) {
 	builder.add(
 		AttachLaserComponentsToNewlyCreatedAtomsSystem,
-		"attach_atom_laser_components",
+		"attach_laser_components",
 		deps,
 	);
-	builder.add(
-		cooling::AttachIndexToCoolingLightSystem,
-		"attach_cooling_index",
-		deps,
-	);
-	builder.add(
-		cooling::IndexCoolingLightsSystem,
-		"index_cooling_lights",
-		deps,
-	);
+	builder.add(index::IndexLasersSystem, "index_lasers", deps);
 	builder.add(
 		sampler::InitialiseLaserSamplerMasksSystem,
 		"initialise_laser_sampler_masks",
@@ -116,96 +76,29 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 		deps,
 	);
 	builder.add(
-		photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem,
-		"initialise_expected_photons",
-		deps,
-	);
-	builder.add(
-		rate::InitialiseRateCoefficientsSystem,
-		"initialise_rate_coefficients",
-		deps,
-	);
-	builder.add(
 		sampler::FillLaserSamplerMasksSystem,
 		"fill_laser_sampler_masks",
-		&["index_cooling_lights", "initialise_laser_sampler_masks"],
+		&["index_lasers", "initialise_laser_sampler_masks"],
 	);
 	builder.add(
 		intensity::SampleLaserIntensitySystem,
 		"sample_laser_intensity",
 		&[
-			"index_cooling_lights",
+			"index_lasers",
 			"initialise_laser_intensity",
 			INTEGRATE_POSITION_SYSTEM_NAME,
 		],
 	);
 	builder.add(
-		doppler::CalculateDopplerShiftSystem,
-		"calculate_doppler_shift",
-		&["index_cooling_lights"],
-	);
-	builder.add(
-		sampler::CalculateLaserDetuningSystem,
-		"calculate_laser_detuning",
-		&[
-			"calculate_doppler_shift",
-			"zeeman_shift",
-			"index_cooling_lights",
-		],
-	);
-	builder.add(
-		rate::CalculateRateCoefficientsSystem,
-		"calculate_rate_coefficients",
-		&["initialise_rate_coefficients", "calculate_laser_detuning"],
-	);
-	builder.add(
-		twolevel::CalculateTwoLevelPopulationSystem,
-		"calculate_twolevel",
-		&["calculate_rate_coefficients", "fill_laser_sampler_masks"],
-	);
-	builder.add(
-		photons_scattered::CalculateMeanTotalPhotonsScatteredSystem,
-		"calculate_total_photons",
-		&["calculate_twolevel"],
-	);
-	builder.add(
-		photons_scattered::CalculateExpectedPhotonsScatteredSystem,
-		"calculate_expected_photons",
-		&[
-			"calculate_total_photons",
-			"fill_laser_sampler_masks",
-			"initialise_expected_photons",
-		],
-	);
-	builder.add(
-		photons_scattered::CalculateActualPhotonsScatteredSystem,
-		"calculate_actual_photons",
-		&["calculate_expected_photons"],
-	);
-	builder.add(
-		force::CalculateAbsorptionForcesSystem,
-		"calculate_absorption_forces",
-		&["calculate_actual_photons", INTEGRATE_POSITION_SYSTEM_NAME],
-	);
-	builder.add(
-		repump::RepumpSystem,
-		"repump",
-		&["calculate_absorption_forces"],
-	);
-	builder.add(
-		force::ApplyEmissionForceSystem,
-		"calculate_emission_forces",
-		&[
-			"calculate_absorption_forces",
-			INTEGRATE_POSITION_SYSTEM_NAME,
-		],
+		intensity_gradient::SampleGaussianLaserIntensityGradientSystem,
+		"sample_intensity_gradient",
+		&["index_lasers"],
 	);
 }
 
 /// Registers resources required by magnetics to the ecs world.
 pub fn register_components(world: &mut World) {
-	world.register::<cooling::CoolingLight>();
-	world.register::<cooling::CoolingLightIndex>();
 	world.register::<gaussian::GaussianBeam>();
 	world.register::<gaussian::CircularMask>();
+	world.register::<frame::Frame>();
 }

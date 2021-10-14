@@ -1,13 +1,14 @@
 //! Shift in an atom's transition frequency due to a magnetic field (zeeman effect)
-
+extern crate serde;
 use super::MagneticFieldSampler;
 use crate::atom::AtomicTransition;
 use crate::constant::HBAR;
 use crate::initiate::NewlyCreated;
+use serde::Serialize;
 use specs::prelude::*;
 
 /// Represents the (angular) Zeemanshift of the atom depending on the magnetic field it experiences
-#[derive(Clone)]
+#[derive(Clone, Copy, Serialize)]
 pub struct ZeemanShiftSampler {
     /// Zeemanshift for sigma plus transition in rad/s
     pub sigma_plus: f64,

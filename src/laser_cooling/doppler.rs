@@ -1,16 +1,19 @@
 //! Calculations of the Doppler shift.
 extern crate rayon;
-
+extern crate serde;
 use specs::prelude::*;
 
-use super::cooling::{CoolingLight, CoolingLightIndex};
-use super::gaussian::GaussianBeam;
+use super::CoolingLight;
 use crate::atom::Velocity;
+use crate::laser::gaussian::GaussianBeam;
+use crate::laser::index::LaserIndex;
+use serde::Serialize;
+use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 const LASER_CACHE_SIZE: usize = 16;
 
 /// Represents the Dopplershift of the atom with respect to each beam due to the atom velocity
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
 pub struct DopplerShiftSampler {
     /// detuning value in rad/s
     pub doppler_shift: f64,
@@ -32,7 +35,7 @@ pub struct CalculateDopplerShiftSystem;
 impl<'a> System<'a> for CalculateDopplerShiftSystem {
     type SystemData = (
         ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, CoolingLightIndex>,
+        ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, GaussianBeam>,
         WriteStorage<'a, DopplerShiftSamplers>,
         ReadStorage<'a, Velocity>,
@@ -44,7 +47,7 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
         // There are typically only a small number of lasers in a simulation.
         // For a speedup, cache the required components into thread memory,
         // so they can be distributed to parallel workers during the atom loop.
-        type CachedLaser = (CoolingLight, CoolingLightIndex, GaussianBeam);
+        type CachedLaser = (CoolingLight, LaserIndex, GaussianBeam);
         let laser_cache: Vec<CachedLaser> = (&cooling, &indices, &gaussian)
             .join()
             .map(|(cooling, index, gaussian)| (cooling.clone(), index.clone(), gaussian.clone()))
@@ -76,9 +79,10 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
 ///
 /// Each list entry corresponds to the detuning with respect to a CoolingLight entity
 /// and is indext via `CoolingLightIndex`
+#[derive(Clone, Copy, Serialize)]
 pub struct DopplerShiftSamplers {
     /// List of all `DopplerShiftSampler`s
-    pub contents: [DopplerShiftSampler; crate::laser::COOLING_BEAM_LIMIT],
+    pub contents: [DopplerShiftSampler; crate::laser::BEAM_LIMIT],
 }
 impl Component for DopplerShiftSamplers {
     type Storage = VecStorage<Self>;
@@ -94,7 +98,7 @@ impl<'a> System<'a> for InitialiseDopplerShiftSamplersSystem {
         use rayon::prelude::*;
 
         (&mut samplers).par_join().for_each(|mut sampler| {
-            sampler.contents = [DopplerShiftSampler::default(); crate::laser::COOLING_BEAM_LIMIT];
+            sampler.contents = [DopplerShiftSampler::default(); crate::laser::BEAM_LIMIT];
         });
     }
 }
@@ -104,15 +108,16 @@ pub mod tests {
 
     use super::*;
     use crate::constant::PI;
-    use crate::laser::cooling::{CoolingLight, CoolingLightIndex};
+    use crate::laser_cooling::CoolingLight;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
+    use crate::laser::gaussian;
     use nalgebra::Vector3;
 
     #[test]
     fn test_calculate_doppler_shift_system() {
         let mut test_world = World::new();
-        test_world.register::<CoolingLightIndex>();
+        test_world.register::<LaserIndex>();
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
         test_world.register::<Velocity>();
@@ -125,7 +130,7 @@ pub mod tests {
                 polarization: 1,
                 wavelength: wavelength,
             })
-            .with(CoolingLightIndex {
+            .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })
@@ -134,6 +139,8 @@ pub mod tests {
                 intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
+                rayleigh_range: gaussian::calculate_rayleigh_range(&wavelength, &2.0),
+                ellipticity: 0.0,
             })
             .build();
 
@@ -144,7 +151,7 @@ pub mod tests {
                 vel: Vector3::new(atom_velocity, 0.0, 0.0),
             })
             .with(DopplerShiftSamplers {
-                contents: [DopplerShiftSampler::default(); crate::laser::COOLING_BEAM_LIMIT],
+                contents: [DopplerShiftSampler::default(); crate::laser::BEAM_LIMIT],
             })
             .build();
 

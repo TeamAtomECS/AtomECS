@@ -2,6 +2,8 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
+use atomecs::output::file::SerdeJson;
+use lib::atom::Atom;
 use lib::atom::{AtomicTransition, Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
@@ -10,8 +12,9 @@ use lib::atom_sources::VelocityCap;
 use lib::destructor::ToBeDestroyed;
 use lib::ecs;
 use lib::integrator::Timestep;
-use lib::laser::cooling::CoolingLight;
+use lib::integrator::INTEGRATE_VELOCITY_SYSTEM_NAME;
 use lib::laser::gaussian::GaussianBeam;
+use lib::laser_cooling::CoolingLight;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
@@ -42,6 +45,12 @@ fn main() {
         &[],
     );
 
+    builder = builder.with(
+        file::new_with_filter::<lib::atom::Force, SerdeJson, Atom>("force.txt".to_string(), 100),
+        "",
+        &[INTEGRATE_VELOCITY_SYSTEM_NAME],
+    );
+
     let mut dispatcher = builder.build();
     dispatcher.setup(&mut world);
 
@@ -64,6 +73,8 @@ fn main() {
             e_radius: push_beam_radius,
             power: push_beam_power,
             direction: Vector3::z(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -83,6 +94,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(1.0, 1.0, 0.0).normalize(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -97,6 +110,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(1.0, -1.0, 0.0).normalize(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -111,6 +126,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(-1.0, 1.0, 0.0).normalize(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
@@ -125,6 +142,8 @@ fn main() {
             e_radius: radius,
             power: power,
             direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
+            rayleigh_range: f64::INFINITY,
+            ellipticity: 0.0,
         })
         .with(CoolingLight::for_species(
             AtomicTransition::strontium(),
