@@ -62,4 +62,3 @@ The current developers of `atomecs` are:
 
 The long term goal for `atomecs` is to have a complete simulation suite for cold atom experiments.
 If you'd like to get involved in development, please do!
-Development is discussed through the issues. Feel free to fork, develop features, and raise a pull request to merge your changes back into the main repository.
