@@ -308,7 +308,7 @@ pub mod tests {
     #[allow(unused_imports)]
     use nalgebra::Vector3;
     #[allow(unused_imports)]
-    use specs::{Builder, Entity, RunNow, World};
+    use specs::prelude::*;
     extern crate specs;
 
     #[test]
@@ -415,7 +415,7 @@ pub mod tests {
 
         let builder = atomecs_builder.builder;
         let mut dispatcher = builder.build();
-        dispatcher.setup(&mut test_world.res);
+        dispatcher.setup(&mut test_world);
 
         let vel1 = Vector3::new(1.0, 0.0, 0.0);
         let vel2 = Vector3::new(-1.0, 0.0, 0.0);
@@ -446,14 +446,14 @@ pub mod tests {
             .build();
 
         let dt = 1.0;
-        test_world.add_resource(Timestep { delta: dt });
-        test_world.add_resource(ApplyCollisionsOption);
-        test_world.add_resource(CollisionsTracker {
+        test_world.insert(Timestep { delta: dt });
+        test_world.insert(ApplyCollisionsOption);
+        test_world.insert(CollisionsTracker {
             num_collisions: Vec::new(),
             num_atoms: Vec::new(),
             num_particles: Vec::new(),
         });
-        test_world.add_resource(CollisionParameters {
+        test_world.insert(CollisionParameters {
             macroparticle: 1.0,
             box_number: 10,
             box_width: 2.0,
@@ -462,7 +462,7 @@ pub mod tests {
         });
 
         for _i in 0..10 {
-            dispatcher.dispatch(&mut test_world.res);
+            dispatcher.dispatch(&mut test_world);
             test_world.maintain();
         }
 
