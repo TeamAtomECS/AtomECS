@@ -17,7 +17,7 @@ jobs:
     - name: Install toolchain
       uses: actions-rs/toolchain@v1
       with:
-          toolchain: stable-2021-09-06
+          toolchain: stable-x86_64-pc-windows-msvc
           profile: minimal
           override: true
     - name: Run tests
