@@ -17,7 +17,7 @@ jobs:
     - name: Install toolchain
       uses: actions-rs/toolchain@v1
       with:
-          toolchain: stable-2020-07-16
+          toolchain: stable
           profile: minimal
           override: true
     - name: Run tests

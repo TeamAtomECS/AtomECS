@@ -107,7 +107,7 @@ pub fn register_components(world: &mut World) {
 }
 
 /// A simple probability distribution which uses weighted indices to retrieve values.
-struct WeightedProbabilityDistribution {
+pub struct WeightedProbabilityDistribution {
     values: Vec<f64>,
     weighted_index: WeightedIndex<f64>,
 }

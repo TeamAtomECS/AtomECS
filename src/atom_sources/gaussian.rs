@@ -50,7 +50,10 @@ impl GaussianVelocityDistributionSource {
 /// `mean`: The mean velocity, in m/s
 ///
 /// `std`: The std of velocity, in m/s
-fn create_gaussian_velocity_distribution(mean: f64, std: f64) -> WeightedProbabilityDistribution {
+pub fn create_gaussian_velocity_distribution(
+    mean: f64,
+    std: f64,
+) -> WeightedProbabilityDistribution {
     // tuple list of (velocity, weight)
     let mut velocities = Vec::<f64>::new();
     let mut weights = Vec::<f64>::new();
