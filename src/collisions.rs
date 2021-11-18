@@ -68,7 +68,7 @@ impl CollisionBox<'_> {
         self.particle_number = self.velocities.len() as i32;
         self.atom_number = self.particle_number as f64 * params.macroparticle;
 
-        // Only one atom or less in box - no collisions.
+        // Only one atom or less in box -> no collisions.
         if self.particle_number <= 1 {
             return;
         }

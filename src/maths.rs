@@ -65,6 +65,6 @@ mod tests {
 		let centre = Vector3::new(0., 1., 1.);
 		let dir = Vector3::new(1., 2., 2.);
 		let (distance, _) = get_minimum_distance_line_point(&pos, &centre, &dir);
-		assert!(distance > 0.942, distance < 0.943);
+		assert!(distance > 0.942 && distance < 0.943);
 	}
 }

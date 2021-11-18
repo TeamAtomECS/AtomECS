@@ -348,8 +348,7 @@ pub mod tests {
             sampler_storage
                 .get(checker1)
                 .expect("entity not found")
-                .everything_allright,
-            true
+                .everything_allright
         );
 
         assert_eq!(

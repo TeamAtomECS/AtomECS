@@ -223,7 +223,6 @@ pub mod tests {
 	use crate::atom::Position;
 	use crate::magnetic::quadrupole::{QuadrupoleField3D, Sample3DQuadrupoleFieldSystem};
 	use assert_approx_eq::assert_approx_eq;
-	use specs::prelude::*;
 
 	/// Tests the correct implementation of the magnetics systems and dispatcher.
 	/// This is done by setting up a test world and ensuring that the magnetic systems perform the correct operations on test entities.

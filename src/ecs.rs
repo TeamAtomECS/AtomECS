@@ -51,16 +51,15 @@ impl AtomecsDispatcherBuilder {
 	pub fn add_frame_initialisation_systems(&mut self) {}
 
 	pub fn add_systems(&mut self) {
-		&self.builder.add(
+		self.builder.add(
 			VelocityVerletIntegratePositionSystem,
 			INTEGRATE_POSITION_SYSTEM_NAME,
 			&[],
 		);
-		&self
-			.builder
+		self.builder
 			.add(ClearForceSystem, "clear", &[INTEGRATE_POSITION_SYSTEM_NAME]);
-		&self.builder.add(DeflagNewAtomsSystem, "deflag", &[]);
-		&self.builder.add(AddOldForceToNewAtomsSystem, "", &[]);
+		self.builder.add(DeflagNewAtomsSystem, "deflag", &[]);
+		self.builder.add(AddOldForceToNewAtomsSystem, "", &[]);
 
 		magnetic::add_systems_to_dispatch(&mut self.builder, &[]);
 		laser::add_systems_to_dispatch(&mut self.builder, &[]);
@@ -73,7 +72,7 @@ impl AtomecsDispatcherBuilder {
 			&["clear", INTEGRATE_POSITION_SYSTEM_NAME],
 		);
 
-		&self.builder.add(
+		self.builder.add(
 			VelocityVerletIntegrateVelocitySystem,
 			INTEGRATE_VELOCITY_SYSTEM_NAME,
 			&[
@@ -85,10 +84,9 @@ impl AtomecsDispatcherBuilder {
 	}
 
 	pub fn add_frame_end_systems(&mut self) {
-		&self
-			.builder
+		self.builder
 			.add(ConsoleOutputSystem, "", &[INTEGRATE_VELOCITY_SYSTEM_NAME]);
-		&self.builder.add(
+		self.builder.add(
 			DeleteToBeDestroyedEntitiesSystem,
 			"",
 			&[INTEGRATE_VELOCITY_SYSTEM_NAME],
