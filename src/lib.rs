@@ -23,6 +23,7 @@ pub mod laser_cooling;
 pub mod magnetic;
 pub mod maths;
 pub mod output;
+pub mod partition;
 pub mod ramp;
 pub mod shapes;
 pub mod sim_region;
