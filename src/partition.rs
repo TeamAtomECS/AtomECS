@@ -23,8 +23,8 @@ impl Component for BoxID {
 
 /// A partition of space that contains atoms
 #[derive(Clone)]
-pub struct PartitionCell {
-    pub velocities: Vec<Velocity>,
+pub struct PartitionCell<'a> {
+    pub velocities: Vec<&'a mut Velocity>,
     pub expected_collision_number: f64,
     pub collision_number: i32,
     pub density: f64,
@@ -33,7 +33,7 @@ pub struct PartitionCell {
     pub particle_number: i32,
 }
 
-impl Default for PartitionCell {
+impl Default for PartitionCell<'_> {
     fn default() -> Self {
         PartitionCell {
             velocities: Vec::new(),
@@ -47,7 +47,7 @@ impl Default for PartitionCell {
     }
 }
 
-impl PartitionCell {
+impl PartitionCell<'_> {
     //count particles in this cell
     fn count_particles(&mut self) {
         self.particle_number = self.velocities.len() as i32;
@@ -76,12 +76,12 @@ impl Default for PartitionParameters {
     }
 }
 
-pub struct VelocityHashmap {
+pub struct VelocityHashmap<'a> {
     ///hashmap of velocities of atoms
-    pub hashmap: HashMap<i64, PartitionCell>,
+    pub hashmap: HashMap<i64, PartitionCell<'a>>,
 }
 
-impl Default for VelocityHashmap {
+impl Default for VelocityHashmap<'_> {
     fn default() -> Self {
         VelocityHashmap {
             hashmap: HashMap::new(),
@@ -96,7 +96,7 @@ impl<'a> System<'a> for BuildSpatialPartitionSystem {
         ReadStorage<'a, Velocity>,
         ReadStorage<'a, crate::atom::Atom>,
         ReadExpect<'a, PartitionParameters>,
-        WriteExpect<'a, VelocityHashmap>,
+        WriteExpect<'a, VelocityHashmap<'a>>,
         Read<'a, LazyUpdate>,
         Entities<'a>,
         WriteStorage<'a, BoxID>,
@@ -115,7 +115,8 @@ impl<'a> System<'a> for BuildSpatialPartitionSystem {
             mut boxids,
         ): Self::SystemData,
     ) {
-        use rayon::prelude::*;
+        println!("build partition running");
+        use rayon::prelude::{IntoParallelIterator, ParallelIterator};
         use specs::ParJoin;
         //make hash table - dividing space up into grid
         // number of boxes per side
@@ -130,6 +131,7 @@ impl<'a> System<'a> for BuildSpatialPartitionSystem {
             .par_join()
             .for_each(|(position, mut boxid)| {
                 boxid.id = pos_to_id(position.pos, n_boxes, partition_params.box_width);
+                println!("entity box id: {}", boxid.id);
             });
 
         //insert atom velocity into hash
@@ -141,7 +143,10 @@ impl<'a> System<'a> for BuildSpatialPartitionSystem {
             if boxid.id == i64::MAX {
                 continue;
             } else {
-                map.entry(boxid.id).or_default().velocities.push(*velocity);
+                map.entry(boxid.id)
+                    .or_default()
+                    .velocities
+                    .push(&mut velocity);
             }
         }
         let cells: Vec<&mut PartitionCell> = map.values_mut().collect();
@@ -157,7 +162,7 @@ impl<'a> System<'a> for RescalePartitionCellSystem {
     type SystemData = (
         ReadStorage<'a, Position>,
         ReadStorage<'a, crate::atom::Atom>,
-        ReadExpect<'a, VelocityHashmap>,
+        ReadExpect<'a, VelocityHashmap<'a>>,
         WriteExpect<'a, PartitionParameters>,
     );
 
@@ -196,8 +201,8 @@ impl<'a> System<'a> for RescalePartitionCellSystem {
             zs.push(position.pos[2]);
         }
         let xrange = get_max(&xs) - get_min(&xs);
-        let yrange = get_max(&ys) - get_min(&xs);
-        let zrange = get_max(&zs) - get_min(&xs);
+        let yrange = get_max(&ys) - get_min(&ys);
+        let zrange = get_max(&zs) - get_min(&zs);
 
         let range = get_max(&vec![xrange, yrange, zrange]);
 
@@ -300,5 +305,197 @@ pub mod tests {
         assert_eq!(id5, 550);
         assert_eq!(id6, i64::MAX);
         assert_eq!(id7, 0);
+    }
+
+    #[test]
+
+    fn test_build_spatial_partition() {
+        let mut test_world = World::new();
+
+        let mut system = BuildSpatialPartitionSystem;
+        test_world.register::<Position>();
+        test_world.register::<Atom>();
+        test_world.register::<BoxID>();
+        test_world.register::<Velocity>();
+        let n_boxes = 10;
+        let width = 2.0;
+        let vel = Velocity {
+            vel: Vector3::new(0.0, 0.0, 0.0),
+        };
+
+        let atom1 = test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(1.0, 0.0, 0.0),
+            })
+            .with(Atom)
+            .with(vel)
+            .build();
+        let atom2 = test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(1.0, 1.0, 0.0),
+            })
+            .with(vel)
+            .with(Atom)
+            .build();
+        let atom3 = test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(-1.0, 1.0, 1.0),
+            })
+            .with(vel)
+            .with(Atom)
+            .build();
+        let atom4 = test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(0.0, 3.0, 0.0),
+            })
+            .with(vel)
+            .with(Atom)
+            .build();
+
+        test_world.insert(Timestep { delta: 1.0 });
+        test_world.insert(Step { n: 0 });
+        test_world.insert(VelocityHashmap::default());
+
+        test_world.insert(PartitionParameters {
+            box_number: n_boxes,
+            box_width: width,
+            target_density: 1.0,
+        });
+
+        for _i in 0..2 {
+            system.run_now(&test_world);
+            test_world.maintain();
+        }
+
+        let boxid_storage = test_world.read_storage::<BoxID>();
+
+        let boxid1 = boxid_storage.get(atom1).expect("entity not found").id;
+        let boxid2 = boxid_storage.get(atom2).expect("entity not found").id;
+        let boxid3 = boxid_storage.get(atom3).expect("entity not found").id;
+        let boxid4 = boxid_storage.get(atom4).expect("entity not found").id;
+
+        assert!(boxid1 == 555);
+        assert!(boxid2 == 555);
+        assert!(boxid3 == 554);
+        assert!(boxid4 == 565);
+    }
+
+    #[test]
+    fn test_rescale_spatial_partition() {
+        let mut test_world = World::new();
+
+        let mut build_system = BuildSpatialPartitionSystem;
+        let mut rescale_system = RescalePartitionCellSystem;
+        test_world.register::<Position>();
+        test_world.register::<Atom>();
+        test_world.register::<BoxID>();
+        test_world.register::<Velocity>();
+        let n_boxes = 10;
+        let width = 2.0;
+        let vel = Velocity {
+            vel: Vector3::new(0.0, 0.0, 0.0),
+        };
+
+        test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(1.9, 1.9, 0.5),
+            })
+            .with(Atom)
+            .with(BoxID { id: 0 })
+            .with(vel)
+            .build();
+        test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(-1.9, 1.9, 0.5),
+            })
+            .with(vel)
+            .with(Atom)
+            .with(BoxID { id: 0 })
+            .build();
+        test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(1.9, -1.9, 0.5),
+            })
+            .with(vel)
+            .with(Atom)
+            .with(BoxID { id: 0 })
+            .build();
+        test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(-1.9, -1.9, 0.5),
+            })
+            .with(vel)
+            .with(Atom)
+            .with(BoxID { id: 0 })
+            .build();
+
+        test_world.insert(Timestep { delta: 1.0 });
+        test_world.insert(Step { n: 0 });
+        test_world.insert(VelocityHashmap::default());
+
+        test_world.insert(PartitionParameters {
+            box_number: n_boxes,
+            box_width: width,
+            target_density: 1.0,
+        });
+
+        build_system.run_now(&test_world);
+        test_world.maintain();
+
+        test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(0.5, 0.5, 0.5),
+            })
+            .with(Atom)
+            .with(BoxID { id: 0 })
+            .with(vel)
+            .build();
+        test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(-0.5, 0.5, 0.5),
+            })
+            .with(vel)
+            .with(Atom)
+            .with(BoxID { id: 0 })
+            .build();
+        test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(0.5, -0.5, 0.5),
+            })
+            .with(vel)
+            .with(Atom)
+            .with(BoxID { id: 0 })
+            .build();
+        test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(-0.5, -0.5, 0.5),
+            })
+            .with(vel)
+            .with(Atom)
+            .with(BoxID { id: 0 })
+            .build();
+
+        build_system.run_now(&test_world);
+        rescale_system.run_now(&test_world);
+        test_world.maintain();
+
+        let read_params = test_world.read_resource::<PartitionParameters>();
+
+        println!("{}", &read_params.box_width);
+        println!("{}", &read_params.box_number);
+        assert_eq!(read_params.box_number, 3);
+        assert_approx_eq::assert_approx_eq!(read_params.box_width, 2.0 / (2.0_f64).powf(1.0 / 3.0))
     }
 }
