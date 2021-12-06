@@ -25,5 +25,6 @@ pub mod maths;
 pub mod output;
 pub mod partition;
 pub mod ramp;
+pub mod rf_knife;
 pub mod shapes;
 pub mod sim_region;
