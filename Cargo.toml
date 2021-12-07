@@ -11,7 +11,7 @@ readme = "README.md"
 keywords = ["physics", "cold atoms", "amop", "laser cooling", "ecs"]
 
 [dependencies]
-atomecs-derive = { git = "https://github.com/TeamAtomECS/AtomECS-derive" }
+atomecs-derive = { 0.1.0 }
 rayon = "1.5.0"
 specs={ version="0.16.1", features=["rayon"] }
 specs-derive = "0.4.1"
