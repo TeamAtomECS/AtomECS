@@ -349,6 +349,7 @@ pub mod tests {
                 .get(checker1)
                 .expect("entity not found")
                 .everything_allright,
+            "{}",
             true
         );
 

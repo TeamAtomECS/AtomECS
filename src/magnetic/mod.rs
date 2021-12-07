@@ -8,8 +8,8 @@ use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use nalgebra::{Matrix3, Vector3};
 use specs::{
-	Component, DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System,
-	VecStorage, World, WriteStorage,
+    Component, DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System,
+    VecStorage, World, WriteStorage,
 };
 
 pub mod force;
@@ -23,67 +23,67 @@ use std::fmt;
 /// A component that stores the magnetic field at an entity's location.
 #[derive(Copy, Clone)]
 pub struct MagneticFieldSampler {
-	/// Vector representing the magnetic field components along x,y,z in units of Tesla.
-	pub field: Vector3<f64>,
+    /// Vector representing the magnetic field components along x,y,z in units of Tesla.
+    pub field: Vector3<f64>,
 
-	/// Magnitude of the magnetic field in units of Tesla
-	pub magnitude: f64,
+    /// Magnitude of the magnetic field in units of Tesla
+    pub magnitude: f64,
 
-	/// Local gradient of the magnitude of the magnetic field in T/m
-	pub gradient: Vector3<f64>,
+    /// Local gradient of the magnitude of the magnetic field in T/m
+    pub gradient: Vector3<f64>,
 
-	///Local jacobian of magnetic field
-	pub jacobian: Matrix3<f64>,
+    ///Local jacobian of magnetic field
+    pub jacobian: Matrix3<f64>,
 }
 impl MagneticFieldSampler {
-	pub fn tesla(b_field: Vector3<f64>) -> Self {
-		MagneticFieldSampler {
-			field: b_field,
-			magnitude: b_field.norm(),
-			gradient: Vector3::new(0.0, 0.0, 0.0),
-			jacobian: Matrix3::zeros(),
-		}
-	}
+    pub fn tesla(b_field: Vector3<f64>) -> Self {
+        MagneticFieldSampler {
+            field: b_field,
+            magnitude: b_field.norm(),
+            gradient: Vector3::new(0.0, 0.0, 0.0),
+            jacobian: Matrix3::zeros(),
+        }
+    }
 }
 impl Component for MagneticFieldSampler {
-	type Storage = VecStorage<Self>;
+    type Storage = VecStorage<Self>;
 }
 impl fmt::Display for MagneticFieldSampler {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(
-			f,
-			"({:?},{:?},{:?})",
-			self.field[0], self.field[1], self.field[2]
-		)
-	}
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "({:?},{:?},{:?})",
+            self.field[0], self.field[1], self.field[2]
+        )
+    }
 }
 
 impl Default for MagneticFieldSampler {
-	fn default() -> Self {
-		MagneticFieldSampler {
-			field: Vector3::new(0.0, 0.0, 0.0),
-			magnitude: 0.0,
-			gradient: Vector3::new(0.0, 0.0, 0.0),
-			jacobian: Matrix3::zeros(),
-		}
-	}
+    fn default() -> Self {
+        MagneticFieldSampler {
+            field: Vector3::new(0.0, 0.0, 0.0),
+            magnitude: 0.0,
+            gradient: Vector3::new(0.0, 0.0, 0.0),
+            jacobian: Matrix3::zeros(),
+        }
+    }
 }
 
 /// System that clears the magnetic field samplers each frame.
 pub struct ClearMagneticFieldSamplerSystem;
 
 impl<'a> System<'a> for ClearMagneticFieldSamplerSystem {
-	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
-	fn run(&mut self, mut sampler: Self::SystemData) {
-		use rayon::prelude::*;
+    type SystemData = WriteStorage<'a, MagneticFieldSampler>;
+    fn run(&mut self, mut sampler: Self::SystemData) {
+        use rayon::prelude::*;
 
-		(&mut sampler).par_join().for_each(|mut sampler| {
-			sampler.magnitude = 0.;
-			sampler.field = Vector3::new(0.0, 0.0, 0.0);
-			sampler.gradient = Vector3::new(0.0, 0.0, 0.0);
-			sampler.jacobian = Matrix3::zeros();
-		});
-	}
+        (&mut sampler).par_join().for_each(|mut sampler| {
+            sampler.magnitude = 0.;
+            sampler.field = Vector3::new(0.0, 0.0, 0.0);
+            sampler.gradient = Vector3::new(0.0, 0.0, 0.0);
+            sampler.jacobian = Matrix3::zeros();
+        });
+    }
 }
 
 /// System that calculates the magnitude of the magnetic field.
@@ -93,17 +93,17 @@ impl<'a> System<'a> for ClearMagneticFieldSamplerSystem {
 pub struct CalculateMagneticFieldMagnitudeSystem;
 
 impl<'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
-	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
-	fn run(&mut self, mut sampler: Self::SystemData) {
-		use rayon::prelude::*;
+    type SystemData = WriteStorage<'a, MagneticFieldSampler>;
+    fn run(&mut self, mut sampler: Self::SystemData) {
+        use rayon::prelude::*;
 
-		(&mut sampler).par_join().for_each(|mut sampler| {
-			sampler.magnitude = sampler.field.norm();
-			if sampler.magnitude.is_nan() {
-				sampler.magnitude = 0.0;
-			}
-		});
-	}
+        (&mut sampler).par_join().for_each(|mut sampler| {
+            sampler.magnitude = sampler.field.norm();
+            if sampler.magnitude.is_nan() {
+                sampler.magnitude = 0.0;
+            }
+        });
+    }
 }
 
 /// System that calculates the gradient of the magnitude of the magnetic field.
@@ -112,19 +112,19 @@ impl<'a> System<'a> for CalculateMagneticFieldMagnitudeSystem {
 pub struct CalculateMagneticMagnitudeGradientSystem;
 
 impl<'a> System<'a> for CalculateMagneticMagnitudeGradientSystem {
-	type SystemData = WriteStorage<'a, MagneticFieldSampler>;
-	fn run(&mut self, mut sampler: Self::SystemData) {
-		use rayon::prelude::*;
+    type SystemData = WriteStorage<'a, MagneticFieldSampler>;
+    fn run(&mut self, mut sampler: Self::SystemData) {
+        use rayon::prelude::*;
 
-		(&mut sampler).par_join().for_each(|mut sampler| {
-			let mut gradient = Vector3::new(0.0, 0.0, 0.0);
-			for i in 0..3 {
-				gradient[i] =
-					(1.0 / (sampler.magnitude)) * (sampler.field.dot(&sampler.jacobian.column(i)));
-			}
-			sampler.gradient = gradient;
-		});
-	}
+        (&mut sampler).par_join().for_each(|mut sampler| {
+            let mut gradient = Vector3::new(0.0, 0.0, 0.0);
+            for i in 0..3 {
+                gradient[i] =
+                    (1.0 / (sampler.magnitude)) * (sampler.field.dot(&sampler.jacobian.column(i)));
+            }
+            sampler.gradient = gradient;
+        });
+    }
 }
 
 /// Attachs the MagneticFieldSampler component to newly created atoms.
@@ -132,16 +132,16 @@ impl<'a> System<'a> for CalculateMagneticMagnitudeGradientSystem {
 pub struct AttachFieldSamplersToNewlyCreatedAtomsSystem;
 
 impl<'a> System<'a> for AttachFieldSamplersToNewlyCreatedAtomsSystem {
-	type SystemData = (
-		Entities<'a>,
-		ReadStorage<'a, NewlyCreated>,
-		Read<'a, LazyUpdate>,
-	);
-	fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
-		for (ent, _nc) in (&ent, &newly_created).join() {
-			updater.insert(ent, MagneticFieldSampler::default());
-		}
-	}
+    type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a, NewlyCreated>,
+        Read<'a, LazyUpdate>,
+    );
+    fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
+        for (ent, _nc) in (&ent, &newly_created).join() {
+            updater.insert(ent, MagneticFieldSampler::default());
+        }
+    }
 }
 
 /// Adds the systems required by magnetics to the dispatcher.
@@ -152,211 +152,210 @@ impl<'a> System<'a> for AttachFieldSamplersToNewlyCreatedAtomsSystem {
 ///
 /// `deps`: any dependencies that must be completed before the magnetics systems run.
 pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>, deps: &[&str]) {
-	builder.add(ClearMagneticFieldSamplerSystem, "magnetics_clear", deps);
-	builder.add(
-		quadrupole::Sample3DQuadrupoleFieldSystem,
-		"magnetics_quadrupole",
-		&[
-			"magnetics_clear",
-			crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME,
-		],
-	);
-	builder.add(
-		quadrupole::Sample2DQuadrupoleFieldSystem,
-		"magnetics_2dquadrupole",
-		&["magnetics_quadrupole"],
-	);
-	builder.add(
-		uniform::UniformMagneticFieldSystem,
-		"magnetics_uniform",
-		&["magnetics_2dquadrupole"],
-	);
-	builder.add(
-		top::TimeOrbitingPotentialSystem,
-		"magnetics_top",
-		&["magnetics_uniform"],
-	);
-	builder.add(
-		grid::SampleMagneticGridSystem,
-		"magnetics_grid",
-		&["magnetics_top", INTEGRATE_POSITION_SYSTEM_NAME],
-	);
-	builder.add(
-		CalculateMagneticFieldMagnitudeSystem,
-		"magnetics_magnitude",
-		&["magnetics_grid"],
-	);
-	builder.add(
-		CalculateMagneticMagnitudeGradientSystem,
-		"magnetics_gradient",
-		&["magnetics_magnitude"],
-	);
-	builder.add(
-		AttachFieldSamplersToNewlyCreatedAtomsSystem,
-		"add_magnetic_field_samplers",
-		&[],
-	);
-	builder.add(
-		zeeman::AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem,
-		"attach_zeeman_shift_samplers",
-		&[],
-	);
-	builder.add(
-		zeeman::CalculateZeemanShiftSystem,
-		"zeeman_shift",
-		&["magnetics_magnitude"],
-	);
+    builder.add(ClearMagneticFieldSamplerSystem, "magnetics_clear", deps);
+    builder.add(
+        quadrupole::Sample3DQuadrupoleFieldSystem,
+        "magnetics_quadrupole",
+        &[
+            "magnetics_clear",
+            crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME,
+        ],
+    );
+    builder.add(
+        quadrupole::Sample2DQuadrupoleFieldSystem,
+        "magnetics_2dquadrupole",
+        &["magnetics_quadrupole"],
+    );
+    builder.add(
+        uniform::UniformMagneticFieldSystem,
+        "magnetics_uniform",
+        &["magnetics_2dquadrupole"],
+    );
+    builder.add(
+        top::TimeOrbitingPotentialSystem,
+        "magnetics_top",
+        &["magnetics_uniform"],
+    );
+    builder.add(
+        grid::SampleMagneticGridSystem,
+        "magnetics_grid",
+        &["magnetics_top", INTEGRATE_POSITION_SYSTEM_NAME],
+    );
+    builder.add(
+        CalculateMagneticFieldMagnitudeSystem,
+        "magnetics_magnitude",
+        &["magnetics_grid"],
+    );
+    builder.add(
+        CalculateMagneticMagnitudeGradientSystem,
+        "magnetics_gradient",
+        &["magnetics_magnitude"],
+    );
+    builder.add(
+        AttachFieldSamplersToNewlyCreatedAtomsSystem,
+        "add_magnetic_field_samplers",
+        &[],
+    );
+    builder.add(
+        zeeman::AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem,
+        "attach_zeeman_shift_samplers",
+        &[],
+    );
+    builder.add(
+        zeeman::CalculateZeemanShiftSystem,
+        "zeeman_shift",
+        &["magnetics_magnitude"],
+    );
 }
 
 /// Registers resources required by magnetics to the ecs world.
 pub fn register_components(world: &mut World) {
-	world.register::<uniform::UniformMagneticField>();
-	world.register::<quadrupole::QuadrupoleField3D>();
-	world.register::<quadrupole::QuadrupoleField2D>();
-	world.register::<MagneticFieldSampler>();
-	world.register::<grid::PrecalculatedMagneticFieldGrid>();
+    world.register::<uniform::UniformMagneticField>();
+    world.register::<quadrupole::QuadrupoleField3D>();
+    world.register::<quadrupole::QuadrupoleField2D>();
+    world.register::<MagneticFieldSampler>();
+    world.register::<grid::PrecalculatedMagneticFieldGrid>();
 }
 
 #[cfg(test)]
 pub mod tests {
-	use super::*;
-	use crate::atom::Position;
-	use crate::magnetic::quadrupole::{QuadrupoleField3D, Sample3DQuadrupoleFieldSystem};
-	use assert_approx_eq::assert_approx_eq;
-	use specs::prelude::*;
+    use super::*;
+    use crate::atom::Position;
+    use crate::magnetic::quadrupole::{QuadrupoleField3D, Sample3DQuadrupoleFieldSystem};
+    use assert_approx_eq::assert_approx_eq;
 
-	/// Tests the correct implementation of the magnetics systems and dispatcher.
-	/// This is done by setting up a test world and ensuring that the magnetic systems perform the correct operations on test entities.
-	#[test]
-	fn test_magnetics_systems() {
-		let mut test_world = World::new();
-		register_components(&mut test_world);
-		test_world.register::<NewlyCreated>();
-		test_world.register::<zeeman::ZeemanShiftSampler>();
-		let mut builder = DispatcherBuilder::new();
-		builder.add(
-			crate::integrator::VelocityVerletIntegratePositionSystem {},
-			crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME,
-			&[],
-		);
-		add_systems_to_dispatch(&mut builder, &[]);
-		let mut dispatcher = builder.build();
-		dispatcher.setup(&mut test_world);
-		test_world.insert(crate::integrator::Step { n: 0 });
-		test_world.insert(crate::integrator::Timestep { delta: 1.0e-6 });
+    /// Tests the correct implementation of the magnetics systems and dispatcher.
+    /// This is done by setting up a test world and ensuring that the magnetic systems perform the correct operations on test entities.
+    #[test]
+    fn test_magnetics_systems() {
+        let mut test_world = World::new();
+        register_components(&mut test_world);
+        test_world.register::<NewlyCreated>();
+        test_world.register::<zeeman::ZeemanShiftSampler>();
+        let mut builder = DispatcherBuilder::new();
+        builder.add(
+            crate::integrator::VelocityVerletIntegratePositionSystem {},
+            crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME,
+            &[],
+        );
+        add_systems_to_dispatch(&mut builder, &[]);
+        let mut dispatcher = builder.build();
+        dispatcher.setup(&mut test_world);
+        test_world.insert(crate::integrator::Step { n: 0 });
+        test_world.insert(crate::integrator::Timestep { delta: 1.0e-6 });
 
-		test_world
-			.create_entity()
-			.with(uniform::UniformMagneticField {
-				field: Vector3::new(2.0, 0.0, 0.0),
-			})
-			.with(quadrupole::QuadrupoleField3D::gauss_per_cm(
-				100.0,
-				Vector3::z(),
-			))
-			.with(Position {
-				pos: Vector3::new(0.0, 0.0, 0.0),
-			})
-			.build();
+        test_world
+            .create_entity()
+            .with(uniform::UniformMagneticField {
+                field: Vector3::new(2.0, 0.0, 0.0),
+            })
+            .with(quadrupole::QuadrupoleField3D::gauss_per_cm(
+                100.0,
+                Vector3::z(),
+            ))
+            .with(Position {
+                pos: Vector3::new(0.0, 0.0, 0.0),
+            })
+            .build();
 
-		let sampler_entity = test_world
-			.create_entity()
-			.with(Position {
-				pos: Vector3::new(1.0, 1.0, 1.0),
-			})
-			.with(MagneticFieldSampler::default())
-			.build();
+        let sampler_entity = test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(1.0, 1.0, 1.0),
+            })
+            .with(MagneticFieldSampler::default())
+            .build();
 
-		dispatcher.dispatch(&mut test_world);
+        dispatcher.dispatch(&mut test_world);
 
-		let samplers = test_world.read_storage::<MagneticFieldSampler>();
-		let sampler = samplers.get(sampler_entity);
-		assert_eq!(
-			sampler.expect("entity not found").field,
-			Vector3::new(2.0 + 1.0, 1.0, -2.0)
-		);
-	}
+        let samplers = test_world.read_storage::<MagneticFieldSampler>();
+        let sampler = samplers.get(sampler_entity);
+        assert_eq!(
+            sampler.expect("entity not found").field,
+            Vector3::new(2.0 + 1.0, 1.0, -2.0)
+        );
+    }
 
-	/// Tests that magnetic field samplers are added to newly created atoms.
-	#[test]
-	fn test_field_samplers_are_added() {
-		let mut test_world = World::new();
-		register_components(&mut test_world);
-		test_world.register::<NewlyCreated>();
-		test_world.register::<zeeman::ZeemanShiftSampler>();
-		let mut builder = DispatcherBuilder::new();
-		builder.add(
-			crate::integrator::VelocityVerletIntegratePositionSystem {},
-			crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME,
-			&[],
-		);
-		add_systems_to_dispatch(&mut builder, &[]);
-		let mut dispatcher = builder.build();
-		dispatcher.setup(&mut test_world);
-		test_world.insert(crate::integrator::Step { n: 0 });
-		test_world.insert(crate::integrator::Timestep { delta: 1.0e-6 });
+    /// Tests that magnetic field samplers are added to newly created atoms.
+    #[test]
+    fn test_field_samplers_are_added() {
+        let mut test_world = World::new();
+        register_components(&mut test_world);
+        test_world.register::<NewlyCreated>();
+        test_world.register::<zeeman::ZeemanShiftSampler>();
+        let mut builder = DispatcherBuilder::new();
+        builder.add(
+            crate::integrator::VelocityVerletIntegratePositionSystem {},
+            crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME,
+            &[],
+        );
+        add_systems_to_dispatch(&mut builder, &[]);
+        let mut dispatcher = builder.build();
+        dispatcher.setup(&mut test_world);
+        test_world.insert(crate::integrator::Step { n: 0 });
+        test_world.insert(crate::integrator::Timestep { delta: 1.0e-6 });
 
-		let sampler_entity = test_world.create_entity().with(NewlyCreated).build();
+        let sampler_entity = test_world.create_entity().with(NewlyCreated).build();
 
-		dispatcher.dispatch(&mut test_world);
-		test_world.maintain();
+        dispatcher.dispatch(&mut test_world);
+        test_world.maintain();
 
-		let samplers = test_world.read_storage::<MagneticFieldSampler>();
-		assert_eq!(samplers.contains(sampler_entity), true);
-	}
+        let samplers = test_world.read_storage::<MagneticFieldSampler>();
+        assert_eq!(samplers.contains(sampler_entity), true);
+    }
 
-	// Test correct calculation of magnetic field gradient
-	#[test]
+    // Test correct calculation of magnetic field gradient
+    #[test]
 
-	fn test_magnetic_gradient_system() {
-		let mut test_world = World::new();
+    fn test_magnetic_gradient_system() {
+        let mut test_world = World::new();
 
-		test_world.register::<QuadrupoleField3D>();
-		test_world.register::<Position>();
-		test_world.register::<MagneticFieldSampler>();
+        test_world.register::<QuadrupoleField3D>();
+        test_world.register::<Position>();
+        test_world.register::<MagneticFieldSampler>();
 
-		let atom1 = test_world
-			.create_entity()
-			.with(Position {
-				pos: Vector3::new(2.0, 1.0, -5.0),
-			})
-			.with(MagneticFieldSampler::default())
-			.build();
+        let atom1 = test_world
+            .create_entity()
+            .with(Position {
+                pos: Vector3::new(2.0, 1.0, -5.0),
+            })
+            .with(MagneticFieldSampler::default())
+            .build();
 
-		test_world
-			.create_entity()
-			.with(QuadrupoleField3D::gauss_per_cm(2.0, Vector3::z()))
-			.with(Position {
-				pos: Vector3::new(0.0, 0.0, 0.0),
-			})
-			.build();
+        test_world
+            .create_entity()
+            .with(QuadrupoleField3D::gauss_per_cm(2.0, Vector3::z()))
+            .with(Position {
+                pos: Vector3::new(0.0, 0.0, 0.0),
+            })
+            .build();
 
-		test_world
-			.create_entity()
-			.with(QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
-			.with(Position {
-				pos: Vector3::new(0.0, 0.0, 0.0),
-			})
-			.build();
+        test_world
+            .create_entity()
+            .with(QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
+            .with(Position {
+                pos: Vector3::new(0.0, 0.0, 0.0),
+            })
+            .build();
 
-		let mut quad_system = Sample3DQuadrupoleFieldSystem;
-		quad_system.run_now(&test_world);
+        let mut quad_system = Sample3DQuadrupoleFieldSystem;
+        quad_system.run_now(&test_world);
 
-		let mut magnitude_system = CalculateMagneticFieldMagnitudeSystem;
-		magnitude_system.run_now(&test_world);
-		let mut gradient_system = CalculateMagneticMagnitudeGradientSystem;
-		gradient_system.run_now(&test_world);
+        let mut magnitude_system = CalculateMagneticFieldMagnitudeSystem;
+        magnitude_system.run_now(&test_world);
+        let mut gradient_system = CalculateMagneticMagnitudeGradientSystem;
+        gradient_system.run_now(&test_world);
 
-		test_world.maintain();
-		let sampler_storage = test_world.read_storage::<MagneticFieldSampler>();
+        test_world.maintain();
+        let sampler_storage = test_world.read_storage::<MagneticFieldSampler>();
 
-		let test_gradient = sampler_storage
-			.get(atom1)
-			.expect("entity not found")
-			.gradient;
+        let test_gradient = sampler_storage
+            .get(atom1)
+            .expect("entity not found")
+            .gradient;
 
-		assert_approx_eq!(test_gradient[0], 5.8554e-3, 1e-6_f64);
-		assert_approx_eq!(test_gradient[1], 2.9277e-3, 1e-6_f64);
-		assert_approx_eq!(test_gradient[2], -0.058554, 1e-6_f64);
-	}
+        assert_approx_eq!(test_gradient[0], 5.8554e-3, 1e-6_f64);
+        assert_approx_eq!(test_gradient[1], 2.9277e-3, 1e-6_f64);
+        assert_approx_eq!(test_gradient[2], -0.058554, 1e-6_f64);
+    }
 }
