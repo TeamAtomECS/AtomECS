@@ -54,7 +54,7 @@ checksum = "c9ff149ed9780025acfdb36862d35b28856bb693ceb451259a7164442f22fdc3"
 
 [[package]]
 name = "atomecs"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "assert_approx_eq",
  "atomecs-derive",
@@ -78,7 +78,8 @@ dependencies = [
 [[package]]
 name = "atomecs-derive"
 version = "0.1.0"
-source = "git+https://github.com/TeamAtomECS/AtomECS-derive#94a4e17f9e510be5cb73d0241104084cf1d99d56"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4c9b47ee1db80c85b592461fec76d799896e94318ef9797e0f8f8bc77010c02"
 dependencies = [
  "quote",
  "syn",
