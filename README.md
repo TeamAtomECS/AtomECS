@@ -1,18 +1,18 @@
 # AtomECS
 > Simulate cold atoms with rust.
  
-//! <div align="center">
-//! <!-- Crates version -->
-//! <a href="https://crates.io/crates/atomecs">
-//! <img src="https://img.shields.io/crates/v/atomecs.svg?style=flat"
-//! alt="Crates.io version" />
-//! </a>
-//! <!-- docs.rs docs -->
-//! <a href="https://docs.rs/atomecs">
-//! <img src="https://img.shields.io/badge/docs-latest-blue.svg?style=flat"
-//! alt="docs.rs docs" />
-//! </a>
-//! </div>
+<div align="center">
+<!-- Crates version -->
+<a href="https://crates.io/crates/atomecs">
+<img src="https://img.shields.io/crates/v/atomecs.svg?style=flat"
+alt="Crates.io version" />
+</a>
+<!-- docs.rs docs -->
+<a href="https://docs.rs/atomecs">
+<img src="https://img.shields.io/badge/docs-latest-blue.svg?style=flat"
+alt="docs.rs docs" />
+</a>
+</div>
 
 **New:** Paper out now on [arxiv](https://arxiv.org/abs/2105.06447)
 
