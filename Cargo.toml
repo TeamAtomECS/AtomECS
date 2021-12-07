@@ -8,7 +8,7 @@ authors = ["Pi-sun <37469116+Pi-sun@users.noreply.github.com>", "ElliotB256 <704
 edition = "2018"
 license = "GPL-3.0-or-later"
 readme = "README.md"
-keywords = ["physics", "cold atoms", "amop", "laser cooling", "ecs"]
+keywords = ["physics", "cold-atoms", "amop", "laser-cooling", "ecs"]
 
 [dependencies]
 atomecs-derive = "0.1.0"
