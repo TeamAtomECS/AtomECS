@@ -3,8 +3,8 @@
 
 **New:** Paper out now on [arxiv](https://arxiv.org/abs/2105.06447)
 
-[![crate_version](https://img.shields.io/crates/v/atomecs.svg?style=flat)(https://crates.io/crates/atomecs)]
-[![crate_version](https://img.shields.io/badge/docs-latest-blue.svg?style=flat)(https://docs.rs/atomecs)]
+[![crate_version](https://img.shields.io/crates/v/atomecs.svg?style=flat)](https://crates.io/crates/atomecs)
+[![crate_version](https://img.shields.io/badge/docs-latest-blue.svg?style=flat)](https://docs.rs/atomecs)
 [![build](https://github.com/TeamAtomECS/AtomECS/actions/workflows/build.yml/badge.svg)](https://github.com/TeamAtomECS/AtomECS/actions/workflows/build.yml) [![unit_tests](https://github.com/TeamAtomECS/AtomECS/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/TeamAtomECS/AtomECS/actions/workflows/unit-tests.yml)
 
 `atomecs` is a rust crate for simulating ultracold atom experiments. It supports numerous features:
