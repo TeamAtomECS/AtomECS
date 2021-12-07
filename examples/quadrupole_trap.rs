@@ -88,7 +88,7 @@ fn main() {
     }
 
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-5 });
+    world.insert(Timestep { delta: 1.0e-5 });
 
     // Run the simulation for a number of steps.
     for _i in 0..10000 {
