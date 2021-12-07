@@ -1,7 +1,7 @@
 # AtomECS
 > Simulate cold atoms with rust.
  
-<div align="center">
+<div align="left">
 <!-- Crates version -->
 <a href="https://crates.io/crates/atomecs">
 <img src="https://img.shields.io/crates/v/atomecs.svg?style=flat"
