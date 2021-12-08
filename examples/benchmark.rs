@@ -84,9 +84,9 @@ fn main() {
     world
         .create_entity()
         .with(GaussianBeam {
-            intersection: beam_centre.clone(),
+            intersection: beam_centre,
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(0.0, 0.0, 1.0),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -100,9 +100,9 @@ fn main() {
     world
         .create_entity()
         .with(GaussianBeam {
-            intersection: beam_centre.clone(),
+            intersection: beam_centre,
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(0.0, 0.0, -1.0),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -116,9 +116,9 @@ fn main() {
     world
         .create_entity()
         .with(GaussianBeam {
-            intersection: beam_centre.clone(),
+            intersection: beam_centre,
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(-1.0, 0.0, 0.0),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -132,9 +132,9 @@ fn main() {
     world
         .create_entity()
         .with(GaussianBeam {
-            intersection: beam_centre.clone(),
+            intersection: beam_centre,
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(1.0, 0.0, 0.0),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -148,9 +148,9 @@ fn main() {
     world
         .create_entity()
         .with(GaussianBeam {
-            intersection: beam_centre.clone(),
+            intersection: beam_centre,
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(0.0, 1.0, 0.0),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -164,9 +164,9 @@ fn main() {
     world
         .create_entity()
         .with(GaussianBeam {
-            intersection: beam_centre.clone(),
+            intersection: beam_centre,
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(0.0, -1.0, 0.0),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,

@@ -42,10 +42,10 @@ pub struct CoolingLight {
 
 impl Lerp<CoolingLight> for CoolingLight {
     fn lerp(&self, b: &CoolingLight, amount: f64) -> Self {
-        return CoolingLight {
+        CoolingLight {
             polarization: self.polarization,
             wavelength: self.wavelength - (self.wavelength - b.wavelength) * amount,
-        };
+        }
     }
 }
 
@@ -73,7 +73,7 @@ impl CoolingLight {
         let freq = species.frequency + detuning * 1.0e6;
         CoolingLight {
             wavelength: constant::C / freq,
-            polarization: polarization,
+            polarization,
         }
     }
 }
@@ -259,12 +259,11 @@ pub mod tests {
         system.run_now(&test_world);
         test_world.maintain();
 
-        assert_eq!(
-            test_world
+        assert!(
+            !test_world
                 .read_storage::<LaserIndex>()
                 .get(test_entity)
-                .is_none(),
-            false
+                .is_none()
         );
     }
 

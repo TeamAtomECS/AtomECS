@@ -102,7 +102,7 @@ impl<'a> System<'a> for CalculateRateCoefficientsSystem {
                 .par_join()
                 .for_each(|(detunings, intensities, atominfo, bfield, rates)| {
                     let beam_direction_vector = gaussian.direction.normalize();
-                    let costheta = if &bfield.field.norm_squared() < &(10.0 * f64::EPSILON) {
+                    let costheta = if bfield.field.norm_squared() < (10.0 * f64::EPSILON) {
                         0.0
                     } else {
                         beam_direction_vector
@@ -167,7 +167,7 @@ pub mod tests {
             .create_entity()
             .with(CoolingLight {
                 polarization: 1,
-                wavelength: wavelength,
+                wavelength,
             })
             .with(LaserIndex {
                 index: 0,
@@ -198,12 +198,12 @@ pub mod tests {
             })
             .with(LaserIntensitySamplers {
                 contents: [crate::laser::intensity::LaserIntensitySampler {
-                    intensity: intensity,
+                    intensity,
                 }; crate::laser::BEAM_LIMIT],
             })
             .with(AtomicTransition::strontium())
             .with(MagneticFieldSampler {
-                field: field,
+                field,
                 magnitude: 1.0,
                 gradient: Vector3::new(0.0, 0.0, 0.0),
                 jacobian: Matrix3::zeros(),

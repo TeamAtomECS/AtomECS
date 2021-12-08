@@ -19,6 +19,13 @@ pub struct Position {
 	/// position in 3D in units of m
 	pub pos: Vector3<f64>,
 }
+
+impl Default for Position {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl Position {
 	pub fn new() -> Self {
 		Position {
@@ -92,6 +99,12 @@ pub struct Force {
 impl Component for Force {
 	type Storage = VecStorage<Self>;
 }
+impl Default for Force {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl Force {
 	pub fn new() -> Self {
 		Force {

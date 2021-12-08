@@ -92,7 +92,7 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(1.0, 1.0, 0.0).normalize(),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -108,7 +108,7 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(1.0, -1.0, 0.0).normalize(),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -124,7 +124,7 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(-1.0, 1.0, 0.0).normalize(),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -140,7 +140,7 @@ fn main() {
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,

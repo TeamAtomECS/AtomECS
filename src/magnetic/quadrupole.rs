@@ -75,14 +75,14 @@ impl<'a> System<'a> for Sample3DQuadrupoleFieldSystem {
         for (centre, quadrupole) in (&pos, &quadrupole).join() {
             (&pos, &mut sampler)
                 .par_join()
-                .for_each(|(pos, mut sampler)| {
+                .for_each(|(pos, sampler)| {
                     let quad_field = Sample3DQuadrupoleFieldSystem::calculate_field(
                         pos.pos,
                         centre.pos,
                         quadrupole.gradient,
                         quadrupole.direction,
                     );
-                    sampler.field = sampler.field + quad_field;
+                    sampler.field += quad_field;
 
                     // calculate local jacobian for magnetic field gradient
                     let mut jacobian = Matrix3::<f64>::zeros();
@@ -92,8 +92,8 @@ impl<'a> System<'a> for Sample3DQuadrupoleFieldSystem {
                     for i in 0..3 {
                         let mut pos_plus_dr = pos.pos;
                         let mut pos_minus_dr = pos.pos;
-                        pos_plus_dr[i] = pos_plus_dr[i] + delta;
-                        pos_minus_dr[i] = pos_minus_dr[i] - delta;
+                        pos_plus_dr[i] += delta;
+                        pos_minus_dr[i] -= delta;
 
                         let b_plus_dr = Sample3DQuadrupoleFieldSystem::calculate_field(
                             pos_plus_dr,
@@ -114,7 +114,7 @@ impl<'a> System<'a> for Sample3DQuadrupoleFieldSystem {
 
                         jacobian.set_column(i, &gradient);
                     }
-                    sampler.jacobian = sampler.jacobian + jacobian;
+                    sampler.jacobian += jacobian;
                 });
         }
     }
@@ -194,7 +194,7 @@ impl<'a> System<'a> for Sample2DQuadrupoleFieldSystem {
     );
     fn run(&mut self, (mut sampler, pos, quadrupole): Self::SystemData) {
         for (centre, quadrupole) in (&pos, &quadrupole).join() {
-            for (pos, mut sampler) in (&pos, &mut sampler).join() {
+            for (pos, sampler) in (&pos, &mut sampler).join() {
                 let quad_field = Self::calculate_field(
                     pos.pos,
                     centre.pos,
@@ -202,7 +202,7 @@ impl<'a> System<'a> for Sample2DQuadrupoleFieldSystem {
                     quadrupole.direction_in,
                     quadrupole.direction_out,
                 );
-                sampler.field = sampler.field + quad_field;
+                sampler.field += quad_field;
             }
         }
     }

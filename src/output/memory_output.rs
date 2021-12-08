@@ -32,7 +32,7 @@ where
 {
     pub fn new(interval: u64) -> Self {
         MemoryOutputSystem {
-            interval: interval,
+            interval,
             payload: Vec::new(),
         }
     }

@@ -78,7 +78,7 @@ impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
 
                 for count in 0..rates.contents.len() {
                     if mask.contents[count].filled {
-                        sum_rates = sum_rates + rates.contents[count].rate;
+                        sum_rates += rates.contents[count].rate;
                     }
                 }
                 twolevel.excited = sum_rates / (atominfo.gamma() + 2. * sum_rates);
@@ -128,9 +128,9 @@ pub mod tests {
 
         let mut sum_rates = 0.0;
 
-        for i in 0..crate::laser::BEAM_LIMIT {
-            if active_lasers[i].filled {
-                sum_rates = sum_rates + 1_000_000.0;
+        for active_laser in active_lasers.iter().take(crate::laser::BEAM_LIMIT) {
+            if active_laser.filled {
+                sum_rates += 1_000_000.0;
             }
         }
 

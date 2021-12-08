@@ -28,10 +28,9 @@ impl<'a> System<'a> for ApplyDipoleForceSystem {
     ) {
         (&mut force, &polarizability, &gradient_sampler)
             .par_join()
-            .for_each(|(mut force, polarizability, sampler)| {
+            .for_each(|(force, polarizability, sampler)| {
                 for (index, _dipole) in (&dipole_index, &dipole_light).join() {
-                    force.force = force.force
-                        + polarizability.prefactor * sampler.contents[index.index].gradient;
+                    force.force += polarizability.prefactor * sampler.contents[index.index].gradient;
                 }
             });
     }
@@ -168,8 +167,8 @@ pub mod tests {
 
         let gaussian_beam = GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: e_radius,
-            power: power,
+            e_radius,
+            power,
             direction: Vector3::x(),
             rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
             ellipticity: 0.0,
@@ -191,8 +190,8 @@ pub mod tests {
             .build();
         let gaussian_beam = GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: e_radius,
-            power: power,
+            e_radius,
+            power,
             direction: Vector3::y(),
             rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
             ellipticity: 0.0,

@@ -74,17 +74,17 @@ impl OvenBuilder {
 	) -> &mut Self {
 		self.microchannel_length = microchannel_length;
 		self.microchannel_radius = microchannel_radius;
-		return self;
+		self
 	}
 
 	pub fn with_lip(&mut self, lip_length: f64, lip_radius: f64) -> &mut Self {
 		self.max_theta = (lip_radius / lip_length).atan();
-		return self;
+		self
 	}
 
 	pub fn with_aperture(&mut self, aperture: OvenAperture) -> &mut Self {
 		self.aperture = aperture;
-		return self;
+		self
 	}
 
 	pub fn build(&self) -> Oven {
@@ -146,7 +146,7 @@ impl Oven {
 		let mut rng = rand::thread_rng();
 		match self.aperture {
 			OvenAperture::Cubic { size } => {
-				let size = size.clone();
+				let size = size;
 				let pos1 = rng.gen_range(-0.5 * size[0]..0.5 * size[0]);
 				let pos2 = rng.gen_range(-0.5 * size[1]..0.5 * size[1]);
 				let pos3 = rng.gen_range(-0.5 * size[2]..0.5 * size[2]);
@@ -218,12 +218,12 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 				updater.insert(
 					new_atom,
 					Velocity {
-						vel: new_vel.clone(),
+						vel: new_vel,
 					},
 				);
 				updater.insert(new_atom, Force::new());
 				updater.insert(new_atom, Mass { value: mass });
-				updater.insert(new_atom, atom.clone());
+				updater.insert(new_atom, *atom);
 				updater.insert(new_atom, Atom);
 				updater.insert(new_atom, InitialVelocity { vel: new_vel });
 				updater.insert(new_atom, NewlyCreated);
@@ -305,6 +305,6 @@ fn create_jtheta_distribution(
 		// Note: we can exclude d_theta because it is constant and the distribution will be normalized.
 	}
 
-	let distribution = WeightedProbabilityDistribution::new(thetas, weights);
-	distribution
+	
+	WeightedProbabilityDistribution::new(thetas, weights)
 }

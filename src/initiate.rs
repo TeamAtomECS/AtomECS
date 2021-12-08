@@ -65,10 +65,10 @@ pub mod tests {
 
 		let test_entity = test_world.create_entity().with(NewlyCreated).build();
 
-		dispatcher.dispatch(&mut test_world);
+		dispatcher.dispatch(&test_world);
 		test_world.maintain();
 
 		let created_flags = test_world.read_storage::<NewlyCreated>();
-		assert_eq!(created_flags.contains(test_entity), false);
+		assert!(!created_flags.contains(test_entity));
 	}
 }

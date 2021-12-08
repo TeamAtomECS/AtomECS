@@ -59,7 +59,7 @@ pub mod tests {
         test_world.maintain();
 
         let positions = test_world.read_storage::<Position>();
-        assert_eq!(positions.get(test_entity1).is_none(), false);
-        assert_eq!(positions.get(test_entity2).is_none(), true);
+        assert!(!positions.get(test_entity1).is_none());
+        assert!(positions.get(test_entity2).is_none());
     }
 }

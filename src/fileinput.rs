@@ -71,7 +71,7 @@ pub fn write_file_template(file: &str) {
 		trigger_time: 0.0,
 	};
 	let sim = SimArchetype {
-		lasers: lasers,
+		lasers,
 		ovens,
 		magnetic: mag,
 		mass: massrubidium,
@@ -81,7 +81,7 @@ pub fn write_file_template(file: &str) {
 	};
 
 	let serialized = serde_yaml::to_string(&sim).unwrap();
-	write!(writer, "{}", serialized.to_string()).expect("Could not write to file.");
+	write!(writer, "{}", serialized).expect("Could not write to file.");
 }
 
 /// Archetype describing a gaussian cooling laser beam

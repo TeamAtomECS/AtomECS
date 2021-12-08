@@ -71,10 +71,10 @@ impl GaussianBeam {
 		let std = e_radius / 2.0_f64.powf(0.5);
 		let power = 2.0 * std::f64::consts::PI * std.powi(2) * peak_intensity;
 		GaussianBeam {
-			intersection: intersection,
-			direction: direction,
-			power: power,
-			e_radius: e_radius,
+			intersection,
+			direction,
+			power,
+			e_radius,
 			rayleigh_range: f64::INFINITY,
 			ellipticity: 0.0,
 		}
@@ -105,10 +105,10 @@ impl GaussianBeam {
 		let std = e_radius / 2.0_f64.powf(0.5);
 		let power = 2.0 * std::f64::consts::PI * std.powi(2) * peak_intensity;
 		GaussianBeam {
-			intersection: intersection,
-			direction: direction,
-			power: power,
-			e_radius: e_radius,
+			intersection,
+			direction,
+			power,
+			e_radius,
 			rayleigh_range: calculate_rayleigh_range(&wavelength, &e_radius),
 			ellipticity: 0.0,
 		}
@@ -137,10 +137,10 @@ impl GaussianBeam {
 		ellipiticity: f64,
 	) -> Self {
 		GaussianBeam {
-			intersection: intersection,
+			intersection,
 			direction: direction.normalize(),
-			power: power,
-			e_radius: e_radius,
+			power,
+			e_radius,
 			rayleigh_range: calculate_rayleigh_range(&wavelength, &e_radius),
 			ellipticity: ellipiticity,
 		}
@@ -173,7 +173,7 @@ pub fn get_gaussian_beam_intensity(
 				&pos.pos,
 				&beam.intersection,
 				&beam.direction,
-				&frame,
+				frame,
 			);
 			let semi_major_axis = 1.0 / (1.0 - beam.ellipticity.powf(2.0)).powf(0.5);
 
@@ -343,7 +343,7 @@ pub mod tests {
 			e_radius: 2.0,
 			power: 1.0,
 			rayleigh_range: calculate_rayleigh_range(&1064.0e-9, &2.0),
-			ellipticity: (3.0 / 4.0 as f64).powf(0.5),
+			ellipticity: (3.0 / 4.0_f64).powf(0.5),
 		};
 
 		// checking if value on x-axis stays the same (as without ellipticity and frame)
@@ -372,7 +372,7 @@ pub mod tests {
 			e_radius: 2.0,
 			power: 1.0,
 			rayleigh_range: calculate_rayleigh_range(&1064.0e-9, &2.0),
-			ellipticity: (15.0 / 16.0 as f64).powf(0.5),
+			ellipticity: (15.0 / 16.0_f64).powf(0.5),
 		};
 
 		// but we check along the de-focused axis (so intensity is lower than in symmetrical case)

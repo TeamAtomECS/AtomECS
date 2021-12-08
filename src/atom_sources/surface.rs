@@ -121,7 +121,7 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
 				updater.insert(new_atom, Velocity { vel: velocity });
 				updater.insert(new_atom, Force::new());
 				updater.insert(new_atom, Mass { value: mass });
-				updater.insert(new_atom, atom_info.clone());
+				updater.insert(new_atom, *atom_info);
 				updater.insert(new_atom, Atom);
 				updater.insert(new_atom, InitialVelocity { vel: velocity });
 				updater.insert(new_atom, NewlyCreated);

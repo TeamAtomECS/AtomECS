@@ -25,9 +25,8 @@ impl<'a> System<'a> for ApplyGravitationalForceSystem {
             Some(_) => {
                 (&mut force, &mass)
                     .par_join()
-                    .for_each(|(mut force, mass)| {
-                        force.force = force.force
-                            + mass.value * constant::AMU * constant::GC * Vector3::new(0., 0., -1.);
+                    .for_each(|(force, mass)| {
+                        force.force += mass.value * constant::AMU * constant::GC * Vector3::new(0., 0., -1.);
                     });
             }
         }

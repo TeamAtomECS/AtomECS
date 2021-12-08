@@ -65,12 +65,12 @@ where
     let path = Path::new(&file_name);
     let display = path.display();
     let file = match File::create(&path) {
-        Err(why) => panic!("couldn't open {}: {}", display, why.to_string()),
+        Err(why) => panic!("couldn't open {}: {}", display, why),
         Ok(file) => file,
     };
     let writer = BufWriter::new(file);
     OutputSystem {
-        interval: interval,
+        interval,
         atom_flag: PhantomData,
         stream: writer,
         formatter: PhantomData,
@@ -133,12 +133,12 @@ where
     W: Write,
 {
     fn write_frame_header(writer: &mut W, step: u64, atom_number: usize) -> Result<(), io::Error> {
-        write!(writer, "step-{:?}, {:?}\n", step, atom_number)?;
+        writeln!(writer, "step-{:?}, {:?}", step, atom_number)?;
         Ok(())
     }
 
     fn write_atom(writer: &mut W, atom: Entity, data: C) -> Result<(), io::Error> {
-        write!(writer, "{:?},{:?}: {}\n", atom.gen().id(), atom.id(), data)?;
+        writeln!(writer, "{:?},{:?}: {}", atom.gen().id(), atom.id(), data)?;
         Ok(())
     }
 }
@@ -150,15 +150,15 @@ where
     W: Write,
 {
     fn write_frame_header(writer: &mut W, step: u64, atom_number: usize) -> Result<(), io::Error> {
-        write!(writer, "step-{:?}, {:?}\n", step, atom_number)?;
+        writeln!(writer, "step-{:?}, {:?}", step, atom_number)?;
         Ok(())
     }
 
     fn write_atom(writer: &mut W, atom: Entity, data: C) -> Result<(), io::Error> {
         let serialized = serde_json::to_string(&data).unwrap();
-        write!(
+        writeln!(
             writer,
-            "{:?},{:?}, {}\n",
+            "{:?},{:?}, {}",
             atom.gen().id(),
             atom.id(),
             serialized
@@ -184,9 +184,9 @@ where
     fn write_atom(writer: &mut W, _atom: Entity, data: C) -> Result<(), io::Error> {
         // the scale factor is 20000
         let position = 20000.0 * data.pos();
-        write!(
+        writeln!(
             writer,
-            "H\t{}\t{}\t{}\n",
+            "H\t{}\t{}\t{}",
             position[0], position[1], position[2]
         )?;
         Ok(())

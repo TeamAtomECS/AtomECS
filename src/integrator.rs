@@ -49,13 +49,13 @@ impl<'a> System<'a> for EulerIntegrationSystem {
     fn run(&mut self, (mut pos, mut vel, t, mut step, force, mass): Self::SystemData) {
         use rayon::prelude::*;
 
-        step.n = step.n + 1;
-        (&mut vel, &mut pos, &force, &mass).par_join().for_each(
-            |(mut vel, mut pos, force, mass)| {
-                euler_update(&mut vel, &mut pos, &force, &mass, t.delta);
-            },
-        );
-    }
+        step.n += 1;
+		(&mut vel, &mut pos, &force, &mass).par_join().for_each(
+			|(vel, pos, force, mass)| {
+				euler_update(vel, pos, force, mass, t.delta);
+			},
+		);
+	}
 }
 
 pub const INTEGRATE_POSITION_SYSTEM_NAME: &str = "integrate_position";
@@ -81,8 +81,8 @@ impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
     fn run(&mut self, (mut pos, vel, t, mut step, force, mut oldforce, mass): Self::SystemData) {
         use rayon::prelude::*;
 
-        step.n = step.n + 1;
-        let dt = t.delta;
+		step.n += 1;
+		let dt = t.delta;
 
         (&mut pos, &vel, &mut oldforce, &force, &mass)
             .par_join()
@@ -112,18 +112,17 @@ impl<'a> System<'a> for VelocityVerletIntegrateVelocitySystem {
         ReadStorage<'a, Mass>,
     );
 
-    fn run(&mut self, (mut vel, t, force, oldforce, mass): Self::SystemData) {
+    fn run(&mut self, (mut vel, t, force, old_force, mass): Self::SystemData) {
         use rayon::prelude::*;
 
         let dt = t.delta;
 
-        (&mut vel, &force, &oldforce, &mass).par_join().for_each(
-            |(mut vel, force, oldforce, mass)| {
-                vel.vel = vel.vel
-                    + (force.force + oldforce.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
-            },
-        );
-    }
+		(&mut vel, &force, &old_force, &mass).par_join().for_each(
+			|(vel, force, old_force, mass)| {
+				vel.vel += (force.force + old_force.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
+			},
+		);
+	}
 }
 
 /// Adds [OldForce](OldForce.struct.html) components to newly created atoms.
@@ -135,8 +134,8 @@ impl<'a> System<'a> for AddOldForceToNewAtomsSystem {
         ReadStorage<'a, OldForce>,
         Read<'a, LazyUpdate>,
     );
-    fn run(&mut self, (ent, newly_created, oldforce, updater): Self::SystemData) {
-        for (ent, _, _) in (&ent, &newly_created, !&oldforce).join() {
+    fn run(&mut self, (ent, newly_created, old_force, updater): Self::SystemData) {
+        for (ent, _, _) in (&ent, &newly_created, !&old_force).join() {
             updater.insert(ent, OldForce::default());
         }
     }
@@ -155,8 +154,8 @@ impl Default for OldForce {
 
 /// Performs the euler method to update [Velocity](struct.Velocity.html) and [Position](struct.Position.html) given an applied [Force](struct.Force.html).
 fn euler_update(vel: &mut Velocity, pos: &mut Position, force: &Force, mass: &Mass, dt: f64) {
-    pos.pos = pos.pos + vel.vel * dt;
-    vel.vel = vel.vel + force.force * dt / (constant::AMU * mass.value);
+	pos.pos += vel.vel * dt;
+	vel.vel += force.force * dt / (constant::AMU * mass.value);
 }
 
 pub mod tests {
@@ -200,33 +199,33 @@ pub mod tests {
             .build();
         dispatcher.setup(&mut world);
 
-        // create a particle with known force and mass
-        let force = Vector3::new(1.0, 0.0, 0.0);
-        let mass = 1.0;
-        let atom = world
-            .create_entity()
-            .with(Position {
-                pos: Vector3::new(0.0, 0.0, 0.0),
-            })
-            .with(Velocity {
-                vel: Vector3::new(0.0, 0.0, 0.0),
-            })
-            .with(Force { force: force })
-            .with(Mass {
-                value: mass / constant::AMU,
-            })
-            .build();
+		// create a particle with known force and mass
+		let force = Vector3::new(1.0, 0.0, 0.0);
+		let mass = 1.0;
+		let atom = world
+			.create_entity()
+			.with(Position {
+				pos: Vector3::new(0.0, 0.0, 0.0),
+			})
+			.with(Velocity {
+				vel: Vector3::new(0.0, 0.0, 0.0),
+			})
+			.with(Force { force })
+			.with(Mass {
+				value: mass / constant::AMU,
+			})
+			.build();
 
         let dt = 1.0e-3;
         world.insert(Timestep { delta: dt });
         world.insert(Step { n: 0 });
 
-        // run simulation loop 1_000 times.
-        let n_steps = 1_000;
-        for _i in 0..n_steps {
-            dispatcher.dispatch(&mut world);
-            world.maintain();
-        }
+		// run simulation loop 1_000 times.
+		let n_steps = 1_000;
+		for _i in 0..n_steps {
+			dispatcher.dispatch(&world);
+			world.maintain();
+		}
 
         let a = force / mass;
         let expected_v = a * (n_steps as f64 * dt);
@@ -267,16 +266,15 @@ pub mod tests {
 
         let test_entity = test_world.create_entity().with(NewlyCreated {}).build();
 
-        dispatcher.dispatch(&mut test_world);
-        test_world.maintain();
+		dispatcher.dispatch(&test_world);
+		test_world.maintain();
 
-        let old_forces = test_world.read_storage::<OldForce>();
-        assert_eq!(
-            old_forces.contains(test_entity),
-            true,
-            "OldForce component not added to test entity."
-        );
-    }
+		let old_forces = test_world.read_storage::<OldForce>();
+		assert!(
+			old_forces.contains(test_entity),
+			"OldForce component not added to test entity."
+		);
+	}
 
     #[test]
     fn test_velocity_verlet_integration() {
@@ -296,36 +294,36 @@ pub mod tests {
             .build();
         dispatcher.setup(&mut world);
 
-        // create a particle with known force and mass
-        let force = Vector3::new(1.0, 0.0, 0.0);
-        let mass = 1.0;
-        let atom = world
-            .create_entity()
-            .with(Position {
-                pos: Vector3::new(0.0, 0.0, 0.0),
-            })
-            .with(Velocity {
-                vel: Vector3::new(0.0, 0.0, 0.0),
-            })
-            .with(Force { force: force })
-            .with(OldForce {
-                0: Force { force: force },
-            })
-            .with(Mass {
-                value: mass / constant::AMU,
-            })
-            .build();
+		// create a particle with known force and mass
+		let force = Vector3::new(1.0, 0.0, 0.0);
+		let mass = 1.0;
+		let atom = world
+			.create_entity()
+			.with(Position {
+				pos: Vector3::new(0.0, 0.0, 0.0),
+			})
+			.with(Velocity {
+				vel: Vector3::new(0.0, 0.0, 0.0),
+			})
+			.with(Force { force })
+			.with(OldForce {
+				0: Force { force },
+			})
+			.with(Mass {
+				value: mass / constant::AMU,
+			})
+			.build();
 
         let dt = 1.0e-3;
         world.insert(Timestep { delta: dt });
         world.insert(Step { n: 0 });
 
-        // run simulation loop 1_000 times.
-        let n_steps = 1_000;
-        for _i in 0..n_steps {
-            dispatcher.dispatch(&mut world);
-            world.maintain();
-        }
+		// run simulation loop 1_000 times.
+		let n_steps = 1_000;
+		for _i in 0..n_steps {
+			dispatcher.dispatch(&world);
+			world.maintain();
+		}
 
         let a = force / mass;
         let expected_v = a * (n_steps as f64 * dt);

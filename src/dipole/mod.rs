@@ -60,9 +60,9 @@ impl Polarizability {
             / (2. * (2. * constant::PI * transition_f).powf(3.0))
             * optical_transition_linewidth
             * -(1. / (transition_f - dipole_f) + 1. / (transition_f + dipole_f));
-        return Polarizability {
-            prefactor: prefactor,
-        };
+        Polarizability {
+            prefactor,
+        }
     }
 }
 

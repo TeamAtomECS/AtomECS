@@ -25,4 +25,4 @@ pub const AMU: f64 = 1.6605e-27;
 pub const C: f64 = 2.998e8;
 
 /// Sqrt of 2
-pub const SQRT2: f64 = 1.41421356237;
+pub const SQRT2: f64 = std::f64::consts::SQRT_2;

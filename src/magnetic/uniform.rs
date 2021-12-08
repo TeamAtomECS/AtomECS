@@ -46,7 +46,7 @@ impl<'a> System<'a> for UniformMagneticFieldSystem {
 
         for field in (&fields).join() {
             (&mut samplers).par_join().for_each(|sampler| {
-                sampler.field = sampler.field + field.field;
+                sampler.field += field.field;
             });
         }
     }

@@ -36,13 +36,13 @@ impl Cylinder {
         let dir = Vector3::new(0.23, 1.2, 0.4563).normalize();
         let perp_x = direction.normalize().cross(&dir);
         let perp_y = direction.normalize().cross(&perp_x);
-        return Cylinder {
-            radius: radius,
-            length: length,
+        Cylinder {
+            radius,
+            length,
             direction: direction.normalize(),
-            perp_x: perp_x,
-            perp_y: perp_y,
-        };
+            perp_x,
+            perp_y,
+        }
     }
 }
 
@@ -59,7 +59,7 @@ impl Volume for Cylinder {
             return false;
         }
         let orthogonal = delta - projection * self.direction;
-        return orthogonal.norm_squared() < self.radius.powi(2);
+        orthogonal.norm_squared() < self.radius.powi(2)
     }
 }
 
@@ -80,19 +80,19 @@ impl Surface for Cylinder {
             };
             let angle = rng.gen_range(0.0..2.0 * std::f64::consts::PI);
             let f: f64 = rng.gen_range(0.0..1.0);
-            let radius = &self.radius * f.sqrt();
+            let radius = self.radius * f.sqrt();
             let normal = sign * self.direction;
             let point = surface_position
                 + self.perp_x * radius * angle.cos()
                 + self.perp_y * radius * angle.sin()
                 + normal * self.length / 2.0;
-            return (point, normal);
+            (point, normal)
         } else {
             let angle = rng.gen_range(0.0..2.0 * std::f64::consts::PI);
             let axial = rng.gen_range(-self.length..self.length) / 2.0;
             let normal = self.perp_x * angle.cos() + self.perp_y * angle.sin();
             let point = surface_position + normal * self.radius + self.direction * axial;
-            return (point, normal);
+            (point, normal)
         }
     }
 }
@@ -105,7 +105,7 @@ pub struct Sphere {
 impl Volume for Sphere {
     fn contains(&self, volume_position: &Vector3<f64>, entity_position: &Vector3<f64>) -> bool {
         let delta = entity_position - volume_position;
-        return delta.norm_squared() < self.radius.powi(2);
+        delta.norm_squared() < self.radius.powi(2)
     }
 }
 
@@ -125,7 +125,7 @@ impl Surface for Sphere {
             theta.cos(),
         );
         let position = surface_position + self.radius * normal;
-        return (position, normal);
+        (position, normal)
     }
 }
 
@@ -142,9 +142,9 @@ pub struct Cuboid {
 impl Volume for Cuboid {
     fn contains(&self, volume_position: &Vector3<f64>, entity_position: &Vector3<f64>) -> bool {
         let delta = entity_position - volume_position;
-        return delta[0].abs() < self.half_width[0]
+        delta[0].abs() < self.half_width[0]
             && delta[1].abs() < self.half_width[1]
-            && delta[2].abs() < self.half_width[2];
+            && delta[2].abs() < self.half_width[2]
     }
 }
 
@@ -183,7 +183,7 @@ impl Surface for Cuboid {
             _ => Vector3::new(0.0, 0.0, 0.0),
         };
         let position = surface_position + point;
-        return (position, normal);
+        (position, normal)
     }
 }
 

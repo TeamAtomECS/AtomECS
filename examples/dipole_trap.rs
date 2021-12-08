@@ -51,8 +51,8 @@ fn main() {
 
     let gaussian_beam = GaussianBeam {
         intersection: Vector3::new(0.0, 0.0, 0.0),
-        e_radius: e_radius,
-        power: power,
+        e_radius,
+        power,
         direction: Vector3::x(),
         rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &e_radius),
         ellipticity: 0.0,
@@ -61,7 +61,7 @@ fn main() {
         .create_entity()
         .with(gaussian_beam)
         .with(dipole::DipoleLight {
-            wavelength: wavelength,
+            wavelength,
         })
         .with(laser::frame::Frame {
             x_vector: Vector3::y(),
@@ -71,8 +71,8 @@ fn main() {
 
     let gaussian_beam = GaussianBeam {
         intersection: Vector3::new(0.0, 0.0, 0.0),
-        e_radius: e_radius,
-        power: power,
+        e_radius,
+        power,
         direction: Vector3::y(),
         rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &e_radius),
         ellipticity: 0.0,
@@ -81,7 +81,7 @@ fn main() {
         .create_entity()
         .with(gaussian_beam)
         .with(dipole::DipoleLight {
-            wavelength: wavelength,
+            wavelength,
         })
         .with(laser::frame::Frame {
             x_vector: Vector3::x(),
