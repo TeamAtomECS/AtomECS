@@ -43,9 +43,9 @@ pub struct AtomecsDispatcherBuilder {
     pub builder: DispatcherBuilder<'static, 'static>,
 }
 impl AtomecsDispatcherBuilder {
-	pub fn new() -> Self {
-		Self::default()
-	}
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     pub fn add_frame_initialisation_systems(&mut self) {}
 
