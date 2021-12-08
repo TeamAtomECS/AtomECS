@@ -260,10 +260,10 @@ pub mod tests {
         test_world.maintain();
 
         assert!(
-            !test_world
+            test_world
                 .read_storage::<LaserIndex>()
                 .get(test_entity)
-                .is_none()
+                .is_some()
         );
     }
 

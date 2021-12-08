@@ -78,19 +78,19 @@ impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
         ReadStorage<'a, Mass>,
     );
 
-    fn run(&mut self, (mut pos, vel, t, mut step, force, mut oldforce, mass): Self::SystemData) {
+    fn run(&mut self, (mut pos, vel, t, mut step, force, mut old_force, mass): Self::SystemData) {
         use rayon::prelude::*;
 
         step.n += 1;
         let dt = t.delta;
 
-        (&mut pos, &vel, &mut oldforce, &force, &mass)
+        (&mut pos, &vel, &mut old_force, &force, &mass)
             .par_join()
-            .for_each(|(mut pos, vel, mut oldforce, force, mass)| {
+            .for_each(|(mut pos, vel, mut old_force, force, mass)| {
                 pos.pos = pos.pos
                     + vel.vel * dt
                     + force.force / (constant::AMU * mass.value) / 2.0 * dt * dt;
-                oldforce.0 = *force;
+                old_force.0 = *force;
             });
     }
 }
