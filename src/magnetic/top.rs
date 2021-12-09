@@ -26,7 +26,7 @@ impl TimeOrbitingPotential {
     pub fn gauss(amplitude: f64, frequency: f64) -> Self {
         Self {
             amplitude: amplitude * 1e-4,
-            frequency: frequency,
+            frequency,
         }
     }
 }
@@ -56,7 +56,7 @@ impl<'a> System<'a> for TimeOrbitingPotentialSystem {
                         0.0,
                     );
 
-                sampler.field = sampler.field + top_field;
+                sampler.field += top_field;
             });
         }
     }

@@ -35,9 +35,9 @@ impl<'a> System<'a> for ApplyMagneticForceSystem {
 
         (&mut forces, &samplers, &dipoles)
             .par_join()
-            .for_each(|(mut force, sampler, dipole)| {
+            .for_each(|(force, sampler, dipole)| {
                 let dipole_force = -dipole.mFgF * constant::BOHRMAG * sampler.gradient;
-                force.force = force.force + dipole_force;
+                force.force += dipole_force;
             });
     }
 }

@@ -49,10 +49,10 @@ impl<'a> System<'a> for EulerIntegrationSystem {
     fn run(&mut self, (mut pos, mut vel, t, mut step, force, mass): Self::SystemData) {
         use rayon::prelude::*;
 
-        step.n = step.n + 1;
+        step.n += 1;
         (&mut vel, &mut pos, &force, &mass).par_join().for_each(
-            |(mut vel, mut pos, force, mass)| {
-                euler_update(&mut vel, &mut pos, &force, &mass, t.delta);
+            |(vel, pos, force, mass)| {
+                euler_update(vel, pos, force, mass, t.delta);
             },
         );
     }
@@ -78,19 +78,19 @@ impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
         ReadStorage<'a, Mass>,
     );
 
-    fn run(&mut self, (mut pos, vel, t, mut step, force, mut oldforce, mass): Self::SystemData) {
+    fn run(&mut self, (mut pos, vel, t, mut step, force, mut old_force, mass): Self::SystemData) {
         use rayon::prelude::*;
 
-        step.n = step.n + 1;
+        step.n += 1;
         let dt = t.delta;
 
-        (&mut pos, &vel, &mut oldforce, &force, &mass)
+        (&mut pos, &vel, &mut old_force, &force, &mass)
             .par_join()
-            .for_each(|(mut pos, vel, mut oldforce, force, mass)| {
+            .for_each(|(mut pos, vel, mut old_force, force, mass)| {
                 pos.pos = pos.pos
                     + vel.vel * dt
                     + force.force / (constant::AMU * mass.value) / 2.0 * dt * dt;
-                oldforce.0 = *force;
+                old_force.0 = *force;
             });
     }
 }
@@ -112,15 +112,14 @@ impl<'a> System<'a> for VelocityVerletIntegrateVelocitySystem {
         ReadStorage<'a, Mass>,
     );
 
-    fn run(&mut self, (mut vel, t, force, oldforce, mass): Self::SystemData) {
+    fn run(&mut self, (mut vel, t, force, old_force, mass): Self::SystemData) {
         use rayon::prelude::*;
 
         let dt = t.delta;
 
-        (&mut vel, &force, &oldforce, &mass).par_join().for_each(
-            |(mut vel, force, oldforce, mass)| {
-                vel.vel = vel.vel
-                    + (force.force + oldforce.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
+        (&mut vel, &force, &old_force, &mass).par_join().for_each(
+            |(vel, force, old_force, mass)| {
+                vel.vel += (force.force + old_force.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
             },
         );
     }
@@ -135,28 +134,24 @@ impl<'a> System<'a> for AddOldForceToNewAtomsSystem {
         ReadStorage<'a, OldForce>,
         Read<'a, LazyUpdate>,
     );
-    fn run(&mut self, (ent, newly_created, oldforce, updater): Self::SystemData) {
-        for (ent, _, _) in (&ent, &newly_created, !&oldforce).join() {
+    fn run(&mut self, (ent, newly_created, old_force, updater): Self::SystemData) {
+        for (ent, _, _) in (&ent, &newly_created, !&old_force).join() {
             updater.insert(ent, OldForce::default());
         }
     }
 }
 
 /// Stores the value of the force calculation from the previous frame.
+#[derive(Default)]
 pub struct OldForce(Force);
 impl Component for OldForce {
     type Storage = VecStorage<OldForce>;
 }
-impl Default for OldForce {
-    fn default() -> Self {
-        OldForce { 0: Force::new() }
-    }
-}
 
 /// Performs the euler method to update [Velocity](struct.Velocity.html) and [Position](struct.Position.html) given an applied [Force](struct.Force.html).
 fn euler_update(vel: &mut Velocity, pos: &mut Position, force: &Force, mass: &Mass, dt: f64) {
-    pos.pos = pos.pos + vel.vel * dt;
-    vel.vel = vel.vel + force.force * dt / (constant::AMU * mass.value);
+    pos.pos += vel.vel * dt;
+    vel.vel += force.force * dt / (constant::AMU * mass.value);
 }
 
 pub mod tests {
@@ -211,7 +206,7 @@ pub mod tests {
             .with(Velocity {
                 vel: Vector3::new(0.0, 0.0, 0.0),
             })
-            .with(Force { force: force })
+            .with(Force { force })
             .with(Mass {
                 value: mass / constant::AMU,
             })
@@ -224,7 +219,7 @@ pub mod tests {
         // run simulation loop 1_000 times.
         let n_steps = 1_000;
         for _i in 0..n_steps {
-            dispatcher.dispatch(&mut world);
+            dispatcher.dispatch(&world);
             world.maintain();
         }
 
@@ -267,13 +262,12 @@ pub mod tests {
 
         let test_entity = test_world.create_entity().with(NewlyCreated {}).build();
 
-        dispatcher.dispatch(&mut test_world);
+        dispatcher.dispatch(&test_world);
         test_world.maintain();
 
         let old_forces = test_world.read_storage::<OldForce>();
-        assert_eq!(
+        assert!(
             old_forces.contains(test_entity),
-            true,
             "OldForce component not added to test entity."
         );
     }
@@ -307,9 +301,9 @@ pub mod tests {
             .with(Velocity {
                 vel: Vector3::new(0.0, 0.0, 0.0),
             })
-            .with(Force { force: force })
+            .with(Force { force })
             .with(OldForce {
-                0: Force { force: force },
+                0: Force { force },
             })
             .with(Mass {
                 value: mass / constant::AMU,
@@ -323,7 +317,7 @@ pub mod tests {
         // run simulation loop 1_000 times.
         let n_steps = 1_000;
         for _i in 0..n_steps {
-            dispatcher.dispatch(&mut world);
+            dispatcher.dispatch(&world);
             world.maintain();
         }
 

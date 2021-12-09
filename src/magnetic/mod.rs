@@ -266,7 +266,7 @@ pub mod tests {
             .with(MagneticFieldSampler::default())
             .build();
 
-        dispatcher.dispatch(&mut test_world);
+        dispatcher.dispatch(&test_world);
 
         let samplers = test_world.read_storage::<MagneticFieldSampler>();
         let sampler = samplers.get(sampler_entity);
@@ -297,11 +297,11 @@ pub mod tests {
 
         let sampler_entity = test_world.create_entity().with(NewlyCreated).build();
 
-        dispatcher.dispatch(&mut test_world);
+        dispatcher.dispatch(&test_world);
         test_world.maintain();
 
         let samplers = test_world.read_storage::<MagneticFieldSampler>();
-        assert_eq!(samplers.contains(sampler_entity), true);
+        assert!(samplers.contains(sampler_entity));
     }
 
     // Test correct calculation of magnetic field gradient

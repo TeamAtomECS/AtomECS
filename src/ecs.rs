@@ -38,14 +38,13 @@ pub fn register_components(world: &mut World) {
 }
 
 /// Struct that creates the ECS Dispatcher builder used in AtomECS.
+#[derive(Default)]
 pub struct AtomecsDispatcherBuilder {
     pub builder: DispatcherBuilder<'static, 'static>,
 }
 impl AtomecsDispatcherBuilder {
-    pub fn new() -> AtomecsDispatcherBuilder {
-        AtomecsDispatcherBuilder {
-            builder: DispatcherBuilder::new(),
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn add_frame_initialisation_systems(&mut self) {}

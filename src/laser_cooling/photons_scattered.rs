@@ -150,7 +150,7 @@ impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
 
                 for index in 0..rates.contents.len() {
                     if mask.contents[index].filled {
-                        sum_rates = sum_rates + rates.contents[index].rate;
+                        sum_rates += rates.contents[index].rate;
                     }
                 }
 
@@ -199,7 +199,7 @@ impl ActualPhotonsScatteredVector {
     pub fn calculate_total_scattered(&self) -> u64 {
         let mut sum: f64 = 0.0;
         for i in 0..self.contents.len() {
-            sum = sum + self.contents[i].scattered;
+            sum += self.contents[i].scattered;
         }
         sum as u64
     }

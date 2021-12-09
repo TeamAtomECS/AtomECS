@@ -77,7 +77,7 @@ impl CollisionBox<'_> {
         // vbar is the average _speed_, not the average _velocity_.
         let mut vsum = 0.0;
         for i in 0..self.velocities.len() {
-            vsum = vsum + self.velocities[i].vel.norm();
+            vsum += self.velocities[i].vel.norm();
         }
         let vbar = vsum / self.velocities.len() as f64;
 
@@ -215,7 +215,7 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
                 // (Note that using hashmap parallel values mut does not work in parallel, tested.)
                 let boxes: Vec<&mut CollisionBox> = map.values_mut().collect();
                 boxes.into_par_iter().for_each(|collision_box| {
-                    collision_box.do_collisions(params.clone(), t.delta);
+                    collision_box.do_collisions(*params, t.delta);
                 });
 
                 tracker.num_atoms = map
@@ -235,7 +235,7 @@ impl<'a> System<'a> for ApplyCollisionsSystem {
     }
 }
 
-fn do_collision<'a>(mut v1: Vector3<f64>, mut v2: Vector3<f64>) -> (Vector3<f64>, Vector3<f64>) {
+fn do_collision(mut v1: Vector3<f64>, mut v2: Vector3<f64>) -> (Vector3<f64>, Vector3<f64>) {
     let mut rng = rand::thread_rng();
 
     // Randomly modify velocities in CoM frame, conserving energy & momentum
@@ -263,11 +263,9 @@ fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
     let bound = (n as f64) / 2.0 * width;
 
     let id: i64;
-    if pos[0].abs() > bound {
-        id = i64::MAX;
-    } else if pos[1].abs() > bound {
-        id = i64::MAX;
-    } else if pos[2].abs() > bound {
+    if pos[0].abs() > bound
+        || pos[1].abs() > bound
+        || pos[2].abs() > bound {
         id = i64::MAX;
     } else {
         let xp: i64;
@@ -371,9 +369,11 @@ pub mod tests {
 
         let vel = Vector3::new(1.0, 0.0, 0.0);
         const MACRO_ATOM_NUMBER: usize = 100;
-        let mut velocities: Vec<Velocity> = vec![Velocity { vel: vel.clone() }; MACRO_ATOM_NUMBER];
-        let mut collision_box = CollisionBox::default();
-        collision_box.velocities = velocities.iter_mut().collect();
+        let mut velocities: Vec<Velocity> = vec![Velocity { vel }; MACRO_ATOM_NUMBER];
+        let mut collision_box = CollisionBox {
+            velocities: velocities.iter_mut().collect(),
+            ..Default::default()
+        };
 
         let params = CollisionParameters {
             macroparticle: 10.0,
@@ -462,7 +462,7 @@ pub mod tests {
         });
 
         for _i in 0..10 {
-            dispatcher.dispatch(&mut test_world);
+            dispatcher.dispatch(&test_world);
             test_world.maintain();
         }
 

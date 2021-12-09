@@ -98,7 +98,7 @@ fn main() {
     world
         .create_entity()
         .with(GaussianBeam::from_peak_intensity(
-            beam_centre.clone(),
+            beam_centre,
             Vector3::new(0.0, 0.0, 1.0),
             intensity,
             radius,
@@ -112,7 +112,7 @@ fn main() {
     world
         .create_entity()
         .with(GaussianBeam::from_peak_intensity(
-            beam_centre.clone(),
+            beam_centre,
             Vector3::new(0.0, 0.0, -1.0),
             intensity,
             radius,
@@ -126,7 +126,7 @@ fn main() {
     world
         .create_entity()
         .with(GaussianBeam::from_peak_intensity(
-            beam_centre.clone(),
+            beam_centre,
             Vector3::new(1.0, 0.0, 0.0),
             intensity,
             radius,
@@ -140,7 +140,7 @@ fn main() {
     world
         .create_entity()
         .with(GaussianBeam::from_peak_intensity(
-            beam_centre.clone(),
+            beam_centre,
             Vector3::new(-1.0, 0.0, 0.0),
             intensity,
             radius,
@@ -154,7 +154,7 @@ fn main() {
     world
         .create_entity()
         .with(GaussianBeam::from_peak_intensity(
-            beam_centre.clone(),
+            beam_centre,
             Vector3::new(0.0, 1.0, 0.0),
             intensity,
             radius,
@@ -168,7 +168,7 @@ fn main() {
     world
         .create_entity()
         .with(GaussianBeam::from_peak_intensity(
-            beam_centre.clone(),
+            beam_centre,
             Vector3::new(0.0, -1.0, 0.0),
             intensity,
             radius,

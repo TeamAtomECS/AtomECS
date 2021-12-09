@@ -34,7 +34,7 @@ impl MassDistribution {
     /// The created distribution will be normalised.
     pub fn new(distribution: Vec<MassRatio>) -> Self {
         let mut mass_dist = MassDistribution {
-            distribution: distribution,
+            distribution,
             normalised: false,
         };
         mass_dist.normalise();
@@ -45,11 +45,11 @@ impl MassDistribution {
     pub fn normalise(&mut self) {
         let mut total = 0.;
         for mr in self.distribution.iter() {
-            total = total + mr.ratio;
+            total += mr.ratio;
         }
 
         for mut mr in &mut self.distribution {
-            mr.ratio = mr.ratio / total;
+            mr.ratio /= total;
         }
         self.normalised = true
     }
@@ -62,7 +62,7 @@ impl MassDistribution {
         let luck = rng.gen_range(0.0..1.0);
         let mut finalmass = 0.;
         for masspercent in self.distribution.iter() {
-            level = level + masspercent.ratio;
+            level += masspercent.ratio;
             if level > luck {
                 return Mass {
                     value: masspercent.mass,
@@ -70,7 +70,7 @@ impl MassDistribution {
             }
             finalmass = masspercent.mass;
         }
-        return Mass { value: finalmass };
+        Mass { value: finalmass }
     }
 }
 
@@ -95,7 +95,7 @@ pub mod tests {
 
         let mut total_ratio = 0.0;
         for mr in &mass_distribution.distribution {
-            total_ratio = total_ratio + mr.ratio;
+            total_ratio += mr.ratio;
         }
 
         assert_approx_eq!(total_ratio, 1., 0.0001);

@@ -34,11 +34,11 @@ impl Component for GaussianVelocityDistributionSource {
 }
 impl GaussianVelocityDistributionSource {
     fn get_random_velocity<R: Rng + ?Sized>(&self, rng: &mut R) -> Vector3<f64> {
-        return Vector3::new(
+        Vector3::new(
             self.vx_distribution.sample(rng),
             self.vy_distribution.sample(rng),
             self.vz_distribution.sample(rng),
-        );
+        )
     }
 }
 
@@ -143,13 +143,13 @@ impl<'a> System<'a> for GaussianCreateAtomsSystem {
                 updater.insert(
                     new_atom,
                     Velocity {
-                        vel: new_vel.clone(),
+                        vel: new_vel,
                     },
                 );
                 updater.insert(new_atom, source_position.clone());
                 updater.insert(new_atom, Force::new());
                 updater.insert(new_atom, mass.clone());
-                updater.insert(new_atom, atom.clone());
+                updater.insert(new_atom, *atom);
                 updater.insert(new_atom, Atom);
                 updater.insert(new_atom, InitialVelocity { vel: new_vel });
                 updater.insert(new_atom, NewlyCreated);

@@ -118,7 +118,7 @@ pub mod tests {
         let rate = 3.3;
         let emitter = test_world
             .create_entity()
-            .with(EmitFixedRate { rate: rate })
+            .with(EmitFixedRate { rate })
             .with(AtomNumberToEmit { number: 0 })
             .build();
 
@@ -132,11 +132,11 @@ pub mod tests {
             system.run_now(&test_world);
             let emits = test_world.read_storage::<AtomNumberToEmit>();
             let number = emits.get(emitter).expect("Could not get entity").number;
-            assert_eq!(number == 3 || number == 4, true);
-            total = total + number;
+            assert!(number == 3 || number == 4);
+            total += number;
         }
-        assert_eq!(total > (n as f64 * 0.9 * rate) as i32, true);
-        assert_eq!(total < (n as f64 * 1.1 * rate) as i32, true);
+        assert!(total > (n as f64 * 0.9 * rate) as i32);
+        assert!(total < (n as f64 * 1.1 * rate) as i32);
     }
 
     #[test]
@@ -148,7 +148,7 @@ pub mod tests {
         let number = 10;
         let emitter = test_world
             .create_entity()
-            .with(EmitNumberPerFrame { number: number })
+            .with(EmitNumberPerFrame { number })
             .with(AtomNumberToEmit { number: 0 })
             .build();
 

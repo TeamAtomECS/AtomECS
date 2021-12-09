@@ -31,7 +31,7 @@ pub struct VelocityCap {
 pub fn add_systems_to_dispatch(
     builder: &mut DispatcherBuilder<'static, 'static>,
     deps: &[&str],
-) -> () {
+) {
     builder.add(
         emit::EmitNumberPerFrameSystem,
         "emit_number_per_frame",
@@ -114,7 +114,7 @@ pub struct WeightedProbabilityDistribution {
 impl WeightedProbabilityDistribution {
     pub fn new(values: Vec<f64>, weights: Vec<f64>) -> Self {
         WeightedProbabilityDistribution {
-            values: values,
+            values,
             weighted_index: WeightedIndex::new(&weights).unwrap(),
         }
     }

@@ -129,7 +129,7 @@ fn main() {
         dispatcher.dispatch(&mut world);
         world.maintain();
 
-        if (_i > 0) && (_i % 50 as i32 == 0) {
+        if (_i > 0) && (_i % 50_i32 == 0) {
             let tracker = world.read_resource::<CollisionsTracker>();
             let _result = write_collisions_tracker(
                 &mut filename,
