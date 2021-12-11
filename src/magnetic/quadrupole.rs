@@ -15,9 +15,9 @@ use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 #[derive(Serialize, Clone, Copy, Lerp)]
 pub struct QuadrupoleField3D {
     /// Gradient of the quadrupole field, in units of Tesla/m
-    gradient: f64,
+    pub gradient: f64,
     /// A unit vector pointing along the symmetry axis of the 3D quadrupole field.
-    direction: Vector3<f64>,
+    pub direction: Vector3<f64>,
 }
 impl QuadrupoleField3D {
     /// Creates a `QuadrupoleField3D` component with gradient specified in Gauss per cm.
@@ -128,13 +128,13 @@ impl<'a> System<'a> for Sample3DQuadrupoleFieldSystem {
 ///  * `e_y` is in the direction `direction_in`.
 pub struct QuadrupoleField2D {
     /// Gradient of the quadrupole field, `B'`, in units of Tesla/m
-    gradient: f64,
+    pub gradient: f64,
 
     /// A unit vector that defines the direction along which the field lines point away from the node. Perpendicular to `axis` and `direction_in`.
-    direction_out: Vector3<f64>,
+    pub direction_out: Vector3<f64>,
 
     /// A unit vector that defines the direction along which the field lines point in from the node. Perpendicular to both `direction_out` and `axis`.
-    direction_in: Vector3<f64>,
+    pub direction_in: Vector3<f64>,
 }
 impl QuadrupoleField2D {
     /// Creates a `QuadrupoleField2D` component with gradient specified in Gauss/cm.
