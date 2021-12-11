@@ -8,15 +8,10 @@ extern crate nalgebra;
 use crate::laser_cooling::CoolingLight;
 
 /// Tracks which slots in the laser sampler arrays are currently used for cooling light.
-#[derive(Clone, Copy, Serialize)]
+#[derive(Clone, Copy, Default, Serialize)]
 pub struct LaserSamplerMask {
     /// Marks whether a cooling light exists for this slot in the laser sampler array.
     pub filled: bool,
-}
-impl Default for LaserSamplerMask {
-    fn default() -> Self {
-        LaserSamplerMask { filled: false }
-    }
 }
 /// Component that holds a vector of `LaserSamplerMask`
 pub struct CoolingLaserSamplerMasks {

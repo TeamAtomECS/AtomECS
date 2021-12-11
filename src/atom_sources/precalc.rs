@@ -70,7 +70,7 @@ pub struct Species {
 impl Species {
     fn create(mass: f64, temperature: f64, power: f64) -> Self {
         Species {
-            mass: mass,
+            mass,
             v_distribution: create_v_distribution(temperature, mass * AMU, power),
         }
     }
@@ -102,7 +102,7 @@ impl PrecalculatedSpeciesInformation {
             species.push(Species::create(mr.mass, temperature, power));
         }
         PrecalculatedSpeciesInformation {
-            species: species,
+            species,
             distribution: WeightedIndex::new(&ratios).unwrap(),
         }
     }

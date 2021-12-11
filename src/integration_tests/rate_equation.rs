@@ -55,7 +55,7 @@ pub mod tests {
         world
             .create_entity()
             .with(CoolingLight::for_species(
-                transition.clone(),
+                transition,
                 detuning_megahz,
                 1,
             ))
@@ -82,7 +82,7 @@ pub mod tests {
             .with(Velocity {
                 vel: Vector3::new(0.0, 0.0, 0.0),
             })
-            .with(transition.clone())
+            .with(transition)
             .with(Atom)
             .with(NewlyCreated)
             .with(Force::new())
@@ -97,7 +97,7 @@ pub mod tests {
             .build();
 
         // The first dispatch is to add required components to new atoms.
-        dispatcher.dispatch(&mut world);
+        dispatcher.dispatch(&world);
         world.maintain();
 
         // Reset position and velocity to zero.
@@ -121,7 +121,7 @@ pub mod tests {
             .is_ok());
 
         // Second dispatch to calculate values over completed atoms.
-        dispatcher.dispatch(&mut world);
+        dispatcher.dispatch(&world);
 
         let expected_scattered =
             analytic_scattering_rate(intensity, i_sat, delta, transition.gamma());

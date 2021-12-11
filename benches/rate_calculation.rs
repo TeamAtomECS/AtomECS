@@ -7,7 +7,7 @@ use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
 use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
-use lib::laser::cooling::CoolingLight;
+use lib::laser_cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser_cooling::force::EmissionForceOption;
 use lib::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
@@ -42,9 +42,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     world
         .create_entity()
         .with(GaussianBeam {
-            intersection: beam_centre.clone(),
+            intersection: beam_centre,
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(0.0, 0.0, 1.0),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -58,9 +58,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     world
         .create_entity()
         .with(GaussianBeam {
-            intersection: beam_centre.clone(),
+            intersection: beam_centre,
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(0.0, 0.0, -1.0),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -74,9 +74,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     world
         .create_entity()
         .with(GaussianBeam {
-            intersection: beam_centre.clone(),
+            intersection: beam_centre,
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(-1.0, 0.0, 0.0),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -90,9 +90,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     world
         .create_entity()
         .with(GaussianBeam {
-            intersection: beam_centre.clone(),
+            intersection: beam_centre,
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(1.0, 0.0, 0.0),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -106,9 +106,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     world
         .create_entity()
         .with(GaussianBeam {
-            intersection: beam_centre.clone(),
+            intersection: beam_centre,
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(0.0, 1.0, 0.0),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -122,9 +122,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     world
         .create_entity()
         .with(GaussianBeam {
-            intersection: beam_centre.clone(),
+            intersection: beam_centre,
             e_radius: radius,
-            power: power,
+            power,
             direction: Vector3::new(0.0, -1.0, 0.0),
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
@@ -139,8 +139,8 @@ fn criterion_benchmark(c: &mut Criterion) {
     // Define timestep
     world.insert(Timestep { delta: 1.0e-6 });
 
-    let vel_dist = Normal::new(0.0, 0.22);
-    let pos_dist = Normal::new(0.0, 1.2e-4);
+    let vel_dist = Normal::new(0.0, 0.22).unwrap();
+    let pos_dist = Normal::new(0.0, 1.2e-4).unwrap();
     let mut rng = rand::thread_rng();
 
     // Add atoms

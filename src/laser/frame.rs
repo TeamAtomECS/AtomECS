@@ -29,7 +29,7 @@ impl Frame {
         let orth_vector: Vector3<f64> = Vector3::cross(&beam_direction, &x_vector).normalize();
         let x_vector = x_vector.normalize();
         Frame {
-            x_vector: x_vector,
+            x_vector,
             y_vector: orth_vector,
         }
     }

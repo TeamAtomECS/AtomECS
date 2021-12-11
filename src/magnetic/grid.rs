@@ -46,14 +46,14 @@ impl PrecalculatedMagneticFieldGrid {
                 .max(0)
                 .min(self.extent_cells[2] - 1),
         );
-        return self.extent_cells[2] as i32
+        self.extent_cells[2] as i32
             * (self.extent_cells[1] as i32 * (cell_id[0] as i32) + (cell_id[1] as i32))
-            + (cell_id[2] as i32);
+            + (cell_id[2] as i32)
     }
 
     pub fn get_field(&self, pos: &Vector3<f64>) -> Vector3<f64> {
-        let index = self.position_to_grid_index(&pos);
-        return self.grid[index as usize];
+        let index = self.position_to_grid_index(pos);
+        self.grid[index as usize]
     }
 }
 
@@ -72,9 +72,9 @@ impl<'a> System<'a> for SampleMagneticGridSystem {
     );
     fn run(&mut self, (mut sampler, pos, grids): Self::SystemData) {
         for grid in (&grids).join() {
-            for (pos, mut sampler) in (&pos, &mut sampler).join() {
+            for (pos, sampler) in (&pos, &mut sampler).join() {
                 let field = grid.get_field(&pos.pos);
-                sampler.field = sampler.field + field;
+                sampler.field += field;
             }
         }
     }

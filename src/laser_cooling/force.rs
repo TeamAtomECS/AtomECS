@@ -59,7 +59,7 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
         type CachedLaser = (CoolingLight, LaserIndex, GaussianBeam);
         let laser_cache: Vec<CachedLaser> = (&cooling_light, &cooling_index, &gaussian_beam)
             .join()
-            .map(|(cooling, index, gaussian)| (cooling.clone(), index.clone(), gaussian.clone()))
+            .map(|(cooling, index, gaussian)| (*cooling, *index, *gaussian))
             .collect();
 
         // Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
@@ -72,14 +72,13 @@ impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
 
             (&actual_scattered_vector, &mut forces, !&_dark)
                 .par_join()
-                .for_each(|(scattered, mut force, _)| {
-                    for i in 0..number_in_iteration {
-                        let (cooling, index, gaussian) = laser_array[i];
+                .for_each(|(scattered, force, _)| {
+                    for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
                         let new_force = scattered.contents[index.index].scattered * HBAR
                             / timestep.delta
                             * gaussian.direction.normalize()
                             * cooling.wavenumber();
-                        force.force = force.force + new_force;
+                        force.force += new_force;
                     }
                 })
         }
@@ -145,7 +144,7 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
                     EmissionForceOption::On(configuration) => {
                         (&mut force, &atom_info, &actual_scattered_vector)
                             .par_join()
-                            .for_each(|(mut force, atom_info, kick)| {
+                            .for_each(|(force, atom_info, kick)| {
                                 let total: u64 = kick.calculate_total_scattered();
                                 let mut rng = rand::thread_rng();
                                 let omega = 2.0 * constant::PI * atom_info.frequency;
@@ -165,13 +164,12 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
                                         normal.sample(&mut rng),
                                         normal.sample(&mut rng),
                                     );
-                                    force.force = force.force + force_n_kicks;
+                                    force.force += force_n_kicks;
                                 } else {
                                     // explicit random walk implementation
                                     for _i in 0..total {
                                         let v: [f64; 3] = UnitSphere.sample(&mut rng);
-                                        force.force = force.force
-                                            + force_one_kick * Vector3::new(v[0], v[1], v[2]);
+                                        force.force += force_one_kick * Vector3::new(v[0], v[1], v[2]);
                                     }
                                 }
                             });
@@ -214,7 +212,7 @@ pub mod tests {
             .create_entity()
             .with(CoolingLight {
                 polarization: 1,
-                wavelength: wavelength,
+                wavelength,
             })
             .with(LaserIndex {
                 index: 0,

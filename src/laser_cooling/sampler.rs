@@ -90,7 +90,7 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
         type CachedLaser = (LaserIndex, CoolingLight);
         let laser_cache: Vec<CachedLaser> = (&indices, &cooling_light)
             .join()
-            .map(|(index, cooling)| (index.clone(), cooling.clone()))
+            .map(|(index, cooling)| (*index, *cooling))
             .collect();
 
         // Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
@@ -110,19 +110,18 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
                 .par_join()
                 .for_each(
                     |(detuning_sampler, doppler_samplers, zeeman_sampler, atom_info)| {
-                        for i in 0..number_in_iteration {
-                            let (index, cooling) = laser_array[i];
+                        for (index, cooling) in laser_array.iter().take(number_in_iteration) {
                             let without_zeeman = 2.0
                                 * constant::PI
                                 * (constant::C / cooling.wavelength - atom_info.frequency)
                                 - doppler_samplers.contents[index.index].doppler_shift;
 
                             detuning_sampler.contents[index.index].detuning_sigma_plus =
-                                without_zeeman.clone() - zeeman_sampler.sigma_plus;
+                                without_zeeman - zeeman_sampler.sigma_plus;
                             detuning_sampler.contents[index.index].detuning_sigma_minus =
-                                without_zeeman.clone() - zeeman_sampler.sigma_minus;
+                                without_zeeman - zeeman_sampler.sigma_minus;
                             detuning_sampler.contents[index.index].detuning_pi =
-                                without_zeeman.clone() - zeeman_sampler.sigma_pi;
+                                without_zeeman - zeeman_sampler.sigma_pi;
                         }
                     },
                 )
@@ -155,7 +154,7 @@ pub mod tests {
             .create_entity()
             .with(CoolingLight {
                 polarization: 1,
-                wavelength: wavelength,
+                wavelength,
             })
             .with(LaserIndex {
                 index: 0,

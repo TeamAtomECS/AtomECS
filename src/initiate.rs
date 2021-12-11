@@ -33,42 +33,42 @@ pub struct NewlyCreated;
 pub struct DeflagNewAtomsSystem;
 
 impl<'a> System<'a> for DeflagNewAtomsSystem {
-	type SystemData = (
-		Entities<'a>,
-		ReadStorage<'a, NewlyCreated>,
-		Read<'a, LazyUpdate>,
-	);
+    type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a, NewlyCreated>,
+        Read<'a, LazyUpdate>,
+    );
 
-	fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
-		for (ent, _newly_created) in (&ent, &newly_created).join() {
-			updater.remove::<NewlyCreated>(ent);
-		}
-	}
+    fn run(&mut self, (ent, newly_created, updater): Self::SystemData) {
+        for (ent, _newly_created) in (&ent, &newly_created).join() {
+            updater.remove::<NewlyCreated>(ent);
+        }
+    }
 }
 
 pub mod tests {
-	#[allow(unused_imports)]
-	use super::*;
-	extern crate specs;
-	#[allow(unused_imports)]
-	use specs::{Builder, DispatcherBuilder, World};
+    #[allow(unused_imports)]
+    use super::*;
+    extern crate specs;
+    #[allow(unused_imports)]
+    use specs::{Builder, DispatcherBuilder, World};
 
-	/// Tests that the NewlyCreated component is properly removed from atoms via the DeflagNewAtomsSystem.
-	#[test]
-	fn test_deflag_new_atoms_system() {
-		let mut test_world = World::new();
+    /// Tests that the NewlyCreated component is properly removed from atoms via the DeflagNewAtomsSystem.
+    #[test]
+    fn test_deflag_new_atoms_system() {
+        let mut test_world = World::new();
 
-		let mut dispatcher = DispatcherBuilder::new()
-			.with(DeflagNewAtomsSystem, "deflagger", &[])
-			.build();
-		dispatcher.setup(&mut test_world);
+        let mut dispatcher = DispatcherBuilder::new()
+            .with(DeflagNewAtomsSystem, "deflagger", &[])
+            .build();
+        dispatcher.setup(&mut test_world);
 
-		let test_entity = test_world.create_entity().with(NewlyCreated).build();
+        let test_entity = test_world.create_entity().with(NewlyCreated).build();
 
-		dispatcher.dispatch(&mut test_world);
-		test_world.maintain();
+        dispatcher.dispatch(&test_world);
+        test_world.maintain();
 
-		let created_flags = test_world.read_storage::<NewlyCreated>();
-		assert_eq!(created_flags.contains(test_entity), false);
-	}
+        let created_flags = test_world.read_storage::<NewlyCreated>();
+        assert!(!created_flags.contains(test_entity));
+    }
 }
