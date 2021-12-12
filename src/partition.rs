@@ -24,33 +24,20 @@ impl Component for BoxID {
 /// A partition of space that contains atoms
 //#[derive(Clone)]
 pub struct PartitionCell {
-    pub expected_collision_number: f64,
-    pub collision_number: i32,
     pub density: f64,
     pub volume: f64,
-    pub atom_number: f64,
     pub particle_number: i32,
 }
 
 impl Default for PartitionCell {
     fn default() -> Self {
         PartitionCell {
-            expected_collision_number: 0.0,
             density: 0.0,
             volume: 0.0,
-            atom_number: 0.0,
-            collision_number: 0,
             particle_number: 0,
         }
     }
 }
-
-// impl PartitionCell {
-//     //count particles in this cell
-//     fn count_particles(&mut self) {
-//         self.particle_number = self.entities.len() as i32;
-//     }
-// }
 
 /// Resource for defining spatial partitioning parameters. Space is divided into many small cubes of width box_width, and there are box_number of them
 /// along each axis, constituting a large cube of volume (box_number*box_width)^3.
@@ -75,7 +62,7 @@ impl Default for PartitionParameters {
 }
 
 pub struct DensityHashmap {
-    ///hashmap of velocities of atoms
+    ///hashmap of density of atoms
     pub hashmap: HashMap<i64, PartitionCell>,
 }
 
@@ -130,6 +117,7 @@ impl<'a> System<'a> for BuildSpatialPartitionSystem {
                 println!("entity box id: {}", boxid.id);
             });
 
+        // Count number of particles with each unique box id and insert it into the hashmap
         let mut map: HashMap<i64, PartitionCell> = HashMap::new();
         for boxid in boxids.join() {
             if boxid.id == i64::MAX {
