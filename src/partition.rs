@@ -4,7 +4,7 @@
 //! This creates a discretised density distribution for use by other systems e.g. tow-body collisions.
 
 extern crate multimap;
-use crate::atom::{Position, Velocity};
+use crate::atom::Position;
 use hashbrown::HashMap;
 use nalgebra::Vector3;
 use specs::{
@@ -12,7 +12,7 @@ use specs::{
     WriteExpect, WriteStorage,
 };
 
-/// Component that marks which box an atom is in for spatial partitioning
+/// Component that marks which boSSx an atom is in for spatial partitioning
 pub struct BoxID {
     /// ID of the box
     pub id: i64,
@@ -22,9 +22,8 @@ impl Component for BoxID {
 }
 
 /// A partition of space that contains atoms
-#[derive(Clone)]
-pub struct PartitionCell<'a> {
-    pub velocities: Vec<&'a mut Velocity>,
+//#[derive(Clone)]
+pub struct PartitionCell {
     pub expected_collision_number: f64,
     pub collision_number: i32,
     pub density: f64,
@@ -33,10 +32,9 @@ pub struct PartitionCell<'a> {
     pub particle_number: i32,
 }
 
-impl Default for PartitionCell<'_> {
+impl Default for PartitionCell {
     fn default() -> Self {
         PartitionCell {
-            velocities: Vec::new(),
             expected_collision_number: 0.0,
             density: 0.0,
             volume: 0.0,
@@ -47,16 +45,16 @@ impl Default for PartitionCell<'_> {
     }
 }
 
-impl PartitionCell<'_> {
-    //count particles in this cell
-    fn count_particles(&mut self) {
-        self.particle_number = self.velocities.len() as i32;
-    }
-}
+// impl PartitionCell {
+//     //count particles in this cell
+//     fn count_particles(&mut self) {
+//         self.particle_number = self.entities.len() as i32;
+//     }
+// }
 
 /// Resource for defining spatial partitioning parameters. Space is divided into many small cubes of width box_width, and there are box_number of them
 /// along each axis, constituting a large cube of volume (box_number*box_width)^3.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct PartitionParameters {
     /// number of boxes per side in spatial binning
     pub box_number: i64,
@@ -76,14 +74,14 @@ impl Default for PartitionParameters {
     }
 }
 
-pub struct VelocityHashmap<'a> {
+pub struct DensityHashmap {
     ///hashmap of velocities of atoms
-    pub hashmap: HashMap<i64, PartitionCell<'a>>,
+    pub hashmap: HashMap<i64, PartitionCell>,
 }
 
-impl Default for VelocityHashmap<'_> {
+impl Default for DensityHashmap {
     fn default() -> Self {
-        VelocityHashmap {
+        DensityHashmap {
             hashmap: HashMap::new(),
         }
     }
@@ -93,12 +91,11 @@ pub struct BuildSpatialPartitionSystem;
 impl<'a> System<'a> for BuildSpatialPartitionSystem {
     type SystemData = (
         ReadStorage<'a, Position>,
-        ReadStorage<'a, Velocity>,
+        Entities<'a>,
         ReadStorage<'a, crate::atom::Atom>,
         ReadExpect<'a, PartitionParameters>,
-        WriteExpect<'a, VelocityHashmap<'a>>,
+        WriteExpect<'a, DensityHashmap>,
         Read<'a, LazyUpdate>,
-        Entities<'a>,
         WriteStorage<'a, BoxID>,
     );
 
@@ -106,17 +103,16 @@ impl<'a> System<'a> for BuildSpatialPartitionSystem {
         &mut self,
         (
             positions,
-            velocities,
+            entities,
             atoms,
             partition_params,
             mut hashmap,
             updater,
-            entities,
             mut boxids,
         ): Self::SystemData,
     ) {
         println!("build partition running");
-        use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+        use rayon::prelude::ParallelIterator;
         use specs::ParJoin;
         //make hash table - dividing space up into grid
         // number of boxes per side
@@ -134,25 +130,14 @@ impl<'a> System<'a> for BuildSpatialPartitionSystem {
                 println!("entity box id: {}", boxid.id);
             });
 
-        //insert atom velocity into hash
-        //not all systems will care about velocity e.g. two body loss only cares about number
-        // of atoms per cell. But it's faster to only make this hashmap once, and collisions
-        // cares about velocity, so we'll just do this anyway?
         let mut map: HashMap<i64, PartitionCell> = HashMap::new();
-        for (velocity, boxid) in (&velocities, &boxids).join() {
+        for boxid in boxids.join() {
             if boxid.id == i64::MAX {
                 continue;
             } else {
-                map.entry(boxid.id)
-                    .or_default()
-                    .velocities
-                    .push(&mut velocity);
+                map.entry(boxid.id).or_default().particle_number += 1;
             }
         }
-        let cells: Vec<&mut PartitionCell> = map.values_mut().collect();
-        cells.into_par_iter().for_each(|partition_cell| {
-            partition_cell.count_particles();
-        });
         hashmap.hashmap = map;
     }
 }
@@ -162,7 +147,7 @@ impl<'a> System<'a> for RescalePartitionCellSystem {
     type SystemData = (
         ReadStorage<'a, Position>,
         ReadStorage<'a, crate::atom::Atom>,
-        ReadExpect<'a, VelocityHashmap<'a>>,
+        ReadExpect<'a, DensityHashmap>,
         WriteExpect<'a, PartitionParameters>,
     );
 
@@ -316,12 +301,8 @@ pub mod tests {
         test_world.register::<Position>();
         test_world.register::<Atom>();
         test_world.register::<BoxID>();
-        test_world.register::<Velocity>();
         let n_boxes = 10;
         let width = 2.0;
-        let vel = Velocity {
-            vel: Vector3::new(0.0, 0.0, 0.0),
-        };
 
         let atom1 = test_world
             .create_entity()
@@ -329,14 +310,12 @@ pub mod tests {
                 pos: Vector3::new(1.0, 0.0, 0.0),
             })
             .with(Atom)
-            .with(vel)
             .build();
         let atom2 = test_world
             .create_entity()
             .with(Position {
                 pos: Vector3::new(1.0, 1.0, 0.0),
             })
-            .with(vel)
             .with(Atom)
             .build();
         let atom3 = test_world
@@ -344,7 +323,6 @@ pub mod tests {
             .with(Position {
                 pos: Vector3::new(-1.0, 1.0, 1.0),
             })
-            .with(vel)
             .with(Atom)
             .build();
         let atom4 = test_world
@@ -352,13 +330,12 @@ pub mod tests {
             .with(Position {
                 pos: Vector3::new(0.0, 3.0, 0.0),
             })
-            .with(vel)
             .with(Atom)
             .build();
 
         test_world.insert(Timestep { delta: 1.0 });
         test_world.insert(Step { n: 0 });
-        test_world.insert(VelocityHashmap::default());
+        test_world.insert(DensityHashmap::default());
 
         test_world.insert(PartitionParameters {
             box_number: n_boxes,
@@ -393,12 +370,8 @@ pub mod tests {
         test_world.register::<Position>();
         test_world.register::<Atom>();
         test_world.register::<BoxID>();
-        test_world.register::<Velocity>();
         let n_boxes = 10;
         let width = 2.0;
-        let vel = Velocity {
-            vel: Vector3::new(0.0, 0.0, 0.0),
-        };
 
         test_world
             .create_entity()
@@ -407,14 +380,12 @@ pub mod tests {
             })
             .with(Atom)
             .with(BoxID { id: 0 })
-            .with(vel)
             .build();
         test_world
             .create_entity()
             .with(Position {
                 pos: Vector3::new(-1.9, 1.9, 0.5),
             })
-            .with(vel)
             .with(Atom)
             .with(BoxID { id: 0 })
             .build();
@@ -423,7 +394,6 @@ pub mod tests {
             .with(Position {
                 pos: Vector3::new(1.9, -1.9, 0.5),
             })
-            .with(vel)
             .with(Atom)
             .with(BoxID { id: 0 })
             .build();
@@ -432,14 +402,13 @@ pub mod tests {
             .with(Position {
                 pos: Vector3::new(-1.9, -1.9, 0.5),
             })
-            .with(vel)
             .with(Atom)
             .with(BoxID { id: 0 })
             .build();
 
         test_world.insert(Timestep { delta: 1.0 });
         test_world.insert(Step { n: 0 });
-        test_world.insert(VelocityHashmap::default());
+        test_world.insert(DensityHashmap::default());
 
         test_world.insert(PartitionParameters {
             box_number: n_boxes,
@@ -457,14 +426,12 @@ pub mod tests {
             })
             .with(Atom)
             .with(BoxID { id: 0 })
-            .with(vel)
             .build();
         test_world
             .create_entity()
             .with(Position {
                 pos: Vector3::new(-0.5, 0.5, 0.5),
             })
-            .with(vel)
             .with(Atom)
             .with(BoxID { id: 0 })
             .build();
@@ -473,7 +440,6 @@ pub mod tests {
             .with(Position {
                 pos: Vector3::new(0.5, -0.5, 0.5),
             })
-            .with(vel)
             .with(Atom)
             .with(BoxID { id: 0 })
             .build();
@@ -482,7 +448,6 @@ pub mod tests {
             .with(Position {
                 pos: Vector3::new(-0.5, -0.5, 0.5),
             })
-            .with(vel)
             .with(Atom)
             .with(BoxID { id: 0 })
             .build();
