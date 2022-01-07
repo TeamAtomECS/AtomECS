@@ -35,40 +35,43 @@ impl Default for LaserDetuningSampler {
 }
 
 /// Component that holds a vector of `LaserDetuningSampler`
-pub struct LaserDetuningSamplers {
+pub struct LaserDetuningSamplers<const N: usize> {
     /// List of `LaserDetuningSampler`s
-    pub contents: [LaserDetuningSampler; crate::laser::BEAM_LIMIT],
+    pub contents: [LaserDetuningSampler; N],
 }
-impl Component for LaserDetuningSamplers {
+
+impl<const N: usize> Component for LaserDetuningSamplers<N> {
     type Storage = VecStorage<Self>;
 }
 
 /// This system initialises all `LaserDetuningSamplers` to a NAN value.
 ///
 /// It also ensures that the size of the `LaserDetuningSamplers` components match the number of CoolingLight entities in the world.
-pub struct InitialiseLaserDetuningSamplersSystem;
-impl<'a> System<'a> for InitialiseLaserDetuningSamplersSystem {
-    type SystemData = (WriteStorage<'a, LaserDetuningSamplers>,);
+pub struct InitialiseLaserDetuningSamplersSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for InitialiseLaserDetuningSamplersSystem<N> {
+    type SystemData = (WriteStorage<'a, LaserDetuningSamplers<N>>,);
     fn run(&mut self, (mut samplers,): Self::SystemData) {
         use rayon::prelude::*;
 
         (&mut samplers).par_join().for_each(|mut sampler| {
-            sampler.contents = [LaserDetuningSampler::default(); crate::laser::BEAM_LIMIT];
+            sampler.contents = [LaserDetuningSampler::default(); N];
         });
     }
 }
 
 /// This system calculates the total Laser Detuning for each atom with respect to
 /// each CoolingLight entities.
-pub struct CalculateLaserDetuningSystem;
-impl<'a> System<'a> for CalculateLaserDetuningSystem {
+pub struct CalculateLaserDetuningSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for CalculateLaserDetuningSystem<N> {
     type SystemData = (
         ReadStorage<'a, AtomicTransition>,
         ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, DopplerShiftSamplers>,
+        ReadStorage<'a, DopplerShiftSamplers<N>>,
         ReadStorage<'a, ZeemanShiftSampler>,
-        WriteStorage<'a, LaserDetuningSamplers>,
+        WriteStorage<'a, LaserDetuningSamplers<N>>,
     );
 
     fn run(
@@ -132,6 +135,8 @@ impl<'a> System<'a> for CalculateLaserDetuningSystem {
 #[cfg(test)]
 pub mod tests {
 
+    use crate::laser::DEFAULT_BEAM_LIMIT;
+
     use super::*;
 
     extern crate specs;
@@ -144,8 +149,8 @@ pub mod tests {
         let mut test_world = World::new();
         test_world.register::<CoolingLight>();
         test_world.register::<LaserIndex>();
-        test_world.register::<DopplerShiftSamplers>();
-        test_world.register::<LaserDetuningSamplers>();
+        test_world.register::<DopplerShiftSamplers<{ DEFAULT_BEAM_LIMIT }>>();
+        test_world.register::<LaserDetuningSamplers<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<AtomicTransition>();
         test_world.register::<ZeemanShiftSampler>();
 
@@ -167,7 +172,7 @@ pub mod tests {
             .with(DopplerShiftSamplers {
                 contents: [crate::laser_cooling::doppler::DopplerShiftSampler {
                     doppler_shift: 10.0e6, //rad/s
-                }; crate::laser::BEAM_LIMIT],
+                }; crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .with(AtomicTransition::strontium())
             .with(ZeemanShiftSampler {
@@ -176,14 +181,15 @@ pub mod tests {
                 sigma_pi: 0.0,        //rad/s
             })
             .with(LaserDetuningSamplers {
-                contents: [LaserDetuningSampler::default(); crate::laser::BEAM_LIMIT],
+                contents: [LaserDetuningSampler::default(); crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .build();
 
-        let mut system = CalculateLaserDetuningSystem;
+        let mut system = CalculateLaserDetuningSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
-        let sampler_storage = test_world.read_storage::<LaserDetuningSamplers>();
+        let sampler_storage =
+            test_world.read_storage::<LaserDetuningSamplers<{ DEFAULT_BEAM_LIMIT }>>();
 
         assert_approx_eq!(
             sampler_storage

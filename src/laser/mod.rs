@@ -11,15 +11,15 @@ use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use specs::prelude::*;
 
-pub const BEAM_LIMIT: usize = 16;
+pub const DEFAULT_BEAM_LIMIT: usize = 16;
 
 /// Attaches components used for optical force calculation to newly created atoms.
 ///
 /// They are recognized as newly created if they are associated with
 /// the `NewlyCreated` component.
-pub struct AttachLaserComponentsToNewlyCreatedAtomsSystem;
+pub struct AttachLaserComponentsToNewlyCreatedAtomsSystem<const N: usize>;
 
-impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
+impl<'a, const N: usize> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem<N> {
     type SystemData = (
         Entities<'a>,
         ReadStorage<'a, NewlyCreated>,
@@ -31,20 +31,19 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
             updater.insert(
                 ent,
                 sampler::CoolingLaserSamplerMasks {
-                    contents: [sampler::LaserSamplerMask::default(); BEAM_LIMIT],
+                    contents: [sampler::LaserSamplerMask::default(); N],
                 },
             );
             updater.insert(
                 ent,
                 intensity::LaserIntensitySamplers {
-                    contents: [intensity::LaserIntensitySampler::default(); BEAM_LIMIT],
+                    contents: [intensity::LaserIntensitySampler::default(); N],
                 },
             );
             updater.insert(
                 ent,
                 intensity_gradient::LaserIntensityGradientSamplers {
-                    contents: [intensity_gradient::LaserIntensityGradientSampler::default();
-                        BEAM_LIMIT],
+                    contents: [intensity_gradient::LaserIntensityGradientSampler::default(); N],
                 },
             );
         }
@@ -58,30 +57,33 @@ impl<'a> System<'a> for AttachLaserComponentsToNewlyCreatedAtomsSystem {
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the systems run.
-pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>, deps: &[&str]) {
+pub fn add_systems_to_dispatch<const N: usize>(
+    builder: &mut DispatcherBuilder<'static, 'static>,
+    deps: &[&str],
+) {
     builder.add(
-        AttachLaserComponentsToNewlyCreatedAtomsSystem,
+        AttachLaserComponentsToNewlyCreatedAtomsSystem::<N>,
         "attach_laser_components",
         deps,
     );
     builder.add(index::IndexLasersSystem, "index_lasers", deps);
     builder.add(
-        sampler::InitialiseLaserSamplerMasksSystem,
+        sampler::InitialiseLaserSamplerMasksSystem::<N>,
         "initialise_laser_sampler_masks",
         deps,
     );
     builder.add(
-        intensity::InitialiseLaserIntensitySamplersSystem,
+        intensity::InitialiseLaserIntensitySamplersSystem::<N>,
         "initialise_laser_intensity",
         deps,
     );
     builder.add(
-        sampler::FillLaserSamplerMasksSystem,
+        sampler::FillLaserSamplerMasksSystem::<N>,
         "fill_laser_sampler_masks",
         &["index_lasers", "initialise_laser_sampler_masks"],
     );
     builder.add(
-        intensity::SampleLaserIntensitySystem,
+        intensity::SampleLaserIntensitySystem::<N>,
         "sample_laser_intensity",
         &[
             "index_lasers",
@@ -90,7 +92,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
         ],
     );
     builder.add(
-        intensity_gradient::SampleGaussianLaserIntensityGradientSystem,
+        intensity_gradient::SampleGaussianLaserIntensityGradientSystem::<N>,
         "sample_intensity_gradient",
         &["index_lasers"],
     );

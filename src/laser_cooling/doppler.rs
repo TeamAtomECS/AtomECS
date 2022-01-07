@@ -31,13 +31,14 @@ impl Default for DopplerShiftSampler {
 /// This system calculates the Doppler shift for each atom in each cooling beam.
 ///
 /// The result is stored in `DopplerShiftSamplers`
-pub struct CalculateDopplerShiftSystem;
-impl<'a> System<'a> for CalculateDopplerShiftSystem {
+pub struct CalculateDopplerShiftSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for CalculateDopplerShiftSystem<N> {
     type SystemData = (
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, GaussianBeam>,
-        WriteStorage<'a, DopplerShiftSamplers>,
+        WriteStorage<'a, DopplerShiftSamplers<N>>,
         ReadStorage<'a, Velocity>,
     );
 
@@ -79,25 +80,27 @@ impl<'a> System<'a> for CalculateDopplerShiftSystem {
 /// Each list entry corresponds to the detuning with respect to a CoolingLight entity
 /// and is indext via `CoolingLightIndex`
 #[derive(Clone, Copy, Serialize)]
-pub struct DopplerShiftSamplers {
+pub struct DopplerShiftSamplers<const N: usize> {
     /// List of all `DopplerShiftSampler`s
-    pub contents: [DopplerShiftSampler; crate::laser::BEAM_LIMIT],
+    #[serde(with = "serde_arrays")]
+    pub contents: [DopplerShiftSampler; N],
 }
-impl Component for DopplerShiftSamplers {
+impl<const N: usize> Component for DopplerShiftSamplers<N> {
     type Storage = VecStorage<Self>;
 }
 
 /// This system initialises all `DopplerShiftSamplers` to a NAN value.
 ///
 /// It also ensures that the size of the `DopplerShiftSamplers` components match the number of CoolingLight entities in the world.
-pub struct InitialiseDopplerShiftSamplersSystem;
-impl<'a> System<'a> for InitialiseDopplerShiftSamplersSystem {
-    type SystemData = (WriteStorage<'a, DopplerShiftSamplers>,);
+pub struct InitialiseDopplerShiftSamplersSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for InitialiseDopplerShiftSamplersSystem<N> {
+    type SystemData = (WriteStorage<'a, DopplerShiftSamplers<N>>,);
     fn run(&mut self, (mut samplers,): Self::SystemData) {
         use rayon::prelude::*;
 
         (&mut samplers).par_join().for_each(|mut sampler| {
-            sampler.contents = [DopplerShiftSampler::default(); crate::laser::BEAM_LIMIT];
+            sampler.contents = [DopplerShiftSampler::default(); N];
         });
     }
 }
@@ -110,7 +113,7 @@ pub mod tests {
     use crate::laser_cooling::CoolingLight;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
-    use crate::laser::gaussian;
+    use crate::laser::{gaussian, DEFAULT_BEAM_LIMIT};
     use nalgebra::Vector3;
 
     #[test]
@@ -120,7 +123,7 @@ pub mod tests {
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
         test_world.register::<Velocity>();
-        test_world.register::<DopplerShiftSamplers>();
+        test_world.register::<DopplerShiftSamplers<{ DEFAULT_BEAM_LIMIT }>>();
 
         let wavelength = 780e-9;
         test_world
@@ -150,14 +153,15 @@ pub mod tests {
                 vel: Vector3::new(atom_velocity, 0.0, 0.0),
             })
             .with(DopplerShiftSamplers {
-                contents: [DopplerShiftSampler::default(); crate::laser::BEAM_LIMIT],
+                contents: [DopplerShiftSampler::default(); crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .build();
 
-        let mut system = CalculateDopplerShiftSystem;
+        let mut system = CalculateDopplerShiftSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
-        let sampler_storage = test_world.read_storage::<DopplerShiftSamplers>();
+        let sampler_storage =
+            test_world.read_storage::<DopplerShiftSamplers<{ DEFAULT_BEAM_LIMIT }>>();
 
         assert_approx_eq!(
             sampler_storage

@@ -32,7 +32,7 @@ fn main() {
     world.register::<TimeOrbitingPotential>();
     let mut atomecs_builder = AtomecsDispatcherBuilder::new();
     atomecs_builder.add_frame_initialisation_systems();
-    atomecs_builder.add_systems();
+    atomecs_builder.add_systems::<{ lib::laser::DEFAULT_BEAM_LIMIT }>();
     atomecs_builder.builder.add(
         ApplyMagneticForceSystem {},
         "magnetic_force",

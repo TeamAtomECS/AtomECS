@@ -10,6 +10,7 @@ pub mod tests {
     use crate::integrator::Timestep;
     use crate::laser::gaussian::GaussianBeam;
     use crate::laser::index::LaserIndex;
+    use crate::laser::DEFAULT_BEAM_LIMIT;
     use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
     use crate::laser_cooling::CoolingLight;
     extern crate nalgebra;
@@ -48,17 +49,14 @@ pub mod tests {
         // Create simulation dispatcher
         ecs::register_components(&mut world);
         ecs::register_resources(&mut world);
-        let mut dispatcher = ecs::create_simulation_dispatcher_builder().build();
+        let mut dispatcher =
+            ecs::create_simulation_dispatcher_builder::<{DEFAULT_BEAM_LIMIT}>().build();
         dispatcher.setup(&mut world);
 
         // add laser to test world.
         world
             .create_entity()
-            .with(CoolingLight::for_species(
-                transition,
-                detuning_megahz,
-                1,
-            ))
+            .with(CoolingLight::for_species(transition, detuning_megahz, 1))
             .with(LaserIndex::default())
             .with(GaussianBeam::from_peak_intensity_with_rayleigh_range(
                 Vector3::new(0.0, 0.0, 0.0),

@@ -14,35 +14,37 @@ pub struct LaserSamplerMask {
     pub filled: bool,
 }
 /// Component that holds a vector of `LaserSamplerMask`
-pub struct CoolingLaserSamplerMasks {
+pub struct CoolingLaserSamplerMasks<const N: usize> {
     /// List of `LaserSamplerMask`s
-    pub contents: [LaserSamplerMask; crate::laser::BEAM_LIMIT],
+    pub contents: [LaserSamplerMask; N],
 }
-impl Component for CoolingLaserSamplerMasks {
+impl<const N: usize> Component for CoolingLaserSamplerMasks<N> {
     type Storage = VecStorage<Self>;
 }
 
 /// Marks all laser sampler mask slots as empty.
-pub struct InitialiseLaserSamplerMasksSystem;
-impl<'a> System<'a> for InitialiseLaserSamplerMasksSystem {
-    type SystemData = (WriteStorage<'a, CoolingLaserSamplerMasks>,);
+pub struct InitialiseLaserSamplerMasksSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for InitialiseLaserSamplerMasksSystem<N> {
+    type SystemData = (WriteStorage<'a, CoolingLaserSamplerMasks<N>>,);
 
     fn run(&mut self, (mut masks,): Self::SystemData) {
         use rayon::prelude::*;
 
         (&mut masks).par_join().for_each(|mask| {
-            mask.contents = [LaserSamplerMask::default(); crate::laser::BEAM_LIMIT];
+            mask.contents = [LaserSamplerMask::default(); N];
         });
     }
 }
 
 /// Determines which laser sampler slots are currently being used.
-pub struct FillLaserSamplerMasksSystem;
-impl<'a> System<'a> for FillLaserSamplerMasksSystem {
+pub struct FillLaserSamplerMasksSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for FillLaserSamplerMasksSystem<N> {
     type SystemData = (
         ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, CoolingLight>,
-        WriteStorage<'a, CoolingLaserSamplerMasks>,
+        WriteStorage<'a, CoolingLaserSamplerMasks<N>>,
     );
     fn run(&mut self, (light_index, cooling, mut masks): Self::SystemData) {
         use rayon::prelude::*;

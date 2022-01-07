@@ -62,7 +62,8 @@ fn main() {
     let mut world = World::new();
     ecs::register_components(&mut world);
     ecs::register_resources(&mut world);
-    let mut builder = ecs::create_simulation_dispatcher_builder();
+    let mut builder =
+        ecs::create_simulation_dispatcher_builder::<{ lib::laser::DEFAULT_BEAM_LIMIT }>();
 
     // Configure simulation output.
     builder = builder.with(

@@ -5,7 +5,6 @@ use crate::constant;
 use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use crate::laser::index::LaserIndex;
-use crate::laser::BEAM_LIMIT;
 use crate::ramp::Lerp;
 use serde::{Deserialize, Serialize};
 use specs::prelude::*;
@@ -85,9 +84,9 @@ impl Component for CoolingLight {
 ///
 /// They are recognized as newly created if they are associated with
 /// the `NewlyCreated` component.
-pub struct AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem;
+pub struct AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem<const N: usize>;
 
-impl<'a> System<'a> for AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem {
+impl<'a, const N: usize> System<'a> for AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem<N> {
     type SystemData = (
         Entities<'a>,
         ReadStorage<'a, NewlyCreated>,
@@ -99,19 +98,19 @@ impl<'a> System<'a> for AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem {
             updater.insert(
                 ent,
                 doppler::DopplerShiftSamplers {
-                    contents: [doppler::DopplerShiftSampler::default(); BEAM_LIMIT],
+                    contents: [doppler::DopplerShiftSampler::default(); N],
                 },
             );
             updater.insert(
                 ent,
                 sampler::LaserDetuningSamplers {
-                    contents: [sampler::LaserDetuningSampler::default(); BEAM_LIMIT],
+                    contents: [sampler::LaserDetuningSampler::default(); N],
                 },
             );
             updater.insert(
                 ent,
                 rate::RateCoefficients {
-                    contents: [rate::RateCoefficient::default(); BEAM_LIMIT],
+                    contents: [rate::RateCoefficient::default(); N],
                 },
             );
             updater.insert(ent, twolevel::TwoLevelPopulation::default());
@@ -119,13 +118,13 @@ impl<'a> System<'a> for AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem {
             updater.insert(
                 ent,
                 photons_scattered::ExpectedPhotonsScatteredVector {
-                    contents: [photons_scattered::ExpectedPhotonsScattered::default(); BEAM_LIMIT],
+                    contents: [photons_scattered::ExpectedPhotonsScattered::default(); N],
                 },
             );
             updater.insert(
                 ent,
                 photons_scattered::ActualPhotonsScatteredVector {
-                    contents: [photons_scattered::ActualPhotonsScattered::default(); BEAM_LIMIT],
+                    contents: [photons_scattered::ActualPhotonsScattered::default(); N],
                 },
             );
         }
@@ -156,39 +155,42 @@ impl<'a> System<'a> for AttachIndexToCoolingLightSystem {
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the systems run.
-pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>, deps: &[&str]) {
+pub fn add_systems_to_dispatch<const N: usize>(
+    builder: &mut DispatcherBuilder<'static, 'static>,
+    deps: &[&str],
+) {
     builder.add(
-        AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem,
+        AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem::<N>,
         "attach_laser_cooling_components",
         deps,
     );
     builder.add(
-        photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem,
+        photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem::<N>,
         "initialise_expected_photons",
         deps,
     );
     builder.add(
-        rate::InitialiseRateCoefficientsSystem,
+        rate::InitialiseRateCoefficientsSystem::<N>,
         "initialise_rate_coefficients",
         deps,
     );
     builder.add(
-        doppler::CalculateDopplerShiftSystem,
+        doppler::CalculateDopplerShiftSystem::<N>,
         "calculate_doppler_shift",
         &["index_lasers"],
     );
     builder.add(
-        sampler::CalculateLaserDetuningSystem,
+        sampler::CalculateLaserDetuningSystem::<N>,
         "calculate_laser_detuning",
         &["calculate_doppler_shift", "zeeman_shift", "index_lasers"],
     );
     builder.add(
-        rate::CalculateRateCoefficientsSystem,
+        rate::CalculateRateCoefficientsSystem::<N>,
         "calculate_rate_coefficients",
         &["calculate_laser_detuning", "initialise_rate_coefficients"],
     );
     builder.add(
-        twolevel::CalculateTwoLevelPopulationSystem,
+        twolevel::CalculateTwoLevelPopulationSystem::<N>,
         "calculate_twolevel",
         &["calculate_rate_coefficients", "fill_laser_sampler_masks"],
     );
@@ -198,7 +200,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
         &["calculate_twolevel"],
     );
     builder.add(
-        photons_scattered::CalculateExpectedPhotonsScatteredSystem,
+        photons_scattered::CalculateExpectedPhotonsScatteredSystem::<N>,
         "calculate_expected_photons",
         &[
             "calculate_total_photons",
@@ -207,12 +209,12 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
         ],
     );
     builder.add(
-        photons_scattered::CalculateActualPhotonsScatteredSystem,
+        photons_scattered::CalculateActualPhotonsScatteredSystem::<N>,
         "calculate_actual_photons",
         &["calculate_expected_photons"],
     );
     builder.add(
-        force::CalculateAbsorptionForcesSystem,
+        force::CalculateAbsorptionForcesSystem::<N>,
         "calculate_absorption_forces",
         &["calculate_actual_photons", INTEGRATE_POSITION_SYSTEM_NAME],
     );
@@ -222,7 +224,7 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
         &["calculate_absorption_forces"],
     );
     builder.add(
-        force::ApplyEmissionForceSystem,
+        force::ApplyEmissionForceSystem::<N>,
         "calculate_emission_forces",
         &[
             "calculate_absorption_forces",
@@ -259,12 +261,10 @@ pub mod tests {
         system.run_now(&test_world);
         test_world.maintain();
 
-        assert!(
-            test_world
-                .read_storage::<LaserIndex>()
-                .get(test_entity)
-                .is_some()
-        );
+        assert!(test_world
+            .read_storage::<LaserIndex>()
+            .get(test_entity)
+            .is_some());
     }
 
     #[test]

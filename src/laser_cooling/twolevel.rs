@@ -51,12 +51,13 @@ impl Component for TwoLevelPopulation {
 }
 
 /// Calculates the TwoLevelPopulation from the natural linewidth and the `RateCoefficients`
-pub struct CalculateTwoLevelPopulationSystem;
-impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
+pub struct CalculateTwoLevelPopulationSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for CalculateTwoLevelPopulationSystem<N> {
     type SystemData = (
         ReadStorage<'a, AtomicTransition>,
-        ReadStorage<'a, RateCoefficients>,
-        ReadStorage<'a, CoolingLaserSamplerMasks>,
+        ReadStorage<'a, RateCoefficients<N>>,
+        ReadStorage<'a, CoolingLaserSamplerMasks<N>>,
         WriteStorage<'a, TwoLevelPopulation>,
     );
 
@@ -91,20 +92,21 @@ impl<'a> System<'a> for CalculateTwoLevelPopulationSystem {
 pub mod tests {
 
     use super::*;
+    use crate::laser::DEFAULT_BEAM_LIMIT;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
 
     #[test]
     fn test_calculate_twolevel_population_system() {
         let mut test_world = World::new();
-        test_world.register::<RateCoefficients>();
+        test_world.register::<RateCoefficients<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<AtomicTransition>();
-        test_world.register::<CoolingLaserSamplerMasks>();
+        test_world.register::<CoolingLaserSamplerMasks<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<TwoLevelPopulation>();
 
         // this test runs with two lasers only and we have to tell this the mask
         let mut active_lasers =
-            [crate::laser::sampler::LaserSamplerMask { filled: false }; crate::laser::BEAM_LIMIT];
+            [crate::laser::sampler::LaserSamplerMask { filled: false }; DEFAULT_BEAM_LIMIT];
         active_lasers[0] = crate::laser::sampler::LaserSamplerMask { filled: true };
         active_lasers[1] = crate::laser::sampler::LaserSamplerMask { filled: true };
 
@@ -112,7 +114,7 @@ pub mod tests {
             .create_entity()
             .with(RateCoefficients {
                 contents: [crate::laser_cooling::rate::RateCoefficient { rate: 1_000_000.0 };
-                    crate::laser::BEAM_LIMIT],
+                    crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .with(AtomicTransition::strontium())
             .with(CoolingLaserSamplerMasks {
@@ -121,14 +123,14 @@ pub mod tests {
             .with(TwoLevelPopulation::default())
             .build();
 
-        let mut system = CalculateTwoLevelPopulationSystem;
+        let mut system = CalculateTwoLevelPopulationSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<TwoLevelPopulation>();
 
         let mut sum_rates = 0.0;
 
-        for active_laser in active_lasers.iter().take(crate::laser::BEAM_LIMIT) {
+        for active_laser in active_lasers.iter().take(crate::laser::DEFAULT_BEAM_LIMIT) {
             if active_laser.filled {
                 sum_rates += 1_000_000.0;
             }
@@ -147,21 +149,21 @@ pub mod tests {
     #[test]
     fn test_popn_high_intensity_limit() {
         let mut test_world = World::new();
-        test_world.register::<RateCoefficients>();
+        test_world.register::<RateCoefficients<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<AtomicTransition>();
-        test_world.register::<CoolingLaserSamplerMasks>();
+        test_world.register::<CoolingLaserSamplerMasks<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<TwoLevelPopulation>();
 
         // this test runs with two lasers only and we have to tell this the mask
-        let mut active_lasers =
-            [crate::laser::sampler::LaserSamplerMask { filled: false }; crate::laser::BEAM_LIMIT];
+        let mut active_lasers = [crate::laser::sampler::LaserSamplerMask { filled: false };
+            crate::laser::DEFAULT_BEAM_LIMIT];
         active_lasers[0] = crate::laser::sampler::LaserSamplerMask { filled: true };
 
         let atom1 = test_world
             .create_entity()
             .with(RateCoefficients {
                 contents: [crate::laser_cooling::rate::RateCoefficient { rate: 1.0e9 };
-                    crate::laser::BEAM_LIMIT],
+                    crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .with(AtomicTransition::rubidium())
             .with(CoolingLaserSamplerMasks {
@@ -170,7 +172,7 @@ pub mod tests {
             .with(TwoLevelPopulation::default())
             .build();
 
-        let mut system = CalculateTwoLevelPopulationSystem;
+        let mut system = CalculateTwoLevelPopulationSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<TwoLevelPopulation>();

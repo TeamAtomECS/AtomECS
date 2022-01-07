@@ -29,11 +29,12 @@ impl Default for LaserIntensityGradientSampler {
 }
 
 /// Component that holds a list of `LaserIntensityGradientSampler`s
-pub struct LaserIntensityGradientSamplers {
+pub struct LaserIntensityGradientSamplers<const N: usize> {
     /// List of laser gradient samplers
-    pub contents: [LaserIntensityGradientSampler; crate::laser::BEAM_LIMIT],
+    pub contents: [LaserIntensityGradientSampler; N],
 }
-impl Component for LaserIntensityGradientSamplers {
+
+impl<const N: usize> Component for LaserIntensityGradientSamplers<N> {
     type Storage = VecStorage<Self>;
 }
 
@@ -44,15 +45,16 @@ impl Component for LaserIntensityGradientSamplers {
 /// `Frame` to account for different ellipiticies in the future.
 /// The result is stored in the `LaserIntensityGradientSamplers` component that each
 /// atom is associated with.
-pub struct SampleGaussianLaserIntensityGradientSystem;
-impl<'a> System<'a> for SampleGaussianLaserIntensityGradientSystem {
+pub struct SampleGaussianLaserIntensityGradientSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for SampleGaussianLaserIntensityGradientSystem<N> {
     type SystemData = (
         ReadStorage<'a, DipoleLight>,
         ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, GaussianBeam>,
         ReadStorage<'a, Frame>,
         ReadStorage<'a, Position>,
-        WriteStorage<'a, LaserIntensityGradientSamplers>,
+        WriteStorage<'a, LaserIntensityGradientSamplers<N>>,
     );
 
     fn run(
@@ -73,6 +75,8 @@ impl<'a> System<'a> for SampleGaussianLaserIntensityGradientSystem {
 }
 #[cfg(test)]
 pub mod tests {
+    use crate::laser::DEFAULT_BEAM_LIMIT;
+
     use super::*;
 
     extern crate specs;
@@ -88,7 +92,7 @@ pub mod tests {
         test_world.register::<LaserIndex>();
         test_world.register::<GaussianBeam>();
         test_world.register::<Position>();
-        test_world.register::<LaserIntensityGradientSamplers>();
+        test_world.register::<LaserIntensityGradientSamplers<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<Frame>();
         test_world.register::<DipoleLight>();
 
@@ -126,13 +130,15 @@ pub mod tests {
                 pos: Vector3::new(10.0e-6, 0.0, 30.0e-6),
             })
             .with(LaserIntensityGradientSamplers {
-                contents: [LaserIntensityGradientSampler::default(); crate::laser::BEAM_LIMIT],
+                contents: [LaserIntensityGradientSampler::default();
+                    crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .build();
-        let mut system = SampleGaussianLaserIntensityGradientSystem;
+        let mut system = SampleGaussianLaserIntensityGradientSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
-        let sampler_storage = test_world.read_storage::<LaserIntensityGradientSamplers>();
+        let sampler_storage =
+            test_world.read_storage::<LaserIntensityGradientSamplers<{ DEFAULT_BEAM_LIMIT }>>();
         let sim_result_gradient = sampler_storage
             .get(atom1)
             .expect("Entity not found!")
@@ -174,7 +180,7 @@ pub mod tests {
         test_world.register::<LaserIndex>();
         test_world.register::<GaussianBeam>();
         test_world.register::<Position>();
-        test_world.register::<LaserIntensityGradientSamplers>();
+        test_world.register::<LaserIntensityGradientSamplers<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<Frame>();
         test_world.register::<DipoleLight>();
 
@@ -212,13 +218,15 @@ pub mod tests {
                 pos: Vector3::new(20.0e-6, 20.0e-6, 20.0e-6),
             })
             .with(LaserIntensityGradientSamplers {
-                contents: [LaserIntensityGradientSampler::default(); crate::laser::BEAM_LIMIT],
+                contents: [LaserIntensityGradientSampler::default();
+                    crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .build();
-        let mut system = SampleGaussianLaserIntensityGradientSystem;
+        let mut system = SampleGaussianLaserIntensityGradientSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
-        let sampler_storage = test_world.read_storage::<LaserIntensityGradientSamplers>();
+        let sampler_storage =
+            test_world.read_storage::<LaserIntensityGradientSamplers<{ DEFAULT_BEAM_LIMIT }>>();
         let sim_result_gradient = sampler_storage
             .get(atom1)
             .expect("Entity not found!")

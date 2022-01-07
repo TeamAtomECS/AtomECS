@@ -33,25 +33,28 @@ impl Default for LaserIntensitySampler {
 
 /// Component that holds a list of `LaserIntensitySamplers`
 #[derive(Copy, Clone, Serialize)]
-pub struct LaserIntensitySamplers {
+pub struct LaserIntensitySamplers<const N: usize> {
     /// List of laser samplers
-    pub contents: [LaserIntensitySampler; crate::laser::BEAM_LIMIT],
+    #[serde(with = "serde_arrays")]
+    pub contents: [LaserIntensitySampler; N],
 }
-impl Component for LaserIntensitySamplers {
+
+impl<const N: usize> Component for LaserIntensitySamplers<N> {
     type Storage = VecStorage<Self>;
 }
 
 /// This system initialises all `LaserIntensitySamplers` to a NAN value.
 ///
 /// It also ensures that the size of the `LaserIntensitySamplers` components match the number of CoolingLight entities in the world.
-pub struct InitialiseLaserIntensitySamplersSystem;
-impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
-    type SystemData = (WriteStorage<'a, LaserIntensitySamplers>,);
+pub struct InitialiseLaserIntensitySamplersSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for InitialiseLaserIntensitySamplersSystem<N> {
+    type SystemData = (WriteStorage<'a, LaserIntensitySamplers<N>>,);
     fn run(&mut self, (mut samplers,): Self::SystemData) {
         use rayon::prelude::*;
 
         (&mut samplers).par_join().for_each(|mut sampler| {
-            sampler.contents = [LaserIntensitySampler::default(); crate::laser::BEAM_LIMIT];
+            sampler.contents = [LaserIntensitySampler::default(); N];
         });
     }
 }
@@ -62,8 +65,9 @@ impl<'a> System<'a> for InitialiseLaserIntensitySamplersSystem {
 /// along with `CoolingLight` is `GaussianBeam`.
 /// However, in the future, other components will be implemented and this System can then be expanded
 /// to handle them as well.
-pub struct SampleLaserIntensitySystem;
-impl<'a> System<'a> for SampleLaserIntensitySystem {
+pub struct SampleLaserIntensitySystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for SampleLaserIntensitySystem<N> {
     type SystemData = (
         Entities<'a>,
         ReadStorage<'a, LaserIndex>,
@@ -71,7 +75,7 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
         ReadStorage<'a, CircularMask>,
         ReadStorage<'a, Frame>,
         ReadStorage<'a, Position>,
-        WriteStorage<'a, LaserIntensitySamplers>,
+        WriteStorage<'a, LaserIntensitySamplers<N>>,
     );
 
     fn run(
@@ -112,7 +116,9 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
             (&mut intensity_samplers, &position)
                 .par_join()
                 .for_each(|(samplers, pos)| {
-                    for (index, gaussian, mask, frame) in laser_array.iter().take(number_in_iteration) {
+                    for (index, gaussian, mask, frame) in
+                        laser_array.iter().take(number_in_iteration)
+                    {
                         samplers.contents[index.index].intensity = get_gaussian_beam_intensity(
                             gaussian,
                             pos,
@@ -129,7 +135,7 @@ impl<'a> System<'a> for SampleLaserIntensitySystem {
 pub mod tests {
 
     use super::*;
-    use crate::laser::index::LaserIndex;
+    use crate::laser::{index::LaserIndex, DEFAULT_BEAM_LIMIT};
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
     use crate::laser::gaussian;
@@ -145,7 +151,7 @@ pub mod tests {
         test_world.register::<CircularMask>();
         test_world.register::<Frame>();
         test_world.register::<Position>();
-        test_world.register::<LaserIntensitySamplers>();
+        test_world.register::<LaserIntensitySamplers<{ DEFAULT_BEAM_LIMIT }>>();
 
         test_world
             .create_entity()
@@ -167,14 +173,15 @@ pub mod tests {
             .create_entity()
             .with(Position { pos: Vector3::y() })
             .with(LaserIntensitySamplers {
-                contents: [LaserIntensitySampler::default(); crate::laser::BEAM_LIMIT],
+                contents: [LaserIntensitySampler::default(); crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .build();
 
-        let mut system = SampleLaserIntensitySystem;
+        let mut system = SampleLaserIntensitySystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
-        let sampler_storage = test_world.read_storage::<LaserIntensitySamplers>();
+        let sampler_storage =
+            test_world.read_storage::<LaserIntensitySamplers<{ DEFAULT_BEAM_LIMIT }>>();
 
         let actual_intensity = gaussian::get_gaussian_beam_intensity(
             &GaussianBeam {

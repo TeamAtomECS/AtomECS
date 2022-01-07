@@ -11,14 +11,14 @@ use crate::laser::index::LaserIndex;
 ///
 /// It uses the `LaserIntensityGradientSamplers` and the properties of the `DipoleLight`
 /// to add the respective amount of force to `Force`
-pub struct ApplyDipoleForceSystem;
+pub struct ApplyDipoleForceSystem<const N: usize>;
 
-impl<'a> System<'a> for ApplyDipoleForceSystem {
+impl<'a, const N: usize> System<'a> for ApplyDipoleForceSystem<N> {
     type SystemData = (
         ReadStorage<'a, DipoleLight>,
         ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, Polarizability>,
-        ReadStorage<'a, LaserIntensityGradientSamplers>,
+        ReadStorage<'a, LaserIntensityGradientSamplers<N>>,
         WriteStorage<'a, Force>,
     );
 
@@ -30,7 +30,8 @@ impl<'a> System<'a> for ApplyDipoleForceSystem {
             .par_join()
             .for_each(|(force, polarizability, sampler)| {
                 for (index, _dipole) in (&dipole_index, &dipole_light).join() {
-                    force.force += polarizability.prefactor * sampler.contents[index.index].gradient;
+                    force.force +=
+                        polarizability.prefactor * sampler.contents[index.index].gradient;
                 }
             });
     }
@@ -47,6 +48,7 @@ pub mod tests {
     use crate::constant;
     use crate::laser;
     use crate::laser::gaussian::GaussianBeam;
+    use crate::laser::DEFAULT_BEAM_LIMIT;
     use nalgebra::Vector3;
 
     #[test]
@@ -56,7 +58,7 @@ pub mod tests {
         test_world.register::<LaserIndex>();
         test_world.register::<DipoleLight>();
         test_world.register::<Force>();
-        test_world.register::<LaserIntensityGradientSamplers>();
+        test_world.register::<LaserIntensityGradientSamplers<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<Polarizability>();
 
         let transition_linewidth = 32e6;
@@ -82,11 +84,11 @@ pub mod tests {
             .with(LaserIntensityGradientSamplers {
                 contents: [crate::laser::intensity_gradient::LaserIntensityGradientSampler {
                     gradient: Vector3::new(0.0, 1.0, -2.0),
-                }; crate::laser::BEAM_LIMIT],
+                }; crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .with(transition)
             .build();
-        let mut system = ApplyDipoleForceSystem;
+        let mut system = ApplyDipoleForceSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
@@ -111,7 +113,7 @@ pub mod tests {
         test_world.register::<LaserIndex>();
         test_world.register::<DipoleLight>();
         test_world.register::<Force>();
-        test_world.register::<LaserIntensityGradientSamplers>();
+        test_world.register::<LaserIntensityGradientSamplers<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<Polarizability>();
 
         test_world
@@ -134,11 +136,11 @@ pub mod tests {
             .with(LaserIntensityGradientSamplers {
                 contents: [crate::laser::intensity_gradient::LaserIntensityGradientSampler {
                     gradient: Vector3::new(-8.4628e+7, -4.33992902e+13, -4.33992902e+13),
-                }; crate::laser::BEAM_LIMIT],
+                }; crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .with(transition)
             .build();
-        let mut system = ApplyDipoleForceSystem;
+        let mut system = ApplyDipoleForceSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
@@ -156,7 +158,7 @@ pub mod tests {
         test_world.register::<LaserIndex>();
         test_world.register::<DipoleLight>();
         test_world.register::<Force>();
-        test_world.register::<LaserIntensityGradientSamplers>();
+        test_world.register::<LaserIntensityGradientSamplers<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<Polarizability>();
         test_world.register::<crate::atom::Position>();
         test_world.register::<crate::laser::gaussian::GaussianBeam>();
@@ -223,18 +225,21 @@ pub mod tests {
             })
             .with(LaserIntensityGradientSamplers {
                 contents: [laser::intensity_gradient::LaserIntensityGradientSampler::default();
-                    crate::laser::BEAM_LIMIT],
+                    crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .with(transition)
             .build();
-        let mut grad_system = laser::intensity_gradient::SampleGaussianLaserIntensityGradientSystem;
-        let mut force_system = ApplyDipoleForceSystem;
+        let mut grad_system = laser::intensity_gradient::SampleGaussianLaserIntensityGradientSystem::<
+            { DEFAULT_BEAM_LIMIT },
+        >;
+        let mut force_system = ApplyDipoleForceSystem::<{ DEFAULT_BEAM_LIMIT }>;
         grad_system.run_now(&test_world);
         test_world.maintain();
         force_system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
-        let grad_sampler_storage = test_world.read_storage::<LaserIntensityGradientSamplers>();
+        let grad_sampler_storage =
+            test_world.read_storage::<LaserIntensityGradientSamplers<{ DEFAULT_BEAM_LIMIT }>>();
         let sim_result_force = sampler_storage.get(atom1).expect("Entity not found!").force;
         let _sim_result_grad = grad_sampler_storage
             .get(atom1)

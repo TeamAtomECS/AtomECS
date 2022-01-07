@@ -49,7 +49,7 @@ impl AtomecsDispatcherBuilder {
 
     pub fn add_frame_initialisation_systems(&mut self) {}
 
-    pub fn add_systems(&mut self) {
+    pub fn add_systems<const N: usize>(&mut self) {
         self.builder.add(
             VelocityVerletIntegratePositionSystem,
             INTEGRATE_POSITION_SYSTEM_NAME,
@@ -61,9 +61,9 @@ impl AtomecsDispatcherBuilder {
         self.builder.add(AddOldForceToNewAtomsSystem, "", &[]);
 
         magnetic::add_systems_to_dispatch(&mut self.builder, &[]);
-        laser::add_systems_to_dispatch(&mut self.builder, &[]);
-        laser_cooling::add_systems_to_dispatch(&mut self.builder, &[]);
-        dipole::add_systems_to_dispatch(&mut self.builder, &[]);
+        laser::add_systems_to_dispatch::<N>(&mut self.builder, &[]);
+        laser_cooling::add_systems_to_dispatch::<N>(&mut self.builder, &[]);
+        dipole::add_systems_to_dispatch::<N>(&mut self.builder, &[]);
         atom_sources::add_systems_to_dispatch(&mut self.builder, &[]);
         self.builder.add(
             ApplyGravitationalForceSystem,
@@ -93,23 +93,24 @@ impl AtomecsDispatcherBuilder {
         sim_region::add_systems_to_dispatch(&mut self.builder, &[]);
     }
 
-    pub fn build(mut self) -> DispatcherBuilder<'static, 'static> {
+    pub fn build<const N: usize>(mut self) -> DispatcherBuilder<'static, 'static> {
         self.add_frame_initialisation_systems();
-        self.add_systems();
+        self.add_systems::<N>();
         self.add_frame_end_systems();
         self.builder
     }
 }
 
 /// Creates a [Dispatcher](specs::Dispatcher) that is used to calculate each simulation frame.
-pub fn create_simulation_dispatcher() -> Dispatcher<'static, 'static> {
-    let builder = create_simulation_dispatcher_builder();
+pub fn create_simulation_dispatcher<const N: usize>() -> Dispatcher<'static, 'static> {
+    let builder = create_simulation_dispatcher_builder::<N>();
     builder.build()
 }
 
-pub fn create_simulation_dispatcher_builder() -> DispatcherBuilder<'static, 'static> {
+pub fn create_simulation_dispatcher_builder<const N: usize>() -> DispatcherBuilder<'static, 'static>
+{
     let atomecs_builder = AtomecsDispatcherBuilder::new();
-    atomecs_builder.build()
+    atomecs_builder.build::<N>()
 }
 
 /// Add required resources to the world
