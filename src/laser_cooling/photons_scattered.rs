@@ -86,15 +86,16 @@ impl Default for ExpectedPhotonsScattered {
 
 /// The List that holds an `ExpectedPhotonsScattered` for each laser
 #[derive(Deserialize, Serialize, Clone)]
-pub struct ExpectedPhotonsScatteredVector {
-    pub contents: [ExpectedPhotonsScattered; crate::laser::BEAM_LIMIT],
+pub struct ExpectedPhotonsScatteredVector<const N: usize> {
+    #[serde(with = "serde_arrays")]
+    pub contents: [ExpectedPhotonsScattered; N],
 }
 
-impl Component for ExpectedPhotonsScatteredVector {
+impl<const N: usize> Component for ExpectedPhotonsScatteredVector<N> {
     type Storage = VecStorage<Self>;
 }
 
-impl fmt::Display for ExpectedPhotonsScatteredVector {
+impl<const N: usize> fmt::Display for ExpectedPhotonsScatteredVector<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut result = f.write_str("");
         for aps in &self.contents {
@@ -107,14 +108,15 @@ impl fmt::Display for ExpectedPhotonsScatteredVector {
 /// This system initialises all ´ExpectedPhotonsScatteredVector´ to a NAN value.
 ///
 /// It also ensures that the size of the ´ExpectedPhotonsScatteredVector´ components match the number of CoolingLight entities in the world.
-pub struct InitialiseExpectedPhotonsScatteredVectorSystem;
-impl<'a> System<'a> for InitialiseExpectedPhotonsScatteredVectorSystem {
-    type SystemData = (WriteStorage<'a, ExpectedPhotonsScatteredVector>,);
+pub struct InitialiseExpectedPhotonsScatteredVectorSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for InitialiseExpectedPhotonsScatteredVectorSystem<N> {
+    type SystemData = (WriteStorage<'a, ExpectedPhotonsScatteredVector<N>>,);
     fn run(&mut self, (mut expected_photons,): Self::SystemData) {
         use rayon::prelude::*;
 
         (&mut expected_photons).par_join().for_each(|mut expected| {
-            expected.contents = [ExpectedPhotonsScattered::default(); crate::laser::BEAM_LIMIT];
+            expected.contents = [ExpectedPhotonsScattered::default(); N];
         });
     }
 }
@@ -123,13 +125,14 @@ impl<'a> System<'a> for InitialiseExpectedPhotonsScatteredVectorSystem {
 ///
 /// It is required that the `TotalPhotonsScattered` is already updated since this System divides
 /// them between the CoolingLight entities.
-pub struct CalculateExpectedPhotonsScatteredSystem;
-impl<'a> System<'a> for CalculateExpectedPhotonsScatteredSystem {
+pub struct CalculateExpectedPhotonsScatteredSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for CalculateExpectedPhotonsScatteredSystem<N> {
     type SystemData = (
-        ReadStorage<'a, RateCoefficients>,
+        ReadStorage<'a, RateCoefficients<N>>,
         ReadStorage<'a, TotalPhotonsScattered>,
-        ReadStorage<'a, CoolingLaserSamplerMasks>,
-        WriteStorage<'a, ExpectedPhotonsScatteredVector>,
+        ReadStorage<'a, CoolingLaserSamplerMasks<N>>,
+        WriteStorage<'a, ExpectedPhotonsScatteredVector<N>>,
     );
 
     fn run(
@@ -190,22 +193,26 @@ impl Default for ActualPhotonsScattered {
 
 /// The ist that holds an `ActualPhotonsScattered` for each CoolingLight entity
 #[derive(Deserialize, Serialize, Clone)]
-pub struct ActualPhotonsScatteredVector {
-    pub contents: [ActualPhotonsScattered; crate::laser::BEAM_LIMIT],
+pub struct ActualPhotonsScatteredVector<const N: usize> {
+    #[serde(with = "serde_arrays")]
+    pub contents: [ActualPhotonsScattered; N],
 }
 
-impl ActualPhotonsScatteredVector {
+impl<const N: usize> ActualPhotonsScatteredVector<N> {
     /// Calculate the sum of all entries
     pub fn calculate_total_scattered(&self) -> u64 {
         let mut sum: f64 = 0.0;
-        for i in 0..self.contents.len() {
-            sum += self.contents[i].scattered;
+        // for i in 0..self.contents.len() {
+        //     sum += self.contents[i].scattered;
+        // }
+        for item in &self.contents {
+            sum += item.scattered;
         }
         sum as u64
     }
 }
 
-impl fmt::Display for ActualPhotonsScatteredVector {
+impl<const N: usize> fmt::Display for ActualPhotonsScatteredVector<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut result = f.write_str("");
         for aps in &self.contents {
@@ -215,7 +222,7 @@ impl fmt::Display for ActualPhotonsScatteredVector {
     }
 }
 
-impl Component for ActualPhotonsScatteredVector {
+impl<const N: usize> Component for ActualPhotonsScatteredVector<N> {
     type Storage = VecStorage<Self>;
 }
 
@@ -236,12 +243,13 @@ impl Default for ScatteringFluctuationsOption {
 
 /// Calcutates the actual number of photons scattered by each CoolingLight entity in one iteration step
 /// by drawing from a Poisson Distribution that has `ExpectedPhotonsScattered` as the lambda parameter.
-pub struct CalculateActualPhotonsScatteredSystem;
-impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
+pub struct CalculateActualPhotonsScatteredSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for CalculateActualPhotonsScatteredSystem<N> {
     type SystemData = (
         Option<Read<'a, ScatteringFluctuationsOption>>,
-        ReadStorage<'a, ExpectedPhotonsScatteredVector>,
-        WriteStorage<'a, ActualPhotonsScatteredVector>,
+        ReadStorage<'a, ExpectedPhotonsScatteredVector<N>>,
+        WriteStorage<'a, ActualPhotonsScatteredVector<N>>,
     );
 
     fn run(
@@ -296,6 +304,8 @@ impl<'a> System<'a> for CalculateActualPhotonsScatteredSystem {
 #[cfg(test)]
 pub mod tests {
 
+    use crate::laser::DEFAULT_BEAM_LIMIT;
+
     use super::*;
 
     extern crate specs;
@@ -344,10 +354,10 @@ pub mod tests {
     fn test_calculate_expected_photons_scattered_system() {
         let mut test_world = World::new();
 
-        test_world.register::<RateCoefficients>();
-        test_world.register::<CoolingLaserSamplerMasks>();
+        test_world.register::<RateCoefficients<{ DEFAULT_BEAM_LIMIT }>>();
+        test_world.register::<CoolingLaserSamplerMasks<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<TotalPhotonsScattered>();
-        test_world.register::<ExpectedPhotonsScatteredVector>();
+        test_world.register::<ExpectedPhotonsScatteredVector<{ DEFAULT_BEAM_LIMIT }>>();
 
         //We assume 16 beams with equal `RateCoefficient`s for this test
 
@@ -356,22 +366,23 @@ pub mod tests {
             .with(TotalPhotonsScattered { total: 8.0 })
             .with(CoolingLaserSamplerMasks {
                 contents: [crate::laser::sampler::LaserSamplerMask { filled: true };
-                    crate::laser::BEAM_LIMIT],
+                    crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .with(RateCoefficients {
                 contents: [crate::laser_cooling::rate::RateCoefficient { rate: 1_000_000.0 };
-                    crate::laser::BEAM_LIMIT],
+                    crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .with(ExpectedPhotonsScatteredVector {
-                contents: [ExpectedPhotonsScattered::default(); crate::laser::BEAM_LIMIT],
+                contents: [ExpectedPhotonsScattered::default(); crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .build();
-        let mut system = CalculateExpectedPhotonsScatteredSystem;
+        let mut system = CalculateExpectedPhotonsScatteredSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
-        let sampler_storage = test_world.read_storage::<ExpectedPhotonsScatteredVector>();
+        let sampler_storage =
+            test_world.read_storage::<ExpectedPhotonsScatteredVector<{ DEFAULT_BEAM_LIMIT }>>();
 
-        let scattered = 8.0 / crate::laser::BEAM_LIMIT as f64;
+        let scattered = 8.0 / crate::laser::DEFAULT_BEAM_LIMIT as f64;
 
         assert_approx_eq!(
             sampler_storage

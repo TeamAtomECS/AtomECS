@@ -263,9 +263,7 @@ fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
     let bound = (n as f64) / 2.0 * width;
 
     let id: i64;
-    if pos[0].abs() > bound
-        || pos[1].abs() > bound
-        || pos[2].abs() > bound {
+    if pos[0].abs() > bound || pos[1].abs() > bound || pos[2].abs() > bound {
         id = i64::MAX;
     } else {
         let xp: i64;
@@ -407,7 +405,7 @@ pub mod tests {
         test_world.register::<NewlyCreated>();
         let mut atomecs_builder = AtomecsDispatcherBuilder::new();
         atomecs_builder.add_frame_initialisation_systems();
-        atomecs_builder.add_systems();
+        atomecs_builder.add_systems::<{ crate::laser::DEFAULT_BEAM_LIMIT }>();
         atomecs_builder
             .builder
             .add(ApplyCollisionsSystem, "collisions", &[]);

@@ -27,13 +27,14 @@ const LASER_CACHE_SIZE: usize = 16;
 /// s already populated with the correct terms. Furthermore, it is assumed that a
 /// `CoolingLightIndex` is present and assigned for all cooling lasers, with an index
 /// corresponding to the entries in the `ActualPhotonsScatteredVector` vector.
-pub struct CalculateAbsorptionForcesSystem;
-impl<'a> System<'a> for CalculateAbsorptionForcesSystem {
+pub struct CalculateAbsorptionForcesSystem<const N: usize>;
+
+impl<'a, const N: usize> System<'a> for CalculateAbsorptionForcesSystem<N> {
     type SystemData = (
         ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, GaussianBeam>,
-        ReadStorage<'a, ActualPhotonsScatteredVector>,
+        ReadStorage<'a, ActualPhotonsScatteredVector<N>>,
         WriteStorage<'a, Force>,
         ReadExpect<'a, Timestep>,
         ReadStorage<'a, Dark>,
@@ -119,13 +120,13 @@ pub struct EmissionForceConfiguration {
 ///
 /// Uses an internal threshold of 5 to decide if the random vektor is iteratively
 /// produced or derived by random-walk formula and a single random unit vector.
-pub struct ApplyEmissionForceSystem;
+pub struct ApplyEmissionForceSystem<const N: usize>;
 
-impl<'a> System<'a> for ApplyEmissionForceSystem {
+impl<'a, const N: usize> System<'a> for ApplyEmissionForceSystem<N> {
     type SystemData = (
         Option<Read<'a, EmissionForceOption>>,
         WriteStorage<'a, Force>,
-        ReadStorage<'a, ActualPhotonsScatteredVector>,
+        ReadStorage<'a, ActualPhotonsScatteredVector<N>>,
         ReadStorage<'a, AtomicTransition>,
         ReadExpect<'a, Timestep>,
     );
@@ -169,7 +170,8 @@ impl<'a> System<'a> for ApplyEmissionForceSystem {
                                     // explicit random walk implementation
                                     for _i in 0..total {
                                         let v: [f64; 3] = UnitSphere.sample(&mut rng);
-                                        force.force += force_one_kick * Vector3::new(v[0], v[1], v[2]);
+                                        force.force +=
+                                            force_one_kick * Vector3::new(v[0], v[1], v[2]);
                                     }
                                 }
                             });
@@ -189,7 +191,7 @@ pub mod tests {
     use crate::laser::index::LaserIndex;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
-    use crate::laser::gaussian;
+    use crate::laser::{gaussian, DEFAULT_BEAM_LIMIT};
     use nalgebra::Vector3;
 
     /// Tests the correct implementation of the `CalculateAbsorptionForceSystem`
@@ -202,7 +204,7 @@ pub mod tests {
         test_world.register::<LaserIndex>();
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
-        test_world.register::<ActualPhotonsScatteredVector>();
+        test_world.register::<ActualPhotonsScatteredVector<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<Force>();
         test_world.register::<Dark>();
         test_world.insert(Timestep { delta: time_delta });
@@ -235,12 +237,12 @@ pub mod tests {
             .with(ActualPhotonsScatteredVector {
                 contents: [crate::laser_cooling::photons_scattered::ActualPhotonsScattered {
                     scattered: number_scattered,
-                }; crate::laser::BEAM_LIMIT],
+                }; crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .with(Force::new())
             .build();
 
-        let mut system = CalculateAbsorptionForcesSystem;
+        let mut system = CalculateAbsorptionForcesSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
@@ -260,7 +262,7 @@ pub mod tests {
 
         let time_delta = 1.0e-5;
 
-        test_world.register::<ActualPhotonsScatteredVector>();
+        test_world.register::<ActualPhotonsScatteredVector<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<Force>();
         test_world.register::<AtomicTransition>();
         test_world.insert(EmissionForceOption::default());
@@ -272,13 +274,13 @@ pub mod tests {
             .with(ActualPhotonsScatteredVector {
                 contents: [crate::laser_cooling::photons_scattered::ActualPhotonsScattered {
                     scattered: number_scattered,
-                }; crate::laser::BEAM_LIMIT],
+                }; crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .with(Force::new())
             .with(AtomicTransition::strontium())
             .build();
 
-        let mut system = ApplyEmissionForceSystem;
+        let mut system = ApplyEmissionForceSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();

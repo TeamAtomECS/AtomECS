@@ -7,10 +7,10 @@ use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
 use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
-use lib::laser_cooling::CoolingLight;
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser_cooling::force::EmissionForceOption;
 use lib::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
+use lib::laser_cooling::CoolingLight;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use nalgebra::Vector3;
 use rand_distr::{Distribution, Normal};
@@ -21,7 +21,8 @@ fn criterion_benchmark(c: &mut Criterion) {
     let mut world = World::new();
     ecs::register_components(&mut world);
     ecs::register_resources(&mut world);
-    let mut dispatcher = ecs::create_simulation_dispatcher_builder().build();
+    let mut dispatcher =
+        ecs::create_simulation_dispatcher_builder::<{ lib::laser::DEFAULT_BEAM_LIMIT }>().build();
     dispatcher.setup(&mut world);
 
     // Create magnetic field.
@@ -184,7 +185,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     // Now bench just a specific system.
     let mut bench_builder = DispatcherBuilder::new();
     bench_builder.add(
-        lib::laser_cooling::rate::CalculateRateCoefficientsSystem,
+        lib::laser_cooling::rate::CalculateRateCoefficientsSystem::<
+            { lib::laser::DEFAULT_BEAM_LIMIT },
+        >,
         "",
         &[],
     );

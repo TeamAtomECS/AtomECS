@@ -60,9 +60,7 @@ impl Polarizability {
             / (2. * (2. * constant::PI * transition_f).powf(3.0))
             * optical_transition_linewidth
             * -(1. / (transition_f - dipole_f) + 1. / (transition_f + dipole_f));
-        Polarizability {
-            prefactor,
-        }
+        Polarizability { prefactor }
     }
 }
 
@@ -90,9 +88,12 @@ impl<'a> System<'a> for AttachIndexToDipoleLightSystem {
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the systems run.
-pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>, deps: &[&str]) {
+pub fn add_systems_to_dispatch<const N: usize>(
+    builder: &mut DispatcherBuilder<'static, 'static>,
+    deps: &[&str],
+) {
     builder.add(
-        force::ApplyDipoleForceSystem,
+        force::ApplyDipoleForceSystem::<N>,
         "apply_dipole_force",
         &["sample_intensity_gradient"],
     );
