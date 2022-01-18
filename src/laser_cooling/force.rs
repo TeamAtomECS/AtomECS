@@ -1,7 +1,9 @@
 //! Calculation of the forces exerted on the atom by the CoolingLight entities
 
+use std::marker::PhantomData;
+
 use super::CoolingLight;
-use crate::atom::AtomicTransition;
+use super::transition::{TransitionComponent};
 use crate::constant;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
@@ -27,14 +29,15 @@ const LASER_CACHE_SIZE: usize = 16;
 /// s already populated with the correct terms. Furthermore, it is assumed that a
 /// `CoolingLightIndex` is present and assigned for all cooling lasers, with an index
 /// corresponding to the entries in the `ActualPhotonsScatteredVector` vector.
-pub struct CalculateAbsorptionForcesSystem<const N: usize>;
+#[derive(Default)]
+pub struct CalculateAbsorptionForcesSystem<T, const N: usize>(PhantomData<T>) where T : TransitionComponent;
 
-impl<'a, const N: usize> System<'a> for CalculateAbsorptionForcesSystem<N> {
+impl<'a, T, const N: usize> System<'a> for CalculateAbsorptionForcesSystem<T, N> where T : TransitionComponent {
     type SystemData = (
         ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, GaussianBeam>,
-        ReadStorage<'a, ActualPhotonsScatteredVector<N>>,
+        ReadStorage<'a, ActualPhotonsScatteredVector<T, N>>,
         WriteStorage<'a, Force>,
         ReadExpect<'a, Timestep>,
         ReadStorage<'a, Dark>,
@@ -120,20 +123,21 @@ pub struct EmissionForceConfiguration {
 ///
 /// Uses an internal threshold of 5 to decide if the random vektor is iteratively
 /// produced or derived by random-walk formula and a single random unit vector.
-pub struct ApplyEmissionForceSystem<const N: usize>;
+#[derive(Default)]
+pub struct ApplyEmissionForceSystem<T, const N: usize>(PhantomData<T>) where T : TransitionComponent;
 
-impl<'a, const N: usize> System<'a> for ApplyEmissionForceSystem<N> {
+impl<'a, T, const N: usize> System<'a> for ApplyEmissionForceSystem<T, N> where T : TransitionComponent {
     type SystemData = (
         Option<Read<'a, EmissionForceOption>>,
         WriteStorage<'a, Force>,
-        ReadStorage<'a, ActualPhotonsScatteredVector<N>>,
-        ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, ActualPhotonsScatteredVector<T, N>>,
+        ReadStorage<'a, T>,
         ReadExpect<'a, Timestep>,
     );
 
     fn run(
         &mut self,
-        (rand_opt, mut force, actual_scattered_vector, atom_info, timestep): Self::SystemData,
+        (rand_opt, mut force, actual_scattered_vector, transition, timestep): Self::SystemData,
     ) {
         use rayon::prelude::*;
 
@@ -143,12 +147,12 @@ impl<'a, const N: usize> System<'a> for ApplyEmissionForceSystem<N> {
                 match *opt {
                     EmissionForceOption::Off => {}
                     EmissionForceOption::On(configuration) => {
-                        (&mut force, &atom_info, &actual_scattered_vector)
+                        (&mut force, &transition, &actual_scattered_vector)
                             .par_join()
-                            .for_each(|(force, atom_info, kick)| {
+                            .for_each(|(force, _atom_info, kick)| {
                                 let total: u64 = kick.calculate_total_scattered();
                                 let mut rng = rand::thread_rng();
-                                let omega = 2.0 * constant::PI * atom_info.frequency;
+                                let omega = 2.0 * constant::PI * T::frequency();
                                 let force_one_kick =
                                     constant::HBAR * omega / constant::C / timestep.delta;
                                 if total > configuration.explicit_threshold {

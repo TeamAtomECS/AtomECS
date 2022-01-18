@@ -2,8 +2,10 @@
 
 extern crate serde;
 
+use std::marker::PhantomData;
+
 use super::CoolingLight;
-use crate::atom::AtomicTransition;
+use super::transition::{TransitionComponent};
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
 use crate::laser::intensity::LaserIntensitySamplers;
@@ -12,41 +14,44 @@ use crate::magnetic::MagneticFieldSampler;
 use serde::Serialize;
 use specs::prelude::*;
 
-/// Represents the rate coefficient of the atom with respect to a specific CoolingLight entity
+/// Represents the rate coefficient of the atom with respect to a specific CoolingLight entity, for the given transition.
 #[derive(Clone, Copy, Serialize)]
-pub struct RateCoefficient {
+pub struct RateCoefficient<T> where T : TransitionComponent {
     /// rate coefficient in Hz
     pub rate: f64,
+    phantom: PhantomData<T>
 }
 
-impl Default for RateCoefficient {
+impl<T> Default for RateCoefficient<T> where T : TransitionComponent {
     fn default() -> Self {
         RateCoefficient {
             /// rate coefficient in Hz
             rate: f64::NAN,
+            phantom: PhantomData
         }
     }
 }
 
 /// Component that holds a Vector of `RateCoefficient`
 #[derive(Clone, Copy, Serialize)]
-pub struct RateCoefficients<const N: usize> {
+pub struct RateCoefficients<T, const N: usize> where T : TransitionComponent {
     /// Vector of `RateCoefficient` where each entry corresponds to a different CoolingLight entity
     #[serde(with = "serde_arrays")]
-    pub contents: [RateCoefficient; N],
+    pub contents: [RateCoefficient<T>; N],
 }
 
-impl<const N: usize> Component for RateCoefficients<N> {
+impl<T, const N: usize> Component for RateCoefficients<T, N> where T : TransitionComponent {
     type Storage = VecStorage<Self>;
 }
 
 /// This system initialises all `RateCoefficient` to a NAN value.
 ///
 /// It also ensures that the size of the `RateCoefficient` components match the number of CoolingLight entities in the world.
-pub struct InitialiseRateCoefficientsSystem<const N: usize>;
+#[derive(Default)]
+pub struct InitialiseRateCoefficientsSystem<T, const N: usize>(PhantomData<T>) where T : TransitionComponent;
 
-impl<'a, const N: usize> System<'a> for InitialiseRateCoefficientsSystem<N> {
-    type SystemData = (WriteStorage<'a, RateCoefficients<N>>,);
+impl<'a, T, const N: usize> System<'a> for InitialiseRateCoefficientsSystem<T, N> where T : TransitionComponent {
+    type SystemData = (WriteStorage<'a, RateCoefficients<T, N>>,);
     fn run(&mut self, (mut rate_coefficients,): Self::SystemData) {
         use rayon::prelude::*;
 
@@ -66,18 +71,19 @@ impl<'a, const N: usize> System<'a> for InitialiseRateCoefficientsSystem<N> {
 /// This is also the System that currently takes care of handling the polarizations correctly.
 /// The polarization is projected onto the quantization axis given by the local magnetic
 /// field vector. For fully polarized CoolingLight all projection pre-factors add up to 1.
-pub struct CalculateRateCoefficientsSystem<const N: usize>;
+#[derive(Default)]
+pub struct CalculateRateCoefficientsSystem<T, const N: usize>(PhantomData<T>) where T : TransitionComponent;
 
-impl<'a, const N: usize> System<'a> for CalculateRateCoefficientsSystem<N> {
+impl<'a, T, const N: usize> System<'a> for CalculateRateCoefficientsSystem<T, N> where T : TransitionComponent {
     type SystemData = (
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, LaserIndex>,
-        ReadStorage<'a, LaserDetuningSamplers<N>>,
+        ReadStorage<'a, LaserDetuningSamplers<T, N>>,
         ReadStorage<'a, LaserIntensitySamplers<N>>,
-        ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, T>,
         ReadStorage<'a, GaussianBeam>,
         ReadStorage<'a, MagneticFieldSampler>,
-        WriteStorage<'a, RateCoefficients<N>>,
+        WriteStorage<'a, RateCoefficients<T, N>>,
     );
     fn run(
         &mut self,
@@ -103,7 +109,7 @@ impl<'a, const N: usize> System<'a> for CalculateRateCoefficientsSystem<N> {
                 &mut rate_coefficients,
             )
                 .par_join()
-                .for_each(|(detunings, intensities, atominfo, bfield, rates)| {
+                .for_each(|(detunings, intensities, _atominfo, bfield, rates)| {
                     let beam_direction_vector = gaussian.direction.normalize();
                     let costheta = if bfield.field.norm_squared() < (10.0 * f64::EPSILON) {
                         0.0
@@ -114,8 +120,8 @@ impl<'a, const N: usize> System<'a> for CalculateRateCoefficientsSystem<N> {
                     };
 
                     let prefactor =
-                        atominfo.rate_prefactor * intensities.contents[index.index].intensity;
-                    let gamma = atominfo.gamma();
+                        T::rate_prefactor() * intensities.contents[index.index].intensity;
+                    let gamma = T::gamma();
 
                     let scatter1 =
                         0.25 * (cooling.polarization as f64 * costheta + 1.).powf(2.) * prefactor

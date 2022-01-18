@@ -18,8 +18,9 @@ use crate::integrator::{
     INTEGRATE_VELOCITY_SYSTEM_NAME,
 };
 use crate::laser;
-use crate::laser_cooling;
+use crate::laser_cooling::{self, transition};
 use crate::laser_cooling::repump::Dark;
+use crate::laser_cooling::transition::TransitionComponent;
 use crate::magnetic;
 use crate::output::console_output::ConsoleOutputSystem;
 use crate::sim_region;
@@ -49,7 +50,7 @@ impl AtomecsDispatcherBuilder {
 
     pub fn add_frame_initialisation_systems(&mut self) {}
 
-    pub fn add_systems<const N: usize>(&mut self) {
+    pub fn add_systems<T, const N: usize>(&mut self) where T : TransitionComponent {
         self.builder.add(
             VelocityVerletIntegratePositionSystem,
             INTEGRATE_POSITION_SYSTEM_NAME,
@@ -62,7 +63,7 @@ impl AtomecsDispatcherBuilder {
 
         magnetic::add_systems_to_dispatch(&mut self.builder, &[]);
         laser::add_systems_to_dispatch::<N>(&mut self.builder, &[]);
-        laser_cooling::add_systems_to_dispatch::<N>(&mut self.builder, &[]);
+        laser_cooling::add_systems_to_dispatch::<T,N>(&mut self.builder, &[]);
         dipole::add_systems_to_dispatch::<N>(&mut self.builder, &[]);
         atom_sources::add_systems_to_dispatch(&mut self.builder, &[]);
         self.builder.add(
@@ -95,7 +96,7 @@ impl AtomecsDispatcherBuilder {
 
     pub fn build<const N: usize>(mut self) -> DispatcherBuilder<'static, 'static> {
         self.add_frame_initialisation_systems();
-        self.add_systems::<N>();
+        self.add_systems::<transition::Strontium88_461,N>();
         self.add_frame_end_systems();
         self.builder
     }

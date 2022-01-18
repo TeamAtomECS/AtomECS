@@ -1,56 +1,60 @@
 //! Calculation of the total detuning for specific atoms and CoolingLight entities
 
 use super::CoolingLight;
-use crate::atom::AtomicTransition;
+use super::transition::TransitionComponent;
 use crate::constant;
 use crate::laser::index::LaserIndex;
 use crate::laser_cooling::doppler::DopplerShiftSamplers;
-use crate::magnetic::zeeman::ZeemanShiftSampler;
+use super::zeeman::ZeemanShiftSampler;
 use specs::prelude::*;
 use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 use std::f64;
+use std::marker::PhantomData;
 extern crate nalgebra;
 
 const LASER_CACHE_SIZE: usize = 16;
 
 /// Represents total detuning of the atom's transition with respect to each beam
 #[derive(Clone, Copy)]
-pub struct LaserDetuningSampler {
+pub struct LaserDetuningSampler<T> where T : TransitionComponent {
     /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_plus: f64,
     /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_minus: f64,
     /// Laser detuning of the pi transition with respect to laser beam, in SI units of rad/s
     pub detuning_pi: f64,
+    phantom: PhantomData<T>
 }
 
-impl Default for LaserDetuningSampler {
+impl<T> Default for LaserDetuningSampler<T> where T : TransitionComponent {
     fn default() -> Self {
         LaserDetuningSampler {
             detuning_sigma_plus: f64::NAN,
             detuning_sigma_minus: f64::NAN,
             detuning_pi: f64::NAN,
+            phantom: PhantomData
         }
     }
 }
 
 /// Component that holds a vector of `LaserDetuningSampler`
-pub struct LaserDetuningSamplers<const N: usize> {
+pub struct LaserDetuningSamplers<T, const N: usize> where T : TransitionComponent {
     /// List of `LaserDetuningSampler`s
-    pub contents: [LaserDetuningSampler; N],
+    pub contents: [LaserDetuningSampler<T>; N],
 }
 
-impl<const N: usize> Component for LaserDetuningSamplers<N> {
+impl<T, const N: usize> Component for LaserDetuningSamplers<T, N> where T : TransitionComponent {
     type Storage = VecStorage<Self>;
 }
 
 /// This system initialises all `LaserDetuningSamplers` to a NAN value.
 ///
 /// It also ensures that the size of the `LaserDetuningSamplers` components match the number of CoolingLight entities in the world.
-pub struct InitialiseLaserDetuningSamplersSystem<const N: usize>;
+#[derive(Default)]
+pub struct InitialiseLaserDetuningSamplersSystem<T, const N: usize>(PhantomData<T>) where T : TransitionComponent;
 
-impl<'a, const N: usize> System<'a> for InitialiseLaserDetuningSamplersSystem<N> {
-    type SystemData = (WriteStorage<'a, LaserDetuningSamplers<N>>,);
+impl<'a, T, const N: usize> System<'a> for InitialiseLaserDetuningSamplersSystem<T, N> where T : TransitionComponent {
+    type SystemData = (WriteStorage<'a, LaserDetuningSamplers<T, N>>,);
     fn run(&mut self, (mut samplers,): Self::SystemData) {
         use rayon::prelude::*;
 
@@ -62,22 +66,22 @@ impl<'a, const N: usize> System<'a> for InitialiseLaserDetuningSamplersSystem<N>
 
 /// This system calculates the total Laser Detuning for each atom with respect to
 /// each CoolingLight entities.
-pub struct CalculateLaserDetuningSystem<const N: usize>;
-
-impl<'a, const N: usize> System<'a> for CalculateLaserDetuningSystem<N> {
+#[derive(Default)]
+pub struct CalculateLaserDetuningSystem<T, const N: usize>(PhantomData<T>) where T : TransitionComponent;
+impl<'a, T, const N: usize> System<'a> for CalculateLaserDetuningSystem<T, N> where T : TransitionComponent {
     type SystemData = (
-        ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, T>,
         ReadStorage<'a, LaserIndex>,
         ReadStorage<'a, CoolingLight>,
         ReadStorage<'a, DopplerShiftSamplers<N>>,
-        ReadStorage<'a, ZeemanShiftSampler>,
-        WriteStorage<'a, LaserDetuningSamplers<N>>,
+        ReadStorage<'a, ZeemanShiftSampler<T>>,
+        WriteStorage<'a, LaserDetuningSamplers<T, N>>,
     );
 
     fn run(
         &mut self,
         (
-            atom_info,
+            transitions,
             indices,
             cooling_light,
             doppler_samplers,
@@ -108,15 +112,15 @@ impl<'a, const N: usize> System<'a> for CalculateLaserDetuningSystem<N> {
                 &mut detuning_samplers,
                 &doppler_samplers,
                 &zeeman_sampler,
-                &atom_info,
+                &transitions,
             )
                 .par_join()
                 .for_each(
-                    |(detuning_sampler, doppler_samplers, zeeman_sampler, atom_info)| {
+                    |(detuning_sampler, doppler_samplers, zeeman_sampler, _transitions)| {
                         for (index, cooling) in laser_array.iter().take(number_in_iteration) {
                             let without_zeeman = 2.0
                                 * constant::PI
-                                * (constant::C / cooling.wavelength - atom_info.frequency)
+                                * (constant::C / cooling.wavelength - T::frequency())
                                 - doppler_samplers.contents[index.index].doppler_shift;
 
                             detuning_sampler.contents[index.index].detuning_sigma_plus =

@@ -13,7 +13,6 @@ pub mod constant;
 pub mod destructor;
 pub mod dipole;
 pub mod ecs;
-pub mod fileinput;
 pub mod gravity;
 pub mod initiate;
 pub mod integration_tests;

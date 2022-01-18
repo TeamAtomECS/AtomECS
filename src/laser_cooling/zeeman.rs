@@ -1,64 +1,71 @@
 //! Shift in an atom's transition frequency due to a magnetic field (zeeman effect)
 extern crate serde;
-use super::MagneticFieldSampler;
-use crate::atom::AtomicTransition;
+use std::marker::PhantomData;
+
+use crate::magnetic::MagneticFieldSampler;
 use crate::constant::HBAR;
 use crate::initiate::NewlyCreated;
 use serde::Serialize;
 use specs::prelude::*;
 
+use super::transition::TransitionComponent;
+
 /// Represents the (angular) Zeemanshift of the atom depending on the magnetic field it experiences
 #[derive(Clone, Copy, Serialize)]
-pub struct ZeemanShiftSampler {
+pub struct ZeemanShiftSampler<T> where T : TransitionComponent {
     /// Zeemanshift for sigma plus transition in rad/s
     pub sigma_plus: f64,
     /// Zeemanshift for sigma minus transition in rad/s
     pub sigma_minus: f64,
     /// Zeemanshift for pi transition in rad/s
     pub sigma_pi: f64,
+    phantom: PhantomData<T>
 }
 
-impl Default for ZeemanShiftSampler {
+impl<T> Default for ZeemanShiftSampler<T> where T : TransitionComponent {
     fn default() -> Self {
-        ZeemanShiftSampler {
+        ZeemanShiftSampler::<T> {
             /// Zeemanshift for sigma plus transition in rad/s
             sigma_plus: f64::NAN,
             /// Zeemanshift for sigma minus transition in rad/s
             sigma_minus: f64::NAN,
             /// Zeemanshift for pi transition in rad/s
             sigma_pi: f64::NAN,
+            phantom: PhantomData
         }
     }
 }
 
-impl Component for ZeemanShiftSampler {
+impl<T> Component for ZeemanShiftSampler<T> where T : TransitionComponent + 'static {
     type Storage = VecStorage<Self>;
 }
 
 /// Attaches the ZeemanShifSampler component to newly created atoms.
-pub struct AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem;
+#[derive(Default)]
+pub struct AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem<T>(PhantomData<T>) where T : TransitionComponent;
 
-impl<'a> System<'a> for AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem {
+impl<'a, T> System<'a> for AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem<T> where T : TransitionComponent {
     type SystemData = (
         Entities<'a>,
         ReadStorage<'a, NewlyCreated>,
-        ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, T>,
         Read<'a, LazyUpdate>,
     );
-    fn run(&mut self, (ent, newly_created, atomic_transition, updater): Self::SystemData) {
-        for (ent, _nc, _at) in (&ent, &newly_created, &atomic_transition).join() {
-            updater.insert(ent, ZeemanShiftSampler::default());
+    fn run(&mut self, (ent, newly_created, transition, updater): Self::SystemData) {
+        for (ent, _nc, _at) in (&ent, &newly_created, &transition).join() {
+            updater.insert(ent, ZeemanShiftSampler::<T>::default());
         }
     }
 }
 
 /// Calculates the Zeeman shift for each atom in each cooling beam.
-pub struct CalculateZeemanShiftSystem;
-impl<'a> System<'a> for CalculateZeemanShiftSystem {
+#[derive(Default)]
+pub struct CalculateZeemanShiftSystem<T>(PhantomData<T>) where T : TransitionComponent;
+impl<'a, T> System<'a> for CalculateZeemanShiftSystem<T> where T : TransitionComponent {
     type SystemData = (
-        WriteStorage<'a, ZeemanShiftSampler>,
+        WriteStorage<'a, ZeemanShiftSampler<T>>,
         ReadStorage<'a, MagneticFieldSampler>,
-        ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, T>,
     );
 
     fn run(
@@ -74,9 +81,9 @@ impl<'a> System<'a> for CalculateZeemanShiftSystem {
         )
             .par_join()
             .for_each(|(zeeman, magnetic_field, atom_info)| {
-                zeeman.sigma_plus = atom_info.mup / HBAR * magnetic_field.magnitude;
-                zeeman.sigma_minus = atom_info.mum / HBAR * magnetic_field.magnitude;
-                zeeman.sigma_pi = atom_info.muz / HBAR * magnetic_field.magnitude;
+                zeeman.sigma_plus = T::mup() / HBAR * magnetic_field.magnitude;
+                zeeman.sigma_minus = T::mum() / HBAR * magnetic_field.magnitude;
+                zeeman.sigma_pi = T::muz() / HBAR * magnetic_field.magnitude;
             });
     }
 }
