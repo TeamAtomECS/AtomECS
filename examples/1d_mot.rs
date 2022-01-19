@@ -4,12 +4,13 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
-use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
+use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::ecs;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser_cooling::CoolingLight;
+use lib::laser_cooling::transition::Strontium88_461;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
@@ -58,8 +59,7 @@ fn main() {
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
         })
-        .with(CoolingLight::for_species(
-            AtomicTransition::rubidium(),
+        .with(CoolingLight::for_species::<Strontium88_461>(
             detuning,
             -1,
         ))
@@ -74,8 +74,7 @@ fn main() {
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
         })
-        .with(CoolingLight::for_species(
-            AtomicTransition::rubidium(),
+        .with(CoolingLight::for_species::<Strontium88_461>(
             detuning,
             -1,
         ))
@@ -94,7 +93,7 @@ fn main() {
                 vel: Vector3::new(0.0, 0.0, 10.0 + (i as f64) * 5.0),
             })
             .with(NewlyCreated)
-            .with(AtomicTransition::rubidium())
+            .with(Strontium88_461)
             .with(Mass { value: 87.0 })
             .build();
     }

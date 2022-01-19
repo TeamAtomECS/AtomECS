@@ -2,8 +2,11 @@
 
 extern crate nalgebra;
 
+use std::marker::PhantomData;
+
 use super::emit::AtomNumberToEmit;
 use super::precalc::{MaxwellBoltzmannSource, PrecalculatedSpeciesInformation};
+use super::species::{AtomCreator};
 use crate::constant;
 use crate::constant::PI;
 use crate::initiate::*;
@@ -44,15 +47,16 @@ pub enum OvenAperture {
 }
 
 /// Builder struct for creating Ovens.
-pub struct OvenBuilder {
+pub struct OvenBuilder<T> where T : AtomCreator {
     temperature: f64,
     aperture: OvenAperture,
     direction: Vector3<f64>,
     microchannel_radius: f64,
     microchannel_length: f64,
     max_theta: f64,
+    phantom: PhantomData<T>
 }
-impl OvenBuilder {
+impl<T> OvenBuilder<T> where T : AtomCreator {
     pub fn new(temperature_kelvin: f64, direction: Vector3<f64>) -> Self {
         Self {
             temperature: temperature_kelvin,
@@ -64,6 +68,7 @@ impl OvenBuilder {
             microchannel_length: 4e-3,
             microchannel_radius: 0.2e-3,
             max_theta: PI / 2.0,
+            phantom: PhantomData
         }
     }
 
@@ -87,7 +92,7 @@ impl OvenBuilder {
         self
     }
 
-    pub fn build(&self) -> Oven {
+    pub fn build(&self) -> Oven<T> {
         Oven {
             temperature: self.temperature,
             aperture: self.aperture,
@@ -97,6 +102,7 @@ impl OvenBuilder {
                 self.microchannel_length,
             ),
             max_theta: self.max_theta,
+            phantom: PhantomData
         }
     }
 }
@@ -114,7 +120,7 @@ impl OvenBuilder {
 /// Additionally, any atom spawned with an angle greater than `max_theta` is ignored.
 /// For real ovens, the maximum theta is determined by geometric constraints, for example the presence of a 'lip' of given length and
 /// aperture radius.
-pub struct Oven {
+pub struct Oven<T> where T : AtomCreator {
     /// Temperature of the oven, in Kelvin
     pub temperature: f64,
 
@@ -129,8 +135,10 @@ pub struct Oven {
 
     /// The maximum angle theta at which atoms can be emitted from the oven. This can be constricted eg by a heat shield, or 'hot lip'.
     pub max_theta: f64,
+
+    phantom : PhantomData<T>
 }
-impl MaxwellBoltzmannSource for Oven {
+impl<T> MaxwellBoltzmannSource for Oven<T> where T : AtomCreator {
     fn get_temperature(&self) -> f64 {
         self.temperature
     }
@@ -138,10 +146,10 @@ impl MaxwellBoltzmannSource for Oven {
         3.0
     }
 }
-impl Component for Oven {
+impl<T> Component for Oven<T> where T : AtomCreator + 'static {
     type Storage = HashMapStorage<Self>;
 }
-impl Oven {
+impl<T> Oven<T> where T : AtomCreator {
     pub fn get_random_spawn_position(&self) -> Vector3<f64> {
         let mut rng = rand::thread_rng();
         match self.aperture {
@@ -168,12 +176,13 @@ impl Oven {
 /// This system creates atoms from an oven source.
 ///
 /// The oven points in the direction [Oven.direction].
-pub struct OvenCreateAtomsSystem;
+#[derive(Default)]
+pub struct OvenCreateAtomsSystem<T>(PhantomData<T>) where T : AtomCreator;
 
-impl<'a> System<'a> for OvenCreateAtomsSystem {
+impl<'a, T> System<'a> for OvenCreateAtomsSystem<T> where T : AtomCreator + 'static {
     type SystemData = (
         Entities<'a>,
-        ReadStorage<'a, Oven>,
+        ReadStorage<'a, Oven<T>>,
         ReadStorage<'a, AtomNumberToEmit>,
         ReadStorage<'a, Position>,
         ReadStorage<'a, PrecalculatedSpeciesInformation>,
@@ -183,7 +192,7 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
 
     fn run(
         &mut self,
-        (entities, oven, atom, numbers_to_emit, pos, precalcs, velocity_cap, updater): Self::SystemData,
+        (entities, oven, numbers_to_emit, pos, precalcs, velocity_cap, updater): Self::SystemData,
     ) {
         let max_vel = match velocity_cap {
             Some(cap) => cap.value,
@@ -191,8 +200,8 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
         };
 
         let mut rng = rand::thread_rng();
-        for (oven, atom, number_to_emit, oven_position, precalcs) in
-            (&oven, &atom, &numbers_to_emit, &pos, &precalcs).join()
+        for (oven, number_to_emit, oven_position, precalcs) in
+            (&oven, &numbers_to_emit, &pos, &precalcs).join()
         {
             for _i in 0..number_to_emit.number {
                 let (mass, speed) = precalcs.generate_random_mass_v(&mut rng);
@@ -222,10 +231,10 @@ impl<'a> System<'a> for OvenCreateAtomsSystem {
                 );
                 updater.insert(new_atom, Force::new());
                 updater.insert(new_atom, Mass { value: mass });
-                updater.insert(new_atom, *atom);
                 updater.insert(new_atom, Atom);
                 updater.insert(new_atom, InitialVelocity { vel: new_vel });
                 updater.insert(new_atom, NewlyCreated);
+                T::mutate(&updater, new_atom);
             }
         }
     }

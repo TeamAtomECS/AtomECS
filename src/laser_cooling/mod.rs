@@ -187,6 +187,11 @@ pub fn add_systems_to_dispatch<T, const N: usize>(
         &["index_lasers"],
     );
     builder.add(
+        zeeman::CalculateZeemanShiftSystem::<T>::default(),
+        "zeeman_shift",
+        &["magnetics_magnitude"],
+    );
+    builder.add(
         sampler::CalculateLaserDetuningSystem::<T, N>::default(),
         "calculate_laser_detuning",
         &["calculate_doppler_shift", "zeeman_shift", "index_lasers"],
@@ -242,11 +247,6 @@ pub fn add_systems_to_dispatch<T, const N: usize>(
         zeeman::AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem::<T>::default(),
         "attach_zeeman_shift_samplers",
         &[],
-    );
-    builder.add(
-        zeeman::CalculateZeemanShiftSystem::<T>::default(),
-        "zeeman_shift",
-        &["magnetics_magnitude"],
     );
     builder.add(
         AttachIndexToCoolingLightSystem,

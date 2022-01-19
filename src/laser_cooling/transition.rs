@@ -45,11 +45,8 @@ impl AtomicTransition for Strontium88_461 {
     fn frequency() -> f64 { 650_759_219_088_937.0 }
     fn linewidth() -> f64 { 32e6 }
     fn saturation_intensity() -> f64 { 430.0 }
-    fn rate_prefactor() -> f64 { todo!() }
-
-    fn gamma() -> f64 {
-        todo!()
-    }
+    fn rate_prefactor() -> f64 { Self::gamma().powi(3) / (Self::saturation_intensity() * 8.0) }
+    fn gamma() -> f64 { Self::linewidth() * 2.0 * std::f64::consts::PI }
 }
 impl Component for Strontium88_461 {
     type Storage = VecStorage<Self>;

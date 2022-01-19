@@ -80,7 +80,7 @@ impl<'a, T> System<'a> for CalculateZeemanShiftSystem<T> where T : TransitionCom
             &atomic_transition,
         )
             .par_join()
-            .for_each(|(zeeman, magnetic_field, atom_info)| {
+            .for_each(|(zeeman, magnetic_field, _transition)| {
                 zeeman.sigma_plus = T::mup() / HBAR * magnetic_field.magnitude;
                 zeeman.sigma_minus = T::mum() / HBAR * magnetic_field.magnitude;
                 zeeman.sigma_pi = T::muz() / HBAR * magnetic_field.magnitude;

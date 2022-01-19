@@ -1,6 +1,8 @@
 //! Atom sources with gaussian velocity distributions.
 
-use super::WeightedProbabilityDistribution;
+use std::marker::PhantomData;
+
+use super::{WeightedProbabilityDistribution, species::AtomCreator};
 use crate::atom::*;
 use crate::atom_sources::emit::AtomNumberToEmit;
 use crate::constant::EXP;
@@ -16,23 +18,25 @@ use specs::{
     WriteStorage,
 };
 
-pub struct GaussianVelocityDistributionSourceDefinition {
+pub struct GaussianVelocityDistributionSourceDefinition<T> where T : AtomCreator {
     pub mean: Vector3<f64>,
     pub std: Vector3<f64>,
+    phantom: PhantomData<T>
 }
-impl Component for GaussianVelocityDistributionSourceDefinition {
+impl<T> Component for GaussianVelocityDistributionSourceDefinition<T> where T : AtomCreator + 'static {
     type Storage = HashMapStorage<Self>;
 }
 
-pub struct GaussianVelocityDistributionSource {
+pub struct GaussianVelocityDistributionSource<T> where T : AtomCreator {
     vx_distribution: WeightedProbabilityDistribution,
     vy_distribution: WeightedProbabilityDistribution,
     vz_distribution: WeightedProbabilityDistribution,
+    phantom: PhantomData<T>
 }
-impl Component for GaussianVelocityDistributionSource {
+impl<T> Component for GaussianVelocityDistributionSource<T> where T : AtomCreator + 'static {
     type Storage = HashMapStorage<Self>;
 }
-impl GaussianVelocityDistributionSource {
+impl<T> GaussianVelocityDistributionSource<T> where T : AtomCreator {
     fn get_random_velocity<R: Rng + ?Sized>(&self, rng: &mut R) -> Vector3<f64> {
         Vector3::new(
             self.vx_distribution.sample(rng),
@@ -73,16 +77,17 @@ pub fn create_gaussian_velocity_distribution(
 /// Precalculates the probability distributions for
 /// [GaussianVelocityDistributionSourceDefinition](struct.GaussianVelocityDistributionSourceDefinition.html) and
 /// stores the result in a [GaussianVelocityDistributionSource](struct.GaussianVelocityDistributionSource.html) component.
-pub struct PrecalculateForGaussianSourceSystem;
-impl<'a> System<'a> for PrecalculateForGaussianSourceSystem {
+#[derive(Default)]
+pub struct PrecalculateForGaussianSourceSystem<T>(PhantomData<T>);
+impl<'a, T> System<'a> for PrecalculateForGaussianSourceSystem<T> where T : AtomCreator + 'static {
     type SystemData = (
         Entities<'a>,
-        ReadStorage<'a, GaussianVelocityDistributionSourceDefinition>,
-        WriteStorage<'a, GaussianVelocityDistributionSource>,
+        ReadStorage<'a, GaussianVelocityDistributionSourceDefinition<T>>,
+        WriteStorage<'a, GaussianVelocityDistributionSource<T>>,
     );
 
     fn run(&mut self, (entities, definitions, mut calculated): Self::SystemData) {
-        let mut precalculated_data = Vec::<(Entity, GaussianVelocityDistributionSource)>::new();
+        let mut precalculated_data = Vec::<(Entity, GaussianVelocityDistributionSource<T>)>::new();
         for (entity, definition, _) in (&entities, &definitions, !&calculated).join() {
             let source = GaussianVelocityDistributionSource {
                 vx_distribution: create_gaussian_velocity_distribution(
@@ -97,6 +102,7 @@ impl<'a> System<'a> for PrecalculateForGaussianSourceSystem {
                     definition.mean[2],
                     definition.std[2],
                 ),
+                phantom: PhantomData
             };
             precalculated_data.push((entity, source));
             println!("Precalculated velocity and mass distributions for a gaussian source.");
@@ -110,13 +116,12 @@ impl<'a> System<'a> for PrecalculateForGaussianSourceSystem {
     }
 }
 
-pub struct GaussianCreateAtomsSystem;
-
-impl<'a> System<'a> for GaussianCreateAtomsSystem {
+#[derive(Default)]
+pub struct GaussianCreateAtomsSystem<T>(PhantomData<T>);
+impl<'a, T> System<'a> for GaussianCreateAtomsSystem<T> where T : AtomCreator + 'static {
     type SystemData = (
         Entities<'a>,
-        ReadStorage<'a, GaussianVelocityDistributionSource>,
-        ReadStorage<'a, AtomicTransition>,
+        ReadStorage<'a, GaussianVelocityDistributionSource<T>>,
         ReadStorage<'a, AtomNumberToEmit>,
         ReadStorage<'a, Position>,
         ReadStorage<'a, Mass>,
@@ -125,12 +130,11 @@ impl<'a> System<'a> for GaussianCreateAtomsSystem {
 
     fn run(
         &mut self,
-        (entities, sources, atom_infos, numbers_to_emits, positions, masses, updater): Self::SystemData,
+        (entities, sources, numbers_to_emits, positions, masses, updater): Self::SystemData,
     ) {
         let mut rng = rand::thread_rng();
-        for (source, atom, number_to_emit, source_position, mass) in (
+        for (source, number_to_emit, source_position, mass) in (
             &sources,
-            &atom_infos,
             &numbers_to_emits,
             &positions,
             &masses,
@@ -149,10 +153,10 @@ impl<'a> System<'a> for GaussianCreateAtomsSystem {
                 updater.insert(new_atom, source_position.clone());
                 updater.insert(new_atom, Force::new());
                 updater.insert(new_atom, mass.clone());
-                updater.insert(new_atom, *atom);
                 updater.insert(new_atom, Atom);
                 updater.insert(new_atom, InitialVelocity { vel: new_vel });
                 updater.insert(new_atom, NewlyCreated);
+                T::mutate(&updater, new_atom);
             }
         }
     }
