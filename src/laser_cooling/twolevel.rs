@@ -106,6 +106,7 @@ pub mod tests {
         test_world.register::<RateCoefficients<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<CoolingLaserSamplerMasks<{ DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<TwoLevelPopulation<Strontium88_461>>();
+        test_world.register::<Strontium88_461>();
 
         // this test runs with two lasers only and we have to tell this the mask
         let mut active_lasers =

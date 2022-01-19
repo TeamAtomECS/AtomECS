@@ -188,9 +188,6 @@ impl<'a, T, const N: usize> System<'a> for ApplyEmissionForceSystem<T, N> where 
 
 #[cfg(test)]
 pub mod tests {
-
-    use std::num;
-
     use super::CoolingLight;
     use super::*;
     use crate::constant::{HBAR, PI};
