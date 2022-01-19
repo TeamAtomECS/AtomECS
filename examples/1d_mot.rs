@@ -10,10 +10,10 @@ use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser_cooling::CoolingLight;
-use lib::laser_cooling::transition::Strontium88_461;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file;
 use lib::output::file::Text;
+use lib::species::Strontium88_461;
 use nalgebra::Vector3;
 use specs::prelude::*;
 

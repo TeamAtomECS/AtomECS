@@ -3,13 +3,10 @@
 //! This module contains a number of helpful methods that are used to setup the `specs::World`
 //! and to create the `specs::Dispatcher` that is used to perform the simulation itself.
 
-use crate::atom;
+use crate::{atom, laser_cooling};
 use crate::atom::ClearForceSystem;
 use crate::atom_sources;
-use crate::atom_sources::species::Strontium88;
 use crate::destructor::DeleteToBeDestroyedEntitiesSystem;
-//use crate::detector;
-//use crate::detector::DetectingInfo;
 use crate::dipole;
 use crate::gravity::ApplyGravitationalForceSystem;
 use crate::initiate::DeflagNewAtomsSystem;
@@ -19,12 +16,12 @@ use crate::integrator::{
     INTEGRATE_VELOCITY_SYSTEM_NAME,
 };
 use crate::laser;
-use crate::laser_cooling::{self, transition};
 use crate::laser_cooling::repump::Dark;
 use crate::laser_cooling::transition::TransitionComponent;
 use crate::magnetic;
 use crate::output::console_output::ConsoleOutputSystem;
 use crate::sim_region;
+use crate::species::{Strontium88_461, Strontium88};
 
 use specs::prelude::*;
 
@@ -97,7 +94,7 @@ impl AtomecsDispatcherBuilder {
 
     pub fn build<const N: usize>(mut self) -> DispatcherBuilder<'static, 'static> {
         self.add_frame_initialisation_systems();
-        self.add_systems::<transition::Strontium88_461,N>();
+        self.add_systems::<Strontium88_461,N>();
         self.add_frame_end_systems();
         self.builder
     }
