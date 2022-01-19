@@ -6,7 +6,7 @@
 use crate::atom;
 use crate::atom::ClearForceSystem;
 use crate::atom_sources;
-use crate::atom_sources::species::Strontium87;
+use crate::atom_sources::species::Strontium88;
 use crate::destructor::DeleteToBeDestroyedEntitiesSystem;
 //use crate::detector;
 //use crate::detector::DetectingInfo;
@@ -33,7 +33,7 @@ pub fn register_components(world: &mut World) {
     atom::register_components(world);
     magnetic::register_components(world);
     laser::register_components(world);
-    atom_sources::register_components::<Strontium87>(world);
+    atom_sources::register_components::<Strontium88>(world);
     sim_region::register_components(world);
     world.register::<Dark>();
     dipole::register_components(world);
@@ -66,7 +66,7 @@ impl AtomecsDispatcherBuilder {
         laser::add_systems_to_dispatch::<N>(&mut self.builder, &[]);
         laser_cooling::add_systems_to_dispatch::<T,N>(&mut self.builder, &[]);
         dipole::add_systems_to_dispatch::<N>(&mut self.builder, &[]);
-        atom_sources::add_systems_to_dispatch::<Strontium87>(&mut self.builder, &[]);
+        atom_sources::add_systems_to_dispatch::<Strontium88>(&mut self.builder, &[]);
         self.builder.add(
             ApplyGravitationalForceSystem,
             "add_gravity",
