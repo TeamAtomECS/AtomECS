@@ -222,14 +222,11 @@ pub mod tests {
     use crate::magnetic::quadrupole::{QuadrupoleField3D, Sample3DQuadrupoleFieldSystem};
     use assert_approx_eq::assert_approx_eq;
 
-    /// Tests the correct implementation of the magnetics systems and dispatcher.
-    /// This is done by setting up a test world and ensuring that the magnetic systems perform the correct operations on test entities.
     #[test]
     fn test_magnetics_systems() {
         let mut test_world = World::new();
         register_components(&mut test_world);
         test_world.register::<NewlyCreated>();
-        test_world.register::<zeeman::ZeemanShiftSampler>();
         let mut builder = DispatcherBuilder::new();
         builder.add(
             crate::integrator::VelocityVerletIntegratePositionSystem {},
@@ -280,7 +277,6 @@ pub mod tests {
         let mut test_world = World::new();
         register_components(&mut test_world);
         test_world.register::<NewlyCreated>();
-        test_world.register::<zeeman::ZeemanShiftSampler>();
         let mut builder = DispatcherBuilder::new();
         builder.add(
             crate::integrator::VelocityVerletIntegratePositionSystem {},

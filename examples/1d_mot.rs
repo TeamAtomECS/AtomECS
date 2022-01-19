@@ -13,13 +13,13 @@ use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file::{FileOutputPlugin};
 use lib::output::file::Text;
 use lib::simulation::SimulationBuilder;
-use lib::species::Strontium88_461;
+use lib::species::{Strontium88_461, Strontium88};
 use nalgebra::Vector3;
 use specs::prelude::*;
 
 fn main() {
 
-    let mut sim_builder = SimulationBuilder::default();
+    let mut sim_builder = SimulationBuilder::default::<Strontium88_461, Strontium88>();
     sim_builder.add_plugin(FileOutputPlugin::<Position, Text, Atom>::new("pos.txt".to_string(), 10));
     sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new("vel.txt".to_string(), 10));
     let mut sim = sim_builder.build();
@@ -44,7 +44,7 @@ fn main() {
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
         })
-        .with(CoolingLight::for_species::<Strontium88_461>(
+        .with(CoolingLight::for_transition::<Strontium88_461>(
             detuning,
             -1,
         ))
@@ -59,7 +59,7 @@ fn main() {
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
         })
-        .with(CoolingLight::for_species::<Strontium88_461>(
+        .with(CoolingLight::for_transition::<Strontium88_461>(
             detuning,
             -1,
         ))

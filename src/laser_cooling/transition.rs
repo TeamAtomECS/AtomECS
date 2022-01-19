@@ -24,6 +24,8 @@ pub trait AtomicTransition {
     fn rate_prefactor() -> f64;
     /// The factor Gamma, equal to 2 pi times the linewidth.
     fn gamma() -> f64;
+    /// Wavelength of the laser cooling transition, m.
+    fn wavelength() -> f64;
 }
 
 /// A transition which can be used as a component.
@@ -60,8 +62,10 @@ macro_rules! transition {
         impl $crate::laser_cooling::transition::AtomicTransition for $transition_name {
             /// Frequency of the laser cooling transition, Hz.
             fn frequency() -> f64 { $frequency }
-            /// Linewidth of the laser cooling transition, Hz
+            /// Linewidth of the laser cooling transition, Hz.
             fn linewidth() -> f64 { $linewidth }
+            /// Wavelength of the laser cooling transition, m.
+            fn wavelength() -> f64 { crate::constant::C / $frequency }
             /// The dependence of the sigma_+ transition on magnetic fields.
             /// The sigma_+ transition is shifted by `mup * field.magnitude / h` Hz.
             /// The units of mup are of Energy per magnetic field, ie Joules/Tesla.

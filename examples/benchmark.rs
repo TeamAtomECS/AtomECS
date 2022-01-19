@@ -2,8 +2,7 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
-use lib::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
-use lib::ecs;
+use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::laser::gaussian::GaussianBeam;
@@ -11,6 +10,8 @@ use lib::laser_cooling::force::EmissionForceOption;
 use lib::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use lib::laser_cooling::CoolingLight;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
+use lib::simulation::SimulationBuilder;
+use lib::species::{Rubidium87_780D2, Rubidium87};
 use nalgebra::Vector3;
 use rand_distr::{Distribution, Normal};
 use specs::prelude::*;
@@ -50,11 +51,7 @@ fn main() {
     };
 
     // Create the simulation world and builder for the ECS dispatcher.
-    let mut world = World::new();
-    ecs::register_components(&mut world);
-    ecs::register_resources(&mut world);
-    let mut builder =
-        ecs::create_simulation_dispatcher_builder::<{ lib::laser::DEFAULT_BEAM_LIMIT }>();
+    let mut sim_builder = SimulationBuilder::default::<Rubidium87_780D2, Rubidium87>();
 
     // Configure thread pool.
     let pool = rayon::ThreadPoolBuilder::new()
@@ -62,13 +59,11 @@ fn main() {
         .build()
         .unwrap();
 
-    builder.add_pool(::std::sync::Arc::new(pool));
-
-    let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world);
+    sim_builder.dispatcher_builder.add_pool(::std::sync::Arc::new(pool));
+    let mut sim = sim_builder.build();
 
     // Create magnetic field.
-    world
+    sim.world
         .create_entity()
         .with(QuadrupoleField3D::gauss_per_cm(18.2, Vector3::z()))
         .with(Position {
@@ -82,7 +77,7 @@ fn main() {
     let radius = 66.7e-3 / (2.0_f64.sqrt());
     let beam_centre = Vector3::new(0.0, 0.0, 0.0);
 
-    world
+    sim.world
         .create_entity()
         .with(GaussianBeam {
             intersection: beam_centre,
@@ -92,13 +87,12 @@ fn main() {
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
         })
-        .with(CoolingLight::for_species(
-            AtomicTransition::rubidium(),
+        .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,
             -1,
         ))
         .build();
-    world
+    sim.world
         .create_entity()
         .with(GaussianBeam {
             intersection: beam_centre,
@@ -108,13 +102,12 @@ fn main() {
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
         })
-        .with(CoolingLight::for_species(
-            AtomicTransition::rubidium(),
+        .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,
             -1,
         ))
         .build();
-    world
+    sim.world
         .create_entity()
         .with(GaussianBeam {
             intersection: beam_centre,
@@ -124,13 +117,12 @@ fn main() {
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
         })
-        .with(CoolingLight::for_species(
-            AtomicTransition::rubidium(),
+        .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,
             1,
         ))
         .build();
-    world
+    sim.world
         .create_entity()
         .with(GaussianBeam {
             intersection: beam_centre,
@@ -140,13 +132,12 @@ fn main() {
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
         })
-        .with(CoolingLight::for_species(
-            AtomicTransition::rubidium(),
+        .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,
             1,
         ))
         .build();
-    world
+    sim.world
         .create_entity()
         .with(GaussianBeam {
             intersection: beam_centre,
@@ -156,13 +147,12 @@ fn main() {
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
         })
-        .with(CoolingLight::for_species(
-            AtomicTransition::rubidium(),
+        .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,
             1,
         ))
         .build();
-    world
+    sim.world
         .create_entity()
         .with(GaussianBeam {
             intersection: beam_centre,
@@ -172,15 +162,14 @@ fn main() {
             rayleigh_range: f64::INFINITY,
             ellipticity: 0.0,
         })
-        .with(CoolingLight::for_species(
-            AtomicTransition::rubidium(),
+        .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,
             1,
         ))
         .build();
 
     // Define timestep
-    world.insert(Timestep { delta: 1.0e-6 });
+    sim.world.insert(Timestep { delta: 1.0e-6 });
 
     let vel_dist = Normal::new(0.0, 0.22).unwrap();
     let pos_dist = Normal::new(0.0, 1.2e-4).unwrap();
@@ -188,7 +177,7 @@ fn main() {
 
     // Add atoms
     for _ in 0..configuration.n_atoms {
-        world
+        sim.world
             .create_entity()
             .with(Position {
                 pos: Vector3::new(
@@ -206,7 +195,7 @@ fn main() {
             })
             .with(Force::new())
             .with(Mass { value: 87.0 })
-            .with(AtomicTransition::rubidium())
+            .with(Rubidium87_780D2)
             .with(Atom)
             .with(NewlyCreated)
             .build();
@@ -215,15 +204,14 @@ fn main() {
     // Enable fluctuation options
     //  * Allow photon numbers to fluctuate.
     //  * Allow random force from emission of photons.
-    world.insert(EmissionForceOption::default());
-    world.insert(ScatteringFluctuationsOption::default());
+    sim.world.insert(EmissionForceOption::default());
+    sim.world.insert(ScatteringFluctuationsOption::default());
 
     let loop_start = Instant::now();
 
     // Run the simulation for a number of steps.
     for _i in 0..configuration.n_steps {
-        dispatcher.dispatch(&mut world);
-        world.maintain();
+        sim.step();
     }
 
     println!(

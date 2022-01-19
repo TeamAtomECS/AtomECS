@@ -139,7 +139,7 @@ impl<'a, T, const N: usize> System<'a> for CalculateLaserDetuningSystem<T, N> wh
 #[cfg(test)]
 pub mod tests {
 
-    use crate::laser::DEFAULT_BEAM_LIMIT;
+    use crate::{laser::DEFAULT_BEAM_LIMIT, species::Strontium88_461, laser_cooling::{transition::AtomicTransition, doppler::DopplerShiftSampler}};
 
     use super::*;
 
@@ -154,11 +154,11 @@ pub mod tests {
         test_world.register::<CoolingLight>();
         test_world.register::<LaserIndex>();
         test_world.register::<DopplerShiftSamplers<{ DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<LaserDetuningSamplers<{ DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<AtomicTransition>();
-        test_world.register::<ZeemanShiftSampler>();
+        test_world.register::<LaserDetuningSamplers<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
+        test_world.register::<Strontium88_461>();
+        test_world.register::<ZeemanShiftSampler<Strontium88_461>>();
 
-        let wavelength = constant::C / AtomicTransition::strontium().frequency;
+        let wavelength = constant::C / Strontium88_461::frequency();
         test_world
             .create_entity()
             .with(CoolingLight {
@@ -171,29 +171,30 @@ pub mod tests {
             })
             .build();
 
+        let mut zss = ZeemanShiftSampler::<Strontium88_461>::default();
+        zss.sigma_pi = 0.0;
+        zss.sigma_plus = 10.0e6;
+        zss.sigma_minus = -10.0e6;
+
         let atom1 = test_world
             .create_entity()
             .with(DopplerShiftSamplers {
-                contents: [crate::laser_cooling::doppler::DopplerShiftSampler {
+                contents: [DopplerShiftSampler {
                     doppler_shift: 10.0e6, //rad/s
-                }; crate::laser::DEFAULT_BEAM_LIMIT],
+                }; DEFAULT_BEAM_LIMIT],
             })
-            .with(AtomicTransition::strontium())
-            .with(ZeemanShiftSampler {
-                sigma_plus: 10.0e6,   //rad/s
-                sigma_minus: -10.0e6, //rad/s
-                sigma_pi: 0.0,        //rad/s
-            })
-            .with(LaserDetuningSamplers {
-                contents: [LaserDetuningSampler::default(); crate::laser::DEFAULT_BEAM_LIMIT],
+            .with(Strontium88_461)
+            .with(zss)
+            .with(LaserDetuningSamplers::<Strontium88_461, DEFAULT_BEAM_LIMIT> {
+                contents: [LaserDetuningSampler::default(); DEFAULT_BEAM_LIMIT],
             })
             .build();
 
-        let mut system = CalculateLaserDetuningSystem::<{ DEFAULT_BEAM_LIMIT }>;
+        let mut system = CalculateLaserDetuningSystem::<Strontium88_461, { DEFAULT_BEAM_LIMIT }>::default();
         system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage =
-            test_world.read_storage::<LaserDetuningSamplers<{ DEFAULT_BEAM_LIMIT }>>();
+            test_world.read_storage::<LaserDetuningSamplers<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
 
         assert_approx_eq!(
             sampler_storage

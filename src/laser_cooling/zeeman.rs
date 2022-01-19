@@ -94,7 +94,7 @@ pub mod tests {
     use super::*;
 
     extern crate specs;
-    use crate::constant::HBAR;
+    use crate::{constant::HBAR, species::Strontium88_461, laser_cooling::transition::AtomicTransition};
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
     use nalgebra::{Matrix3, Vector3};
@@ -103,8 +103,8 @@ pub mod tests {
     fn test_calculate_zeeman_shift_system() {
         let mut test_world = World::new();
         test_world.register::<MagneticFieldSampler>();
-        test_world.register::<AtomicTransition>();
-        test_world.register::<ZeemanShiftSampler>();
+        test_world.register::<Strontium88_461>();
+        test_world.register::<ZeemanShiftSampler<Strontium88_461>>();
 
         let atom1 = test_world
             .create_entity()
@@ -114,21 +114,21 @@ pub mod tests {
                 gradient: Vector3::new(0.0, 0.0, 0.0),
                 jacobian: Matrix3::zeros(),
             })
-            .with(AtomicTransition::strontium())
-            .with(ZeemanShiftSampler::default())
+            .with(ZeemanShiftSampler::<Strontium88_461>::default())
+            .with(Strontium88_461)
             .build();
 
-        let mut system = CalculateZeemanShiftSystem;
+        let mut system = CalculateZeemanShiftSystem::<Strontium88_461>::default();
         system.run_now(&test_world);
         test_world.maintain();
-        let sampler_storage = test_world.read_storage::<ZeemanShiftSampler>();
+        let sampler_storage = test_world.read_storage::<ZeemanShiftSampler<Strontium88_461>>();
 
         assert_approx_eq!(
             sampler_storage
                 .get(atom1)
                 .expect("entity not found")
                 .sigma_plus,
-            AtomicTransition::strontium().mup / HBAR * 1.0,
+                Strontium88_461::mup() / HBAR * 1.0,
             1e-5_f64
         );
 
@@ -137,7 +137,7 @@ pub mod tests {
                 .get(atom1)
                 .expect("entity not found")
                 .sigma_minus,
-            AtomicTransition::strontium().mum / HBAR * 1.0,
+                Strontium88_461::mum() / HBAR * 1.0,
             1e-5_f64
         );
         assert_approx_eq!(
@@ -145,7 +145,7 @@ pub mod tests {
                 .get(atom1)
                 .expect("entity not found")
                 .sigma_pi,
-            AtomicTransition::strontium().muz / HBAR * 1.0,
+                Strontium88_461::muz() / HBAR * 1.0,
             1e-5_f64
         );
     }

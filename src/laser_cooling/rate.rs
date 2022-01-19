@@ -150,12 +150,14 @@ pub mod tests {
     use crate::laser::index::LaserIndex;
     use crate::laser::DEFAULT_BEAM_LIMIT;
     use crate::laser_cooling::CoolingLight;
+    use crate::laser_cooling::transition::AtomicTransition;
+    use crate::species::Strontium88_461;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
     use nalgebra::{Matrix3, Vector3};
 
-    use crate::laser::intensity::LaserIntensitySamplers;
-    use crate::laser_cooling::sampler::LaserDetuningSamplers;
+    use crate::laser::intensity::{LaserIntensitySamplers, LaserIntensitySampler};
+    use crate::laser_cooling::sampler::{LaserDetuningSamplers, LaserDetuningSampler};
     use crate::magnetic::MagneticFieldSampler;
 
     /// Tests the correct implementation of the `RateCoefficients`
@@ -166,11 +168,11 @@ pub mod tests {
         test_world.register::<LaserIndex>();
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
-        test_world.register::<LaserDetuningSamplers<{ DEFAULT_BEAM_LIMIT }>>();
+        test_world.register::<LaserDetuningSamplers<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<LaserIntensitySamplers<{ DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<AtomicTransition>();
+        test_world.register::<Strontium88_461>();
         test_world.register::<MagneticFieldSampler>();
-        test_world.register::<RateCoefficients<{ DEFAULT_BEAM_LIMIT }>>();
+        test_world.register::<RateCoefficients<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
 
         let wavelength = 461e-9;
         test_world
@@ -197,20 +199,21 @@ pub mod tests {
         let field = Vector3::new(0.0, 0.0, 1.0);
         let intensity = 1.0;
 
+        let mut lds = LaserDetuningSampler::<Strontium88_461>::default();
+        lds.detuning_sigma_plus = detuning;
+        lds.detuning_sigma_minus = detuning;
+        lds.detuning_pi = detuning;
+
         let atom1 = test_world
             .create_entity()
             .with(LaserDetuningSamplers {
-                contents: [crate::laser_cooling::sampler::LaserDetuningSampler {
-                    detuning_sigma_plus: detuning,
-                    detuning_sigma_minus: detuning,
-                    detuning_pi: detuning,
-                }; crate::laser::DEFAULT_BEAM_LIMIT],
+                contents: [lds; DEFAULT_BEAM_LIMIT],
             })
             .with(LaserIntensitySamplers {
-                contents: [crate::laser::intensity::LaserIntensitySampler { intensity };
-                    crate::laser::DEFAULT_BEAM_LIMIT],
+                contents: [LaserIntensitySampler { intensity };
+                    DEFAULT_BEAM_LIMIT],
             })
-            .with(AtomicTransition::strontium())
+            .with(Strontium88_461)
             .with(MagneticFieldSampler {
                 field,
                 magnitude: 1.0,
@@ -218,22 +221,22 @@ pub mod tests {
                 jacobian: Matrix3::zeros(),
             })
             .with(RateCoefficients {
-                contents: [RateCoefficient::default(); crate::laser::DEFAULT_BEAM_LIMIT],
+                contents: [RateCoefficient::<Strontium88_461>::default(); crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .build();
 
-        let mut system = CalculateRateCoefficientsSystem::<{ DEFAULT_BEAM_LIMIT }>;
+        let mut system = CalculateRateCoefficientsSystem::<Strontium88_461, { DEFAULT_BEAM_LIMIT }>::default();
         system.run_now(&test_world);
         test_world.maintain();
-        let sampler_storage = test_world.read_storage::<RateCoefficients<{ DEFAULT_BEAM_LIMIT }>>();
+        let sampler_storage = test_world.read_storage::<RateCoefficients<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
 
-        let man_pref = AtomicTransition::strontium().rate_prefactor * intensity;
+        let man_pref = Strontium88_461::rate_prefactor() * intensity;
         let scatter1 = 0.25 * man_pref
-            / (detuning.powf(2.0) + (AtomicTransition::strontium().gamma() / 2.).powf(2.0));
+            / (detuning.powf(2.0) + (Strontium88_461::gamma() / 2.).powf(2.0));
         let scatter2 = 0.25 * man_pref
-            / (detuning.powf(2.0) + (AtomicTransition::strontium().gamma() / 2.).powf(2.0));
+            / (detuning.powf(2.0) + (Strontium88_461::gamma() / 2.).powf(2.0));
         let scatter3 = 0.5 * man_pref
-            / (detuning.powf(2.) + (AtomicTransition::strontium().gamma() / 2.).powf(2.));
+            / (detuning.powf(2.) + (Strontium88_461::gamma() / 2.).powf(2.));
 
         assert_approx_eq!(
             sampler_storage

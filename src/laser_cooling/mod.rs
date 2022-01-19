@@ -74,7 +74,7 @@ impl CoolingLight {
     /// * `detuning`: Detuning of the laser from transition in units of MHz
     ///
     /// * `polarization`: Polarization of the cooling beam.
-    pub fn for_species<T>(detuning: f64, polarization: i32) -> Self where T : AtomicTransition {
+    pub fn for_transition<T>(detuning: f64, polarization: i32) -> Self where T : AtomicTransition {
         let freq = T::frequency() + detuning * 1.0e6;
         CoolingLight {
             wavelength: constant::C / freq,
@@ -266,6 +266,8 @@ fn add_systems_to_dispatch<T, const N: usize>(
 #[cfg(test)]
 pub mod tests {
 
+    use crate::species::Rubidium87_780D2;
+
     use super::*;
     use assert_approx_eq::assert_approx_eq;
     #[test]
@@ -295,10 +297,10 @@ pub mod tests {
     #[test]
     fn test_for_species() {
         let detuning = 12.0;
-        let light = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1);
+        let light = CoolingLight::for_transition::<Rubidium87_780D2>(detuning, 1);
         assert_approx_eq!(
             light.frequency(),
-            AtomicTransition::rubidium().frequency + 1.0e6 * detuning
+            Rubidium87_780D2::frequency() + 1.0e6 * detuning
         );
     }
 }

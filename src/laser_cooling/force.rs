@@ -189,10 +189,15 @@ impl<'a, T, const N: usize> System<'a> for ApplyEmissionForceSystem<T, N> where 
 #[cfg(test)]
 pub mod tests {
 
+    use std::num;
+
     use super::CoolingLight;
     use super::*;
     use crate::constant::{HBAR, PI};
     use crate::laser::index::LaserIndex;
+    use crate::laser_cooling::photons_scattered::ActualPhotonsScattered;
+    use crate::laser_cooling::transition::AtomicTransition;
+    use crate::species::Strontium88_461;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
     use crate::laser::{gaussian, DEFAULT_BEAM_LIMIT};
@@ -208,12 +213,12 @@ pub mod tests {
         test_world.register::<LaserIndex>();
         test_world.register::<CoolingLight>();
         test_world.register::<GaussianBeam>();
-        test_world.register::<ActualPhotonsScatteredVector<{ DEFAULT_BEAM_LIMIT }>>();
+        test_world.register::<ActualPhotonsScatteredVector<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<Force>();
         test_world.register::<Dark>();
         test_world.insert(Timestep { delta: time_delta });
 
-        let wavelength = 461e-9;
+        let wavelength = Strontium88_461::wavelength();
         test_world
             .create_entity()
             .with(CoolingLight {
@@ -235,18 +240,18 @@ pub mod tests {
             .build();
 
         let number_scattered = 1_000_000.0;
+        let mut aps = ActualPhotonsScattered::<Strontium88_461>::default();
+        aps.scattered = number_scattered;
 
         let atom1 = test_world
             .create_entity()
             .with(ActualPhotonsScatteredVector {
-                contents: [crate::laser_cooling::photons_scattered::ActualPhotonsScattered {
-                    scattered: number_scattered,
-                }; crate::laser::DEFAULT_BEAM_LIMIT],
+                contents: [aps; DEFAULT_BEAM_LIMIT],
             })
             .with(Force::new())
             .build();
 
-        let mut system = CalculateAbsorptionForcesSystem::<{ DEFAULT_BEAM_LIMIT }>;
+        let mut system = CalculateAbsorptionForcesSystem::<Strontium88_461, { DEFAULT_BEAM_LIMIT }>::default();
         system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
@@ -266,30 +271,30 @@ pub mod tests {
 
         let time_delta = 1.0e-5;
 
-        test_world.register::<ActualPhotonsScatteredVector<{ DEFAULT_BEAM_LIMIT }>>();
+        test_world.register::<ActualPhotonsScatteredVector<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
         test_world.register::<Force>();
-        test_world.register::<AtomicTransition>();
+        test_world.register::<Strontium88_461>();
         test_world.insert(EmissionForceOption::default());
         test_world.insert(Timestep { delta: time_delta });
         let number_scattered = 1_000_000.0;
 
+        let mut aps = ActualPhotonsScattered::<Strontium88_461>::default();
+        aps.scattered = number_scattered;
         let atom1 = test_world
             .create_entity()
             .with(ActualPhotonsScatteredVector {
-                contents: [crate::laser_cooling::photons_scattered::ActualPhotonsScattered {
-                    scattered: number_scattered,
-                }; crate::laser::DEFAULT_BEAM_LIMIT],
+                contents: [aps; DEFAULT_BEAM_LIMIT],
             })
             .with(Force::new())
-            .with(AtomicTransition::strontium())
+            .with(Strontium88_461)
             .build();
 
-        let mut system = ApplyEmissionForceSystem::<{ DEFAULT_BEAM_LIMIT }>;
+        let mut system = ApplyEmissionForceSystem::<Strontium88_461, { DEFAULT_BEAM_LIMIT }>::default();
         system.run_now(&test_world);
         test_world.maintain();
         let sampler_storage = test_world.read_storage::<Force>();
 
-        let max_force_total = number_scattered * 2. * PI * AtomicTransition::strontium().frequency
+        let max_force_total = number_scattered * 2. * PI * Strontium88_461::frequency()
             / constant::C
             * HBAR
             / time_delta;
