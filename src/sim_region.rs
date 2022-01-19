@@ -10,6 +10,7 @@
 use crate::atom::Position;
 use crate::initiate::NewlyCreated;
 use crate::shapes::{Cuboid, Cylinder, Sphere, Volume};
+use crate::simulation::Plugin;
 use specs::prelude::*;
 use std::marker::PhantomData;
 
@@ -149,6 +150,15 @@ impl<'a> System<'a> for AttachRegionTestsToNewlyCreatedSystem {
     }
 }
 
+#[derive(Default)]
+pub struct SimulationRegionPlugin;
+impl Plugin for SimulationRegionPlugin {
+    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
+        add_systems_to_dispatch(&mut builder.dispatcher_builder, &[]);
+        register_components(&mut builder.world);
+    }
+}
+
 /// Adds the systems required by `sim_region` to the dispatcher.
 ///
 /// #Arguments
@@ -156,7 +166,7 @@ impl<'a> System<'a> for AttachRegionTestsToNewlyCreatedSystem {
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the `sim_region` systems run.
-pub fn add_systems_to_dispatch(
+fn add_systems_to_dispatch(
     builder: &mut DispatcherBuilder<'static, 'static>,
     deps: &[&str],
 ) {
@@ -195,7 +205,7 @@ pub fn add_systems_to_dispatch(
 }
 
 /// Registers resources required by magnetics to the ecs world.
-pub fn register_components(world: &mut World) {
+fn register_components(world: &mut World) {
     world.register::<Sphere>();
     world.register::<Cuboid>();
     world.register::<Cylinder>();

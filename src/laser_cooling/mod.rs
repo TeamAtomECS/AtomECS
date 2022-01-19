@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 
-use crate::constant;
+use crate::{constant, simulation::Plugin};
 use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use crate::laser::index::LaserIndex;
@@ -155,6 +155,14 @@ impl<'a> System<'a> for AttachIndexToCoolingLightSystem {
     }
 }
 
+#[derive(Default)]
+pub struct LaserCoolingPlugin<T, const N : usize>(PhantomData<T>) where T : TransitionComponent;
+impl<T, const N : usize> Plugin for LaserCoolingPlugin<T, N> where T : TransitionComponent {
+    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
+        add_systems_to_dispatch::<T, N>(&mut builder.dispatcher_builder, &[]);
+    }
+}
+
 /// Adds the systems required by the module to the dispatcher.
 ///
 /// #Arguments
@@ -162,7 +170,7 @@ impl<'a> System<'a> for AttachIndexToCoolingLightSystem {
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the systems run.
-pub fn add_systems_to_dispatch<T, const N: usize>(
+fn add_systems_to_dispatch<T, const N: usize>(
     builder: &mut DispatcherBuilder<'static, 'static>,
     deps: &[&str],
 )  where T : TransitionComponent {

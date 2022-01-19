@@ -16,11 +16,22 @@ use rand::distributions::WeightedIndex;
 use rand::Rng;
 use std::marker::PhantomData;
 
+use crate::simulation::Plugin;
+
 use self::species::AtomCreator;
 
 pub struct VelocityCap {
     /// The maximum speed of an atom emitted by an atom source. See [Velocity](struct.Velocity.html) for units.
     pub value: f64,
+}
+
+#[derive(Default)]
+pub struct AtomSourcePlugin<T>(PhantomData<T>) where T : AtomCreator;
+impl<T> Plugin for AtomSourcePlugin<T> where T : AtomCreator + 'static {
+    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
+        add_systems_to_dispatch::<T>(&mut builder.dispatcher_builder, &[]);
+        register_components::<T>(&mut builder.world);
+    }
 }
 
 /// Adds the systems required by `atom_sources` to the dispatcher.
@@ -30,7 +41,7 @@ pub struct VelocityCap {
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the atom_sources systems run.
-pub fn add_systems_to_dispatch<T>(
+fn add_systems_to_dispatch<T>(
     builder: &mut DispatcherBuilder<'static, 'static>,
     deps: &[&str],
 ) where T : AtomCreator + 'static {
@@ -90,7 +101,7 @@ pub fn add_systems_to_dispatch<T>(
 }
 
 /// Registers resources required by `atom_sources` to the ecs world.
-pub fn register_components<T>(world: &mut World) where T : AtomCreator + 'static {
+fn register_components<T>(world: &mut World) where T : AtomCreator + 'static {
     world.register::<oven::Oven<T>>();
     world.register::<mass::MassDistribution>();
     world.register::<emit::EmitFixedRate>();

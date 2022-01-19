@@ -2,7 +2,7 @@
 
 use specs::DispatcherBuilder;
 
-use crate::constant;
+use crate::{constant, simulation::Plugin};
 use crate::laser::index::LaserIndex;
 
 use serde::{Deserialize, Serialize};
@@ -81,6 +81,14 @@ impl<'a> System<'a> for AttachIndexToDipoleLightSystem {
     }
 }
 
+pub struct DipolePlugin<const N : usize>;
+impl<const N: usize> Plugin for DipolePlugin<N> {
+    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
+        add_systems_to_dispatch::<N>(&mut builder.dispatcher_builder, &[]);
+        register_components(&mut builder.world);
+    }
+}
+
 /// Adds the systems required by the module to the dispatcher.
 ///
 /// #Arguments
@@ -88,7 +96,7 @@ impl<'a> System<'a> for AttachIndexToDipoleLightSystem {
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the systems run.
-pub fn add_systems_to_dispatch<const N: usize>(
+fn add_systems_to_dispatch<const N: usize>(
     builder: &mut DispatcherBuilder<'static, 'static>,
     deps: &[&str],
 ) {
@@ -104,6 +112,6 @@ pub fn add_systems_to_dispatch<const N: usize>(
     );
 }
 
-pub fn register_components(world: &mut World) {
+fn register_components(world: &mut World) {
     world.register::<DipoleLight>();
 }

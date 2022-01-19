@@ -1,8 +1,11 @@
 //! Common atom components and systems.
 
+use crate::initiate::DeflagNewAtomsSystem;
+use crate::integrator::AddOldForceToNewAtomsSystem;
 use crate::output::file::BinaryConversion;
 use crate::output::file::XYZPosition;
 use crate::ramp::Lerp;
+use crate::simulation::Plugin;
 use nalgebra::Vector3;
 use specs::prelude::*;
 
@@ -148,8 +151,18 @@ impl<'a> System<'a> for ClearForceSystem {
     }
 }
 
+pub struct AtomPlugin;
+impl Plugin for AtomPlugin {
+    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
+        register_components(&mut builder.world);
+
+        builder.dispatcher_builder.add(DeflagNewAtomsSystem, "deflag", &[]);
+        builder.dispatcher_builder.add(AddOldForceToNewAtomsSystem, "", &[]);
+    }
+}
+
 /// Registers resources required by `atom_sources` to the ecs world.
-pub fn register_components(world: &mut World) {
+fn register_components(world: &mut World) {
     world.register::<Position>();
     world.register::<Mass>();
     world.register::<Force>();

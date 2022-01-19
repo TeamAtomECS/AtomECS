@@ -4,7 +4,7 @@ extern crate nalgebra;
 
 use specs::prelude::*;
 
-use crate::initiate::NewlyCreated;
+use crate::{initiate::NewlyCreated, simulation::Plugin};
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use nalgebra::{Matrix3, Vector3};
 use specs::{
@@ -150,7 +150,7 @@ impl<'a> System<'a> for AttachFieldSamplersToNewlyCreatedAtomsSystem {
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the magnetics systems run.
-pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>, deps: &[&str]) {
+fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>, deps: &[&str]) {
     builder.add(ClearMagneticFieldSamplerSystem, "magnetics_clear", deps);
     builder.add(
         quadrupole::Sample3DQuadrupoleFieldSystem,
@@ -198,12 +198,21 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
 }
 
 /// Registers resources required by magnetics to the ecs world.
-pub fn register_components(world: &mut World) {
+fn register_components(world: &mut World) {
     world.register::<uniform::UniformMagneticField>();
     world.register::<quadrupole::QuadrupoleField3D>();
     world.register::<quadrupole::QuadrupoleField2D>();
     world.register::<MagneticFieldSampler>();
     world.register::<grid::PrecalculatedMagneticFieldGrid>();
+}
+
+/// A plugin responsible for calculating magnetic fields.
+pub struct MagneticsPlugin;
+impl Plugin for MagneticsPlugin {
+    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
+        add_systems_to_dispatch(&mut builder.dispatcher_builder, &[]);
+        register_components(&mut builder.world);
+    }
 }
 
 #[cfg(test)]
