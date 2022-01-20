@@ -7,13 +7,14 @@ pub mod tests {
     use crate::atom::{Atom, Force, Mass, Position, Velocity};
     use crate::initiate::NewlyCreated;
     use crate::integrator::Timestep;
+    use crate::laser::LaserPlugin;
     use crate::laser::gaussian::GaussianBeam;
     use crate::laser::index::LaserIndex;
     use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
-    use crate::laser_cooling::CoolingLight;
+    use crate::laser_cooling::{CoolingLight, LaserCoolingPlugin};
     use crate::laser_cooling::transition::AtomicTransition;
     use crate::simulation::SimulationBuilder;
-    use crate::species::{Rubidium87_780D2, Rubidium87};
+    use crate::species::{Rubidium87_780D2};
     extern crate nalgebra;
     use assert_approx_eq::assert_approx_eq;
     use nalgebra::Vector3;
@@ -39,6 +40,7 @@ pub mod tests {
 
     /// Calculates the scattering rate from a single beam at given intensity and detuning, and compares that to analytic theory.
     fn test_single_beam_scattering_rate(i_over_i_sat: f64, delta_over_gamma: f64) {
+        const BEAM_NUMBER: usize = 1;
         let transition = Rubidium87_780D2;
         let i_sat = Rubidium87_780D2::saturation_intensity();
         let intensity = i_sat * i_over_i_sat;
@@ -46,7 +48,10 @@ pub mod tests {
         let detuning_megahz = delta / (2.0 * std::f64::consts::PI * 1.0e6);
 
         // Create simulation dispatcher
-        let mut sim = SimulationBuilder::default::<Rubidium87_780D2, Rubidium87>().build();
+        let mut sim_builder = SimulationBuilder::default();
+        sim_builder.add_plugin(LaserPlugin::<{BEAM_NUMBER}>);
+        sim_builder.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, {BEAM_NUMBER}>::default());
+        let mut sim = sim_builder.build();
 
         // add laser to test world.
         sim.world

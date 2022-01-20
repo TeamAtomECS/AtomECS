@@ -406,8 +406,7 @@ pub mod tests {
     /// Test that the system runs and causes nearby atoms to collide. More of an integration test than a unit test.
     #[test]
     fn test_collisions() {
-        use crate::species::{Strontium88, Strontium88_461};
-        let mut simulation_builder = SimulationBuilder::default::<Strontium88_461, Strontium88>();
+        let mut simulation_builder = SimulationBuilder::default();
         simulation_builder.add_end_frame_systems();
         simulation_builder.add_plugin(CollisionPlugin);
         let mut sim = simulation_builder.build();

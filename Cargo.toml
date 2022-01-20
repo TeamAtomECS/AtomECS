@@ -32,10 +32,6 @@ serde_arrays = "0.1.0"
 gnuplot="0.0.37"
 criterion = "0.3"
 
-[[bench]]
-name = "rate_calculation"
-harness = false
-
 [profile.release]
 opt-level = 3
 debug = true
