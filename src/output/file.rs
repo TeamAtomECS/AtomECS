@@ -76,22 +76,6 @@ where
     }
 }
 
-/// Creates a new [OutputSystem](struct.OutputSystem.html) to write per-atom [Component](specs::Component) data
-/// according to the specified [Format](struct.Format.html).
-///
-/// The interval specifies how often, in integration steps, the file should be written.
-///
-/// Only component data of entities associated with `Atom` is written down.
-///
-/// For example, `new::<Position, Text>("pos.txt", 10).
-fn new<C, F>(file_name: String, interval: u64) -> OutputSystem<C, BufWriter<File>, F, Atom>
-where
-    C: Component + Clone,
-    F: Format<C, BufWriter<File>>,
-{
-    new_with_filter::<C, F, Atom>(file_name, interval)
-}
-
 /// Creates a new [OutputSystem](struct.OutputSystem.html) to write per-entity [Component](specs::Component) data
 /// according to the specified [Format](struct.Format.html).
 ///

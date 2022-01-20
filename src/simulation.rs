@@ -5,7 +5,7 @@
 use std::{any::{Any, type_name}};
 use specs::prelude::*;
 
-use crate::{magnetic::MagneticsPlugin, atom::{AtomPlugin, ClearForceSystem}, laser_cooling::{transition::TransitionComponent}, sim_region::SimulationRegionPlugin, integrator::{VelocityVerletIntegratePositionSystem, INTEGRATE_POSITION_SYSTEM_NAME, INTEGRATE_VELOCITY_SYSTEM_NAME, VelocityVerletIntegrateVelocitySystem, Step}, gravity::GravityPlugin, destructor::DestroyAtomsPlugin, output::console_output::ConsoleOutputSystem};
+use crate::{magnetic::MagneticsPlugin, atom::{AtomPlugin, ClearForceSystem}, sim_region::SimulationRegionPlugin, integrator::{VelocityVerletIntegratePositionSystem, INTEGRATE_POSITION_SYSTEM_NAME, INTEGRATE_VELOCITY_SYSTEM_NAME, VelocityVerletIntegrateVelocitySystem, Step}, gravity::GravityPlugin, destructor::DestroyAtomsPlugin, output::console_output::ConsoleOutputSystem};
 
 /// A simulation in AtomECS.
 pub struct Simulation {
@@ -14,7 +14,7 @@ pub struct Simulation {
 }
 impl Simulation {
     pub fn step(&mut self) {
-        self.dispatcher.dispatch(&mut self.world);
+        self.dispatcher.dispatch(&self.world);
         self.world.maintain();
     }
 }
@@ -55,7 +55,7 @@ impl SimulationBuilder {
 
     fn check_plugin_dependencies(&self, plugin: &impl Plugin) {
         for dep in plugin.deps() {
-            if !self.plugins.iter().map(|p| p.name()).collect::<Vec<&str>>().contains(&dep.name()) {
+            if !self.plugins.iter().map(|p| p.name()).any(|n| n == dep.name()) {
                 panic!("Cannot add plugin {}: it requires a {} plugin, which has not yet been added.", plugin.name(), dep.name());
             }
         }
@@ -75,7 +75,7 @@ impl SimulationBuilder {
 
         Simulation {
             world: self.world,
-            dispatcher: dispatcher
+            dispatcher
         }
     }
 
@@ -91,16 +91,9 @@ impl SimulationBuilder {
         self.dispatcher_builder.add(ConsoleOutputSystem, "", &[INTEGRATE_VELOCITY_SYSTEM_NAME]);
         self.end_frame_systems_added = true;
     }
-
-    /// Configures the simulation to calculate laser cooling forces using the two-level rate equation method.
-    /// 
-    /// For more information, see [crate::laser_cooling].
-    pub fn laser_cooling_via_rate_equation<T>(&mut self)
-        where T : TransitionComponent {
-            //downside is it hides a lot of the plugin details - better to make that clear?
-    }
-
-    pub fn default() -> Self
+}
+impl Default for SimulationBuilder {
+    fn default() -> Self
     {
         let mut builder = Self::new();
         builder.add_plugin(AtomPlugin);
