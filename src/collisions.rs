@@ -15,7 +15,7 @@
 extern crate multimap;
 use crate::atom::{Position, Velocity};
 use crate::constant::{PI, SQRT2};
-use crate::integrator::Timestep;
+use crate::integrator::{Timestep, INTEGRATE_VELOCITY_SYSTEM_NAME};
 use crate::simulation::{Plugin, SimulationBuilder};
 use hashbrown::HashMap;
 use nalgebra::Vector3;
@@ -288,7 +288,8 @@ fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
 pub struct CollisionPlugin;
 impl Plugin for CollisionPlugin {
     fn build(&self, builder: &mut SimulationBuilder) {
-        builder.dispatcher_builder.add(ApplyCollisionsSystem, "collisions", &[]);
+        // Note that the collisions system must be applied after the velocity integrator or it will violate conservation of energy and cause heating
+        builder.dispatcher_builder.add(ApplyCollisionsSystem, "collisions", &[INTEGRATE_VELOCITY_SYSTEM_NAME]);
     }
 }
 
@@ -404,6 +405,7 @@ pub mod tests {
     fn test_collisions() {
         use crate::species::{Strontium88, Strontium88_461};
         let mut simulation_builder = SimulationBuilder::default::<Strontium88_461, Strontium88>();
+        simulation_builder.add_end_frame_systems();
         simulation_builder.add_plugin(CollisionPlugin);
         let mut sim = simulation_builder.build();
 

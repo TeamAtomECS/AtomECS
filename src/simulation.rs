@@ -23,7 +23,8 @@ impl Simulation {
 /// Used to construct a simulation in AtomECS.
 pub struct SimulationBuilder {
     pub world: World,
-    pub dispatcher_builder: DispatcherBuilder<'static, 'static>
+    pub dispatcher_builder: DispatcherBuilder<'static, 'static>,
+    end_frame_systems_added: bool
 }
 impl SimulationBuilder {
     pub fn new() -> Self {
@@ -39,7 +40,8 @@ impl SimulationBuilder {
 
         SimulationBuilder {
             world: World::new(),
-            dispatcher_builder
+            dispatcher_builder,
+            end_frame_systems_added: false,
         }
     }
 
@@ -51,17 +53,9 @@ impl SimulationBuilder {
     /// Builds a [Simulation] from the [SimulationBuilder].
     pub fn build(mut self) -> Simulation {
 
-        self.dispatcher_builder.add(
-            VelocityVerletIntegrateVelocitySystem,
-            INTEGRATE_VELOCITY_SYSTEM_NAME,
-            &[
-                "calculate_absorption_forces",
-                "calculate_emission_forces",
-                "add_gravity",
-            ],
-        );
-
-        self.dispatcher_builder.add(ConsoleOutputSystem, "", &[INTEGRATE_VELOCITY_SYSTEM_NAME]);
+        if !self.end_frame_systems_added {
+            self.add_end_frame_systems();
+        }
 
         let mut dispatcher = self.dispatcher_builder.build();
         dispatcher.setup(&mut self.world);
@@ -72,6 +66,20 @@ impl SimulationBuilder {
             world: self.world,
             dispatcher: dispatcher
         }
+    }
+
+    pub fn add_end_frame_systems(&mut self) {
+        self.dispatcher_builder.add(
+            VelocityVerletIntegrateVelocitySystem,
+            INTEGRATE_VELOCITY_SYSTEM_NAME,
+            &[
+                "calculate_absorption_forces",
+                "calculate_emission_forces",
+                "add_gravity",
+            ],
+        );
+        self.dispatcher_builder.add(ConsoleOutputSystem, "", &[INTEGRATE_VELOCITY_SYSTEM_NAME]);
+        self.end_frame_systems_added = true;
     }
 
     pub fn default<T, S>() -> Self 
