@@ -5,12 +5,13 @@ extern crate nalgebra;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
-use lib::magnetic::force::{ApplyMagneticForceSystem, MagneticDipole};
+use lib::magnetic::force::MagneticDipole;
 use lib::magnetic::quadrupole::QuadrupoleField3D;
+use lib::magnetic::MagneticTrapPlugin;
 use lib::simulation::SimulationBuilder;
 use rand_distr::{Distribution, Normal};
 
-use lib::output::file::{FileOutputPlugin};
+use lib::output::file::FileOutputPlugin;
 use lib::output::file::Text;
 use nalgebra::Vector3;
 use specs::prelude::*;
@@ -20,17 +21,18 @@ fn main() {
     let now = Instant::now();
 
     let mut sim_builder = SimulationBuilder::default();
-    sim_builder.add_plugin(FileOutputPlugin::<Position, Text, Atom>::new("pos.txt".to_string(), 100));
-    sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new("vel.txt".to_string(), 100));
-    
+    sim_builder.add_plugin(FileOutputPlugin::<Position, Text, Atom>::new(
+        "pos.txt".to_string(),
+        100,
+    ));
+    sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new(
+        "vel.txt".to_string(),
+        100,
+    ));
     // Add magnetics systems (todo: as plugin)
     sim_builder.world.register::<NewlyCreated>();
-    sim_builder.world.register::<MagneticDipole>();
-    sim_builder.dispatcher_builder.add(
-        ApplyMagneticForceSystem {},
-        "magnetic_force",
-        &["magnetics_gradient"],
-    );
+    sim_builder.add_plugin(MagneticTrapPlugin);
+
     let mut sim = sim_builder.build();
 
     // Create magnetic field.
