@@ -1,50 +1,34 @@
 //! Single particle in a cross beam optical dipole trap
 extern crate atomecs as lib;
 extern crate nalgebra;
-use lib::atom;
+use lib::atom::{self, Position, Velocity};
 use lib::atom::Atom;
-use lib::dipole;
+use lib::dipole::{self, DipolePlugin};
 use lib::integrator::Timestep;
-use lib::laser;
+use lib::laser::{self, LaserPlugin};
 use lib::laser::gaussian::GaussianBeam;
-use lib::output::file;
+use lib::output::file::{FileOutputPlugin};
 use lib::output::file::{Text, XYZ};
+use lib::simulation::SimulationBuilder;
 use nalgebra::Vector3;
 use specs::prelude::*;
-use specs::{Builder, World};
 use std::time::Instant;
+
+const BEAM_NUMBER: usize = 2;
 
 fn main() {
     let now = Instant::now();
 
-    // Create the simulation world and builder for the ECS dispatcher.
-    let mut world = World::new();
-    ecs::register_components(&mut world);
-    ecs::register_resources(&mut world);
-    let mut builder =
-        ecs::create_simulation_dispatcher_builder::<{ lib::laser::DEFAULT_BEAM_LIMIT }>();
-
     // Configure simulation output.
-    builder = builder.with(
-        file::new::<atom::Position, Text>("pos_dipole.txt".to_string(), 100),
-        "",
-        &[],
-    );
-    builder = builder.with(
-        file::new::<atom::Velocity, Text>("vel_dipole.txt".to_string(), 100),
-        "",
-        &[],
-    );
-    builder = builder.with(
-        file::new_with_filter::<atom::Position, XYZ, Atom>("position.xyz".to_string(), 100),
-        "",
-        &[],
-    );
+    let mut sim_builder = SimulationBuilder::default();
+    sim_builder.add_plugin(LaserPlugin::<{BEAM_NUMBER}>);
+    sim_builder.add_plugin(DipolePlugin::<{BEAM_NUMBER}>);
+    sim_builder.add_plugin(FileOutputPlugin::<Position, Text, Atom>::new("pos.txt".to_string(), 100));
+    sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new("vel.txt".to_string(), 100));
+    sim_builder.add_plugin(FileOutputPlugin::<Position, XYZ, Atom>::new("position.xyz".to_string(), 100));
+    let mut sim = sim_builder.build();
 
-    let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world);
     // Create dipole laser.
-
     let power = 10.0;
     let e_radius = 60.0e-6 / (2.0_f64.sqrt());
     let wavelength = 1064.0e-9;
@@ -57,7 +41,7 @@ fn main() {
         rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &e_radius),
         ellipticity: 0.0,
     };
-    world
+    sim.world
         .create_entity()
         .with(gaussian_beam)
         .with(dipole::DipoleLight { wavelength })
@@ -75,7 +59,7 @@ fn main() {
         rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &e_radius),
         ellipticity: 0.0,
     };
-    world
+    sim.world
         .create_entity()
         .with(gaussian_beam)
         .with(dipole::DipoleLight { wavelength })
@@ -86,10 +70,10 @@ fn main() {
         .build();
 
     // Define timestep
-    world.insert(Timestep { delta: 1.0e-5 });
+    sim.world.insert(Timestep { delta: 1.0e-5 });
 
     // Create a single test atom
-    world
+    sim.world
         .create_entity()
         .with(atom::Mass { value: 87.0 })
         .with(atom::Force::new())
@@ -108,8 +92,7 @@ fn main() {
 
     // Run the simulation for a number of steps.
     for _i in 0..100_000 {
-        dispatcher.dispatch(&mut world);
-        world.maintain();
+        sim.step();
     }
 
     println!("Simulation completed in {} ms.", now.elapsed().as_millis());

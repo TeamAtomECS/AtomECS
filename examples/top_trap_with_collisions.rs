@@ -4,18 +4,16 @@ extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::collisions::{
-    ApplyCollisionsOption, ApplyCollisionsSystem, CollisionParameters, CollisionsTracker,
+    CollisionPlugin,
 };
-use lib::ecs;
-use lib::ecs::AtomecsDispatcherBuilder;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
-use lib::integrator::INTEGRATE_VELOCITY_SYSTEM_NAME;
 use lib::magnetic::force::{ApplyMagneticForceSystem, MagneticDipole};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::magnetic::top::TimeOrbitingPotential;
-use lib::output::file;
+use lib::output::file::{FileOutputPlugin};
 use lib::output::file::Text;
+use lib::simulation::SimulationBuilder;
 use nalgebra::Vector3;
 use rand_distr::{Distribution, Normal};
 use specs::prelude::*;
@@ -23,53 +21,33 @@ use std::fs::File;
 use std::io::{Error, Write};
 
 fn main() {
-    // Create the simulation world and builder for the ECS dispatcher.
-    let mut world = World::new();
-    ecs::register_components(&mut world);
-    ecs::register_resources(&mut world);
-    world.register::<NewlyCreated>();
-    world.register::<MagneticDipole>();
-    world.register::<TimeOrbitingPotential>();
-    let mut atomecs_builder = AtomecsDispatcherBuilder::new();
-    atomecs_builder.add_frame_initialisation_systems();
-    atomecs_builder.add_systems::<{ lib::laser::DEFAULT_BEAM_LIMIT }>();
-    atomecs_builder.builder.add(
+
+    let mut sim_builder = SimulationBuilder::default();
+    sim_builder.add_plugin(FileOutputPlugin::<Position, Text, Atom>::new("pos.txt".to_string(), 100));
+    sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new("vel.txt".to_string(), 100));
+
+    // Add magnetics systems (todo: as plugin)
+    sim_builder.world.register::<NewlyCreated>();
+    sim_builder.world.register::<MagneticDipole>();
+    sim_builder.dispatcher_builder.add(
         ApplyMagneticForceSystem {},
         "magnetic_force",
         &["magnetics_gradient"],
     );
-    atomecs_builder.builder.add(
-        ApplyCollisionsSystem {},
-        "collisions",
-        &[INTEGRATE_VELOCITY_SYSTEM_NAME], // Collisions system must be applied after velocity integrator or it will violate conservation of energy and cause heating
-    );
 
-    atomecs_builder.add_frame_end_systems();
-    let mut builder = atomecs_builder.builder;
+    sim_builder.add_end_frame_systems();
+    sim_builder.add_plugin(CollisionPlugin);
 
-    // Configure simulation output.
-    builder = builder.with(
-        file::new::<Position, Text>("pos.txt".to_string(), 100),
-        "",
-        &[],
-    );
-    builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 100),
-        "",
-        &[],
-    );
-
-    let mut dispatcher = builder.build();
-    dispatcher.setup(&mut world);
+    let mut sim = sim_builder.build();
 
     // Create magnetic field.
-    world
+    sim.world
         .create_entity()
         .with(QuadrupoleField3D::gauss_per_cm(80.0, Vector3::z()))
         .with(Position::new())
         .build();
 
-    world
+    sim.world
         .create_entity()
         .with(TimeOrbitingPotential::gauss(20.0, 3000.0)) // Time averaged TOP theory assumes rotation frequency much greater than velocity of atoms
         .build();
@@ -78,7 +56,7 @@ fn main() {
     let v_dist = Normal::new(0.0, 0.004).unwrap(); // ~100nK
 
     for _i in 0..25000 {
-        world
+        sim.world
             .create_entity()
             .with(Position {
                 pos: Vector3::new(
@@ -102,8 +80,8 @@ fn main() {
             .build();
     }
 
-    world.insert(ApplyCollisionsOption);
-    world.insert(CollisionParameters {
+    sim.world.insert(ApplyCollisionsOption);
+    sim.world.insert(CollisionParameters {
         macroparticle: 4e2,
         box_number: 200, //Any number large enough to cover entire cloud with collision boxes. Overestimating box number will not affect performance.
         box_width: 20e-6, //Too few particles per box will both underestimate collision rate and cause large statistical fluctuations.
@@ -112,25 +90,24 @@ fn main() {
         collision_limit: 10_000_000.0, //Maximum number of collisions that can be calculated in one frame.
                                        //This avoids absurdly high collision numbers if many atoms are initialised with the same position, for example.
     });
-    world.insert(CollisionsTracker {
+    sim.world.insert(CollisionsTracker {
         num_collisions: Vec::new(),
         num_atoms: Vec::new(),
         num_particles: Vec::new(),
     });
 
     // Define timestep
-    world.insert(Timestep { delta: 5e-5 }); //Aliasing of TOP field or other strange effects can occur if timestep is not much smaller than TOP field period.
+    sim.world.insert(Timestep { delta: 5e-5 }); //Aliasing of TOP field or other strange effects can occur if timestep is not much smaller than TOP field period.
                                             //Timestep must also be much smaller than mean collision time.
 
     let mut filename = File::create("collisions.txt").expect("Cannot create file.");
 
     // Run the simulation for a number of steps.
     for _i in 0..10000 {
-        dispatcher.dispatch(&mut world);
-        world.maintain();
+        sim.step();
 
         if (_i > 0) && (_i % 50_i32 == 0) {
-            let tracker = world.read_resource::<CollisionsTracker>();
+            let tracker = sim.world.read_resource::<CollisionsTracker>();
             let _result = write_collisions_tracker(
                 &mut filename,
                 &_i,
