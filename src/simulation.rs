@@ -2,8 +2,7 @@
 //! 
 //! Allows a simulation to be created in a flexible manner by combining different plugins.
 
-use std::{any::Any};
-
+use std::{any::{Any, type_name}};
 use specs::prelude::*;
 
 use crate::{magnetic::MagneticsPlugin, atom::{AtomPlugin, ClearForceSystem}, laser::{LaserPlugin}, laser_cooling::{LaserCoolingPlugin, transition::TransitionComponent}, dipole::DipolePlugin, atom_sources::{AtomSourcePlugin, species::AtomCreator}, sim_region::SimulationRegionPlugin, integrator::{VelocityVerletIntegratePositionSystem, INTEGRATE_POSITION_SYSTEM_NAME, INTEGRATE_VELOCITY_SYSTEM_NAME, VelocityVerletIntegrateVelocitySystem, Step}, gravity::GravityPlugin, destructor::DestroyAtomsPlugin, output::console_output::ConsoleOutputSystem};
@@ -24,7 +23,8 @@ impl Simulation {
 pub struct SimulationBuilder {
     pub world: World,
     pub dispatcher_builder: DispatcherBuilder<'static, 'static>,
-    end_frame_systems_added: bool
+    end_frame_systems_added: bool,
+    plugins: Vec<Box<dyn Plugin>>
 }
 impl SimulationBuilder {
     pub fn new() -> Self {
@@ -41,13 +41,24 @@ impl SimulationBuilder {
         SimulationBuilder {
             world: World::new(),
             dispatcher_builder,
-            end_frame_systems_added: false
+            end_frame_systems_added: false,
+            plugins: Vec::new()
         }
     }
 
     /// Add a [Plugin] to the [SimulationBuilder]
     pub fn add_plugin(&mut self, plugin: impl Plugin) {
+        self.check_plugin_dependencies(&plugin);
         plugin.build(self);
+        self.plugins.push(Box::new(plugin));
+    }
+
+    fn check_plugin_dependencies(&self, plugin: &impl Plugin) {
+        for dep in plugin.deps() {
+            if !self.plugins.iter().map(|p| p.name()).collect::<Vec<&str>>().contains(&dep.name()) {
+                panic!("Cannot add plugin {}: it requires a {} plugin, which has not yet been added.", plugin.name(), dep.name());
+            }
+        }
     }
 
     /// Builds a [Simulation] from the [SimulationBuilder].
@@ -113,4 +124,6 @@ pub const DEFAULT_BEAM_NUMBER : usize = 8;
 
 pub trait Plugin : Any + Send + Sync {
     fn build(&self, builder: &mut SimulationBuilder);
+    fn name(&self) -> &str { type_name::<Self>() }
+    fn deps(&self) -> Vec::<Box<dyn Plugin>>;
 }

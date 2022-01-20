@@ -291,6 +291,9 @@ impl Plugin for CollisionPlugin {
         // Note that the collisions system must be applied after the velocity integrator or it will violate conservation of energy and cause heating
         builder.dispatcher_builder.add(ApplyCollisionsSystem, "collisions", &[INTEGRATE_VELOCITY_SYSTEM_NAME]);
     }
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        Vec::new()
+    }
 }
 
 pub mod tests {

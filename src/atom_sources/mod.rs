@@ -39,6 +39,9 @@ impl<T> Plugin for AtomSourcePlugin<T> where T : AtomCreator + 'static {
         add_systems_to_dispatch::<T>(&mut builder.dispatcher_builder, &[]);
         register_components::<T>(&mut builder.world);
     }
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        Vec::new()
+    }
 }
 
 /// Adds the systems required by `atom_sources` to the dispatcher.

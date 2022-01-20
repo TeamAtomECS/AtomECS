@@ -2,6 +2,7 @@
 
 use specs::DispatcherBuilder;
 
+use crate::laser::LaserPlugin;
 use crate::{constant, simulation::Plugin};
 use crate::laser::index::LaserIndex;
 
@@ -87,12 +88,15 @@ impl<'a> System<'a> for AttachIndexToDipoleLightSystem {
 /// 
 /// # Generic Arguments
 /// 
-/// * `N`: The maximum number of laser beams.
+/// * `N`: The maximum number of laser beams (must match the `LaserPlugin`).
 pub struct DipolePlugin<const N : usize>;
 impl<const N: usize> Plugin for DipolePlugin<N> {
     fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
         add_systems_to_dispatch::<N>(&mut builder.dispatcher_builder, &[]);
         register_components(&mut builder.world);
+    }
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        vec![Box::new(LaserPlugin::<{N}>)]
     }
 }
 

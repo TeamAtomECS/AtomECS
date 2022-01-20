@@ -64,6 +64,10 @@ impl<const N : usize> Plugin for LaserPlugin<N> {
         register_components(&mut builder.world);
         add_systems_to_dispatch::<N>(&mut builder.dispatcher_builder, &[]);
     }
+
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        Vec::new()
+    }
 }
 
 /// Adds the systems required by the module to the dispatcher.

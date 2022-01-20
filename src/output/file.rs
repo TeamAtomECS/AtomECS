@@ -71,6 +71,9 @@ where
             &[],
         );
     }
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        Vec::new()
+    }
 }
 
 /// Creates a new [OutputSystem](struct.OutputSystem.html) to write per-atom [Component](specs::Component) data

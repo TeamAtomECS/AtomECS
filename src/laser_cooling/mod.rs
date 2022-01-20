@@ -2,6 +2,7 @@
 
 use std::marker::PhantomData;
 
+use crate::laser::LaserPlugin;
 use crate::{constant, simulation::Plugin};
 use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
@@ -169,6 +170,10 @@ pub struct LaserCoolingPlugin<T, const N : usize>(PhantomData<T>) where T : Tran
 impl<T, const N : usize> Plugin for LaserCoolingPlugin<T, N> where T : TransitionComponent {
     fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
         add_systems_to_dispatch::<T, N>(&mut builder.dispatcher_builder, &[]);
+    }
+
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        vec![Box::new(LaserPlugin::<{N}>)]
     }
 }
 

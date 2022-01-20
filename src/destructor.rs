@@ -33,6 +33,9 @@ impl Plugin for DestroyAtomsPlugin {
             &[INTEGRATE_POSITION_SYSTEM_NAME],
         );
     }
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        Vec::new()
+    }
 }
 
 /// [Component](struct.Component.html) that marks an entity to be removed from the simulation by the [DestroyOutOfBoundAtomsSystem](struct.DestroyOutOfBoundAtomsSystem.html).

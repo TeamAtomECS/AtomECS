@@ -47,6 +47,9 @@ impl Plugin for GravityPlugin {
             &["clear", INTEGRATE_POSITION_SYSTEM_NAME],
         );  
     }
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        Vec::new()
+    }
 }
 
 #[cfg(test)]

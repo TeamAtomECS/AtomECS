@@ -159,6 +159,10 @@ impl Plugin for AtomPlugin {
         builder.dispatcher_builder.add(DeflagNewAtomsSystem, "deflag", &[]);
         builder.dispatcher_builder.add(AddOldForceToNewAtomsSystem, "", &[]);
     }
+
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        Vec::new()
+    }
 }
 
 /// Registers resources required by `atom_sources` to the ecs world.

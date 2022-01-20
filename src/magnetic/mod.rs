@@ -215,6 +215,10 @@ impl Plugin for MagneticsPlugin {
         add_systems_to_dispatch(&mut builder.dispatcher_builder, &[]);
         register_components(&mut builder.world);
     }
+
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        Vec::new()
+    }
 }
 
 #[cfg(test)]
