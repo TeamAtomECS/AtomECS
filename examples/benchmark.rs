@@ -5,13 +5,14 @@ extern crate nalgebra;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
+use lib::laser::LaserPlugin;
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser_cooling::force::EmissionForceOption;
 use lib::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
-use lib::laser_cooling::CoolingLight;
+use lib::laser_cooling::{CoolingLight, LaserCoolingPlugin};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::simulation::SimulationBuilder;
-use lib::species::{Rubidium87_780D2, Rubidium87};
+use lib::species::{Rubidium87_780D2};
 use nalgebra::Vector3;
 use rand_distr::{Distribution, Normal};
 use specs::prelude::*;
@@ -42,6 +43,8 @@ pub struct SimulationOutput {
     pub time: f64,
 }
 
+const BEAM_NUMBER : usize = 6;
+
 fn main() {
     //Load configuration if one exists.
     let read_result = read_to_string("benchmark.json");
@@ -51,7 +54,9 @@ fn main() {
     };
 
     // Create the simulation world and builder for the ECS dispatcher.
-    let mut sim_builder = SimulationBuilder::default::<Rubidium87_780D2, Rubidium87>();
+    let mut sim_builder = SimulationBuilder::default();
+    sim_builder.add_plugin(LaserPlugin::<{BEAM_NUMBER}>);
+    sim_builder.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, {BEAM_NUMBER}>::default());
 
     // Configure thread pool.
     let pool = rayon::ThreadPoolBuilder::new()

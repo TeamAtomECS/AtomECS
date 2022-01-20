@@ -5,7 +5,7 @@
 use std::{any::{Any, type_name}};
 use specs::prelude::*;
 
-use crate::{magnetic::MagneticsPlugin, atom::{AtomPlugin, ClearForceSystem}, laser::{LaserPlugin}, laser_cooling::{LaserCoolingPlugin, transition::TransitionComponent}, dipole::DipolePlugin, atom_sources::{AtomSourcePlugin, species::AtomCreator}, sim_region::SimulationRegionPlugin, integrator::{VelocityVerletIntegratePositionSystem, INTEGRATE_POSITION_SYSTEM_NAME, INTEGRATE_VELOCITY_SYSTEM_NAME, VelocityVerletIntegrateVelocitySystem, Step}, gravity::GravityPlugin, destructor::DestroyAtomsPlugin, output::console_output::ConsoleOutputSystem};
+use crate::{magnetic::MagneticsPlugin, atom::{AtomPlugin, ClearForceSystem}, laser_cooling::{transition::TransitionComponent}, sim_region::SimulationRegionPlugin, integrator::{VelocityVerletIntegratePositionSystem, INTEGRATE_POSITION_SYSTEM_NAME, INTEGRATE_VELOCITY_SYSTEM_NAME, VelocityVerletIntegrateVelocitySystem, Step}, gravity::GravityPlugin, destructor::DestroyAtomsPlugin, output::console_output::ConsoleOutputSystem};
 
 /// A simulation in AtomECS.
 pub struct Simulation {
@@ -80,13 +80,12 @@ impl SimulationBuilder {
     }
 
     pub fn add_end_frame_systems(&mut self) {
+        self.dispatcher_builder.add_barrier();
         self.dispatcher_builder.add(
             VelocityVerletIntegrateVelocitySystem,
             INTEGRATE_VELOCITY_SYSTEM_NAME,
             &[
-                "calculate_absorption_forces",
-                "calculate_emission_forces",
-                "add_gravity",
+                // No deps specified now - implicit in the barrier.
             ],
         );
         self.dispatcher_builder.add(ConsoleOutputSystem, "", &[INTEGRATE_VELOCITY_SYSTEM_NAME]);
@@ -101,18 +100,11 @@ impl SimulationBuilder {
             //downside is it hides a lot of the plugin details - better to make that clear?
     }
 
-    pub fn default<T, S>() -> Self 
-    where
-        T : TransitionComponent,
-        S : AtomCreator + 'static
+    pub fn default() -> Self
     {
         let mut builder = Self::new();
         builder.add_plugin(AtomPlugin);
         builder.add_plugin(MagneticsPlugin);
-        builder.add_plugin(LaserPlugin::<{DEFAULT_BEAM_NUMBER}>);
-        builder.add_plugin(LaserCoolingPlugin::<T, {DEFAULT_BEAM_NUMBER}>::default());
-        builder.add_plugin(DipolePlugin::<{DEFAULT_BEAM_NUMBER}>);
-        builder.add_plugin(AtomSourcePlugin::<S>::default());
         builder.add_plugin(SimulationRegionPlugin);
         builder.add_plugin(GravityPlugin);
         builder.add_plugin(DestroyAtomsPlugin);

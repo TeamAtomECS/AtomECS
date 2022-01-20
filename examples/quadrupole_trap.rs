@@ -8,7 +8,6 @@ use lib::integrator::Timestep;
 use lib::magnetic::force::{ApplyMagneticForceSystem, MagneticDipole};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::simulation::SimulationBuilder;
-use lib::species::{Rubidium87_780D2, Rubidium87};
 use rand_distr::{Distribution, Normal};
 
 use lib::output::file::{FileOutputPlugin};
@@ -20,7 +19,7 @@ use std::time::Instant;
 fn main() {
     let now = Instant::now();
 
-    let mut sim_builder = SimulationBuilder::default::<Rubidium87_780D2, Rubidium87>();
+    let mut sim_builder = SimulationBuilder::default();
     sim_builder.add_plugin(FileOutputPlugin::<Position, Text, Atom>::new("pos.txt".to_string(), 100));
     sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new("vel.txt".to_string(), 100));
     

@@ -7,11 +7,12 @@ use lib::atom::{Position, Velocity};
 use lib::atom_sources::emit::AtomNumberToEmit;
 use lib::atom_sources::mass::{MassDistribution, MassRatio};
 use lib::atom_sources::oven::{OvenAperture, OvenBuilder};
-use lib::atom_sources::VelocityCap;
+use lib::atom_sources::{VelocityCap, AtomSourcePlugin};
 use lib::destructor::ToBeDestroyed;
 use lib::integrator::Timestep;
+use lib::laser::LaserPlugin;
 use lib::laser::gaussian::GaussianBeam;
-use lib::laser_cooling::CoolingLight;
+use lib::laser_cooling::{CoolingLight, LaserCoolingPlugin};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::output::file::{FileOutputPlugin};
 use lib::output::file::Text;
@@ -23,10 +24,15 @@ use nalgebra::Vector3;
 use specs::prelude::*;
 use std::time::Instant;
 
+const BEAM_NUMBER : usize = 6;
+
 fn main() {
     let now = Instant::now();
 
-    let mut sim_builder = SimulationBuilder::default::<Strontium88_461, Strontium88>();
+    let mut sim_builder = SimulationBuilder::default();
+    sim_builder.add_plugin(LaserPlugin::<{BEAM_NUMBER}>);
+    sim_builder.add_plugin(LaserCoolingPlugin::<Strontium88_461, {BEAM_NUMBER}>::default());
+    sim_builder.add_plugin(AtomSourcePlugin::<Strontium88>::default());
     sim_builder.add_plugin(FileOutputPlugin::<Position, Text, Atom>::new("pos.txt".to_string(), 10));
     sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new("vel.txt".to_string(), 10));
     let mut sim = sim_builder.build();

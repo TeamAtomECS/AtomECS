@@ -5,21 +5,25 @@ extern crate nalgebra;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
-use lib::laser::DEFAULT_BEAM_LIMIT;
+use lib::laser::{DEFAULT_BEAM_LIMIT, LaserPlugin};
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser_cooling::photons_scattered::ExpectedPhotonsScatteredVector;
-use lib::laser_cooling::CoolingLight;
+use lib::laser_cooling::{CoolingLight, LaserCoolingPlugin};
 use lib::laser_cooling::transition::AtomicTransition;
 use lib::output::file::{FileOutputPlugin};
 use lib::output::file::Text;
 use lib::simulation::SimulationBuilder;
-use lib::species::{Rubidium87_780D2, Rubidium87};
+use lib::species::{Rubidium87_780D2};
 use nalgebra::Vector3;
 use specs::prelude::*;
 
+const BEAM_NUMBER : usize = 1;
+
 fn main() {
 
-    let mut sim_builder = SimulationBuilder::default::<Rubidium87_780D2, Rubidium87>();
+    let mut sim_builder = SimulationBuilder::default();
+    sim_builder.add_plugin(LaserPlugin::<{BEAM_NUMBER}>);
+    sim_builder.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, {BEAM_NUMBER}>::default());
     sim_builder.add_plugin(FileOutputPlugin::<ExpectedPhotonsScatteredVector<Rubidium87_780D2, {DEFAULT_BEAM_LIMIT}>, Text, Atom>::new("scattered.txt".to_string(), 10));
     sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new("vel.txt".to_string(), 10));
     let mut sim = sim_builder.build();
