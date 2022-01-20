@@ -7,14 +7,14 @@ pub mod tests {
     use crate::atom::{Atom, Force, Mass, Position, Velocity};
     use crate::initiate::NewlyCreated;
     use crate::integrator::Timestep;
-    use crate::laser::LaserPlugin;
     use crate::laser::gaussian::GaussianBeam;
     use crate::laser::index::LaserIndex;
+    use crate::laser::LaserPlugin;
     use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
-    use crate::laser_cooling::{CoolingLight, LaserCoolingPlugin};
     use crate::laser_cooling::transition::AtomicTransition;
+    use crate::laser_cooling::{CoolingLight, LaserCoolingPlugin};
     use crate::simulation::SimulationBuilder;
-    use crate::species::{Rubidium87_780D2};
+    use crate::species::Rubidium87_780D2;
     extern crate nalgebra;
     use assert_approx_eq::assert_approx_eq;
     use nalgebra::Vector3;
@@ -49,14 +49,17 @@ pub mod tests {
 
         // Create simulation dispatcher
         let mut sim_builder = SimulationBuilder::default();
-        sim_builder.add_plugin(LaserPlugin::<{BEAM_NUMBER}>);
-        sim_builder.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, {BEAM_NUMBER}>::default());
+        sim_builder.add_plugin(LaserPlugin::<{ BEAM_NUMBER }>);
+        sim_builder.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, { BEAM_NUMBER }>::default());
         let mut sim = sim_builder.build();
 
         // add laser to test world.
         sim.world
             .create_entity()
-            .with(CoolingLight::for_transition::<Rubidium87_780D2>(detuning_megahz, 1))
+            .with(CoolingLight::for_transition::<Rubidium87_780D2>(
+                detuning_megahz,
+                1,
+            ))
             .with(LaserIndex::default())
             .with(GaussianBeam::from_peak_intensity_with_rayleigh_range(
                 Vector3::new(0.0, 0.0, 0.0),
@@ -72,7 +75,8 @@ pub mod tests {
         sim.world.insert(Timestep { delta: dt });
 
         // add an atom to the world. We don't add force nor mass, because we don't need them.
-        let atom = sim.world
+        let atom = sim
+            .world
             .create_entity()
             .with(Position {
                 pos: Vector3::new(0.0, 0.0, 0.0),
@@ -98,7 +102,8 @@ pub mod tests {
         sim.step();
 
         // Reset position and velocity to zero.
-        assert!(sim.world
+        assert!(sim
+            .world
             .write_storage::<Position>()
             .insert(
                 atom,
@@ -107,7 +112,8 @@ pub mod tests {
                 },
             )
             .is_ok());
-        assert!(sim.world
+        assert!(sim
+            .world
             .write_storage::<Velocity>()
             .insert(
                 atom,
@@ -122,7 +128,8 @@ pub mod tests {
 
         let expected_scattered =
             analytic_scattering_rate(intensity, i_sat, delta, Rubidium87_780D2::gamma());
-        let total_scattered = sim.world
+        let total_scattered = sim
+            .world
             .read_storage::<TotalPhotonsScattered<Rubidium87_780D2>>()
             .get(atom)
             .expect("Could not find atom in storage.")
@@ -138,7 +145,8 @@ pub mod tests {
         let k = 2.0 * std::f64::consts::PI * Rubidium87_780D2::frequency() / crate::constant::C;
         let photon_momentum = crate::constant::HBAR * k;
         let analytic_force = (expected_scattered * dt) * photon_momentum / dt;
-        let measured_force = sim.world
+        let measured_force = sim
+            .world
             .read_storage::<Force>()
             .get(atom)
             .expect("Atom does not have force component.")

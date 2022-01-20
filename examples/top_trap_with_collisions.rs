@@ -3,15 +3,15 @@
 extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
-use lib::collisions::{
-    CollisionPlugin,
-};
+use lib::collisions::CollisionPlugin;
+use lib::collisions::{ApplyCollisionsOption, CollisionParameters, CollisionsTracker};
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::magnetic::force::{ApplyMagneticForceSystem, MagneticDipole};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::magnetic::top::TimeOrbitingPotential;
-use lib::output::file::{FileOutputPlugin};
+use lib::magnetic::MagneticTrapPlugin;
+use lib::output::file::FileOutputPlugin;
 use lib::output::file::Text;
 use lib::simulation::SimulationBuilder;
 use nalgebra::Vector3;
@@ -21,20 +21,19 @@ use std::fs::File;
 use std::io::{Error, Write};
 
 fn main() {
-
     let mut sim_builder = SimulationBuilder::default();
-    sim_builder.add_plugin(FileOutputPlugin::<Position, Text, Atom>::new("pos.txt".to_string(), 100));
-    sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new("vel.txt".to_string(), 100));
+    sim_builder.add_plugin(FileOutputPlugin::<Position, Text, Atom>::new(
+        "pos.txt".to_string(),
+        100,
+    ));
+    sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new(
+        "vel.txt".to_string(),
+        100,
+    ));
 
     // Add magnetics systems (todo: as plugin)
     sim_builder.world.register::<NewlyCreated>();
-    sim_builder.world.register::<MagneticDipole>();
-    sim_builder.dispatcher_builder.add(
-        ApplyMagneticForceSystem {},
-        "magnetic_force",
-        &["magnetics_gradient"],
-    );
-
+    sim_builder.add_plugin(MagneticTrapPlugin);
     sim_builder.add_end_frame_systems();
     sim_builder.add_plugin(CollisionPlugin);
 
@@ -98,7 +97,7 @@ fn main() {
 
     // Define timestep
     sim.world.insert(Timestep { delta: 5e-5 }); //Aliasing of TOP field or other strange effects can occur if timestep is not much smaller than TOP field period.
-                                            //Timestep must also be much smaller than mean collision time.
+                                                //Timestep must also be much smaller than mean collision time.
 
     let mut filename = File::create("collisions.txt").expect("Cannot create file.");
 

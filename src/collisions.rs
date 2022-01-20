@@ -289,9 +289,13 @@ pub struct CollisionPlugin;
 impl Plugin for CollisionPlugin {
     fn build(&self, builder: &mut SimulationBuilder) {
         // Note that the collisions system must be applied after the velocity integrator or it will violate conservation of energy and cause heating
-        builder.dispatcher_builder.add(ApplyCollisionsSystem, "collisions", &[INTEGRATE_VELOCITY_SYSTEM_NAME]);
+        builder.dispatcher_builder.add(
+            ApplyCollisionsSystem,
+            "collisions",
+            &[INTEGRATE_VELOCITY_SYSTEM_NAME],
+        );
     }
-    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+    fn deps(&self) -> Vec<Box<dyn Plugin>> {
         Vec::new()
     }
 }
@@ -418,7 +422,8 @@ pub mod tests {
         let pos2 = Vector3::new(3.0, 0.0, 0.0);
 
         //atom 1 to collide
-        let atom1 = sim.world
+        let atom1 = sim
+            .world
             .create_entity()
             .with(Velocity { vel: vel1 })
             .with(Position { pos: pos1 })
@@ -429,7 +434,8 @@ pub mod tests {
             .build();
 
         //atom2 to collide
-        let atom2 = sim.world
+        let atom2 = sim
+            .world
             .create_entity()
             .with(Velocity { vel: vel2 })
             .with(Position { pos: pos2 })
