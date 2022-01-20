@@ -81,6 +81,13 @@ impl<'a> System<'a> for AttachIndexToDipoleLightSystem {
     }
 }
 
+/// This plugin implements a dipole force that can be used to confine cold atoms.
+/// 
+/// See also [crate::dipole]
+/// 
+/// # Generic Arguments
+/// 
+/// * `N`: The maximum number of laser beams.
 pub struct DipolePlugin<const N : usize>;
 impl<const N: usize> Plugin for DipolePlugin<N> {
     fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {

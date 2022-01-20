@@ -207,6 +207,8 @@ fn register_components(world: &mut World) {
 }
 
 /// A plugin responsible for calculating magnetic fields.
+/// 
+/// See the [crate::magnetics] module for more information.
 pub struct MagneticsPlugin;
 impl Plugin for MagneticsPlugin {
     fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {

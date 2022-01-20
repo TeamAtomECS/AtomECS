@@ -25,6 +25,13 @@ pub struct VelocityCap {
     pub value: f64,
 }
 
+/// This plugin implements the creation of atoms of a given species from sources such as ovens or vacuum chambers.
+/// 
+/// See also [crate::atom_sources].
+/// 
+/// # Generic Arguments
+/// 
+/// * `T`: The atom species to create, which must implement the `AtomCreator` trait.
 #[derive(Default)]
 pub struct AtomSourcePlugin<T>(PhantomData<T>) where T : AtomCreator;
 impl<T> Plugin for AtomSourcePlugin<T> where T : AtomCreator + 'static {

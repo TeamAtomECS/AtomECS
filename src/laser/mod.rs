@@ -51,6 +51,13 @@ impl<'a, const N: usize> System<'a> for AttachLaserComponentsToNewlyCreatedAtoms
     }
 }
 
+/// This plugin provides basic functionality for laser beams, such as calculating laser intensity.
+/// 
+/// See [crate::laser] for more information.
+/// 
+/// # Generic Arguments
+/// 
+/// * `N`: The maximum number of laser beams to configure the simulation for.
 pub struct LaserPlugin<const N : usize>;
 impl<const N : usize> Plugin for LaserPlugin<N> {
     fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {

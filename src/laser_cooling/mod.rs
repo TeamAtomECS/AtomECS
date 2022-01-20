@@ -155,6 +155,15 @@ impl<'a> System<'a> for AttachIndexToCoolingLightSystem {
     }
 }
 
+/// This plugin performs simulations of laser cooling using a two-level rate equation approach.
+/// 
+/// For more information see [crate::laser_cooling].
+/// 
+/// # Generic Arguments
+/// 
+/// * `T`: The laser cooling transition to solve the two-level system for.
+/// 
+/// * `N`: The maximum number of laser beams (must match the `LaserPlugin`).
 #[derive(Default)]
 pub struct LaserCoolingPlugin<T, const N : usize>(PhantomData<T>) where T : TransitionComponent;
 impl<T, const N : usize> Plugin for LaserCoolingPlugin<T, N> where T : TransitionComponent {

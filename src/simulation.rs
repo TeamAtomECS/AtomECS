@@ -41,7 +41,7 @@ impl SimulationBuilder {
         SimulationBuilder {
             world: World::new(),
             dispatcher_builder,
-            end_frame_systems_added: false,
+            end_frame_systems_added: false
         }
     }
 
@@ -80,6 +80,14 @@ impl SimulationBuilder {
         );
         self.dispatcher_builder.add(ConsoleOutputSystem, "", &[INTEGRATE_VELOCITY_SYSTEM_NAME]);
         self.end_frame_systems_added = true;
+    }
+
+    /// Configures the simulation to calculate laser cooling forces using the two-level rate equation method.
+    /// 
+    /// For more information, see [crate::laser_cooling].
+    pub fn laser_cooling_via_rate_equation<T>(&mut self)
+        where T : TransitionComponent {
+            //downside is it hides a lot of the plugin details - better to make that clear?
     }
 
     pub fn default<T, S>() -> Self 

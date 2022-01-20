@@ -21,6 +21,9 @@ impl<'a> System<'a> for DeleteToBeDestroyedEntitiesSystem {
     }
 }
 
+/// This plugin implements removal of atoms marked as `ToBeDestroyed`.
+/// 
+/// See also [crate::destructor].
 pub struct DestroyAtomsPlugin;
 impl Plugin for DestroyAtomsPlugin {
     fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {

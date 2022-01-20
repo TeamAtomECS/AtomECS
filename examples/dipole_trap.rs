@@ -4,7 +4,6 @@ extern crate nalgebra;
 use lib::atom;
 use lib::atom::Atom;
 use lib::dipole;
-use lib::ecs;
 use lib::integrator::Timestep;
 use lib::laser;
 use lib::laser::gaussian::GaussianBeam;

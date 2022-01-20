@@ -35,6 +35,9 @@ impl<'a> System<'a> for ApplyGravitationalForceSystem {
     }
 }
 
+/// This plugin implements the force of gravity.
+/// 
+/// See also [crate::gravity].
 pub struct GravityPlugin;
 impl Plugin for GravityPlugin {
     fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {

@@ -150,6 +150,9 @@ impl<'a> System<'a> for AttachRegionTestsToNewlyCreatedSystem {
     }
 }
 
+/// This plugin implements simulation bounds, and the removal of atoms which leave them.
+/// 
+/// See also [crate::sim_region]
 #[derive(Default)]
 pub struct SimulationRegionPlugin;
 impl Plugin for SimulationRegionPlugin {
