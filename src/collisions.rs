@@ -15,7 +15,8 @@
 extern crate multimap;
 use crate::atom::{Position, Velocity};
 use crate::constant::{PI, SQRT2};
-use crate::integrator::Timestep;
+use crate::integrator::{Timestep, INTEGRATE_VELOCITY_SYSTEM_NAME};
+use crate::simulation::{Plugin, SimulationBuilder};
 use hashbrown::HashMap;
 use nalgebra::Vector3;
 use rand::Rng;
@@ -284,15 +285,26 @@ fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
     id
 }
 
+pub struct CollisionPlugin;
+impl Plugin for CollisionPlugin {
+    fn build(&self, builder: &mut SimulationBuilder) {
+        // Note that the collisions system must be applied after the velocity integrator or it will violate conservation of energy and cause heating
+        builder.dispatcher_builder.add(
+            ApplyCollisionsSystem,
+            "collisions",
+            &[INTEGRATE_VELOCITY_SYSTEM_NAME],
+        );
+    }
+    fn deps(&self) -> Vec<Box<dyn Plugin>> {
+        Vec::new()
+    }
+}
+
 pub mod tests {
     #[allow(unused_imports)]
     use super::*;
     #[allow(unused_imports)]
     use crate::atom::{Atom, Force, Mass, Position, Velocity};
-    #[allow(unused_imports)]
-    use crate::ecs;
-    #[allow(unused_imports)]
-    use crate::ecs::AtomecsDispatcherBuilder;
     #[allow(unused_imports)]
     use crate::initiate::NewlyCreated;
     #[allow(unused_imports)]
@@ -398,22 +410,10 @@ pub mod tests {
     /// Test that the system runs and causes nearby atoms to collide. More of an integration test than a unit test.
     #[test]
     fn test_collisions() {
-        let mut test_world = World::new();
-
-        ecs::register_components(&mut test_world);
-        ecs::register_resources(&mut test_world);
-        test_world.register::<NewlyCreated>();
-        let mut atomecs_builder = AtomecsDispatcherBuilder::new();
-        atomecs_builder.add_frame_initialisation_systems();
-        atomecs_builder.add_systems::<{ crate::laser::DEFAULT_BEAM_LIMIT }>();
-        atomecs_builder
-            .builder
-            .add(ApplyCollisionsSystem, "collisions", &[]);
-        atomecs_builder.add_frame_end_systems();
-
-        let builder = atomecs_builder.builder;
-        let mut dispatcher = builder.build();
-        dispatcher.setup(&mut test_world);
+        let mut simulation_builder = SimulationBuilder::default();
+        simulation_builder.add_end_frame_systems();
+        simulation_builder.add_plugin(CollisionPlugin);
+        let mut sim = simulation_builder.build();
 
         let vel1 = Vector3::new(1.0, 0.0, 0.0);
         let vel2 = Vector3::new(-1.0, 0.0, 0.0);
@@ -422,7 +422,8 @@ pub mod tests {
         let pos2 = Vector3::new(3.0, 0.0, 0.0);
 
         //atom 1 to collide
-        let atom1 = test_world
+        let atom1 = sim
+            .world
             .create_entity()
             .with(Velocity { vel: vel1 })
             .with(Position { pos: pos1 })
@@ -433,7 +434,8 @@ pub mod tests {
             .build();
 
         //atom2 to collide
-        let atom2 = test_world
+        let atom2 = sim
+            .world
             .create_entity()
             .with(Velocity { vel: vel2 })
             .with(Position { pos: pos2 })
@@ -444,14 +446,14 @@ pub mod tests {
             .build();
 
         let dt = 1.0;
-        test_world.insert(Timestep { delta: dt });
-        test_world.insert(ApplyCollisionsOption);
-        test_world.insert(CollisionsTracker {
+        sim.world.insert(Timestep { delta: dt });
+        sim.world.insert(ApplyCollisionsOption);
+        sim.world.insert(CollisionsTracker {
             num_collisions: Vec::new(),
             num_atoms: Vec::new(),
             num_particles: Vec::new(),
         });
-        test_world.insert(CollisionParameters {
+        sim.world.insert(CollisionParameters {
             macroparticle: 1.0,
             box_number: 10,
             box_width: 2.0,
@@ -460,15 +462,14 @@ pub mod tests {
         });
 
         for _i in 0..10 {
-            dispatcher.dispatch(&test_world);
-            test_world.maintain();
+            sim.step();
         }
 
-        let velocities = test_world.read_storage::<Velocity>();
+        let velocities = sim.world.read_storage::<Velocity>();
         let vel1new = velocities.get(atom1).expect("atom1 not found");
         let vel2new = velocities.get(atom2).expect("atom2 not found");
 
-        let positions = test_world.read_storage::<Position>();
+        let positions = sim.world.read_storage::<Position>();
         let pos1new = positions.get(atom1).expect("atom1 not found");
         let pos2new = positions.get(atom2).expect("atom2 not found");
 

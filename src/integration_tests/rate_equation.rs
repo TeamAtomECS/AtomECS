@@ -4,15 +4,17 @@
 
 #[cfg(test)]
 pub mod tests {
-    use crate::atom::{Atom, AtomicTransition, Force, Mass, Position, Velocity};
-    use crate::ecs;
+    use crate::atom::{Atom, Force, Mass, Position, Velocity};
     use crate::initiate::NewlyCreated;
     use crate::integrator::Timestep;
     use crate::laser::gaussian::GaussianBeam;
     use crate::laser::index::LaserIndex;
-    use crate::laser::DEFAULT_BEAM_LIMIT;
+    use crate::laser::LaserPlugin;
     use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
-    use crate::laser_cooling::CoolingLight;
+    use crate::laser_cooling::transition::AtomicTransition;
+    use crate::laser_cooling::{CoolingLight, LaserCoolingPlugin};
+    use crate::simulation::SimulationBuilder;
+    use crate::species::Rubidium87_780D2;
     extern crate nalgebra;
     use assert_approx_eq::assert_approx_eq;
     use nalgebra::Vector3;
@@ -38,25 +40,26 @@ pub mod tests {
 
     /// Calculates the scattering rate from a single beam at given intensity and detuning, and compares that to analytic theory.
     fn test_single_beam_scattering_rate(i_over_i_sat: f64, delta_over_gamma: f64) {
-        let mut world = World::new();
-
-        let transition = AtomicTransition::rubidium();
-        let i_sat = transition.saturation_intensity;
+        const BEAM_NUMBER: usize = 1;
+        let transition = Rubidium87_780D2;
+        let i_sat = Rubidium87_780D2::saturation_intensity();
         let intensity = i_sat * i_over_i_sat;
-        let delta = delta_over_gamma * transition.clone().gamma();
+        let delta = delta_over_gamma * Rubidium87_780D2::gamma();
         let detuning_megahz = delta / (2.0 * std::f64::consts::PI * 1.0e6);
 
         // Create simulation dispatcher
-        ecs::register_components(&mut world);
-        ecs::register_resources(&mut world);
-        let mut dispatcher =
-            ecs::create_simulation_dispatcher_builder::<{DEFAULT_BEAM_LIMIT}>().build();
-        dispatcher.setup(&mut world);
+        let mut sim_builder = SimulationBuilder::default();
+        sim_builder.add_plugin(LaserPlugin::<{ BEAM_NUMBER }>);
+        sim_builder.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, { BEAM_NUMBER }>::default());
+        let mut sim = sim_builder.build();
 
         // add laser to test world.
-        world
+        sim.world
             .create_entity()
-            .with(CoolingLight::for_species(transition, detuning_megahz, 1))
+            .with(CoolingLight::for_transition::<Rubidium87_780D2>(
+                detuning_megahz,
+                1,
+            ))
             .with(LaserIndex::default())
             .with(GaussianBeam::from_peak_intensity_with_rayleigh_range(
                 Vector3::new(0.0, 0.0, 0.0),
@@ -69,10 +72,11 @@ pub mod tests {
 
         // Configure timestep to be one us so that calculated rates are MHz.
         let dt = 1.0e-6;
-        world.insert(Timestep { delta: dt });
+        sim.world.insert(Timestep { delta: dt });
 
         // add an atom to the world. We don't add force nor mass, because we don't need them.
-        let atom = world
+        let atom = sim
+            .world
             .create_entity()
             .with(Position {
                 pos: Vector3::new(0.0, 0.0, 0.0),
@@ -87,19 +91,19 @@ pub mod tests {
             .with(Mass { value: 87.0 })
             .build();
 
-        world
+        sim.world
             .create_entity()
             .with(crate::magnetic::uniform::UniformMagneticField::gauss(
                 Vector3::new(0.1, 0.0, 0.0),
             ))
             .build();
 
-        // The first dispatch is to add required components to new atoms.
-        dispatcher.dispatch(&world);
-        world.maintain();
+        // The first step is to add required components to new atoms.
+        sim.step();
 
         // Reset position and velocity to zero.
-        assert!(world
+        assert!(sim
+            .world
             .write_storage::<Position>()
             .insert(
                 atom,
@@ -108,7 +112,8 @@ pub mod tests {
                 },
             )
             .is_ok());
-        assert!(world
+        assert!(sim
+            .world
             .write_storage::<Velocity>()
             .insert(
                 atom,
@@ -118,13 +123,14 @@ pub mod tests {
             )
             .is_ok());
 
-        // Second dispatch to calculate values over completed atoms.
-        dispatcher.dispatch(&world);
+        // Second step to calculate values over completed atoms.
+        sim.step();
 
         let expected_scattered =
-            analytic_scattering_rate(intensity, i_sat, delta, transition.gamma());
-        let total_scattered = world
-            .read_storage::<TotalPhotonsScattered>()
+            analytic_scattering_rate(intensity, i_sat, delta, Rubidium87_780D2::gamma());
+        let total_scattered = sim
+            .world
+            .read_storage::<TotalPhotonsScattered<Rubidium87_780D2>>()
             .get(atom)
             .expect("Could not find atom in storage.")
             .total
@@ -136,10 +142,11 @@ pub mod tests {
         );
 
         // Compare the magnitude of the calculated force.
-        let k = 2.0 * std::f64::consts::PI * transition.frequency / crate::constant::C;
+        let k = 2.0 * std::f64::consts::PI * Rubidium87_780D2::frequency() / crate::constant::C;
         let photon_momentum = crate::constant::HBAR * k;
         let analytic_force = (expected_scattered * dt) * photon_momentum / dt;
-        let measured_force = world
+        let measured_force = sim
+            .world
             .read_storage::<Force>()
             .get(atom)
             .expect("Atom does not have force component.")

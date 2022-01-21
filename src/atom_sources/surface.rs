@@ -1,10 +1,13 @@
 //! Surface sources
 
 extern crate nalgebra;
+use std::marker::PhantomData;
+
 use nalgebra::Vector3;
 
 use super::emit::AtomNumberToEmit;
 use super::VelocityCap;
+use super::species::AtomCreator;
 use rand;
 use rand::Rng;
 
@@ -16,14 +19,15 @@ use crate::shapes::{Cylinder, Surface};
 extern crate specs;
 use specs::{Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System};
 
-pub struct SurfaceSource {
+pub struct SurfaceSource<T> where T : AtomCreator {
     /// The temperature of the surface source, in Kelvin.
     pub temperature: f64,
+    phantom: PhantomData<T>
 }
-impl Component for SurfaceSource {
+impl<T> Component for SurfaceSource<T> where T : AtomCreator + 'static {
     type Storage = HashMapStorage<Self>;
 }
-impl MaxwellBoltzmannSource for SurfaceSource {
+impl<T> MaxwellBoltzmannSource for SurfaceSource<T> where T : AtomCreator {
     fn get_temperature(&self) -> f64 {
         self.temperature
     }
@@ -35,14 +39,13 @@ impl MaxwellBoltzmannSource for SurfaceSource {
 /// This system creates atoms from an oven source.
 ///
 /// The oven points in the direction [Oven.direction].
-pub struct CreateAtomsOnSurfaceSystem;
-
-impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
+#[derive(Default)]
+pub struct CreateAtomsOnSurfaceSystem<T>(PhantomData<T>);
+impl<'a, T> System<'a> for CreateAtomsOnSurfaceSystem<T> where T : AtomCreator + 'static {
     type SystemData = (
         Entities<'a>,
-        ReadStorage<'a, SurfaceSource>,
+        ReadStorage<'a, SurfaceSource<T>>,
         ReadStorage<'a, Cylinder>,
-        ReadStorage<'a, AtomicTransition>,
         ReadStorage<'a, AtomNumberToEmit>,
         ReadStorage<'a, Position>,
         ReadStorage<'a, PrecalculatedSpeciesInformation>,
@@ -56,7 +59,6 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
             entities,
             surfaces,
             shapes,
-            atom_infos,
             numbers_to_emit,
             source_positions,
             species,
@@ -71,10 +73,9 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
         };
 
         let mut rng = rand::thread_rng();
-        for (_, shape, atom_info, number_to_emit, source_position, species) in (
+        for (_, shape, number_to_emit, source_position, species) in (
             &surfaces,
             &shapes,
-            &atom_infos,
             &numbers_to_emit,
             &source_positions,
             &species,
@@ -121,10 +122,10 @@ impl<'a> System<'a> for CreateAtomsOnSurfaceSystem {
                 updater.insert(new_atom, Velocity { vel: velocity });
                 updater.insert(new_atom, Force::new());
                 updater.insert(new_atom, Mass { value: mass });
-                updater.insert(new_atom, *atom_info);
                 updater.insert(new_atom, Atom);
                 updater.insert(new_atom, InitialVelocity { vel: velocity });
                 updater.insert(new_atom, NewlyCreated);
+                T::mutate(&updater, new_atom);
             }
         }
     }

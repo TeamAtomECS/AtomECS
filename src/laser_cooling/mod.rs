@@ -1,13 +1,18 @@
 //! A module that implements systems and components for calculating optical scattering forces in AtomECS.
 
-use crate::atom::AtomicTransition;
-use crate::constant;
+use std::marker::PhantomData;
+
+use crate::laser::LaserPlugin;
+use crate::{constant, simulation::Plugin};
 use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use crate::laser::index::LaserIndex;
 use crate::ramp::Lerp;
 use serde::{Deserialize, Serialize};
 use specs::prelude::*;
+use transition::AtomicTransition;
+
+use self::transition::TransitionComponent;
 
 pub mod doppler;
 pub mod force;
@@ -16,6 +21,8 @@ pub mod rate;
 pub mod repump;
 pub mod sampler;
 pub mod twolevel;
+pub mod transition;
+pub mod zeeman;
 
 /// A component representing light properties used for laser cooling.
 ///
@@ -63,13 +70,13 @@ impl CoolingLight {
     ///
     /// # Arguments
     ///
-    /// `species`: The atomic species to take the base wavelength from.
+    /// * `<T>`: The atomic transition to take the base wavelength from.
     ///
-    /// `detuning`: Detuning of the laser from transition in units of MHz
+    /// * `detuning`: Detuning of the laser from transition in units of MHz
     ///
-    /// `polarization`: Polarization of the cooling beam.
-    pub fn for_species(species: AtomicTransition, detuning: f64, polarization: i32) -> Self {
-        let freq = species.frequency + detuning * 1.0e6;
+    /// * `polarization`: Polarization of the cooling beam.
+    pub fn for_transition<T>(detuning: f64, polarization: i32) -> Self where T : AtomicTransition {
+        let freq = T::frequency() + detuning * 1.0e6;
         CoolingLight {
             wavelength: constant::C / freq,
             polarization,
@@ -84,9 +91,10 @@ impl Component for CoolingLight {
 ///
 /// They are recognized as newly created if they are associated with
 /// the `NewlyCreated` component.
-pub struct AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem<const N: usize>;
+#[derive(Default)]
+pub struct AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem<T, const N: usize>(PhantomData<T>) where T : TransitionComponent;
 
-impl<'a, const N: usize> System<'a> for AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem<N> {
+impl<'a, T, const N: usize> System<'a> for AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem<T, N> where T : TransitionComponent {
     type SystemData = (
         Entities<'a>,
         ReadStorage<'a, NewlyCreated>,
@@ -103,27 +111,27 @@ impl<'a, const N: usize> System<'a> for AttachLaserCoolingComponentsToNewlyCreat
             );
             updater.insert(
                 ent,
-                sampler::LaserDetuningSamplers {
+                sampler::LaserDetuningSamplers::<T,N> {
                     contents: [sampler::LaserDetuningSampler::default(); N],
                 },
             );
             updater.insert(
                 ent,
                 rate::RateCoefficients {
-                    contents: [rate::RateCoefficient::default(); N],
+                    contents: [rate::RateCoefficient::<T>::default(); N],
                 },
             );
-            updater.insert(ent, twolevel::TwoLevelPopulation::default());
-            updater.insert(ent, photons_scattered::TotalPhotonsScattered::default());
+            updater.insert(ent, twolevel::TwoLevelPopulation::<T>::default());
+            updater.insert(ent, photons_scattered::TotalPhotonsScattered::<T>::default());
             updater.insert(
                 ent,
-                photons_scattered::ExpectedPhotonsScatteredVector {
+                photons_scattered::ExpectedPhotonsScatteredVector::<T,N> {
                     contents: [photons_scattered::ExpectedPhotonsScattered::default(); N],
                 },
             );
             updater.insert(
                 ent,
-                photons_scattered::ActualPhotonsScatteredVector {
+                photons_scattered::ActualPhotonsScatteredVector::<T,N> {
                     contents: [photons_scattered::ActualPhotonsScattered::default(); N],
                 },
             );
@@ -148,6 +156,27 @@ impl<'a> System<'a> for AttachIndexToCoolingLightSystem {
     }
 }
 
+/// This plugin performs simulations of laser cooling using a two-level rate equation approach.
+/// 
+/// For more information see [crate::laser_cooling].
+/// 
+/// # Generic Arguments
+/// 
+/// * `T`: The laser cooling transition to solve the two-level system for.
+/// 
+/// * `N`: The maximum number of laser beams (must match the `LaserPlugin`).
+#[derive(Default)]
+pub struct LaserCoolingPlugin<T, const N : usize>(PhantomData<T>) where T : TransitionComponent;
+impl<T, const N : usize> Plugin for LaserCoolingPlugin<T, N> where T : TransitionComponent {
+    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
+        add_systems_to_dispatch::<T, N>(&mut builder.dispatcher_builder, &[]);
+    }
+
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        vec![Box::new(LaserPlugin::<{N}>)]
+    }
+}
+
 /// Adds the systems required by the module to the dispatcher.
 ///
 /// #Arguments
@@ -155,22 +184,22 @@ impl<'a> System<'a> for AttachIndexToCoolingLightSystem {
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the systems run.
-pub fn add_systems_to_dispatch<const N: usize>(
+fn add_systems_to_dispatch<T, const N: usize>(
     builder: &mut DispatcherBuilder<'static, 'static>,
     deps: &[&str],
-) {
+)  where T : TransitionComponent {
     builder.add(
-        AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem::<N>,
+        AttachLaserCoolingComponentsToNewlyCreatedAtomsSystem::<T, N>::default(),
         "attach_laser_cooling_components",
         deps,
     );
     builder.add(
-        photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem::<N>,
+        photons_scattered::InitialiseExpectedPhotonsScatteredVectorSystem::<T, N>::default(),
         "initialise_expected_photons",
         deps,
     );
     builder.add(
-        rate::InitialiseRateCoefficientsSystem::<N>,
+        rate::InitialiseRateCoefficientsSystem::<T, N>::default(),
         "initialise_rate_coefficients",
         deps,
     );
@@ -180,27 +209,32 @@ pub fn add_systems_to_dispatch<const N: usize>(
         &["index_lasers"],
     );
     builder.add(
-        sampler::CalculateLaserDetuningSystem::<N>,
+        zeeman::CalculateZeemanShiftSystem::<T>::default(),
+        "zeeman_shift",
+        &["magnetics_magnitude"],
+    );
+    builder.add(
+        sampler::CalculateLaserDetuningSystem::<T, N>::default(),
         "calculate_laser_detuning",
         &["calculate_doppler_shift", "zeeman_shift", "index_lasers"],
     );
     builder.add(
-        rate::CalculateRateCoefficientsSystem::<N>,
+        rate::CalculateRateCoefficientsSystem::<T, N>::default(),
         "calculate_rate_coefficients",
         &["calculate_laser_detuning", "initialise_rate_coefficients"],
     );
     builder.add(
-        twolevel::CalculateTwoLevelPopulationSystem::<N>,
+        twolevel::CalculateTwoLevelPopulationSystem::<T, N>::default(),
         "calculate_twolevel",
         &["calculate_rate_coefficients", "fill_laser_sampler_masks"],
     );
     builder.add(
-        photons_scattered::CalculateMeanTotalPhotonsScatteredSystem,
+        photons_scattered::CalculateMeanTotalPhotonsScatteredSystem::<T>::default(),
         "calculate_total_photons",
         &["calculate_twolevel"],
     );
     builder.add(
-        photons_scattered::CalculateExpectedPhotonsScatteredSystem::<N>,
+        photons_scattered::CalculateExpectedPhotonsScatteredSystem::<T, N>::default(),
         "calculate_expected_photons",
         &[
             "calculate_total_photons",
@@ -209,27 +243,32 @@ pub fn add_systems_to_dispatch<const N: usize>(
         ],
     );
     builder.add(
-        photons_scattered::CalculateActualPhotonsScatteredSystem::<N>,
+        photons_scattered::CalculateActualPhotonsScatteredSystem::<T,N>::default(),
         "calculate_actual_photons",
         &["calculate_expected_photons"],
     );
     builder.add(
-        force::CalculateAbsorptionForcesSystem::<N>,
+        force::CalculateAbsorptionForcesSystem::<T, N>::default(),
         "calculate_absorption_forces",
         &["calculate_actual_photons", INTEGRATE_POSITION_SYSTEM_NAME],
     );
     builder.add(
-        repump::RepumpSystem,
+        repump::RepumpSystem::<T>::default(),
         "repump",
         &["calculate_absorption_forces"],
     );
     builder.add(
-        force::ApplyEmissionForceSystem::<N>,
+        force::ApplyEmissionForceSystem::<T, N>::default(),
         "calculate_emission_forces",
         &[
             "calculate_absorption_forces",
             INTEGRATE_POSITION_SYSTEM_NAME,
         ],
+    );
+    builder.add(
+        zeeman::AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem::<T>::default(),
+        "attach_zeeman_shift_samplers",
+        &[],
     );
     builder.add(
         AttachIndexToCoolingLightSystem,
@@ -240,6 +279,8 @@ pub fn add_systems_to_dispatch<const N: usize>(
 
 #[cfg(test)]
 pub mod tests {
+
+    use crate::species::Rubidium87_780D2;
 
     use super::*;
     use assert_approx_eq::assert_approx_eq;
@@ -270,10 +311,10 @@ pub mod tests {
     #[test]
     fn test_for_species() {
         let detuning = 12.0;
-        let light = CoolingLight::for_species(AtomicTransition::rubidium(), detuning, 1);
+        let light = CoolingLight::for_transition::<Rubidium87_780D2>(detuning, 1);
         assert_approx_eq!(
             light.frequency(),
-            AtomicTransition::rubidium().frequency + 1.0e6 * detuning
+            Rubidium87_780D2::frequency() + 1.0e6 * detuning
         );
     }
 }

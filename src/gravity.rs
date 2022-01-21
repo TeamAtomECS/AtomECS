@@ -2,6 +2,8 @@
 
 use crate::atom::{Force, Mass};
 use crate::constant;
+use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
+use crate::simulation::Plugin;
 use nalgebra::Vector3;
 use specs::prelude::*;
 
@@ -30,6 +32,23 @@ impl<'a> System<'a> for ApplyGravitationalForceSystem {
                     });
             }
         }
+    }
+}
+
+/// This plugin implements the force of gravity.
+/// 
+/// See also [crate::gravity].
+pub struct GravityPlugin;
+impl Plugin for GravityPlugin {
+    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
+        builder.dispatcher_builder.add(
+            ApplyGravitationalForceSystem,
+            "add_gravity",
+            &["clear", INTEGRATE_POSITION_SYSTEM_NAME],
+        );  
+    }
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        Vec::new()
     }
 }
 

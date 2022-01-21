@@ -4,8 +4,8 @@ extern crate nalgebra;
 
 use specs::prelude::*;
 
-use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
+use crate::{initiate::NewlyCreated, simulation::Plugin};
 use nalgebra::{Matrix3, Vector3};
 use specs::{
     Component, DispatcherBuilder, Entities, Join, LazyUpdate, Read, ReadStorage, System,
@@ -17,7 +17,6 @@ pub mod grid;
 pub mod quadrupole;
 pub mod top;
 pub mod uniform;
-pub mod zeeman;
 use std::fmt;
 
 /// A component that stores the magnetic field at an entity's location.
@@ -151,7 +150,10 @@ impl<'a> System<'a> for AttachFieldSamplersToNewlyCreatedAtomsSystem {
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the magnetics systems run.
-pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>, deps: &[&str]) {
+fn add_magnetics_systems_to_dispatch(
+    builder: &mut DispatcherBuilder<'static, 'static>,
+    deps: &[&str],
+) {
     builder.add(ClearMagneticFieldSamplerSystem, "magnetics_clear", deps);
     builder.add(
         quadrupole::Sample3DQuadrupoleFieldSystem,
@@ -187,34 +189,68 @@ pub fn add_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>
         &["magnetics_grid"],
     );
     builder.add(
+        AttachFieldSamplersToNewlyCreatedAtomsSystem,
+        "add_magnetic_field_samplers",
+        &[],
+    );
+}
+
+/// Adds the additional systems required by magnetics to the dispatcher.
+fn add_magnetic_trap_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>) {
+    builder.add(
         CalculateMagneticMagnitudeGradientSystem,
         "magnetics_gradient",
         &["magnetics_magnitude"],
     );
     builder.add(
-        AttachFieldSamplersToNewlyCreatedAtomsSystem,
-        "add_magnetic_field_samplers",
-        &[],
-    );
-    builder.add(
-        zeeman::AttachZeemanShiftSamplersToNewlyCreatedAtomsSystem,
-        "attach_zeeman_shift_samplers",
-        &[],
-    );
-    builder.add(
-        zeeman::CalculateZeemanShiftSystem,
-        "zeeman_shift",
-        &["magnetics_magnitude"],
+        force::ApplyMagneticForceSystem,
+        "magnetic_force",
+        &["magnetics_gradient"],
     );
 }
 
 /// Registers resources required by magnetics to the ecs world.
-pub fn register_components(world: &mut World) {
+fn register_magnetics_components(world: &mut World) {
     world.register::<uniform::UniformMagneticField>();
     world.register::<quadrupole::QuadrupoleField3D>();
     world.register::<quadrupole::QuadrupoleField2D>();
+    world.register::<top::TimeOrbitingPotential>();
     world.register::<MagneticFieldSampler>();
     world.register::<grid::PrecalculatedMagneticFieldGrid>();
+    world.register::<force::MagneticDipole>();
+}
+
+/// Registers additional resources required by magnetic trapping to the ecs world.
+fn register_magnetic_trap_components(world: &mut World) {
+    world.register::<force::MagneticDipole>();
+}
+
+/// A plugin responsible for calculating magnetic fields.
+///
+/// See the [crate::magnetics] module for more information.
+pub struct MagneticsPlugin;
+impl Plugin for MagneticsPlugin {
+    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
+        add_magnetics_systems_to_dispatch(&mut builder.dispatcher_builder, &[]);
+        register_magnetics_components(&mut builder.world);
+    }
+
+    fn deps(&self) -> Vec<Box<dyn Plugin>> {
+        Vec::new()
+    }
+}
+
+/// Plugin for magnetic confinement functionality
+pub struct MagneticTrapPlugin;
+impl Plugin for MagneticTrapPlugin {
+    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
+        register_magnetic_trap_components(&mut builder.world);
+        add_magnetic_trap_systems_to_dispatch(&mut builder.dispatcher_builder);
+    }
+
+    fn deps(&self) -> Vec<Box<dyn Plugin>> {
+        vec![Box::new(MagneticsPlugin)]
+    }
 }
 
 #[cfg(test)]
@@ -224,21 +260,18 @@ pub mod tests {
     use crate::magnetic::quadrupole::{QuadrupoleField3D, Sample3DQuadrupoleFieldSystem};
     use assert_approx_eq::assert_approx_eq;
 
-    /// Tests the correct implementation of the magnetics systems and dispatcher.
-    /// This is done by setting up a test world and ensuring that the magnetic systems perform the correct operations on test entities.
     #[test]
     fn test_magnetics_systems() {
         let mut test_world = World::new();
-        register_components(&mut test_world);
+        register_magnetics_components(&mut test_world);
         test_world.register::<NewlyCreated>();
-        test_world.register::<zeeman::ZeemanShiftSampler>();
         let mut builder = DispatcherBuilder::new();
         builder.add(
             crate::integrator::VelocityVerletIntegratePositionSystem {},
             crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME,
             &[],
         );
-        add_systems_to_dispatch(&mut builder, &[]);
+        add_magnetics_systems_to_dispatch(&mut builder, &[]);
         let mut dispatcher = builder.build();
         dispatcher.setup(&mut test_world);
         test_world.insert(crate::integrator::Step { n: 0 });
@@ -280,16 +313,15 @@ pub mod tests {
     #[test]
     fn test_field_samplers_are_added() {
         let mut test_world = World::new();
-        register_components(&mut test_world);
+        register_magnetics_components(&mut test_world);
         test_world.register::<NewlyCreated>();
-        test_world.register::<zeeman::ZeemanShiftSampler>();
         let mut builder = DispatcherBuilder::new();
         builder.add(
             crate::integrator::VelocityVerletIntegratePositionSystem {},
             crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME,
             &[],
         );
-        add_systems_to_dispatch(&mut builder, &[]);
+        add_magnetics_systems_to_dispatch(&mut builder, &[]);
         let mut dispatcher = builder.build();
         dispatcher.setup(&mut test_world);
         test_world.insert(crate::integrator::Step { n: 0 });
@@ -309,10 +341,9 @@ pub mod tests {
 
     fn test_magnetic_gradient_system() {
         let mut test_world = World::new();
-
-        test_world.register::<QuadrupoleField3D>();
+        register_magnetics_components(&mut test_world);
+        register_magnetic_trap_components(&mut test_world);
         test_world.register::<Position>();
-        test_world.register::<MagneticFieldSampler>();
 
         let atom1 = test_world
             .create_entity()

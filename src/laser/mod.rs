@@ -9,6 +9,7 @@ pub mod sampler;
 
 use crate::initiate::NewlyCreated;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
+use crate::simulation::Plugin;
 use specs::prelude::*;
 
 pub const DEFAULT_BEAM_LIMIT: usize = 16;
@@ -50,6 +51,25 @@ impl<'a, const N: usize> System<'a> for AttachLaserComponentsToNewlyCreatedAtoms
     }
 }
 
+/// This plugin provides basic functionality for laser beams, such as calculating laser intensity.
+/// 
+/// See [crate::laser] for more information.
+/// 
+/// # Generic Arguments
+/// 
+/// * `N`: The maximum number of laser beams to configure the simulation for.
+pub struct LaserPlugin<const N : usize>;
+impl<const N : usize> Plugin for LaserPlugin<N> {
+    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
+        register_components(&mut builder.world);
+        add_systems_to_dispatch::<N>(&mut builder.dispatcher_builder, &[]);
+    }
+
+    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+        Vec::new()
+    }
+}
+
 /// Adds the systems required by the module to the dispatcher.
 ///
 /// #Arguments
@@ -57,7 +77,7 @@ impl<'a, const N: usize> System<'a> for AttachLaserComponentsToNewlyCreatedAtoms
 /// `builder`: the dispatch builder to modify
 ///
 /// `deps`: any dependencies that must be completed before the systems run.
-pub fn add_systems_to_dispatch<const N: usize>(
+fn add_systems_to_dispatch<const N: usize>(
     builder: &mut DispatcherBuilder<'static, 'static>,
     deps: &[&str],
 ) {
@@ -99,7 +119,7 @@ pub fn add_systems_to_dispatch<const N: usize>(
 }
 
 /// Registers resources required by magnetics to the ecs world.
-pub fn register_components(world: &mut World) {
+fn register_components(world: &mut World) {
     world.register::<gaussian::GaussianBeam>();
     world.register::<gaussian::CircularMask>();
     world.register::<frame::Frame>();

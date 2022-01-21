@@ -121,6 +121,7 @@ pub trait MaxwellBoltzmannSource {
 /// This system removes the [MassDistribution](struct.MassDistribution.html) component from
 /// the oven and replaces it with a [PrecalculatedForSpeciesSystem] that contains all
 /// precalculated information required to generate atoms from the distribution.
+#[derive(Default)]
 pub struct PrecalculateForSpeciesSystem<T: MaxwellBoltzmannSource> {
     pub marker: PhantomData<T>,
 }
