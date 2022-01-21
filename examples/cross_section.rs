@@ -5,7 +5,7 @@ extern crate nalgebra;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
-use lib::laser::{DEFAULT_BEAM_LIMIT, LaserPlugin};
+use lib::laser::{LaserPlugin};
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser_cooling::photons_scattered::ExpectedPhotonsScatteredVector;
 use lib::laser_cooling::{CoolingLight, LaserCoolingPlugin};
@@ -24,7 +24,7 @@ fn main() {
     let mut sim_builder = SimulationBuilder::default();
     sim_builder.add_plugin(LaserPlugin::<{BEAM_NUMBER}>);
     sim_builder.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, {BEAM_NUMBER}>::default());
-    sim_builder.add_plugin(FileOutputPlugin::<ExpectedPhotonsScatteredVector<Rubidium87_780D2, {DEFAULT_BEAM_LIMIT}>, Text, Atom>::new("scattered.txt".to_string(), 10));
+    sim_builder.add_plugin(FileOutputPlugin::<ExpectedPhotonsScatteredVector<Rubidium87_780D2, {BEAM_NUMBER}>, Text, Atom>::new("scattered.txt".to_string(), 2));
     sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new("vel.txt".to_string(), 10));
     let mut sim = sim_builder.build();
 
@@ -75,7 +75,7 @@ fn main() {
     }
 
     // Run the simulation
-    for _i in 0..4 {
+    for _i in 0..3 {
         sim.step();
     }
 }

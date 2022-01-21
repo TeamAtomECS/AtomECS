@@ -42,7 +42,7 @@ checksum = "c9ff149ed9780025acfdb36862d35b28856bb693ceb451259a7164442f22fdc3"
 
 [[package]]
 name = "atomecs"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "assert_approx_eq",
  "atomecs-derive",
