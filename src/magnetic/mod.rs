@@ -184,6 +184,11 @@ fn add_magnetics_systems_to_dispatch(
         &["magnetics_top", INTEGRATE_POSITION_SYSTEM_NAME],
     );
     builder.add(
+        CalculateMagneticFieldMagnitudeSystem,
+        "magnetics_magnitude",
+        &["magnetics_grid"],
+    );
+    builder.add(
         AttachFieldSamplersToNewlyCreatedAtomsSystem,
         "add_magnetic_field_samplers",
         &[],
@@ -192,11 +197,6 @@ fn add_magnetics_systems_to_dispatch(
 
 /// Adds the additional systems required by magnetics to the dispatcher.
 fn add_magnetic_trap_systems_to_dispatch(builder: &mut DispatcherBuilder<'static, 'static>) {
-    builder.add(
-        CalculateMagneticFieldMagnitudeSystem,
-        "magnetics_magnitude",
-        &["magnetics_grid"],
-    );
     builder.add(
         CalculateMagneticMagnitudeGradientSystem,
         "magnetics_gradient",
