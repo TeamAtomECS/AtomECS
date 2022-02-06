@@ -45,8 +45,8 @@ fn main() {
     dispatcher.setup(&mut world);
     // Create dipole laser.
 
-    let power = 10.0;
-    let e_radius = 60.0e-6 / (2.0_f64.sqrt());
+    let power = 7.0;
+    let e_radius = 50.0e-6 / (2.0_f64.sqrt());
     let wavelength = 1064.0e-9;
 
     let gaussian_beam = GaussianBeam {
@@ -69,28 +69,8 @@ fn main() {
         })
         .build();
 
-    let gaussian_beam = GaussianBeam {
-        intersection: Vector3::new(0.0, 0.0, 0.0),
-        e_radius: e_radius,
-        power: power,
-        direction: Vector3::y(),
-        rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &e_radius),
-        ellipticity: 0.0,
-    };
-    world
-        .create_entity()
-        .with(gaussian_beam)
-        .with(laser::dipole_beam::DipoleLight {
-            wavelength: wavelength,
-        })
-        .with(laser::frame::Frame {
-            x_vector: Vector3::x(),
-            y_vector: Vector3::z(),
-        })
-        .build();
-
     // Define timestep
-    world.insert(Timestep { delta: 1.0e-5 });
+    world.insert(Timestep { delta: 1.0e-7 });
 
     // Create a single test atom
     world
@@ -98,7 +78,7 @@ fn main() {
         .with(atom::Mass { value: 87.0 })
         .with(atom::Force::new())
         .with(atom::Position {
-            pos: Vector3::new(-5.0e-6, 5.0e-6, 5.0e-6),
+            pos: Vector3::new(-0.0e-6, 1.0e-6, 0.0e-6),
         })
         .with(atom::Velocity {
             vel: Vector3::new(0.0, 0.0, 0.0),
