@@ -61,7 +61,7 @@ fn main() {
         .build();
 
     // Define timestep
-    sim.world.insert(Timestep { delta: 1.0e-5 });
+    sim.world.insert(Timestep { delta: 1.0e-7 });
 
     // Create a single test atom
     sim.world
