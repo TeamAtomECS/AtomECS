@@ -7,6 +7,7 @@ extern crate multimap;
 use crate::atom::Position;
 use hashbrown::HashMap;
 use nalgebra::Vector3;
+use specs::Entity;
 use specs::{
     Component, Entities, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System, VecStorage,
     WriteExpect, WriteStorage,
@@ -24,6 +25,7 @@ impl Component for BoxID {
 /// A partition of space that contains atoms
 //#[derive(Clone)]
 pub struct PartitionCell {
+    pub entities: Vec<Entity>,
     pub density: f64,
     pub volume: f64,
     pub particle_number: i32,
@@ -32,6 +34,7 @@ pub struct PartitionCell {
 impl Default for PartitionCell {
     fn default() -> Self {
         PartitionCell {
+            entities: Vec::new(),
             density: 0.0,
             volume: 0.0,
             particle_number: 0,
@@ -117,11 +120,12 @@ impl<'a> System<'a> for BuildSpatialPartitionSystem {
 
         // Count number of particles with each unique box id and insert it into the hashmap
         let mut map: HashMap<i64, PartitionCell> = HashMap::new();
-        for boxid in boxids.join() {
+        for (entity, boxid) in (&entities, &boxids).join() {
             if boxid.id == i64::MAX {
                 continue;
             } else {
                 map.entry(boxid.id).or_default().particle_number += 1;
+                map.entry(boxid.id).or_default().entities.push(entity);
             }
         }
         hashmap.hashmap = map;
