@@ -138,7 +138,6 @@ impl CollisionBox<'_> {
 pub struct CollisionParameters {
     /// number of real particles one simulation particle represents for collisions
     pub macroparticle: f64,
-    /// number of boxes per side in spatial binning
     // collisional cross section of atoms (assuming only one species)
     pub sigma: f64,
     /// Limit on number of collisions per box each frame. If the number of collisions to calculate exceeds this, the simulation will panic.
@@ -381,7 +380,7 @@ pub mod tests {
         );
     }
 
-    /// Test that the system runs and causes nearby atoms to collide. More of an integration test than a unit test.
+    /// Test that the system runs and causes nearby atoms to collide.
     #[test]
     fn test_collisions() {
         let mut test_world = World::new();
