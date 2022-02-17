@@ -98,7 +98,6 @@ impl<'a> System<'a> for BuildSpatialPartitionSystem {
             mut boxids,
         ): Self::SystemData,
     ) {
-        println!("build partition running");
         use rayon::prelude::ParallelIterator;
         use specs::ParJoin;
         //make hash table - dividing space up into grid
@@ -114,7 +113,6 @@ impl<'a> System<'a> for BuildSpatialPartitionSystem {
             .par_join()
             .for_each(|(position, mut boxid)| {
                 boxid.id = pos_to_id(position.pos, n_boxes, partition_params.box_width);
-                println!("entity box id: {}", boxid.id);
             });
 
         // Count number of particles with each unique box id and insert it into the hashmap
@@ -150,37 +148,53 @@ impl<'a> System<'a> for RescalePartitionCellSystem {
         // so then rescale the cell size by whatever number is required to make
         // the average n = 30 (or whatever the target_density is set to)
 
-        //// rescale box width
+        // Rescale has to run before Build, or else the density map that Build writes
+        // won't match the partition parameters after we rescale them
+        // But in the first step no hashmap exists yet so if the map is empty we pass
+
         let map = &hashmap.hashmap;
         let cells: Vec<&PartitionCell> = map.values().collect();
-        let mut total: i32 = 0;
-        for cell in &cells {
-            total += cell.particle_number;
+
+        if cells.is_empty() {
+        } else {
+            //// get size of cloud
+            let mut xs: Vec<f64> = Vec::new();
+            let mut ys: Vec<f64> = Vec::new();
+            let mut zs: Vec<f64> = Vec::new();
+
+            for (position, _atom) in (&positions, &atoms).join() {
+                xs.push(position.pos[0]);
+                ys.push(position.pos[1]);
+                zs.push(position.pos[2]);
+            }
+            let xrange = get_max(&xs) - get_min(&xs);
+            let yrange = get_max(&ys) - get_min(&ys);
+            let zrange = get_max(&zs) - get_min(&zs);
+
+            let max_range = get_max(&vec![xrange, yrange, zrange]);
+            let min_range = get_min(&vec![xrange, yrange, zrange]);
+
+            //// Get average particles per cell
+
+            let mut total: i32 = 0;
+            for cell in &cells {
+                total += cell.particle_number;
+            }
+            let average_particles_per_cell = total as f64 / cells.len() as f64;
+            // maximum allowable box width is 1/10th of cloud
+            // This is to ensure partition cells are smaller than large density variations in cloud
+            let max_box_width = min_range / 10.0;
+
+            // make volume larger by target_density/average_particles, so box_width scales by cube root of this
+            let scale_factor =
+                (partition_params.target_density / average_particles_per_cell).powf(1.0 / 3.0);
+            // Set box width to the rescaled box size, or the maximum box size, whichever is smaller
+            partition_params.box_width =
+                (partition_params.box_width * scale_factor).min(max_box_width);
+
+            let box_number = max_range / partition_params.box_width;
+            partition_params.box_number = box_number.ceil() as i64;
         }
-        let average_particles_per_cell = total as f64 / cells.len() as f64;
-        // make volume larger by target_density/average_particles, so box_width scales by cube root of this
-        let scale_factor =
-            (partition_params.target_density / average_particles_per_cell).powf(1.0 / 3.0);
-        partition_params.box_width = partition_params.box_width * scale_factor;
-
-        //// rescale box number
-        let mut xs: Vec<f64> = Vec::new();
-        let mut ys: Vec<f64> = Vec::new();
-        let mut zs: Vec<f64> = Vec::new();
-
-        for (position, _atom) in (&positions, &atoms).join() {
-            xs.push(position.pos[0]);
-            ys.push(position.pos[1]);
-            zs.push(position.pos[2]);
-        }
-        let xrange = get_max(&xs) - get_min(&xs);
-        let yrange = get_max(&ys) - get_min(&ys);
-        let zrange = get_max(&zs) - get_min(&zs);
-
-        let range = get_max(&vec![xrange, yrange, zrange]);
-
-        let box_number = range / partition_params.box_width;
-        partition_params.box_number = box_number.ceil() as i64;
     }
 }
 
