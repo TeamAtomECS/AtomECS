@@ -7,13 +7,13 @@ use lib::ecs;
 use lib::ecs::AtomecsDispatcherBuilder;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
+use lib::losses::{ApplyOneBodyLossOption, ApplyOneBodyLossSystem, LossCoefficients};
 use lib::magnetic::force::{ApplyMagneticForceSystem, MagneticDipole};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use rand_distr::{Distribution, Normal};
-
 use lib::output::file;
 use lib::output::file::Text;
 use nalgebra::Vector3;
+use rand_distr::{Distribution, Normal};
 use specs::prelude::*;
 use std::time::Instant;
 
@@ -34,17 +34,20 @@ fn main() {
         "magnetic_force",
         &["magnetics_gradient"],
     );
+    atomecs_builder
+        .builder
+        .add(ApplyOneBodyLossSystem {}, "one_body_loss", &[]);
     atomecs_builder.add_frame_end_systems();
     let mut builder = atomecs_builder.builder;
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos.txt".to_string(), 100),
+        file::new::<Position, Text>("pos.txt".to_string(), 200),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 100),
+        file::new::<Velocity, Text>("vel.txt".to_string(), 200),
         "",
         &[],
     );
@@ -87,11 +90,18 @@ fn main() {
             .build();
     }
 
+    world.insert(ApplyOneBodyLossOption);
+    world.insert(LossCoefficients {
+        one_body_lifetime: 10.0,
+        two_body_coefficient: 0.0,
+        three_body_coefficient: 0.0,
+    });
+
     // Define timestep
-    world.add_resource(Timestep { delta: 1.0e-5 });
+    world.insert(Timestep { delta: 5.0e-5 });
 
     // Run the simulation for a number of steps.
-    for _i in 0..10000 {
+    for _i in 0..20000 {
         dispatcher.dispatch(&mut world);
         world.maintain();
     }
