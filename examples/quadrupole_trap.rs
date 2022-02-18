@@ -91,8 +91,9 @@ fn main() {
     }
 
     world.insert(ApplyOneBodyLossOption);
+
     world.insert(LossCoefficients {
-        one_body_lifetime: 10.0,
+        one_body_loss_rate: 0.5,
         two_body_coefficient: 0.0,
         three_body_coefficient: 0.0,
     });
