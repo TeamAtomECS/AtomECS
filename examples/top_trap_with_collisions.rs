@@ -2,7 +2,6 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
-use atomecs::partition::PartitionParameters;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::collisions::{
     ApplyCollisionsOption, ApplyCollisionsSystem, CollisionParameters, CollisionsTracker,
@@ -12,11 +11,15 @@ use lib::ecs::AtomecsDispatcherBuilder;
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::integrator::INTEGRATE_VELOCITY_SYSTEM_NAME;
+use lib::losses::{ApplyTwoBodyLossOption, ApplyTwoBodyLossSystem, LossCoefficients};
 use lib::magnetic::force::{ApplyMagneticForceSystem, MagneticDipole};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::magnetic::top::TimeOrbitingPotential;
 use lib::output::file;
 use lib::output::file::Text;
+use lib::partition::{
+    BuildSpatialPartitionSystem, DensityHashmap, PartitionParameters, RescalePartitionCellSystem,
+};
 use nalgebra::Vector3;
 use rand_distr::{Distribution, Normal};
 use specs::prelude::*;
@@ -40,22 +43,37 @@ fn main() {
         &["magnetics_gradient"],
     );
     atomecs_builder.builder.add(
+        RescalePartitionCellSystem {},
+        "rescale_partition",
+        &[INTEGRATE_VELOCITY_SYSTEM_NAME],
+    );
+    atomecs_builder.builder.add(
+        BuildSpatialPartitionSystem {},
+        "build_partition",
+        &["rescale_partition"],
+    );
+    atomecs_builder.builder.add(
         ApplyCollisionsSystem {},
         "collisions",
-        &[INTEGRATE_VELOCITY_SYSTEM_NAME], // Collisions system must be applied after velocity integrator or it will violate conservation of energy and cause heating
+        &[INTEGRATE_VELOCITY_SYSTEM_NAME, "build_partition"], // Collisions system must be applied after velocity integrator or it will violate conservation of energy and cause heating
     );
 
+    atomecs_builder.builder.add(
+        ApplyTwoBodyLossSystem {},
+        "two_body_loss",
+        &["build_partition"],
+    );
     atomecs_builder.add_frame_end_systems();
     let mut builder = atomecs_builder.builder;
 
     // Configure simulation output.
     builder = builder.with(
-        file::new::<Position, Text>("pos.txt".to_string(), 100),
+        file::new::<Position, Text>("pos.txt".to_string(), 200),
         "",
         &[],
     );
     builder = builder.with(
-        file::new::<Velocity, Text>("vel.txt".to_string(), 100),
+        file::new::<Velocity, Text>("vel.txt".to_string(), 200),
         "",
         &[],
     );
@@ -104,11 +122,12 @@ fn main() {
     }
 
     world.insert(ApplyCollisionsOption);
+    world.insert(ApplyTwoBodyLossOption);
     world.insert(PartitionParameters {
         box_number: 200, //Any number large enough to cover entire cloud with collision boxes. Overestimating box number will not affect performance.
         box_width: 20e-6, //Too few particles per box will both underestimate collision rate and cause large statistical fluctuations.
         //Boxes must also be smaller than typical length scale of density variations within the cloud, since the collisions model treats gas within a box as homogeneous.
-        target_density: 30.0,
+        target_density: 10.0,
     });
     world.insert(CollisionParameters {
         macroparticle: 4e2,
@@ -120,6 +139,12 @@ fn main() {
         num_collisions: Vec::new(),
         num_atoms: Vec::new(),
         num_particles: Vec::new(),
+    });
+    world.insert(DensityHashmap::default());
+    world.insert(LossCoefficients {
+        one_body_loss_rate: 0.0,
+        two_body_coefficient: 5e-19,
+        three_body_coefficient: 0.0,
     });
 
     // Define timestep
