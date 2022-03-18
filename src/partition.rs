@@ -154,30 +154,35 @@ impl<'a> System<'a> for RescalePartitionCellSystem {
 
         // Rescale has to run before Build, or else the density map that Build writes
         // won't match the partition parameters after we rescale them
-        // But in the first step no hashmap exists yet so if the map is empty we pass
+        // But in the first step no hashmap exists yet so we skip scaling for density and just add enough boxes to contain the cloud
 
         let map = &hashmap.hashmap;
         let cells: Vec<&PartitionCell> = map.values().collect();
 
-        if cells.is_empty() {
-        } else {
-            //// get size of cloud
-            let mut xs: Vec<f64> = Vec::new();
-            let mut ys: Vec<f64> = Vec::new();
-            let mut zs: Vec<f64> = Vec::new();
+        //// get size of cloud
+        let mut xs: Vec<f64> = Vec::new();
+        let mut ys: Vec<f64> = Vec::new();
+        let mut zs: Vec<f64> = Vec::new();
 
-            for (position, _atom) in (&positions, &atoms).join() {
-                xs.push(position.pos[0]);
-                ys.push(position.pos[1]);
-                zs.push(position.pos[2]);
-            }
-            let xrange = get_max(&xs) - get_min(&xs);
-            let yrange = get_max(&ys) - get_min(&ys);
-            let zrange = get_max(&zs) - get_min(&zs);
+        for (position, _atom) in (&positions, &atoms).join() {
+            xs.push(position.pos[0]);
+            ys.push(position.pos[1]);
+            zs.push(position.pos[2]);
+        }
+        let xrange = get_max(&xs) - get_min(&xs);
+        let yrange = get_max(&ys) - get_min(&ys);
+        let zrange = get_max(&zs) - get_min(&zs);
 
-            let max_range = get_max(&vec![xrange, yrange, zrange]);
-            let min_range = get_min(&vec![xrange, yrange, zrange]);
+        let xmean = mean(&xs);
+        let ymean = mean(&ys);
+        let zmean = mean(&zs);
 
+        let centre_of_mass = (xmean.powi(2) + ymean.powi(2) + zmean.powi(2)).sqrt();
+
+        let max_range = get_max(&vec![xrange, yrange, zrange]);
+        let min_range = get_min(&vec![xrange, yrange, zrange]);
+
+        if !cells.is_empty() {
             //// Get average particles per cell
 
             let mut total: i32 = 0;
@@ -195,10 +200,10 @@ impl<'a> System<'a> for RescalePartitionCellSystem {
             // Set box width to the rescaled box size, or the maximum box size, whichever is smaller
             partition_params.box_width =
                 (partition_params.box_width * scale_factor).min(max_box_width);
-
-            let box_number = max_range / partition_params.box_width;
-            partition_params.box_number = box_number.ceil() as i64;
         }
+
+        let box_number = 2.0 * (centre_of_mass + max_range) / partition_params.box_width;
+        partition_params.box_number = box_number.ceil() as i64;
     }
 }
 
@@ -243,6 +248,10 @@ fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
         id = xp + n * yp + n.pow(2) * zp;
     }
     id
+}
+
+fn mean(vals: &[f64]) -> f64 {
+    vals.iter().sum::<f64>() / vals.len() as f64
 }
 
 pub mod tests {
