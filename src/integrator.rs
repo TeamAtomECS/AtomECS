@@ -1,18 +1,19 @@
-//! Module that performs time-integration.
-//!
-//! This module implements the [EulerIntegrationSystem](struct.EulerIntegrationSystem.html),
-//! which uses the euler method to integrate classical equations of motion.
-
-extern crate nalgebra;
+//! Implements systems to integrate trajectories.
 
 use crate::atom::*;
 use crate::constant;
 use crate::initiate::NewlyCreated;
-use specs::prelude::*;
+use bevy::prelude::*;
+use bevy::tasks::ComputeTaskPool;
 
 /// Tracks the number of the current integration step.
 pub struct Step {
     pub n: u64,
+}
+impl Default for Step {
+    fn default() -> Self {
+        Step { n: 0 }
+    }
 }
 
 /// The timestep used for the integration.
@@ -24,327 +25,212 @@ pub struct Step {
 /// to simulate the same total simulation time.
 pub struct Timestep {
     /// Duration of the simulation timestep, in SI units of seconds.
-    pub delta: f64,
+    pub delta: f32,
 }
-
-/// # Euler Integration
-///
-/// The EulerIntegrationSystem integrates the classical equations of motion for particles using the euler method:
-/// `x' = x + v * dt`.
-/// This integrator is simple to implement but prone to integration error.
-///
-/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource.
-pub struct EulerIntegrationSystem;
-
-impl<'a> System<'a> for EulerIntegrationSystem {
-    type SystemData = (
-        WriteStorage<'a, Position>,
-        WriteStorage<'a, Velocity>,
-        ReadExpect<'a, Timestep>,
-        WriteExpect<'a, Step>,
-        ReadStorage<'a, Force>,
-        ReadStorage<'a, Mass>,
-    );
-
-    fn run(&mut self, (mut pos, mut vel, t, mut step, force, mass): Self::SystemData) {
-        use rayon::prelude::*;
-
-        step.n += 1;
-        (&mut vel, &mut pos, &force, &mass).par_join().for_each(
-            |(vel, pos, force, mass)| {
-                euler_update(vel, pos, force, mass, t.delta);
-            },
-        );
+impl Default for Timestep {
+    fn default() -> Self {
+        Timestep { delta: 1.0e-6 }
     }
 }
 
 pub const INTEGRATE_POSITION_SYSTEM_NAME: &str = "integrate_position";
 
-/// # Velocity-Verlet Integrate Position
-///
-/// Integrates position using a velocity-verlet integration approach.
-/// Stores the value of `Force` from the previous frame in the `OldForce` component.
-///
-/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource.
-pub struct VelocityVerletIntegratePositionSystem;
-impl<'a> System<'a> for VelocityVerletIntegratePositionSystem {
-    type SystemData = (
-        WriteStorage<'a, Position>,
-        ReadStorage<'a, Velocity>,
-        ReadExpect<'a, Timestep>,
-        WriteExpect<'a, Step>,
-        ReadStorage<'a, Force>,
-        WriteStorage<'a, OldForce>,
-        ReadStorage<'a, Mass>,
-    );
-
-    fn run(&mut self, (mut pos, vel, t, mut step, force, mut old_force, mass): Self::SystemData) {
-        use rayon::prelude::*;
-
-        step.n += 1;
-        let dt = t.delta;
-
-        (&mut pos, &vel, &mut old_force, &force, &mass)
-            .par_join()
-            .for_each(|(mut pos, vel, mut old_force, force, mass)| {
-                pos.pos = pos.pos
-                    + vel.vel * dt
-                    + force.force / (constant::AMU * mass.value) / 2.0 * dt * dt;
-                old_force.0 = *force;
-            });
+pub struct BatchSize(pub usize);
+impl Default for BatchSize {
+    fn default() -> Self {
+        BatchSize(1024)
     }
+}
+
+/// Integrates position using a velocity-verlet integration approach.
+/// Stores the value of [Force] from the previous frame in the [OldForce] component.
+///
+/// The timestep duration is specified by the [Timestep] system resource.
+fn velocity_verlet_integrate_position(
+    pool: Res<ComputeTaskPool>,
+    batch_size: Res<BatchSize>,
+    timestep: Res<Timestep>,
+    mut step: ResMut<Step>,
+    mut query: Query<(&mut Position, &mut OldForce, &Velocity, &Force, &Mass)>,
+) {
+    step.n += 1;
+    let dt = timestep.delta;
+
+    query.par_for_each_mut(&pool, batch_size.0, |(mut pos, mut old_force, vel, force, mass)| {
+        pos.pos = pos.pos
+            + vel.vel * dt
+            + force.force / (constant::AMU * mass.value) / 2.0 * dt * dt;
+        old_force.0 = *force;
+    });
 }
 
 pub const INTEGRATE_VELOCITY_SYSTEM_NAME: &str = "integrate_velocity";
 
-/// # Velocity-Verlet Integrate Velocity
-///
 /// Integrates velocity using the velocity-verlet method, and the average of `Force` this frame and `OldForce` from the previous frame.
 ///
-/// The timestep duration is specified by the [Timestep](struct.Timestep.html) system resource
-pub struct VelocityVerletIntegrateVelocitySystem;
-impl<'a> System<'a> for VelocityVerletIntegrateVelocitySystem {
-    type SystemData = (
-        WriteStorage<'a, Velocity>,
-        ReadExpect<'a, Timestep>,
-        ReadStorage<'a, Force>,
-        ReadStorage<'a, OldForce>,
-        ReadStorage<'a, Mass>,
-    );
+/// The timestep duration is specified by the [Timestep] system resource
+fn velocity_verlet_integrate_velocity(
+    pool: Res<ComputeTaskPool>,
+    batch_size: Res<BatchSize>,
+    timestep: Res<Timestep>,
+    mut query: Query<(&mut Velocity, &Force, &OldForce, &Mass)>,
+) {
+    let dt = timestep.delta;
+    query.par_for_each_mut(&pool, batch_size.0, |(mut vel, force, old_force, mass)| {
+        vel.vel += (force.force + old_force.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
+    });
+}
 
-    fn run(&mut self, (mut vel, t, force, old_force, mass): Self::SystemData) {
-        use rayon::prelude::*;
+/// Adds [OldForce] components to [NewlyCreated] atoms.
+fn add_old_force_to_new_atoms(
+    mut commands: Commands,
+    query: Query<Entity, (With<NewlyCreated>, Without<OldForce>)>
+) {
+    for ent in query.iter() {
+        commands.entity(ent).insert(OldForce::default());
+    }
+}
 
-        let dt = t.delta;
+/// Resets force to zero at the start of each simulation step.
+fn clear_force(
+    mut query: Query<&mut Force>,
+    pool: Res<ComputeTaskPool>,
+    batch_size: Res<BatchSize>,
+) {
+    query.par_for_each_mut(
+        &pool, batch_size.0,
+        |mut force| {
+            force.force = Vec3::new(0.0,0.0,0.0);
+        }
+    )
+}
 
-        (&mut vel, &force, &old_force, &mass).par_join().for_each(
-            |(vel, force, old_force, mass)| {
-                vel.vel += (force.force + old_force.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
-            },
+/// Stores the value of the force calculation from the previous frame.
+#[derive(Component, Default)]
+pub struct OldForce(Force);
+
+#[derive(PartialEq, Clone, Hash, Debug, Eq, SystemLabel)]
+pub enum IntegrationSystems {
+    VelocityVerletIntegratePosition,
+    VelocityVerletIntegrateVelocity,
+    AddOldForceToNewAtoms,
+    ClearForce,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, StageLabel)]
+pub enum IntegrationStages {
+    BeginIntegration,
+    EndIntegration
+}
+
+pub struct IntegrationPlugin;
+impl Plugin for IntegrationPlugin {
+    fn build(&self, app: &mut App) {
+        app.world.insert_resource(BatchSize::default());
+        app.world.insert_resource(Step::default());
+        app.world.insert_resource(Timestep::default());
+        // Add stages for begin/end integration. Stages are used to guarantee all systems have completed.
+        // By default, systems are added to CoreStage::Update. We want our integrator to sandwich either side of these.
+        app.add_stage_before(CoreStage::Update, IntegrationStages::BeginIntegration, SystemStage::parallel());
+        app.add_stage_after(CoreStage::Update, IntegrationStages::EndIntegration, SystemStage::parallel());
+        app.add_system_to_stage(IntegrationStages::BeginIntegration, 
+            velocity_verlet_integrate_position.label(IntegrationSystems::VelocityVerletIntegratePosition)
+        );
+        app.add_system_to_stage(IntegrationStages::BeginIntegration, 
+            clear_force.label(IntegrationSystems::ClearForce)
+        );
+        app.add_system_to_stage(IntegrationStages::BeginIntegration, 
+            add_old_force_to_new_atoms.label(IntegrationSystems::AddOldForceToNewAtoms)
+        );
+        app.add_system_to_stage(IntegrationStages::EndIntegration, 
+            velocity_verlet_integrate_velocity.label(IntegrationSystems::VelocityVerletIntegrateVelocity)
         );
     }
 }
 
-/// Adds [OldForce](OldForce.struct.html) components to newly created atoms.
-pub struct AddOldForceToNewAtomsSystem;
-impl<'a> System<'a> for AddOldForceToNewAtomsSystem {
-    type SystemData = (
-        Entities<'a>,
-        ReadStorage<'a, NewlyCreated>,
-        ReadStorage<'a, OldForce>,
-        Read<'a, LazyUpdate>,
-    );
-    fn run(&mut self, (ent, newly_created, old_force, updater): Self::SystemData) {
-        for (ent, _, _) in (&ent, &newly_created, !&old_force).join() {
-            updater.insert(ent, OldForce::default());
-        }
-    }
-}
 
-/// Stores the value of the force calculation from the previous frame.
-#[derive(Default)]
-pub struct OldForce(Force);
-impl Component for OldForce {
-    type Storage = VecStorage<OldForce>;
-}
-
-/// Performs the euler method to update [Velocity](struct.Velocity.html) and [Position](struct.Position.html) given an applied [Force](struct.Force.html).
-fn euler_update(vel: &mut Velocity, pos: &mut Position, force: &Force, mass: &Mass, dt: f64) {
-    pos.pos += vel.vel * dt;
-    vel.vel += force.force * dt / (constant::AMU * mass.value);
-}
 
 pub mod tests {
     #[allow(unused_imports)]
     use super::*;
-    extern crate specs;
-    #[allow(unused_imports)]
-    use specs::{Builder, DispatcherBuilder, World};
-
-    extern crate nalgebra;
-    #[allow(unused_imports)]
-    use nalgebra::Vector3;
-
-    #[test]
-    fn test_euler() {
-        let mut pos = Position {
-            pos: Vector3::new(1., 1., 1.),
-        };
-        let mut vel = Velocity {
-            vel: Vector3::new(0., 1., 0.),
-        };
-        let time = 1.;
-        let mass = Mass {
-            value: 1. / constant::AMU,
-        };
-        let force = Force {
-            force: Vector3::new(1., 1., 1.),
-        };
-        euler_update(&mut vel, &mut pos, &force, &mass, time);
-        assert_eq!(vel.vel, Vector3::new(1., 2., 1.));
-        assert_eq!(pos.pos, Vector3::new(1., 2., 1.));
-    }
-
-    /// Tests the [EulerIntegrationSystem] by creating a mock world and integrating the trajectory of one entity.
-    #[test]
-    fn test_euler_integration() {
-        let mut world = World::new();
-
-        let mut dispatcher = DispatcherBuilder::new()
-            .with(EulerIntegrationSystem, "integrator", &[])
-            .build();
-        dispatcher.setup(&mut world);
-
-        // create a particle with known force and mass
-        let force = Vector3::new(1.0, 0.0, 0.0);
-        let mass = 1.0;
-        let atom = world
-            .create_entity()
-            .with(Position {
-                pos: Vector3::new(0.0, 0.0, 0.0),
-            })
-            .with(Velocity {
-                vel: Vector3::new(0.0, 0.0, 0.0),
-            })
-            .with(Force { force })
-            .with(Mass {
-                value: mass / constant::AMU,
-            })
-            .build();
-
-        let dt = 1.0e-3;
-        world.insert(Timestep { delta: dt });
-        world.insert(Step { n: 0 });
-
-        // run simulation loop 1_000 times.
-        let n_steps = 1_000;
-        for _i in 0..n_steps {
-            dispatcher.dispatch(&world);
-            world.maintain();
-        }
-
-        let a = force / mass;
-        let expected_v = a * (n_steps as f64 * dt);
-
-        assert_approx_eq::assert_approx_eq!(
-            expected_v.norm(),
-            world
-                .read_storage::<Velocity>()
-                .get(atom)
-                .expect("atom not found.")
-                .vel
-                .norm(),
-            expected_v.norm() * 0.01
-        );
-
-        let expected_x = a * (n_steps as f64 * dt).powi(2) / 2.0;
-        assert_approx_eq::assert_approx_eq!(
-            expected_x.norm(),
-            world
-                .read_storage::<Position>()
-                .get(atom)
-                .expect("atom not found.")
-                .pos
-                .norm(),
-            expected_x.norm() * 0.01
-        );
-    }
 
     #[test]
     fn test_add_old_force_system() {
-        let mut test_world = World::new();
+        let mut app = App::new();
+        app.add_plugin(IntegrationPlugin);
 
-        let mut dispatcher = DispatcherBuilder::new()
-            .with(AddOldForceToNewAtomsSystem, "", &[])
-            .build();
-        dispatcher.setup(&mut test_world);
-        test_world.register::<OldForce>();
-
-        let test_entity = test_world.create_entity().with(NewlyCreated {}).build();
-
-        dispatcher.dispatch(&test_world);
-        test_world.maintain();
-
-        let old_forces = test_world.read_storage::<OldForce>();
+        let test_entity = app.world.spawn().insert(NewlyCreated).id();
+        app.update();
         assert!(
-            old_forces.contains(test_entity),
+            app.world.entity(test_entity).contains::<OldForce>(),
             "OldForce component not added to test entity."
         );
     }
 
     #[test]
     fn test_velocity_verlet_integration() {
-        let mut world = World::new();
+        let mut app = App::new();
+        app.add_plugin(IntegrationPlugin);
 
-        let mut dispatcher = DispatcherBuilder::new()
-            .with(
-                VelocityVerletIntegratePositionSystem,
-                "integrate_position",
-                &[],
-            )
-            .with(
-                VelocityVerletIntegrateVelocitySystem,
-                "integrate_velocity",
-                &["integrate_position"],
-            )
-            .build();
-        dispatcher.setup(&mut world);
+        fn get_force_for_test() -> Vec3 {
+            Vec3::new(1.0, 0.0, 0.0)
+        }
+    
+        fn set_force_for_testing(
+            mut query: Query<&mut Force>
+        ) {
+            for mut force in query.iter_mut() {
+                force.force = get_force_for_test();
+            }
+        }
+
+        app.add_system_to_stage(CoreStage::Update, set_force_for_testing);
 
         // create a particle with known force and mass
-        let force = Vector3::new(1.0, 0.0, 0.0);
+        let force = get_force_for_test();
         let mass = 1.0;
-        let atom = world
-            .create_entity()
-            .with(Position {
-                pos: Vector3::new(0.0, 0.0, 0.0),
+
+        let test_entity = app.world
+            .spawn()
+            .insert(Position {
+                pos: Vec3::new(0.0, 0.0, 0.0),
             })
-            .with(Velocity {
-                vel: Vector3::new(0.0, 0.0, 0.0),
+            .insert(Velocity {
+                vel: Vec3::new(0.0, 0.0, 0.0),
             })
-            .with(Force { force })
-            .with(OldForce {
+            .insert(Force { force })
+            .insert(OldForce {
                 0: Force { force },
             })
-            .with(Mass {
+            .insert(Mass {
                 value: mass / constant::AMU,
             })
-            .build();
+            .id();
 
         let dt = 1.0e-3;
-        world.insert(Timestep { delta: dt });
-        world.insert(Step { n: 0 });
+        app.world.insert_resource(Timestep { delta: dt });
+        
 
         // run simulation loop 1_000 times.
         let n_steps = 1_000;
         for _i in 0..n_steps {
-            dispatcher.dispatch(&world);
-            world.maintain();
+            app.update()
         }
 
         let a = force / mass;
-        let expected_v = a * (n_steps as f64 * dt);
-
+        let expected_v = a * (n_steps as f32 * dt);
+        
         assert_approx_eq::assert_approx_eq!(
-            expected_v.norm(),
-            world
-                .read_storage::<Velocity>()
-                .get(atom)
-                .expect("atom not found.")
-                .vel
-                .norm(),
-            expected_v.norm() * 0.01
+            expected_v.length(),
+            app.world.entity(test_entity).get::<Velocity>().expect("test_entity does not have velocity.").vel.length(),
+            expected_v.length() * 0.01
         );
 
-        let expected_x = a * (n_steps as f64 * dt).powi(2) / 2.0;
+        let expected_x = a * (n_steps as f32 * dt).powi(2) / 2.0;
         assert_approx_eq::assert_approx_eq!(
-            expected_x.norm(),
-            world
-                .read_storage::<Position>()
-                .get(atom)
-                .expect("atom not found.")
-                .pos
-                .norm(),
-            expected_x.norm() * 0.01
+            expected_x.length(),
+            app.world.entity(test_entity).get::<Position>().expect("test_entity does not have velocity.").pos.length(),
+            expected_x.length() * 0.01
         );
     }
 }
