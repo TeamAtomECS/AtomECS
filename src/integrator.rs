@@ -138,7 +138,7 @@ impl Plugin for IntegrationPlugin {
             velocity_verlet_integrate_position.label(IntegrationSystems::VelocityVerletIntegratePosition)
         );
         app.add_system_to_stage(IntegrationStages::BeginIntegration, 
-            clear_force.label(IntegrationSystems::ClearForce)
+            clear_force.label(IntegrationSystems::ClearForce).after(IntegrationSystems::VelocityVerletIntegratePosition)
         );
         app.add_system_to_stage(IntegrationStages::BeginIntegration, 
             add_old_force_to_new_atoms.label(IntegrationSystems::AddOldForceToNewAtoms)

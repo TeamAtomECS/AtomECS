@@ -15,7 +15,7 @@ pub mod initiate;
 pub mod integrator;
 //pub mod laser;
 //pub mod laser_cooling;
-//pub mod magnetic;
+pub mod magnetic;
 //pub mod maths;
 //pub mod output;
 pub mod ramp;

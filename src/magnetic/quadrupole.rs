@@ -1,18 +1,13 @@
 //! Magnetic quadrupole fields
 
-extern crate nalgebra;
-extern crate serde;
-extern crate specs;
-use crate::atom::Position;
-use serde::Serialize;
+use bevy::prelude::*;
+use nalgebra::{Unit, Vector3};
+use super::analytic::AnalyticField;
 
-use crate::magnetic::MagneticFieldSampler;
-use crate::ramp::Lerp;
-use nalgebra::{Matrix3, Unit, Vector3};
-use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 
 /// A component representing a 3D quadrupole field.
-#[derive(Serialize, Clone, Copy, Lerp)]
+#[derive(Clone, Copy, Component)]
+#[component(storage = "SparseSet")]
 pub struct QuadrupoleField3D {
     /// Gradient of the quadrupole field, in units of Tesla/m
     pub gradient: f64,
@@ -29,94 +24,18 @@ impl QuadrupoleField3D {
         }
     }
 }
-
-impl Component for QuadrupoleField3D {
-    type Storage = HashMapStorage<Self>;
-}
-
-/// Updates the values of magnetic field samplers to include quadrupole fields in the world.
-pub struct Sample3DQuadrupoleFieldSystem;
-impl Sample3DQuadrupoleFieldSystem {
+impl AnalyticField for QuadrupoleField3D {
     /// Calculates the quadrupole magnetic field.
     /// The field is defined with components `Bx = grad*x`, `By = grad*y`, `Bz = -2 * grad * z`.
-    ///
-    /// # Arguments
-    ///
-    /// `pos`: position of the sampler, m
-    ///
-    /// `centre`: position of the quadrupole node, m
-    ///
-    /// `gradient`: quadrupole gradient, in Tesla/m
-    ///
-    /// `direction`: A _normalized_ vector pointing in the direction of the quadrupole's symmetry axis.
-    pub fn calculate_field(
-        pos: Vector3<f64>,
-        centre: Vector3<f64>,
-        gradient: f64,
-        direction: Vector3<f64>,
-    ) -> Vector3<f64> {
-        let delta = pos - centre;
-        let z_comp = delta.dot(&direction) * direction;
+    fn get_field(&self, origin: Vector3<f64>, field_point: Vector3<f64>) -> Vector3<f64> {
+        let delta = field_point - origin;
+        let z_comp = delta.dot(&self.direction) * self.direction;
         let r_comp = delta - z_comp;
-        gradient * (r_comp - 2.0 * z_comp)
+        self.gradient * (r_comp - 2.0 * z_comp)
     }
-}
 
-impl<'a> System<'a> for Sample3DQuadrupoleFieldSystem {
-    type SystemData = (
-        WriteStorage<'a, MagneticFieldSampler>,
-        ReadStorage<'a, Position>,
-        ReadStorage<'a, QuadrupoleField3D>,
-    );
-    fn run(&mut self, (mut sampler, pos, quadrupole): Self::SystemData) {
-        use rayon::prelude::*;
-        use specs::ParJoin;
-
-        for (centre, quadrupole) in (&pos, &quadrupole).join() {
-            (&pos, &mut sampler)
-                .par_join()
-                .for_each(|(pos, sampler)| {
-                    let quad_field = Sample3DQuadrupoleFieldSystem::calculate_field(
-                        pos.pos,
-                        centre.pos,
-                        quadrupole.gradient,
-                        quadrupole.direction,
-                    );
-                    sampler.field += quad_field;
-
-                    // calculate local jacobian for magnetic field gradient
-                    let mut jacobian = Matrix3::<f64>::zeros();
-                    let delta = 1e-9; // Is there a better way to choose this number?
-                                      // Strictly speaking to be accurate it depends on the length scale over which
-                                      // the magnetic field changes
-                    for i in 0..3 {
-                        let mut pos_plus_dr = pos.pos;
-                        let mut pos_minus_dr = pos.pos;
-                        pos_plus_dr[i] += delta;
-                        pos_minus_dr[i] -= delta;
-
-                        let b_plus_dr = Sample3DQuadrupoleFieldSystem::calculate_field(
-                            pos_plus_dr,
-                            centre.pos,
-                            quadrupole.gradient,
-                            quadrupole.direction,
-                        );
-                        let b_minus_dr = Sample3DQuadrupoleFieldSystem::calculate_field(
-                            pos_minus_dr,
-                            centre.pos,
-                            quadrupole.gradient,
-                            quadrupole.direction,
-                        );
-
-                        let grad_plus = (b_plus_dr - quad_field) / delta;
-                        let grad_minus = (quad_field - b_minus_dr) / delta;
-                        let gradient = (grad_plus + grad_minus) / 2.0;
-
-                        jacobian.set_column(i, &gradient);
-                    }
-                    sampler.jacobian += jacobian;
-                });
-        }
+    fn calculate_jacobian(&self) -> bool {
+        true
     }
 }
 
@@ -126,6 +45,8 @@ impl<'a> System<'a> for Sample3DQuadrupoleFieldSystem {
 /// The coordinate system is aligned such that:
 ///  * `e_x` is in the direction `direction_out`
 ///  * `e_y` is in the direction `direction_in`.
+#[derive(Clone, Copy, Component)]
+#[component(storage = "SparseSet")]
 pub struct QuadrupoleField2D {
     /// Gradient of the quadrupole field, `B'`, in units of Tesla/m
     pub gradient: f64,
@@ -152,129 +73,77 @@ impl QuadrupoleField2D {
         }
     }
 }
-impl Component for QuadrupoleField2D {
-    type Storage = HashMapStorage<Self>;
-}
-
-/// Updates the values of magnetic field samplers to include 2d quadrupole fields in the world.
-pub struct Sample2DQuadrupoleFieldSystem;
-impl Sample2DQuadrupoleFieldSystem {
-    /// Calculates 2D quadrupole magnetic field.
-    ///
-    /// # Arguments
-    ///
-    /// `pos`: position of the sampler, m
-    ///
-    /// `quad_pos`: position of the quadrupole entity, m
-    ///
-    /// `gradient`: quadrupole gradient, in Tesla/m
-    ///
-    /// `direction_in`: A unit vector in the direction for the field lines point in to the node.
-    ///
-    /// `direction_out`: A unit vector in the direction for the field lines point away from the node.
-    pub fn calculate_field(
-        pos: Vector3<f64>,
-        quad_pos: Vector3<f64>,
-        gradient: f64,
-        direction_in: Vector3<f64>,
-        direction_out: Vector3<f64>,
-    ) -> Vector3<f64> {
-        let delta = pos - quad_pos;
-        let in_comp = direction_in.dot(&delta) * direction_in;
-        let out_comp = direction_out.dot(&delta) * direction_out;
-        gradient * (out_comp - in_comp)
+impl AnalyticField for QuadrupoleField2D {
+    fn get_field(&self, origin: Vector3<f64>, field_point: Vector3<f64>) -> Vector3<f64> {
+        let delta = field_point - origin;
+        let in_comp = self.direction_in.dot(&delta) * self.direction_in;
+        let out_comp = self.direction_out.dot(&delta) * self.direction_out;
+        self.gradient * (out_comp - in_comp)
     }
-}
 
-impl<'a> System<'a> for Sample2DQuadrupoleFieldSystem {
-    type SystemData = (
-        WriteStorage<'a, MagneticFieldSampler>,
-        ReadStorage<'a, Position>,
-        ReadStorage<'a, QuadrupoleField2D>,
-    );
-    fn run(&mut self, (mut sampler, pos, quadrupole): Self::SystemData) {
-        for (centre, quadrupole) in (&pos, &quadrupole).join() {
-            for (pos, sampler) in (&pos, &mut sampler).join() {
-                let quad_field = Self::calculate_field(
-                    pos.pos,
-                    centre.pos,
-                    quadrupole.gradient,
-                    quadrupole.direction_in,
-                    quadrupole.direction_out,
-                );
-                sampler.field += quad_field;
-            }
-        }
+    fn calculate_jacobian(&self) -> bool {
+        true
     }
 }
 
 #[cfg(test)]
 pub mod tests {
 
+    use crate::integrator::BatchSize;
+
     use super::*;
     extern crate nalgebra;
-    extern crate specs;
     use assert_approx_eq::assert_approx_eq;
-    use nalgebra::Vector3;
-    use specs::prelude::*;
 
     /// Tests the correct implementation of the quadrupole 3D field
     #[test]
     fn test_quadrupole_3d_field() {
         let pos = Vector3::new(1.0, 1.0, 1.0);
         let centre = Vector3::new(0., 1., 0.);
-        let gradient = 1.;
-        let field =
-            Sample3DQuadrupoleFieldSystem::calculate_field(pos, centre, gradient, Vector3::z());
+        let quad_field = QuadrupoleField3D { gradient: 1.0, direction: Vector3::z() };
+        let field = quad_field.get_field(centre, pos);
         assert_eq!(field, Vector3::new(1., 0., -2.));
     }
 
     #[test]
 
-    fn test_quadrupole_jacobian_calculation() {
-        let mut test_world = World::new();
+    fn test_3d_quadrupole_systems() {
+        use crate::magnetic::analytic::calculate_field_contributions;
+        use crate::atom::Position;
+        use crate::magnetic::MagneticFieldSampler;
+    
+        let mut app = App::new();
+        app.insert_resource(BatchSize::default());
+        app.add_system(calculate_field_contributions::<QuadrupoleField3D>);
 
-        test_world.register::<QuadrupoleField3D>();
-        test_world.register::<Position>();
-        test_world.register::<MagneticFieldSampler>();
-
-        let atom1 = test_world
-            .create_entity()
-            .with(Position {
+        let atom1 = app.world.spawn()
+        .insert(Position {
                 pos: Vector3::new(0.02, 0.01, -0.05),
             })
-            .with(MagneticFieldSampler::default())
-            .build();
+        .insert(MagneticFieldSampler::default())
+        .id();
 
-        test_world
-            .create_entity()
-            .with(QuadrupoleField3D {
+        app.world.spawn()
+            .insert(QuadrupoleField3D {
                 gradient: 1.0,
                 direction: Vector3::new(0.0, 0.0, 1.0),
             })
-            .with(Position {
+            .insert(Position {
                 pos: Vector3::new(0.0, 0.0, 0.0),
-            })
-            .build();
+            });
 
-        test_world
-            .create_entity()
-            .with(QuadrupoleField3D {
+        app.world.spawn()
+            .insert(QuadrupoleField3D {
                 gradient: 2.0,
                 direction: Vector3::new(1.0, 0.0, 1.0).normalize(),
             })
-            .with(Position {
+            .insert(Position {
                 pos: Vector3::new(0.0, 0.0, 0.0),
-            })
-            .build();
+            });
 
-        let mut system = Sample3DQuadrupoleFieldSystem;
-        system.run_now(&test_world);
-        test_world.maintain();
-        let sampler_storage = test_world.read_storage::<MagneticFieldSampler>();
+        app.update();
 
-        let test_jacobian = sampler_storage
-            .get(atom1)
+        let test_jacobian = app.world.entity(atom1).get::<MagneticFieldSampler>()
             .expect("entity not found")
             .jacobian;
 
@@ -294,13 +163,8 @@ pub mod tests {
         let pos = Vector3::new(1.0, 1.0, 1.0);
         let centre = Vector3::new(0., 0.5, 0.);
         let gradient = 1.;
-        let field = Sample2DQuadrupoleFieldSystem::calculate_field(
-            pos,
-            centre,
-            gradient,
-            Vector3::x(),
-            Vector3::y(),
-        );
+        let quad_field = QuadrupoleField2D { gradient, direction_out: Vector3::y(), direction_in: Vector3::x() };
+        let field = quad_field.get_field(centre, pos);
         assert_eq!(field, Vector3::new(-1., 0.5, 0.));
     }
 }

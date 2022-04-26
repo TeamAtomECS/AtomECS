@@ -1,21 +1,24 @@
 //! Uniform magnetic fields
-
-extern crate nalgebra;
-extern crate specs;
-use super::MagneticFieldSampler;
+use bevy::prelude::*;
+use super::analytic::AnalyticField;
 use crate::ramp::Lerp;
 use nalgebra::Vector3;
-use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
 
 /// A component representing a uniform bias field, of the form `B = [ B_x, B_y, B_z ]`
-#[derive(Clone, Lerp)]
+#[derive(Clone, Copy, Component, Lerp)]
+#[component(storage = "SparseSet")]
 pub struct UniformMagneticField {
     /// Vector field components with respect to the x,y,z cartesian axes, in units of Tesla.
     pub field: Vector3<f64>,
 }
+impl AnalyticField for UniformMagneticField {
+    fn get_field(&self, _origin: Vector3<f64>, _field_point: Vector3<f64>) -> Vector3<f64> {
+        self.field
+    }
 
-impl Component for UniformMagneticField {
-    type Storage = HashMapStorage<Self>;
+    fn calculate_jacobian(&self) -> bool {
+        false // no point - zero everywhere.
+    }
 }
 
 impl UniformMagneticField {
@@ -29,25 +32,5 @@ impl UniformMagneticField {
     /// Create a UniformMagneticField with components specified in units of Tesla.
     pub fn tesla(components: Vector3<f64>) -> UniformMagneticField {
         UniformMagneticField { field: components }
-    }
-}
-
-/// Updates the values of magnetic field samplers to include uniform magnetic fields in the world.
-pub struct UniformMagneticFieldSystem;
-
-impl<'a> System<'a> for UniformMagneticFieldSystem {
-    type SystemData = (
-        WriteStorage<'a, MagneticFieldSampler>,
-        ReadStorage<'a, UniformMagneticField>,
-    );
-    fn run(&mut self, (mut samplers, fields): Self::SystemData) {
-        use rayon::prelude::*;
-        use specs::ParJoin;
-
-        for field in (&fields).join() {
-            (&mut samplers).par_join().for_each(|sampler| {
-                sampler.field += field.field;
-            });
-        }
     }
 }

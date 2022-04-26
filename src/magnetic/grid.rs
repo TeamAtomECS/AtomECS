@@ -1,11 +1,8 @@
 //! Define magnetic fields using grids.
-
-extern crate nalgebra;
-use crate::atom::Position;
+use crate::{atom::Position, integrator::BatchSize};
 use crate::magnetic::MagneticFieldSampler;
+use bevy::{prelude::*, tasks::ComputeTaskPool};
 use nalgebra::Vector3;
-use specs::{Component, HashMapStorage, Join, ReadStorage, System, WriteStorage};
-extern crate serde;
 use serde::{Deserialize, Serialize};
 
 /// Defines a magnetic field using a grid-based representation.
@@ -22,7 +19,7 @@ use serde::{Deserialize, Serialize};
 /// `extent_cells`: Size of the grid in cells, along the (x,y,z) axes.
 ///
 /// `grid`: `Vec<Vector3<f64>>` containing the field at each grid cell.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Component)]
 pub struct PrecalculatedMagneticFieldGrid {
     pub extent_spatial: Vector3<f64>,
     pub position: Vector3<f64>,
@@ -57,25 +54,21 @@ impl PrecalculatedMagneticFieldGrid {
     }
 }
 
-impl Component for PrecalculatedMagneticFieldGrid {
-    type Storage = HashMapStorage<Self>;
-}
-
-/// Samples from the MagneticFieldGrid at a `Position` and stores
-/// result in `MagneticFieldSampler`
-pub struct SampleMagneticGridSystem;
-impl<'a> System<'a> for SampleMagneticGridSystem {
-    type SystemData = (
-        WriteStorage<'a, MagneticFieldSampler>,
-        ReadStorage<'a, Position>,
-        ReadStorage<'a, PrecalculatedMagneticFieldGrid>,
-    );
-    fn run(&mut self, (mut sampler, pos, grids): Self::SystemData) {
-        for grid in (&grids).join() {
-            for (pos, sampler) in (&pos, &mut sampler).join() {
+/// Samples from the [MagneticFieldGrid] at each [Position] and stores
+/// results in the [MagneticFieldSampler]s
+pub fn sample_magnetic_grids(
+    grid_query: Query<&PrecalculatedMagneticFieldGrid>,
+    mut sampler_query: Query<(&Position, &mut MagneticFieldSampler)>,
+    pool: Res<ComputeTaskPool>,
+    batch_size: Res<BatchSize>,
+) {
+    for grid in grid_query.iter() {
+        sampler_query.par_for_each_mut(
+            &pool, batch_size.0,
+            |(pos, mut sampler)| {
                 let field = grid.get_field(&pos.pos);
                 sampler.field += field;
             }
-        }
+        );
     }
 }
