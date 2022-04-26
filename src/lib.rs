@@ -18,7 +18,7 @@ pub mod integrator;
 //pub mod magnetic;
 //pub mod maths;
 //pub mod output;
-//pub mod ramp;
+pub mod ramp;
 //pub mod shapes;
 //pub mod sim_region;
 //pub mod species;

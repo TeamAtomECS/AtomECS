@@ -5,6 +5,7 @@ use crate::constant;
 use crate::initiate::NewlyCreated;
 use bevy::prelude::*;
 use bevy::tasks::ComputeTaskPool;
+use nalgebra::Vector3;
 
 /// Tracks the number of the current integration step.
 pub struct Step {
@@ -25,7 +26,7 @@ impl Default for Step {
 /// to simulate the same total simulation time.
 pub struct Timestep {
     /// Duration of the simulation timestep, in SI units of seconds.
-    pub delta: f32,
+    pub delta: f64,
 }
 impl Default for Timestep {
     fn default() -> Self {
@@ -100,7 +101,7 @@ fn clear_force(
     query.par_for_each_mut(
         &pool, batch_size.0,
         |mut force| {
-            force.force = Vec3::new(0.0,0.0,0.0);
+            force.force = Vector3::new(0.0,0.0,0.0);
         }
     )
 }
@@ -172,8 +173,8 @@ pub mod tests {
         let mut app = App::new();
         app.add_plugin(IntegrationPlugin);
 
-        fn get_force_for_test() -> Vec3 {
-            Vec3::new(1.0, 0.0, 0.0)
+        fn get_force_for_test() -> Vector3<f64> {
+            Vector3::new(1.0, 0.0, 0.0)
         }
     
         fn set_force_for_testing(
@@ -193,10 +194,10 @@ pub mod tests {
         let test_entity = app.world
             .spawn()
             .insert(Position {
-                pos: Vec3::new(0.0, 0.0, 0.0),
+                pos: Vector3::new(0.0, 0.0, 0.0),
             })
             .insert(Velocity {
-                vel: Vec3::new(0.0, 0.0, 0.0),
+                vel: Vector3::new(0.0, 0.0, 0.0),
             })
             .insert(Force { force })
             .insert(OldForce {
@@ -218,19 +219,19 @@ pub mod tests {
         }
 
         let a = force / mass;
-        let expected_v = a * (n_steps as f32 * dt);
+        let expected_v = a * (n_steps as f64 * dt);
         
         assert_approx_eq::assert_approx_eq!(
-            expected_v.length(),
-            app.world.entity(test_entity).get::<Velocity>().expect("test_entity does not have velocity.").vel.length(),
-            expected_v.length() * 0.01
+            expected_v.norm(),
+            app.world.entity(test_entity).get::<Velocity>().expect("test_entity does not have velocity.").vel.norm(),
+            expected_v.norm() * 0.01
         );
 
-        let expected_x = a * (n_steps as f32 * dt).powi(2) / 2.0;
+        let expected_x = a * (n_steps as f64 * dt).powi(2) / 2.0;
         assert_approx_eq::assert_approx_eq!(
-            expected_x.length(),
-            app.world.entity(test_entity).get::<Position>().expect("test_entity does not have velocity.").pos.length(),
-            expected_x.length() * 0.01
+            expected_x.norm(),
+            app.world.entity(test_entity).get::<Position>().expect("test_entity does not have velocity.").pos.norm(),
+            expected_x.norm() * 0.01
         );
     }
 }

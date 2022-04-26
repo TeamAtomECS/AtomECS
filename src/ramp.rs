@@ -12,9 +12,9 @@
 //!   * The struct implements `Clone`.
 //!   * The fields can all be multiplied by an f64 and added (eg `f64` and `Vector3<f64>` types).
 
-use specs::prelude::*;
+use bevy::{prelude::*, tasks::ComputeTaskPool};
 
-use crate::integrator::{Step, Timestep};
+use crate::integrator::{Step, Timestep, BatchSize};
 use std::marker::PhantomData;
 
 pub trait Lerp<T> {
@@ -22,6 +22,7 @@ pub trait Lerp<T> {
     fn lerp(&self, b: &T, amount: f64) -> Self;
 }
 
+#[derive(Component)]
 pub struct Ramp<T>
 where
     T: Lerp<T> + Component + Clone,
@@ -69,65 +70,52 @@ where
     }
 }
 
-impl<T> Component for Ramp<T>
-where
-    T: Lerp<T> + Component + Sync + Send + Clone,
-{
-    type Storage = HashMapStorage<Self>;
+fn apply_ramp<T>(
+    mut query: Query<(&mut T, &mut Ramp<T>)>,
+    pool: Res<ComputeTaskPool>,
+    batch_size: Res<BatchSize>,
+    timestep: Res<Timestep>,
+    step: Res<Step>
+) where
+    T: Lerp<T> + Component + Sync + Send + Clone {
+        let current_time = step.n as f64 * timestep.delta;
+        query.par_for_each_mut(&pool, batch_size.0, 
+        |(mut comp, mut ramp)| {
+            comp.clone_from(&ramp.get_value(current_time));
+        }
+        );
 }
 
-pub struct RampUpdateSystem<T>
-where
-    T: Component,
-    T: Lerp<T>,
-{
-    ramped: PhantomData<T>,
+/// Implements ramping of a given component type.
+pub struct RampPlugin<T>
+where T: Lerp<T> + Component + Sync + Send + Clone {
+    phantom: PhantomData<T>
 }
-
-impl<T> Default for RampUpdateSystem<T>
+impl<T> Default for RampPlugin<T>
 where
-    T: Component,
-    T: Lerp<T>,
+T: Lerp<T> + Component + Sync + Send + Clone,
 {
     fn default() -> Self {
         Self {
-            ramped: PhantomData,
+            phantom: PhantomData,
         }
     }
 }
 
-impl<'a, T> System<'a> for RampUpdateSystem<T>
-where
-    T: Lerp<T> + Component + Sync + Send + Clone,
-{
-    type SystemData = (
-        WriteStorage<'a, T>,
-        WriteStorage<'a, Ramp<T>>,
-        ReadExpect<'a, Timestep>,
-        ReadExpect<'a, Step>,
-    );
 
-    fn run(&mut self, (mut comps, mut ramps, timestep, step): Self::SystemData) {
-        let current_time = step.n as f64 * timestep.delta;
-
-        for (ramp, comp) in (&mut ramps, &mut comps).join() {
-            comp.clone_from(&ramp.get_value(current_time));
-        }
+impl<T> Plugin for RampPlugin<T>
+where T: Lerp<T> + Component + Sync + Send + Clone {
+    fn build(&self, app: &mut App) {
+        app.add_system_to_stage(CoreStage::Update, apply_ramp::<T>);
     }
 }
 
 pub mod tests {
     use super::*;
-    extern crate specs;
-    use specs::{Component, HashMapStorage};
 
-    #[derive(Clone, Lerp)]
+    #[derive(Clone, Lerp, Component)]
     struct ALerpComp {
         value: f64,
-    }
-
-    impl Component for ALerpComp {
-        type Storage = HashMapStorage<Self>;
     }
 
     #[test]
@@ -171,20 +159,11 @@ pub mod tests {
 
     #[test]
     fn test_ramp_system() {
-        use crate::integrator::VelocityVerletIntegratePositionSystem;
         use assert_approx_eq::assert_approx_eq;
-        use specs::{Builder, DispatcherBuilder, ReadStorage, World};
-
-        let mut test_world = World::new();
-        let mut dispatcher = DispatcherBuilder::new()
-            .with(VelocityVerletIntegratePositionSystem, "integrator", &[])
-            .with(
-                RampUpdateSystem::<ALerpComp>::default(),
-                "update_lerp_comp",
-                &["integrator"],
-            )
-            .build();
-        dispatcher.setup(&mut test_world);
+        
+        let mut app = App::new();
+        app.add_plugin(RampPlugin::<ALerpComp>::default());
+        app.add_plugin(crate::integrator::IntegrationPlugin);
 
         let frames = vec![
             (0.0, ALerpComp { value: 0.0 }),
@@ -194,23 +173,20 @@ pub mod tests {
             keyframes: frames,
         };
 
-        let test_entity = test_world
-            .create_entity()
-            .with(ALerpComp { value: 0.0 })
-            .with(ramp)
-            .build();
+        let test_entity = app.world.spawn().insert(ALerpComp { value: 0.0 })
+            .insert(ramp)
+            .id();
 
         let dt = 0.1;
-        test_world.insert(Timestep { delta: dt });
-        test_world.insert(Step { n: 0 });
+        app.world.insert_resource(Timestep { delta: dt });
+        app.world.insert_resource(Step { n: 0 });
 
         // Perform dispatcher loop to ramp components.
         for i in 1..10 {
-            dispatcher.dispatch(&test_world);
+            app.update();
 
-            let comps: ReadStorage<ALerpComp> = test_world.system_data();
             assert_approx_eq!(
-                comps.get(test_entity).expect("Entity not found").value,
+                app.world.entity(test_entity).get::<ALerpComp>().expect("could not get component.").value,
                 i as f64 * dt,
                 std::f64::EPSILON
             );
