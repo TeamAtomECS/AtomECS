@@ -25,6 +25,7 @@ fn main() {
     app.add_system(lib::output::console_output::console_output);
     app.add_system(lib::bevy_bridge::copy_positions);
     app.add_startup_system(setup);
+    app.add_startup_system(setup_atoms);
     app.insert_resource(lib::bevy_bridge::Scale { 0: 1e4 });
 
     // Create magnetic field.
@@ -48,23 +49,14 @@ fn main() {
     app.run();
 }
 
-fn setup(
-    mut commands: Commands,
+fn setup_atoms(mut commands: Commands, 
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // set up the camera
-    let mut camera = OrthographicCameraBundle::new_3d();
-    camera.orthographic_projection.scale = 3.0;
-    camera.transform = Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y);
-
-    // camera
-    commands.spawn_bundle(camera);
-
     let p_dist = Normal::new(0.0, 50e-6).unwrap();
     let v_dist = Normal::new(0.0, 0.004).unwrap(); // ~100nK
 
-    for _i in 0..1000 {
+    for _i in 0..10000 {
         commands
             .spawn()
             .insert(Position {
@@ -91,8 +83,24 @@ fn setup(
                 material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
                 transform: Transform::from_xyz(1.5, 0.5, 1.5),
                 ..default()
-            });
+            })
+            ;
     }
+}
+
+fn setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    // set up the camera
+    let mut camera = OrthographicCameraBundle::new_3d();
+    camera.orthographic_projection.scale = 3.0;
+    camera.transform = Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y);
+
+    // camera
+    commands.spawn_bundle(camera);
+
 
     commands.spawn_bundle(PointLightBundle {
         transform: Transform::from_xyz(3.0, 8.0, 5.0),
