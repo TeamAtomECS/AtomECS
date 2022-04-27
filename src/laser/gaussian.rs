@@ -1,11 +1,8 @@
 //! Gaussian beam intensity distribution
 
-extern crate nalgebra;
-extern crate rayon;
-extern crate specs;
 use crate::laser::frame::Frame;
 use nalgebra::Vector3;
-use specs::{Component, HashMapStorage};
+use bevy::prelude::*;
 
 use crate::atom::Position;
 use crate::constant::EXP;
@@ -21,7 +18,8 @@ use serde::{Deserialize, Serialize};
 ///
 /// Also, attenuation effects are not yet implemented but they might come in a version
 /// that accounts for atom-atom intereactions in the future.
-#[derive(Deserialize, Serialize, Clone, Copy, Lerp)]
+#[derive(Deserialize, Serialize, Clone, Copy, Lerp, Component)]
+#[component(storage = "SparseSet")]
 pub struct GaussianBeam {
     /// A point that the laser beam intersects
     pub intersection: Vector3<f64>,
@@ -46,9 +44,6 @@ pub struct GaussianBeam {
 
     /// ellipticity
     pub ellipticity: f64,
-}
-impl Component for GaussianBeam {
-    type Storage = HashMapStorage<Self>;
 }
 impl GaussianBeam {
     /// Create a GaussianBeam component by specifying the peak intensity, rather than power.
@@ -149,14 +144,14 @@ impl GaussianBeam {
 
 /// A component that covers the central portion of a laser beam.
 ///
-/// The mask is assumed to be coaxial to the GaussianBeam.
-#[derive(Clone, Copy)]
+/// The mask is assumed to be coaxial to the [GaussianBeam].
+/// 
+/// Not currently supported for gradients.
+#[derive(Clone, Copy, Component)]
+#[component(storage = "SparseSet")]
 pub struct CircularMask {
     /// Radius of the masked region in units of m.
     pub radius: f64,
-}
-impl Component for CircularMask {
-    type Storage = HashMapStorage<Self>;
 }
 
 /// Returns the intensity of a gaussian laser beam at the specified position.
@@ -245,12 +240,8 @@ pub fn get_gaussian_beam_intensity_gradient(
 pub mod tests {
 
     use super::*;
-
-    extern crate specs;
     use crate::constant::PI;
     use assert_approx_eq::assert_approx_eq;
-
-    extern crate nalgebra;
     use nalgebra::Vector3;
 
     #[test]

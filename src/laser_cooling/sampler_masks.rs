@@ -1,39 +1,32 @@
 //! Additional utilities for laser samplers.
 extern crate serde;
-use crate::laser::index::LaserIndex;
+use crate::{laser::index::LaserIndex, integrator::BatchSize};
 use serde::Serialize;
-use specs::prelude::*;
-extern crate nalgebra;
-
-use crate::laser_cooling::CoolingLight;
+use bevy::{prelude::*, tasks::ComputeTaskPool};
+//use crate::laser_cooling::CoolingLight;
 
 /// Tracks which slots in the laser sampler arrays are currently used for cooling light.
 #[derive(Clone, Copy, Default, Serialize)]
-pub struct LaserSamplerMask {
+pub struct CoolingLaserSamplerMask {
     /// Marks whether a cooling light exists for this slot in the laser sampler array.
     pub filled: bool,
 }
-/// Component that holds a vector of `LaserSamplerMask`
+
+/// Component that holds a vector of [LaserSamplerMask]
+#[derive(Component)]
+#[component(storage = "SparseSet")]
 pub struct CoolingLaserSamplerMasks<const N: usize> {
     /// List of `LaserSamplerMask`s
-    pub contents: [LaserSamplerMask; N],
-}
-impl<const N: usize> Component for CoolingLaserSamplerMasks<N> {
-    type Storage = VecStorage<Self>;
+    pub contents: [CoolingLaserSamplerMask; N],
 }
 
-/// Marks all laser sampler mask slots as empty.
-pub struct InitialiseLaserSamplerMasksSystem<const N: usize>;
-
-impl<'a, const N: usize> System<'a> for InitialiseLaserSamplerMasksSystem<N> {
-    type SystemData = (WriteStorage<'a, CoolingLaserSamplerMasks<N>>,);
-
-    fn run(&mut self, (mut masks,): Self::SystemData) {
-        use rayon::prelude::*;
-
-        (&mut masks).par_join().for_each(|mask| {
-            mask.contents = [LaserSamplerMask::default(); N];
-        });
+/// Marks all [LaserSamplerMasks] as empty.
+pub fn initialise_laser_sampler_masks<const N: usize>(
+    mut query: Query<&mut CoolingLaserSamplerMasks<N>>,
+) {
+    for masks in query.iter()
+    {
+        masks.contents = [CoolingLaserSamplerMask::default(); N];
     }
 }
 
@@ -56,3 +49,7 @@ impl<'a, const N: usize> System<'a> for FillLaserSamplerMasksSystem<N> {
         }
     }
 }
+
+pub fn fill_laser_sampler_masks<const N: usize>(
+    mut query: Query<&mut 
+)

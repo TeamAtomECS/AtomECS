@@ -21,12 +21,12 @@ fn main() {
     // Add magnetics systems (todo: as plugin)
     app.add_plugin(lib::integrator::IntegrationPlugin);
     app.add_plugin(lib::magnetic::MagneticsPlugin);
-    app.add_plugins(DefaultPlugins);
     app.add_system(lib::output::console_output::console_output);
+    app.add_plugins(DefaultPlugins);
     app.add_system(lib::bevy_bridge::copy_positions);
     app.add_startup_system(setup);
-    app.add_startup_system(setup_atoms);
     app.insert_resource(lib::bevy_bridge::Scale { 0: 1e4 });
+    app.add_startup_system(setup_atoms);
 
     // Create magnetic field.
     app.world.spawn()
@@ -44,7 +44,7 @@ fn main() {
 
     // Run the simulation for a number of steps.
     // for _i in 0..10000 {
-    //     app.update();
+    //      app.update();
     // }
     app.run();
 }
@@ -56,7 +56,7 @@ fn setup_atoms(mut commands: Commands,
     let p_dist = Normal::new(0.0, 50e-6).unwrap();
     let v_dist = Normal::new(0.0, 0.004).unwrap(); // ~100nK
 
-    for _i in 0..10000 {
+    for _i in 0..5000 {
         commands
             .spawn()
             .insert(Position {

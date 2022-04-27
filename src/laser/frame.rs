@@ -1,20 +1,14 @@
-//! Reference Frame orthogonal to the beam
+//! Reference frame orthogonal to the beam
 
-extern crate nalgebra;
-extern crate rayon;
-extern crate specs;
+use bevy::prelude::*;
 use nalgebra::Vector3;
-use specs::Component;
-use specs::VecStorage;
 
 /// A component that stores the orthonormal basis vectors of a reference frame orthogonal to the beam.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Component)]
+#[component(storage = "SparseSet")]
 pub struct Frame {
     pub x_vector: Vector3<f64>,
     pub y_vector: Vector3<f64>,
-}
-impl Component for Frame {
-    type Storage = VecStorage<Self>;
 }
 
 impl Frame {

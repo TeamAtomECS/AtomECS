@@ -139,6 +139,11 @@ impl<'a, T, const N: usize> System<'a> for AttachLaserCoolingComponentsToNewlyCr
     }
 }
 
+//Also add:
+.insert(sampler::CoolingLaserSamplerMasks {
+    contents: [sampler::LaserSamplerMask::default(); N],
+})
+
 /// A system that attaches `LaserIndex` components to entities which have `CoolingLight` but no index.
 pub struct AttachIndexToCoolingLightSystem;
 impl<'a> System<'a> for AttachIndexToCoolingLightSystem {
@@ -276,6 +281,17 @@ fn add_systems_to_dispatch<T, const N: usize>(
         deps,
     );
 }
+
+builder.add(
+    sampler::InitialiseLaserSamplerMasksSystem::<N>,
+    "initialise_laser_sampler_masks",
+    deps,
+);
+builder.add(
+    sampler::FillLaserSamplerMasksSystem::<N>,
+    "fill_laser_sampler_masks",
+    &["index_lasers", "initialise_laser_sampler_masks"],
+);
 
 #[cfg(test)]
 pub mod tests {

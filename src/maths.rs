@@ -2,7 +2,6 @@
 
 use crate::constant::EXP;
 use crate::constant::PI;
-extern crate nalgebra;
 use nalgebra::Vector3;
 
 /// Get relative coordinates between a point and a line.
