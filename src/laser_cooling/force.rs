@@ -1,23 +1,20 @@
 //! Calculation of the forces exerted on the atom by the CoolingLight entities
 
-use std::marker::PhantomData;
-
 use super::CoolingLight;
 use super::transition::{TransitionComponent};
 use crate::constant;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
 use crate::laser_cooling::photons_scattered::ActualPhotonsScatteredVector;
+use bevy::tasks::ComputeTaskPool;
+use bevy::prelude::*;
 use nalgebra::Vector3;
 use rand_distr;
 use rand_distr::{Distribution, Normal, UnitSphere};
-use rayon;
-
-use specs::prelude::*;
 
 use crate::atom::Force;
 use crate::constant::HBAR;
-use crate::integrator::Timestep;
+use crate::integrator::{Timestep, BatchSize};
 
 use crate::laser_cooling::repump::*;
 
@@ -29,63 +26,41 @@ const LASER_CACHE_SIZE: usize = 16;
 /// s already populated with the correct terms. Furthermore, it is assumed that a
 /// `CoolingLightIndex` is present and assigned for all cooling lasers, with an index
 /// corresponding to the entries in the `ActualPhotonsScatteredVector` vector.
-#[derive(Default)]
-pub struct CalculateAbsorptionForcesSystem<T, const N: usize>(PhantomData<T>) where T : TransitionComponent;
+pub fn calculate_absorption_forces<const N: usize, T : TransitionComponent>(
+    laser_query: Query<(&CoolingLight, &LaserIndex, &GaussianBeam)>,
+    mut atom_query: Query<(&ActualPhotonsScatteredVector<T,N>, &mut Force), Without<Dark>>,
+    task_pool: Res<ComputeTaskPool>,
+    batch_size: Res<BatchSize>,
+    timestep: Res<Timestep>
+) {
+    // There are typically only a small number of lasers in a simulation.
+    // For a speedup, cache the required components into thread memory,
+    // so they can be distributed to parallel workers during the atom loop.
+    type CachedLaser = (CoolingLight, LaserIndex, GaussianBeam);
+    let mut laser_cache: Vec<CachedLaser> = Vec::new();
+    for (cooling, index, gaussian) in laser_query.iter() {
+        laser_cache.push((*cooling, *index, *gaussian));
+    }
 
-impl<'a, T, const N: usize> System<'a> for CalculateAbsorptionForcesSystem<T, N> where T : TransitionComponent {
-    type SystemData = (
-        ReadStorage<'a, LaserIndex>,
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, GaussianBeam>,
-        ReadStorage<'a, ActualPhotonsScatteredVector<T, N>>,
-        WriteStorage<'a, Force>,
-        ReadExpect<'a, Timestep>,
-        ReadStorage<'a, Dark>,
-    );
+    // Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
+    for base_index in (0..laser_cache.len()).step_by(LASER_CACHE_SIZE) {
+        let max_index = laser_cache.len().min(base_index + LASER_CACHE_SIZE);
+        let slice = &laser_cache[base_index..max_index];
+        let mut laser_array = vec![laser_cache[0]; LASER_CACHE_SIZE];
+        laser_array[..max_index].copy_from_slice(slice);
+        let number_in_iteration = slice.len();
 
-    fn run(
-        &mut self,
-        (
-            cooling_index,
-            cooling_light,
-            gaussian_beam,
-            actual_scattered_vector,
-            mut forces,
-            timestep,
-            _dark,
-        ): Self::SystemData,
-    ) {
-        use rayon::prelude::*;
-
-        // There are typically only a small number of lasers in a simulation.
-        // For a speedup, cache the required components into thread memory,
-        // so they can be distributed to parallel workers during the atom loop.
-        type CachedLaser = (CoolingLight, LaserIndex, GaussianBeam);
-        let laser_cache: Vec<CachedLaser> = (&cooling_light, &cooling_index, &gaussian_beam)
-            .join()
-            .map(|(cooling, index, gaussian)| (*cooling, *index, *gaussian))
-            .collect();
-
-        // Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
-        for base_index in (0..laser_cache.len()).step_by(LASER_CACHE_SIZE) {
-            let max_index = laser_cache.len().min(base_index + LASER_CACHE_SIZE);
-            let slice = &laser_cache[base_index..max_index];
-            let mut laser_array = vec![laser_cache[0]; LASER_CACHE_SIZE];
-            laser_array[..max_index].copy_from_slice(slice);
-            let number_in_iteration = slice.len();
-
-            (&actual_scattered_vector, &mut forces, !&_dark)
-                .par_join()
-                .for_each(|(scattered, force, _)| {
-                    for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
-                        let new_force = scattered.contents[index.index].scattered * HBAR
-                            / timestep.delta
-                            * gaussian.direction.normalize()
-                            * cooling.wavenumber();
-                        force.force += new_force;
-                    }
-                })
-        }
+        atom_query.par_for_each_mut(&task_pool, batch_size.0, 
+            |(scattered, mut force)| {
+                for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
+                    let new_force = scattered.contents[index.index].scattered * HBAR
+                        / timestep.delta
+                        * gaussian.direction.normalize()
+                        * cooling.wavenumber();
+                    force.force += new_force;
+                }
+            }
+        );
     }
 }
 
@@ -123,63 +98,53 @@ pub struct EmissionForceConfiguration {
 ///
 /// Uses an internal threshold of 5 to decide if the random vektor is iteratively
 /// produced or derived by random-walk formula and a single random unit vector.
-#[derive(Default)]
-pub struct ApplyEmissionForceSystem<T, const N: usize>(PhantomData<T>) where T : TransitionComponent;
+pub fn calculate_emission_forces<const N: usize, T : TransitionComponent>(
+    mut atom_query: Query<(&mut Force, &ActualPhotonsScatteredVector<T,N>), With<T>>,
+    task_pool: Res<ComputeTaskPool>,
+    batch_size: Res<BatchSize>,
+    rand_opt: Option<Res<EmissionForceOption>>,
+    timestep: Res<Timestep>
+) {
+    match rand_opt {
+        None => (),
+        Some(opt) => {
+            match *opt {
+                EmissionForceOption::Off => {}
+                EmissionForceOption::On(configuration) => {
+                    atom_query.par_for_each_mut(
+                        &task_pool,
+                        batch_size.0,
+                        |(mut force, kick)| {
+                            let total: u64 = kick.calculate_total_scattered();
+                            let mut rng = rand::thread_rng();
+                            let omega = 2.0 * constant::PI * T::frequency();
+                            let force_one_kick =
+                                constant::HBAR * omega / constant::C / timestep.delta;
+                            if total > configuration.explicit_threshold {
+                                // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
+                                //Three-Dimensional Random Walk Processes*
+                                let normal = Normal::new(
+                                    0.0,
+                                    (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
+                                )
+                                .unwrap();
 
-impl<'a, T, const N: usize> System<'a> for ApplyEmissionForceSystem<T, N> where T : TransitionComponent {
-    type SystemData = (
-        Option<Read<'a, EmissionForceOption>>,
-        WriteStorage<'a, Force>,
-        ReadStorage<'a, ActualPhotonsScatteredVector<T, N>>,
-        ReadStorage<'a, T>,
-        ReadExpect<'a, Timestep>,
-    );
-
-    fn run(
-        &mut self,
-        (rand_opt, mut force, actual_scattered_vector, transition, timestep): Self::SystemData,
-    ) {
-        use rayon::prelude::*;
-
-        match rand_opt {
-            None => (),
-            Some(opt) => {
-                match *opt {
-                    EmissionForceOption::Off => {}
-                    EmissionForceOption::On(configuration) => {
-                        (&mut force, &transition, &actual_scattered_vector)
-                            .par_join()
-                            .for_each(|(force, _atom_info, kick)| {
-                                let total: u64 = kick.calculate_total_scattered();
-                                let mut rng = rand::thread_rng();
-                                let omega = 2.0 * constant::PI * T::frequency();
-                                let force_one_kick =
-                                    constant::HBAR * omega / constant::C / timestep.delta;
-                                if total > configuration.explicit_threshold {
-                                    // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
-                                    //Three-Dimensional Random Walk Processes*
-                                    let normal = Normal::new(
-                                        0.0,
-                                        (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
-                                    )
-                                    .unwrap();
-
-                                    let force_n_kicks = Vector3::new(
-                                        normal.sample(&mut rng),
-                                        normal.sample(&mut rng),
-                                        normal.sample(&mut rng),
-                                    );
-                                    force.force += force_n_kicks;
-                                } else {
-                                    // explicit random walk implementation
-                                    for _i in 0..total {
-                                        let v: [f64; 3] = UnitSphere.sample(&mut rng);
-                                        force.force +=
-                                            force_one_kick * Vector3::new(v[0], v[1], v[2]);
-                                    }
+                                let force_n_kicks = Vector3::new(
+                                    normal.sample(&mut rng),
+                                    normal.sample(&mut rng),
+                                    normal.sample(&mut rng),
+                                );
+                                force.force += force_n_kicks;
+                            } else {
+                                // explicit random walk implementation
+                                for _i in 0..total {
+                                    let v: [f64; 3] = UnitSphere.sample(&mut rng);
+                                    force.force +=
+                                        force_one_kick * Vector3::new(v[0], v[1], v[2]);
                                 }
-                            });
-                    }
+                            }
+                        }
+                    );
                 }
             }
         }

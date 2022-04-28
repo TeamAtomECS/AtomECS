@@ -1,17 +1,16 @@
 //! Calculation of the steady-state twolevel populations
 
-extern crate rayon;
+use crate::integrator::BatchSize;
 
-use crate::laser::sampler::CoolingLaserSamplerMasks;
-use crate::laser_cooling::rate::RateCoefficients;
+use super::{rate::RateCoefficients, sampler_masks::CoolingLaserSamplerMasks};
 use serde::{Deserialize, Serialize};
-use specs::prelude::*;
+use bevy::{prelude::*, tasks::ComputeTaskPool};
 use std::{fmt, marker::PhantomData};
 
 use super::transition::{TransitionComponent};
 
 /// Represents the steady-state population density of the excited state and ground state for a given atomic transition.
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Component)]
 pub struct TwoLevelPopulation<T> where T : TransitionComponent {
     /// steady-state population density of the ground state, a number in [0,1]
     pub ground: f64,
@@ -19,13 +18,11 @@ pub struct TwoLevelPopulation<T> where T : TransitionComponent {
     pub excited: f64,
     marker: PhantomData<T>,
 }
-
 impl<T> fmt::Display for TwoLevelPopulation<T> where T : TransitionComponent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "g:{},e:{}", self.ground, self.excited)
     }
 }
-
 impl<T> Default for TwoLevelPopulation<T> where T : TransitionComponent {
     fn default() -> Self {
         TwoLevelPopulation {
@@ -37,7 +34,6 @@ impl<T> Default for TwoLevelPopulation<T> where T : TransitionComponent {
         }
     }
 }
-
 impl<T> TwoLevelPopulation<T> where T : TransitionComponent {
     /// Calculate the ground state population from excited state population
     pub fn calculate_ground_state(&mut self) {
@@ -49,54 +45,32 @@ impl<T> TwoLevelPopulation<T> where T : TransitionComponent {
     }
 }
 
-impl<T> Component for TwoLevelPopulation<T> where T : TransitionComponent + 'static {
-    type Storage = VecStorage<Self>;
-}
-
 /// Calculates the TwoLevelPopulation from the natural linewidth and the `RateCoefficients`
-#[derive(Default)]
-pub struct CalculateTwoLevelPopulationSystem<T, const N: usize>(PhantomData<T>) where T: TransitionComponent;
+pub fn calculate_two_level_population<const N: usize, T : TransitionComponent>(
+    mut atom_query: Query<(&mut TwoLevelPopulation<T>, &CoolingLaserSamplerMasks<N>, &RateCoefficients<T,N>), With<T>>,
+    task_pool: Res<ComputeTaskPool>,
+    batch_size: Res<BatchSize>
+) {
+    atom_query.par_for_each_mut(&task_pool, batch_size.0,
+        |(mut twolevel, mask, rates)| {
+            let mut sum_rates: f64 = 0.;
 
-impl<'a, T, const N: usize> System<'a> for CalculateTwoLevelPopulationSystem<T, N> where T: TransitionComponent {
-    type SystemData = (
-        ReadStorage<'a, T>,
-        ReadStorage<'a, RateCoefficients<T, N>>,
-        ReadStorage<'a, CoolingLaserSamplerMasks<N>>,
-        WriteStorage<'a, TwoLevelPopulation<T>>,
-    );
-
-    fn run(
-        &mut self,
-        (transition, rate_coefficients, masks, mut twolevel_population): Self::SystemData,
-    ) {
-        use rayon::prelude::*;
-
-        (
-            &transition,
-            &rate_coefficients,
-            &masks,
-            &mut twolevel_population,
-        )
-            .par_join()
-            .for_each(|(_transition, rates, mask, twolevel)| {
-                let mut sum_rates: f64 = 0.;
-
-                for count in 0..rates.contents.len() {
-                    if mask.contents[count].filled {
-                        sum_rates += rates.contents[count].rate;
-                    }
+            for count in 0..rates.contents.len() {
+                if mask.contents[count].filled {
+                    sum_rates += rates.contents[count].rate;
                 }
-                twolevel.excited = sum_rates / (T::gamma() + 2. * sum_rates);
-                twolevel.calculate_ground_state();
-            });
-    }
+            }
+            twolevel.excited = sum_rates / (T::gamma() + 2. * sum_rates);
+            twolevel.calculate_ground_state();
+        }
+    );
 }
 
 #[cfg(test)]
 pub mod tests {
 
     use super::*;
-    use crate::{laser::{DEFAULT_BEAM_LIMIT, sampler::LaserSamplerMask}, species::{Strontium88_461, Rubidium87_780D2}, laser_cooling::{rate::RateCoefficient, transition::AtomicTransition}};
+    use crate::{laser::DEFAULT_BEAM_LIMIT, laser_cooling::sampler_masks::LaserSamplerMask, species::{Strontium88_461, Rubidium87_780D2}, laser_cooling::{rate::RateCoefficient, transition::AtomicTransition}};
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
 

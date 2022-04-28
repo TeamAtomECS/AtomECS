@@ -1,4 +1,4 @@
-use specs::prelude::*;
+use bevy::prelude::*;
 
 /// Physical constants of an atomic transition used for laser cooling.
 pub trait AtomicTransition {
@@ -57,7 +57,7 @@ macro_rules! transition {
         $muz: expr
     ) => {
         /// A laser cooling transition.
-        #[derive(Copy, Clone, Default)]
+        #[derive(Copy, Clone, Default, bevy::ecs::component::Component)]
         pub struct $transition_name;
         impl $crate::laser_cooling::transition::AtomicTransition for $transition_name {
             /// Frequency of the laser cooling transition, Hz.
@@ -83,9 +83,6 @@ macro_rules! transition {
             /// Precalculate prefactor used in the determination of rate coefficients.
             fn rate_prefactor() -> f64 { ($linewidth * 2.0 * std::f64::consts::PI).powi(3) / ($saturation_intensity * 8.0) }
             fn gamma() -> f64 { $linewidth * 2.0 * std::f64::consts::PI }
-        }
-        impl specs::Component for $transition_name {
-            type Storage = specs::VecStorage<Self>;
         }
     };
 }

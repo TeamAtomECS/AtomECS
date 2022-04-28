@@ -1,21 +1,15 @@
 //! Handling of dark states and repumping
 
-use std::marker::PhantomData;
-
 use rand;
-extern crate specs;
-use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
+use crate::{laser_cooling::photons_scattered::TotalPhotonsScattered};
 use rand::Rng;
-use specs::{Component, Entities, LazyUpdate, Read, ReadStorage, System, VecStorage};
+use bevy::{prelude::*};
 
-use super::transition::{TransitionComponent};
+use super::transition::TransitionComponent;
 
 /// Marks an atom as being in a dark state
+#[derive(Component)]
 pub struct Dark;
-
-impl Component for Dark {
-    type Storage = VecStorage<Self>;
-}
 
 /// Enables the possiblity to loose atoms into dark states
 pub struct RepumpLoss {
@@ -32,29 +26,19 @@ impl RepumpLoss {
 }
 
 /// Checks if an atom transitions into a dark state during the current
-/// simulation step if a `RepumpLoss` component has been initialized.
-#[derive(Default)]
-pub struct RepumpSystem<T>(PhantomData<T>) where T : TransitionComponent;
-
-impl<'a, T> System<'a> for RepumpSystem<T> where T : TransitionComponent {
-    type SystemData = (
-        Option<Read<'a, RepumpLoss>>,
-        Read<'a, LazyUpdate>,
-        ReadStorage<'a, TotalPhotonsScattered<T>>,
-        Entities<'a>,
-    );
-    fn run(&mut self, (repump_opt, lazy, num, ent): Self::SystemData) {
-        use rayon::prelude::*;
-        use specs::ParJoin;
-
-        match repump_opt {
-            None => (),
-            Some(repump) => {
-                (&ent, &num).par_join().for_each(|(ent, num)| {
-                    if repump.if_loss(num.total) {
-                        lazy.insert(ent, Dark {})
-                    }
-                });
+/// simulation step if a [RepumpLoss] resource has been added to the simulation.
+pub fn make_atoms_dark<T : TransitionComponent>(
+    repump_opt: Option<Res<RepumpLoss>>,
+    atom_query: Query<(Entity, &TotalPhotonsScattered<T>)>,
+    mut commands: Commands
+) {
+    match repump_opt {
+        None => (),
+        Some(repump) => {
+            for (ent, num) in atom_query.iter() {
+                if repump.if_loss(num.total) {
+                    commands.entity(ent).insert( Dark {});
+                }
             }
         }
     }

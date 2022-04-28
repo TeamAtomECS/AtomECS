@@ -1,14 +1,13 @@
 //! Calculations of the Doppler shift.
-extern crate rayon;
-extern crate serde;
-use specs::prelude::*;
+use bevy::prelude::*;
+use bevy::tasks::ComputeTaskPool;
 
 use super::CoolingLight;
 use crate::atom::Velocity;
+use crate::integrator::BatchSize;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
 use serde::Serialize;
-use specs::{Component, Join, ReadStorage, System, VecStorage, WriteStorage};
 
 const LASER_CACHE_SIZE: usize = 16;
 
@@ -18,7 +17,6 @@ pub struct DopplerShiftSampler {
     /// detuning value in rad/s
     pub doppler_shift: f64,
 }
-
 impl Default for DopplerShiftSampler {
     fn default() -> Self {
         DopplerShiftSampler {
@@ -31,78 +29,60 @@ impl Default for DopplerShiftSampler {
 /// This system calculates the Doppler shift for each atom in each cooling beam.
 ///
 /// The result is stored in `DopplerShiftSamplers`
-pub struct CalculateDopplerShiftSystem<const N: usize>;
+pub fn calculate_doppler_shift<const N: usize>(
+    laser_query: Query<(&CoolingLight, &LaserIndex, &GaussianBeam)>,
+    mut atom_query: Query<(&mut DopplerShiftSamplers<N>, &Velocity)>,
+    task_pool: Res<ComputeTaskPool>,
+    batch_size: Res<BatchSize>
+) {
 
-impl<'a, const N: usize> System<'a> for CalculateDopplerShiftSystem<N> {
-    type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, LaserIndex>,
-        ReadStorage<'a, GaussianBeam>,
-        WriteStorage<'a, DopplerShiftSamplers<N>>,
-        ReadStorage<'a, Velocity>,
+    // Set samplers to default values first.
+    atom_query.par_for_each_mut(&task_pool, batch_size.0, 
+        |(mut samplers, _vel)| {
+            samplers.contents = [DopplerShiftSampler::default(); N];
+        }
     );
 
-    fn run(&mut self, (cooling, indices, gaussian, mut samplers, velocities): Self::SystemData) {
-        use rayon::prelude::*;
-
-        // There are typically only a small number of lasers in a simulation.
-        // For a speedup, cache the required components into thread memory,
-        // so they can be distributed to parallel workers during the atom loop.
-        type CachedLaser = (CoolingLight, LaserIndex, GaussianBeam);
-        let laser_cache: Vec<CachedLaser> = (&cooling, &indices, &gaussian)
-            .join()
-            .map(|(cooling, index, gaussian)| (*cooling, *index, *gaussian))
-            .collect();
-
-        // Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
-        for base_index in (0..laser_cache.len()).step_by(LASER_CACHE_SIZE) {
-            let max_index = laser_cache.len().min(base_index + LASER_CACHE_SIZE);
-            let slice = &laser_cache[base_index..max_index];
-            let mut laser_array = vec![laser_cache[0]; LASER_CACHE_SIZE];
-            laser_array[..max_index].copy_from_slice(slice);
-            let number_in_iteration = slice.len();
-
-            (&mut samplers, &velocities)
-                .par_join()
-                .for_each(|(sampler, vel)| {
-                    for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
-                        sampler.contents[index.index].doppler_shift = vel
-                            .vel
-                            .dot(&(gaussian.direction.normalize() * cooling.wavenumber()));
-                    }
-                })
-        }
+    // Enumerate through lasers and calculate for each.
+    //
+    // There are typically only a small number of lasers in a simulation.
+    // For a speedup, cache the required components into thread memory,
+    // so they can be distributed to parallel workers during the atom loop.
+    type CachedLaser = (CoolingLight, LaserIndex, GaussianBeam);
+    let mut laser_cache: Vec<CachedLaser> = Vec::new();
+    for (&cooling, &index, &gaussian) in laser_query.iter() {
+        laser_cache.push((cooling, index, gaussian));
     }
+
+    // Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
+    for base_index in (0..laser_cache.len()).step_by(LASER_CACHE_SIZE) {
+        let max_index = laser_cache.len().min(base_index + LASER_CACHE_SIZE);
+        let slice = &laser_cache[base_index..max_index];
+        let mut laser_array = vec![laser_cache[0]; LASER_CACHE_SIZE];
+        laser_array[..max_index].copy_from_slice(slice);
+        let number_in_iteration = slice.len();
+
+        atom_query.par_for_each_mut(&task_pool, batch_size.0,
+            |(mut sampler, vel)| {
+                for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
+                    sampler.contents[index.index].doppler_shift = vel
+                        .vel
+                        .dot(&(gaussian.direction.normalize() * cooling.wavenumber()));
+                }
+            });
+    }
+
 }
 
-/// Component that holds a list of `DopplerShiftSampler`s
+/// Component that holds a list of [DopplerShiftSampler]s
 ///
-/// Each list entry corresponds to the detuning with respect to a CoolingLight entity
-/// and is indext via `CoolingLightIndex`
-#[derive(Clone, Copy, Serialize)]
+/// Each list entry corresponds to the detuning with respect to a [CoolingLight] entity
+/// and indexed via their [LaserIndex].
+#[derive(Clone, Copy, Serialize, Component)]
 pub struct DopplerShiftSamplers<const N: usize> {
     /// List of all `DopplerShiftSampler`s
     #[serde(with = "serde_arrays")]
     pub contents: [DopplerShiftSampler; N],
-}
-impl<const N: usize> Component for DopplerShiftSamplers<N> {
-    type Storage = VecStorage<Self>;
-}
-
-/// This system initialises all `DopplerShiftSamplers` to a NAN value.
-///
-/// It also ensures that the size of the `DopplerShiftSamplers` components match the number of CoolingLight entities in the world.
-pub struct InitialiseDopplerShiftSamplersSystem<const N: usize>;
-
-impl<'a, const N: usize> System<'a> for InitialiseDopplerShiftSamplersSystem<N> {
-    type SystemData = (WriteStorage<'a, DopplerShiftSamplers<N>>,);
-    fn run(&mut self, (mut samplers,): Self::SystemData) {
-        use rayon::prelude::*;
-
-        (&mut samplers).par_join().for_each(|mut sampler| {
-            sampler.contents = [DopplerShiftSampler::default(); N];
-        });
-    }
 }
 
 #[cfg(test)]

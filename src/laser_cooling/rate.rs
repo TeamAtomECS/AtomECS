@@ -1,4 +1,4 @@
-//! Calculation of RateCoefficients for the rate equation approach
+//! Calculation of [RateCoefficients] used in the rate equation formalism of laser cooling.
 
 extern crate serde;
 
@@ -6,22 +6,23 @@ use std::marker::PhantomData;
 
 use super::CoolingLight;
 use super::transition::{TransitionComponent};
+use crate::integrator::BatchSize;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
 use crate::laser::intensity::LaserIntensitySamplers;
 use crate::laser_cooling::sampler::LaserDetuningSamplers;
 use crate::magnetic::MagneticFieldSampler;
+use bevy::tasks::ComputeTaskPool;
 use serde::Serialize;
-use specs::prelude::*;
+use bevy::prelude::*;
 
-/// Represents the rate coefficient of the atom with respect to a specific CoolingLight entity, for the given transition.
+/// Represents the rate coefficient of the atom with respect to a specific [CoolingLight] entity, for the given transition.
 #[derive(Clone, Copy, Serialize)]
 pub struct RateCoefficient<T> where T : TransitionComponent {
     /// rate coefficient in Hz
     pub rate: f64,
     phantom: PhantomData<T>
 }
-
 impl<T> Default for RateCoefficient<T> where T : TransitionComponent {
     fn default() -> Self {
         RateCoefficient {
@@ -33,34 +34,11 @@ impl<T> Default for RateCoefficient<T> where T : TransitionComponent {
 }
 
 /// Component that holds a Vector of `RateCoefficient`
-#[derive(Clone, Copy, Serialize)]
+#[derive(Clone, Copy, Serialize, Component)]
 pub struct RateCoefficients<T, const N: usize> where T : TransitionComponent {
     /// Vector of `RateCoefficient` where each entry corresponds to a different CoolingLight entity
     #[serde(with = "serde_arrays")]
     pub contents: [RateCoefficient<T>; N],
-}
-
-impl<T, const N: usize> Component for RateCoefficients<T, N> where T : TransitionComponent {
-    type Storage = VecStorage<Self>;
-}
-
-/// This system initialises all `RateCoefficient` to a NAN value.
-///
-/// It also ensures that the size of the `RateCoefficient` components match the number of CoolingLight entities in the world.
-#[derive(Default)]
-pub struct InitialiseRateCoefficientsSystem<T, const N: usize>(PhantomData<T>) where T : TransitionComponent;
-
-impl<'a, T, const N: usize> System<'a> for InitialiseRateCoefficientsSystem<T, N> where T : TransitionComponent {
-    type SystemData = (WriteStorage<'a, RateCoefficients<T, N>>,);
-    fn run(&mut self, (mut rate_coefficients,): Self::SystemData) {
-        use rayon::prelude::*;
-
-        (&mut rate_coefficients)
-            .par_join()
-            .for_each(|mut rate_coefficient| {
-                rate_coefficient.contents = [RateCoefficient::default(); N];
-            });
-    }
 }
 
 /// Calculates the TwoLevel approach rate coefficients for all atoms for all
@@ -71,74 +49,55 @@ impl<'a, T, const N: usize> System<'a> for InitialiseRateCoefficientsSystem<T, N
 /// This is also the System that currently takes care of handling the polarizations correctly.
 /// The polarization is projected onto the quantization axis given by the local magnetic
 /// field vector. For fully polarized CoolingLight all projection pre-factors add up to 1.
-#[derive(Default)]
-pub struct CalculateRateCoefficientsSystem<T, const N: usize>(PhantomData<T>) where T : TransitionComponent;
+pub fn calculate_rate_coefficients<const N: usize, T>(
+    laser_query: Query<(&CoolingLight, &LaserIndex, &GaussianBeam)>,
+    mut atom_query: Query<(&LaserDetuningSamplers<T,N>, &LaserIntensitySamplers<N>, &MagneticFieldSampler, &mut RateCoefficients<T,N>), With<T>>,
+    task_pool: Res<ComputeTaskPool>,
+    batch_size: Res<BatchSize>
+) where T : TransitionComponent {
 
-impl<'a, T, const N: usize> System<'a> for CalculateRateCoefficientsSystem<T, N> where T : TransitionComponent {
-    type SystemData = (
-        ReadStorage<'a, CoolingLight>,
-        ReadStorage<'a, LaserIndex>,
-        ReadStorage<'a, LaserDetuningSamplers<T, N>>,
-        ReadStorage<'a, LaserIntensitySamplers<N>>,
-        ReadStorage<'a, T>,
-        ReadStorage<'a, GaussianBeam>,
-        ReadStorage<'a, MagneticFieldSampler>,
-        WriteStorage<'a, RateCoefficients<T, N>>,
-    );
-    fn run(
-        &mut self,
-        (
-            cooling_light,
-            cooling_index,
-            laser_detunings,
-            laser_intensities,
-            atomic_transition,
-            gaussian_beam,
-            magnetic_field_sampler,
-            mut rate_coefficients,
-        ): Self::SystemData,
-    ) {
-        use rayon::prelude::*;
-
-        for (cooling, index, gaussian) in (&cooling_light, &cooling_index, &gaussian_beam).join() {
-            (
-                &laser_detunings,
-                &laser_intensities,
-                &atomic_transition,
-                &magnetic_field_sampler,
-                &mut rate_coefficients,
-            )
-                .par_join()
-                .for_each(|(detunings, intensities, _atominfo, bfield, rates)| {
-                    let beam_direction_vector = gaussian.direction.normalize();
-                    let costheta = if bfield.field.norm_squared() < (10.0 * f64::EPSILON) {
-                        0.0
-                    } else {
-                        beam_direction_vector
-                            .normalize()
-                            .dot(&bfield.field.normalize())
-                    };
-
-                    let prefactor =
-                        T::rate_prefactor() * intensities.contents[index.index].intensity;
-                    let gamma = T::gamma();
-
-                    let scatter1 =
-                        0.25 * (cooling.polarization as f64 * costheta + 1.).powf(2.) * prefactor
-                            / (detunings.contents[index.index].detuning_sigma_plus.powi(2)
-                                + (gamma / 2.0).powi(2));
-
-                    let scatter2 =
-                        0.25 * (cooling.polarization as f64 * costheta - 1.).powi(2) * prefactor
-                            / (detunings.contents[index.index].detuning_sigma_minus.powi(2)
-                                + (gamma / 2.0).powi(2));
-
-                    let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor
-                        / (detunings.contents[index.index].detuning_pi.powi(2)
-                            + (gamma / 2.0).powi(2));
-                    rates.contents[index.index].rate = scatter1 + scatter2 + scatter3;
-                });
+    // First set all rate coefficients to zero.
+    atom_query.par_for_each_mut(&task_pool, batch_size.0,
+        |(_, _, _, mut rates)| {
+            rates.contents = [RateCoefficient::default(); N];
         }
+    );
+
+    // Then calculate for each laser.
+    for (cooling, index, gaussian) in laser_query.iter() {
+        atom_query.par_for_each_mut(
+            &task_pool,
+            batch_size.0,
+            |(detunings, intensities, bfield, mut rates)| {
+                let beam_direction_vector = gaussian.direction.normalize();
+                let costheta = if bfield.field.norm_squared() < (10.0 * f64::EPSILON) {
+                    0.0
+                } else {
+                    beam_direction_vector
+                        .normalize()
+                        .dot(&bfield.field.normalize())
+                };
+
+                let prefactor =
+                    T::rate_prefactor() * intensities.contents[index.index].intensity;
+                let gamma = T::gamma();
+
+                let scatter1 =
+                    0.25 * (cooling.polarization as f64 * costheta + 1.).powf(2.) * prefactor
+                        / (detunings.contents[index.index].detuning_sigma_plus.powi(2)
+                            + (gamma / 2.0).powi(2));
+
+                let scatter2 =
+                    0.25 * (cooling.polarization as f64 * costheta - 1.).powi(2) * prefactor
+                        / (detunings.contents[index.index].detuning_sigma_minus.powi(2)
+                            + (gamma / 2.0).powi(2));
+
+                let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor
+                    / (detunings.contents[index.index].detuning_pi.powi(2)
+                        + (gamma / 2.0).powi(2));
+                rates.contents[index.index].rate = scatter1 + scatter2 + scatter3;
+            }
+        );
     }
 }
 

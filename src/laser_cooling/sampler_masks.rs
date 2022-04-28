@@ -1,9 +1,11 @@
-//! Additional utilities for laser samplers.
+//! Masks to describe which lasers are used for [CoolingLight] calculations.
+
 extern crate serde;
 use crate::{laser::index::LaserIndex, integrator::BatchSize};
 use serde::Serialize;
 use bevy::{prelude::*, tasks::ComputeTaskPool};
-//use crate::laser_cooling::CoolingLight;
+
+use super::CoolingLight;
 
 /// Tracks which slots in the laser sampler arrays are currently used for cooling light.
 #[derive(Clone, Copy, Default, Serialize)]
@@ -20,36 +22,22 @@ pub struct CoolingLaserSamplerMasks<const N: usize> {
     pub contents: [CoolingLaserSamplerMask; N],
 }
 
-/// Marks all [LaserSamplerMasks] as empty.
-pub fn initialise_laser_sampler_masks<const N: usize>(
+/// Populates [LaserSamplerMasks] as empty or filled.
+pub fn populate_cooling_light_masks<const N: usize>(
     mut query: Query<&mut CoolingLaserSamplerMasks<N>>,
+    light_query: Query<&LaserIndex, With<CoolingLight>>,
+    task_pool: Res<ComputeTaskPool>,
+    batch_size: Res<BatchSize>
 ) {
-    for masks in query.iter()
-    {
-        masks.contents = [CoolingLaserSamplerMask::default(); N];
+    let mut masks = [CoolingLaserSamplerMask::default(); N];
+    for index in light_query.iter() {
+        masks[index.index] = CoolingLaserSamplerMask { filled: true };
     }
-}
 
-/// Determines which laser sampler slots are currently being used.
-pub struct FillLaserSamplerMasksSystem<const N: usize>;
-
-impl<'a, const N: usize> System<'a> for FillLaserSamplerMasksSystem<N> {
-    type SystemData = (
-        ReadStorage<'a, LaserIndex>,
-        ReadStorage<'a, CoolingLight>,
-        WriteStorage<'a, CoolingLaserSamplerMasks<N>>,
-    );
-    fn run(&mut self, (light_index, cooling, mut masks): Self::SystemData) {
-        use rayon::prelude::*;
-
-        for (light_index, _) in (&light_index, &cooling).join() {
-            (&mut masks).par_join().for_each(|masks| {
-                masks.contents[light_index.index] = LaserSamplerMask { filled: true };
-            });
+    // distribute the masks into atom components.
+    query.par_for_each_mut(&task_pool, batch_size.0, 
+        |mut atom_masks| {
+            atom_masks.contents = masks.clone();
         }
-    }
+    );
 }
-
-pub fn fill_laser_sampler_masks<const N: usize>(
-    mut query: Query<&mut 
-)
