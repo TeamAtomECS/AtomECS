@@ -167,15 +167,15 @@ impl Plugin for MagneticsPlugin {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::atom::Position;
+    use crate::{atom::Position, integrator::{Timestep, BatchSize, Step}};
 
     #[test]
     fn test_magnetics_plugin() {
         let mut app = App::new();
         app.add_plugin(MagneticsPlugin);
         app.insert_resource(BatchSize::default());
-        app.insert_resource(crate::integrator::Timestep::default());
-        app.insert_resource(crate::integrator::Step::default());
+        app.insert_resource(Timestep::default());
+        app.insert_resource(Step::default());
         //test_world.insert(crate::integrator::Step { n: 0 });
         //test_world.insert(crate::integrator::Timestep { delta: 1.0e-6 });
 
@@ -207,84 +207,59 @@ pub mod tests {
         );
     }
 
-    // /// Tests that magnetic field samplers are added to newly created atoms.
-    // #[test]
-    // fn test_field_samplers_are_added() {
-    //     let mut test_world = World::new();
-    //     register_magnetics_components(&mut test_world);
-    //     test_world.register::<NewlyCreated>();
-    //     let mut builder = DispatcherBuilder::new();
-    //     builder.add(
-    //         crate::integrator::VelocityVerletIntegratePositionSystem {},
-    //         crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME,
-    //         &[],
-    //     );
-    //     add_magnetics_systems_to_dispatch(&mut builder, &[]);
-    //     let mut dispatcher = builder.build();
-    //     dispatcher.setup(&mut test_world);
-    //     test_world.insert(crate::integrator::Step { n: 0 });
-    //     test_world.insert(crate::integrator::Timestep { delta: 1.0e-6 });
+    /// Tests that magnetic field samplers are added to newly created atoms.
+    #[test]
+    fn test_field_samplers_are_added() {
+        let mut app = App::new();
+        app.insert_resource(Step { n: 0 });
+        app.insert_resource(BatchSize::default());
+        app.insert_resource(Timestep { delta: 1.0e-6 });
+        app.add_plugin(MagneticsPlugin);
+        let sampler_entity = app.world.spawn().insert(NewlyCreated).id();
+        app.update();
+        assert!(app.world.entity(sampler_entity).contains::<MagneticFieldSampler>());
+    }
 
-    //     let sampler_entity = test_world.create_entity().with(NewlyCreated).build();
+    // Test correct calculation of magnetic field gradient
+    #[test]
 
-    //     dispatcher.dispatch(&test_world);
-    //     test_world.maintain();
+    fn test_magnetic_gradient_system() {
+        let mut app = App::new();
+        app.insert_resource(Step { n: 0 });
+        app.insert_resource(BatchSize::default());
+        app.insert_resource(Timestep { delta: 1.0e-6 });
 
-    //     let samplers = test_world.read_storage::<MagneticFieldSampler>();
-    //     assert!(samplers.contains(sampler_entity));
-    // }
+        let atom1 = app.world
+            .spawn()
+            .insert(Position {
+                pos: Vector3::new(2.0, 1.0, -5.0),
+            })
+            .insert(MagneticFieldSampler::default())
+            .id();
 
-    // // Test correct calculation of magnetic field gradient
-    // #[test]
+        app.world
+            .spawn()
+            .insert(quadrupole::QuadrupoleField3D::gauss_per_cm(2.0, Vector3::z()))
+            .insert(Position {
+                pos: Vector3::new(0.0, 0.0, 0.0),
+            });
 
-    // fn test_magnetic_gradient_system() {
-    //     let mut test_world = World::new();
-    //     register_magnetics_components(&mut test_world);
-    //     register_magnetic_trap_components(&mut test_world);
-    //     test_world.register::<Position>();
+        app.world
+            .spawn()
+            .insert(quadrupole::QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
+            .insert(Position {
+                pos: Vector3::new(0.0, 0.0, 0.0),
+            });
 
-    //     let atom1 = test_world
-    //         .create_entity()
-    //         .with(Position {
-    //             pos: Vector3::new(2.0, 1.0, -5.0),
-    //         })
-    //         .with(MagneticFieldSampler::default())
-    //         .build();
+        app.add_plugin(MagneticsPlugin);
+        app.update();
 
-    //     test_world
-    //         .create_entity()
-    //         .with(QuadrupoleField3D::gauss_per_cm(2.0, Vector3::z()))
-    //         .with(Position {
-    //             pos: Vector3::new(0.0, 0.0, 0.0),
-    //         })
-    //         .build();
+        let test_gradient = app.world.entity(atom1).get::<MagneticFieldSampler>()
+            .expect("entity not found")
+            .gradient;
 
-    //     test_world
-    //         .create_entity()
-    //         .with(QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
-    //         .with(Position {
-    //             pos: Vector3::new(0.0, 0.0, 0.0),
-    //         })
-    //         .build();
-
-    //     let mut quad_system = Sample3DQuadrupoleFieldSystem;
-    //     quad_system.run_now(&test_world);
-
-    //     let mut magnitude_system = CalculateMagneticFieldMagnitudeSystem;
-    //     magnitude_system.run_now(&test_world);
-    //     let mut gradient_system = CalculateMagneticMagnitudeGradientSystem;
-    //     gradient_system.run_now(&test_world);
-
-    //     test_world.maintain();
-    //     let sampler_storage = test_world.read_storage::<MagneticFieldSampler>();
-
-    //     let test_gradient = sampler_storage
-    //         .get(atom1)
-    //         .expect("entity not found")
-    //         .gradient;
-
-    //     assert_approx_eq!(test_gradient[0], 5.8554e-3, 1e-6_f64);
-    //     assert_approx_eq!(test_gradient[1], 2.9277e-3, 1e-6_f64);
-    //     assert_approx_eq!(test_gradient[2], -0.058554, 1e-6_f64);
-    // }
+        assert_approx_eq::assert_approx_eq!(test_gradient[0], 5.8554e-3, 1e-6_f64);
+        assert_approx_eq::assert_approx_eq!(test_gradient[1], 2.9277e-3, 1e-6_f64);
+        assert_approx_eq::assert_approx_eq!(test_gradient[2], -0.058554, 1e-6_f64);
+    }
 }
