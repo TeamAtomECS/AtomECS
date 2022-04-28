@@ -7,6 +7,9 @@
 //! Some parameters of the simulation can be set by writing a configuration file called `doppler.json`. This file
 //! allows the user to control parameters, eg detuning. If the file is not written, a default detuning of 0.5 Gamma
 //! is used, which corresponds to the minimum Doppler temperature.
+//! 
+//! cargo build --example doppler_limit --target wasm32-unknown-unknown --release
+//! wasm-bindgen --out-dir target/web target/wasm32-unknown-unknown/release/examples/doppler_limit.wasm --target web
 
 extern crate atomecs as lib;
 extern crate nalgebra;
@@ -23,7 +26,7 @@ use lib::species::{Rubidium87_780D2};
 use nalgebra::Vector3;
 use rand_distr::{Distribution, Normal};
 use bevy::prelude::*;
-use std::fs::read_to_string;
+//use std::fs::read_to_string;
 
 extern crate serde;
 use serde::Deserialize;
@@ -72,11 +75,12 @@ fn main() {
 pub fn setup_world(mut commands: Commands) {
 
     //Load configuration if one exists.
-    let read_result = read_to_string("doppler.json");
-    let configuration: DopperSimulationConfiguration = match read_result {
-        Ok(json_str) => serde_json::from_str(&json_str).unwrap(),
-        Err(_) => DopperSimulationConfiguration::default(),
-    };
+    // let read_result = read_to_string("doppler.json");
+    // let configuration: DopperSimulationConfiguration = match read_result {
+    //     Ok(json_str) => serde_json::from_str(&json_str).unwrap(),
+    //     Err(_) => DopperSimulationConfiguration::default(),
+    // };
+    let configuration = DopperSimulationConfiguration::default();
 
     // Create magnetic field.
     commands.spawn()

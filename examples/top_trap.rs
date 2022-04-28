@@ -1,7 +1,9 @@
 //! Time-Orbiting Potential (TOP) trap
 //! 
+//! cargo install -f wasm-bindgen-cli
 //! cargo build --example top_trap --target wasm32-unknown-unknown
-//! wasm-bindgen --out-dir OUTPUT_DIR --target web TARGET_DIR
+//! wasm-bindgen --out-dir target/web target/wasm32-unknown-unknown/release/examples/doppler_limit.wasm
+//! 
 extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
