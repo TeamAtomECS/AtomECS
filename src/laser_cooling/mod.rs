@@ -235,7 +235,7 @@ impl<T, const N : usize> Plugin for LaserCoolingPlugin<T, N> where T : Transitio
             )
             .with_system(
                 force::calculate_emission_forces::<N, T>
-                .label(LaserCoolingSystems::CalculateAbsorptionForces)
+                .label(LaserCoolingSystems::CalculateEmissionForces)
                 .after(LaserCoolingSystems::CalculateAbsorptionForces)
             )
             .with_system(
