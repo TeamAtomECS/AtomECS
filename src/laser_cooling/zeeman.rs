@@ -78,7 +78,7 @@ pub mod tests {
     #[test]
     fn test_calculate_zeeman_shift_system() {
         let mut app = App::new();
-
+        app.insert_resource(BatchSize::default());
         let atom = app.world
             .spawn()
             .insert(MagneticFieldSampler {
@@ -91,7 +91,7 @@ pub mod tests {
             .insert(Strontium88_461)
             .id();
 
-        app.add_system(calculate_zeeman_shift);
+        app.add_system(calculate_zeeman_shift::<Strontium88_461>);
         app.update();
 
         let result = app.world
@@ -117,9 +117,10 @@ pub mod tests {
         );
     }
 
+    #[test]
     fn test_attach_zeeman_sampler_to_newly_created_atoms() {
         let mut app = App::new();
-
+        app.insert_resource(BatchSize::default());
         let atom = app.world
             .spawn()
             .insert(NewlyCreated)
@@ -130,7 +131,7 @@ pub mod tests {
         app.update();
 
         assert!(
-            let result = app.world
+            app.world
             .entity(atom)
             .contains::<ZeemanShiftSampler<Strontium88_461>>()
         );

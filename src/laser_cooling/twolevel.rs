@@ -12,9 +12,11 @@ use super::transition::{TransitionComponent};
 /// Represents the steady-state population density of the excited state and ground state for a given atomic transition.
 #[derive(Deserialize, Serialize, Clone, Component)]
 pub struct TwoLevelPopulation<T> where T : TransitionComponent {
-    /// steady-state population density of the ground state, a number in [0,1]
+    /// steady-state population density of the ground state, a LASER_COUNT
+    ///  in [0,1]
     pub ground: f64,
-    /// steady-state population density of the excited state, a number in [0,1]
+    /// steady-state population density of the excited state, a LASER_COUNT
+    ///  in [0,1]
     pub excited: f64,
     marker: PhantomData<T>,
 }
@@ -26,9 +28,11 @@ impl<T> fmt::Display for TwoLevelPopulation<T> where T : TransitionComponent {
 impl<T> Default for TwoLevelPopulation<T> where T : TransitionComponent {
     fn default() -> Self {
         TwoLevelPopulation {
-            /// steady-state population density of the ground state, a number in [0,1]
+            /// steady-state population density of the ground state, a LASER_COUNT
+            ///  in [0,1]
             ground: f64::NAN,
-            /// steady-state population density of the excited state, a number in [0,1]
+            /// steady-state population density of the excited state, a LASER_COUNT
+            ///  in [0,1]
             excited: f64::NAN,
             marker: PhantomData
         }
@@ -70,55 +74,50 @@ pub fn calculate_two_level_population<const N: usize, T : TransitionComponent>(
 pub mod tests {
 
     use super::*;
-    use crate::{laser::DEFAULT_BEAM_LIMIT, laser_cooling::sampler_masks::LaserSamplerMask, species::{Strontium88_461, Rubidium87_780D2}, laser_cooling::{rate::RateCoefficient, transition::AtomicTransition}};
+    use crate::{species::{Strontium88_461}, laser_cooling::{rate::RateCoefficient, transition::AtomicTransition, sampler_masks::CoolingLaserSamplerMask}};
     use assert_approx_eq::assert_approx_eq;
-    extern crate nalgebra;
+
+    const LASER_COUNT : usize = 4;
 
     #[test]
     fn test_calculate_twolevel_population_system() {
-        let mut test_world = World::new();
-        test_world.register::<RateCoefficients<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<CoolingLaserSamplerMasks<{ DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<TwoLevelPopulation<Strontium88_461>>();
-        test_world.register::<Strontium88_461>();
+        let mut app = App::new();
+        app.insert_resource(BatchSize::default());
 
         // this test runs with two lasers only and we have to tell this the mask
         let mut active_lasers =
-            [LaserSamplerMask { filled: false }; DEFAULT_BEAM_LIMIT];
-        active_lasers[0] = LaserSamplerMask { filled: true };
-        active_lasers[1] = LaserSamplerMask { filled: true };
+            [CoolingLaserSamplerMask { filled: false }; LASER_COUNT
+            ];
+        active_lasers[0] = CoolingLaserSamplerMask { filled: true };
+        active_lasers[1] = CoolingLaserSamplerMask { filled: true };
 
         let mut rc = RateCoefficient::<Strontium88_461>::default();
         rc.rate = 1_000_000.0;
 
-        let atom1 = test_world
-            .create_entity()
-            .with(RateCoefficients  {
-                contents: [rc; DEFAULT_BEAM_LIMIT],
+        let atom1 = app.world.spawn()
+            .insert(RateCoefficients  {
+                contents: [rc; LASER_COUNT],
             })
-            .with(Strontium88_461)
-            .with(CoolingLaserSamplerMasks {
+            .insert(Strontium88_461)
+            .insert(CoolingLaserSamplerMasks {
                 contents: active_lasers,
             })
-            .with(TwoLevelPopulation::<Strontium88_461>::default())
-            .build();
+            .insert(TwoLevelPopulation::<Strontium88_461>::default())
+            .id();
 
-        let mut system = CalculateTwoLevelPopulationSystem::<Strontium88_461, { DEFAULT_BEAM_LIMIT }>::default();
-        system.run_now(&test_world);
-        test_world.maintain();
-        let sampler_storage = test_world.read_storage::<TwoLevelPopulation<Strontium88_461>>();
+        app.add_system(calculate_two_level_population::<LASER_COUNT, Strontium88_461>);
+        app.update();
 
         let mut sum_rates = 0.0;
 
-        for active_laser in active_lasers.iter().take(crate::laser::DEFAULT_BEAM_LIMIT) {
+        for active_laser in active_lasers.iter().take(LASER_COUNT) {
             if active_laser.filled {
                 sum_rates += 1_000_000.0;
             }
         }
 
         assert_approx_eq!(
-            sampler_storage
-                .get(atom1)
+            app.world.entity(atom1).get::<TwoLevelPopulation::<Strontium88_461>>()
                 .expect("entity not found")
                 .excited,
             sum_rates / (Strontium88_461::gamma() + 2.0 * sum_rates),
@@ -128,40 +127,33 @@ pub mod tests {
 
     #[test]
     fn test_popn_high_intensity_limit() {
-        let mut test_world = World::new();
-        test_world.register::<RateCoefficients<Rubidium87_780D2, { DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<Rubidium87_780D2>();
-        test_world.register::<CoolingLaserSamplerMasks<{ DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<TwoLevelPopulation<Rubidium87_780D2>>();
-
+        let mut app = App::new();
+        app.insert_resource(BatchSize::default());
         // this test runs with two lasers only and we have to tell this the mask
-        let mut active_lasers = [LaserSamplerMask { filled: false };
-            crate::laser::DEFAULT_BEAM_LIMIT];
-        active_lasers[0] = LaserSamplerMask { filled: true };
+        let mut active_lasers =
+            [CoolingLaserSamplerMask { filled: true }; LASER_COUNT];
+        active_lasers[0] = CoolingLaserSamplerMask { filled: true };
+        active_lasers[1] = CoolingLaserSamplerMask { filled: true };
 
-        let mut rc = RateCoefficient::<Rubidium87_780D2>::default();
-        rc.rate = 1.0e9;
+        let mut rc = RateCoefficient::<Strontium88_461>::default();
+        rc.rate = 1.0e10;
 
-        let atom1 = test_world
-            .create_entity()
-            .with(RateCoefficients {
-                contents: [rc; DEFAULT_BEAM_LIMIT],
+        let atom1 = app.world.spawn()
+            .insert(RateCoefficients {
+                contents: [rc; LASER_COUNT],
             })
-            .with(Rubidium87_780D2)
-            .with(CoolingLaserSamplerMasks {
+            .insert(Strontium88_461)
+            .insert(CoolingLaserSamplerMasks {
                 contents: active_lasers,
             })
-            .with(TwoLevelPopulation::<Rubidium87_780D2>::default())
-            .build();
+            .insert(TwoLevelPopulation::<Strontium88_461>::default())
+            .id();
 
-        let mut system = CalculateTwoLevelPopulationSystem::<Rubidium87_780D2, { DEFAULT_BEAM_LIMIT }>::default();
-        system.run_now(&test_world);
-        test_world.maintain();
-        let sampler_storage = test_world.read_storage::<TwoLevelPopulation<Rubidium87_780D2>>();
+        app.add_system(calculate_two_level_population::<LASER_COUNT, Strontium88_461>);
+        app.update();
 
         assert_approx_eq!(
-            sampler_storage
-                .get(atom1)
+            app.world.entity(atom1).get::<TwoLevelPopulation::<Strontium88_461>>()
                 .expect("entity not found")
                 .excited,
             0.5,

@@ -225,47 +225,37 @@ pub fn calculate_actual_photons_scattered<const N: usize, T : TransitionComponen
 #[cfg(test)]
 pub mod tests {
 
-    use crate::{laser::{DEFAULT_BEAM_LIMIT}, species::Strontium88_461, laser_cooling::{rate::RateCoefficient, transition::AtomicTransition}};
-    use crate::laser_cooling::sampler_masks::LaserSamplerMask;
+    use crate::{species::Strontium88_461, laser_cooling::{rate::RateCoefficient, transition::AtomicTransition, sampler_masks::CoolingLaserSamplerMask}};
     use super::*;
-
-    extern crate specs;
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
-    extern crate nalgebra;
+
+    const LASER_COUNT : usize = 4;
 
     /// Tests the correct implementation of the `CalculateMeanTotalPhotonsScatteredSystem`
     #[test]
     fn test_calculate_mean_total_photons_scattered_system() {
-        let mut test_world = World::new();
-
+        let mut app = App::new();
         let time_delta = 1.0e-6;
-
-        test_world.register::<TwoLevelPopulation<Strontium88_461>>();
-        test_world.register::<Strontium88_461>();
-        test_world.register::<TotalPhotonsScattered<Strontium88_461>>();
-        test_world.insert(Timestep { delta: time_delta });
+        app.insert_resource(BatchSize::default());
+        app.insert_resource(Timestep { delta: time_delta });
 
         let mut tlp = TwoLevelPopulation::<Strontium88_461>::default();
         tlp.ground = 0.7;
         tlp.excited = 0.3;
 
-        let atom1 = test_world
-            .create_entity()
-            .with(TotalPhotonsScattered::<Strontium88_461>::default())
-            .with(Strontium88_461)
-            .with(tlp)
-            .build();
+        let atom1 = app.world.spawn()
+            .insert(TotalPhotonsScattered::<Strontium88_461>::default())
+            .insert(Strontium88_461)
+            .insert(tlp)
+            .id();
 
-        let mut system = CalculateMeanTotalPhotonsScatteredSystem::<Strontium88_461>::default();
-        system.run_now(&test_world);
-        test_world.maintain();
-        let sampler_storage = test_world.read_storage::<TotalPhotonsScattered<Strontium88_461>>();
+        app.add_system(calculate_mean_total_photons_scattered::<Strontium88_461>);
+        app.update();
 
         let scattered = Strontium88_461::gamma() * 0.3 * time_delta;
 
         assert_approx_eq!(
-            sampler_storage.get(atom1).expect("entity not found").total,
+            app.world.entity(atom1).get::<TotalPhotonsScattered<Strontium88_461>>().expect("entity not found").total,
             scattered,
             1e-5_f64
         );
@@ -274,46 +264,38 @@ pub mod tests {
     /// Tests the correct implementation of the `CalculateExpectedPhotonsScatteredSystem`
     #[test]
     fn test_calculate_expected_photons_scattered_system() {
-        let mut test_world = World::new();
-
-        test_world.register::<RateCoefficients<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<CoolingLaserSamplerMasks<{ DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<TotalPhotonsScattered<Strontium88_461>>();
-        test_world.register::<ExpectedPhotonsScatteredVector<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
-
+        let mut app = App::new();
+        app.insert_resource(BatchSize::default());
         //We assume 16 beams with equal `RateCoefficient`s for this test
         let mut rc = RateCoefficient::<Strontium88_461>::default();
         rc.rate = 1_000_000.0;
         let mut tps = TotalPhotonsScattered::<Strontium88_461>::default();
         tps.total = 8.0;
 
-        let atom1 = test_world
-            .create_entity()
-            .with(tps)
-            .with(CoolingLaserSamplerMasks {
-                contents: [LaserSamplerMask { filled: true };
-                    DEFAULT_BEAM_LIMIT],
+        let atom1 = app.world.spawn()
+            .insert(tps)
+            .insert(CoolingLaserSamplerMasks {
+                contents: [CoolingLaserSamplerMask { filled: true };
+                    LASER_COUNT],
             })
-            .with(RateCoefficients {
-                contents: [rc; DEFAULT_BEAM_LIMIT],
+            .insert(RateCoefficients {
+                contents: [rc; LASER_COUNT],
             })
-            .with(ExpectedPhotonsScatteredVector {
-                contents: [ExpectedPhotonsScattered::<Strontium88_461>::default(); crate::laser::DEFAULT_BEAM_LIMIT],
+            .insert(ExpectedPhotonsScatteredVector {
+                contents: [ExpectedPhotonsScattered::<Strontium88_461>::default(); LASER_COUNT],
             })
-            .build();
-        let mut system = CalculateExpectedPhotonsScatteredSystem::<Strontium88_461, { DEFAULT_BEAM_LIMIT }>::default();
-        system.run_now(&test_world);
-        test_world.maintain();
-        let sampler_storage =
-            test_world.read_storage::<ExpectedPhotonsScatteredVector<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
+            .id();
 
-        let scattered = 8.0 / crate::laser::DEFAULT_BEAM_LIMIT as f64;
+        app.add_system(calculate_expected_photons_scattered::<LASER_COUNT, Strontium88_461>);
+        app.update();
+
+        let scattered = 8.0 / LASER_COUNT as f64;
 
         assert_approx_eq!(
-            sampler_storage
-                .get(atom1)
+            app.world.entity(atom1)
+                .get::<ExpectedPhotonsScatteredVector<Strontium88_461, LASER_COUNT>>()
                 .expect("entity not found")
-                .contents[12] //any entry between 0 and 15 should be the same
+                .contents[1] //all entries are equal
                 .scattered,
             scattered,
             1e-5_f64

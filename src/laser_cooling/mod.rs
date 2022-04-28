@@ -251,32 +251,26 @@ impl<T, const N : usize> Plugin for LaserCoolingPlugin<T, N> where T : Transitio
 #[cfg(test)]
 pub mod tests {
 
-    use crate::species::Rubidium87_780D2;
+    use crate::{species::Rubidium87_780D2, laser::index::LaserIndex};
 
     use super::*;
     use assert_approx_eq::assert_approx_eq;
+
     #[test]
     fn test_add_index_component_to_cooling_lights() {
-        let mut test_world = World::new();
-        test_world.register::<LaserIndex>();
-        test_world.register::<CoolingLight>();
+        let mut app = App::new();
 
-        let test_entity = test_world
-            .create_entity()
-            .with(CoolingLight {
+        let test_entity = app.world.spawn()
+            .insert(CoolingLight {
                 polarization: 1,
                 wavelength: 780e-9,
             })
-            .build();
+            .id();
 
-        let mut system = AttachIndexToCoolingLightSystem;
-        system.run_now(&test_world);
-        test_world.maintain();
+        app.add_system(attach_components_to_cooling_lasers);
+        app.update();
 
-        assert!(test_world
-            .read_storage::<LaserIndex>()
-            .get(test_entity)
-            .is_some());
+        assert!(app.world.entity(test_entity).contains::<LaserIndex>());
     }
 
     #[test]

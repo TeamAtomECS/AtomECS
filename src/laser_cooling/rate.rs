@@ -107,52 +107,42 @@ pub mod tests {
     use super::*;
 
     use crate::laser::index::LaserIndex;
-    use crate::laser::DEFAULT_BEAM_LIMIT;
     use crate::laser_cooling::CoolingLight;
     use crate::laser_cooling::transition::AtomicTransition;
     use crate::species::Strontium88_461;
     use assert_approx_eq::assert_approx_eq;
-    extern crate nalgebra;
     use nalgebra::{Matrix3, Vector3};
 
     use crate::laser::intensity::{LaserIntensitySamplers, LaserIntensitySampler};
     use crate::laser_cooling::sampler::{LaserDetuningSamplers, LaserDetuningSampler};
     use crate::magnetic::MagneticFieldSampler;
 
+    const LASER_COUNT : usize = 4;
+
     /// Tests the correct implementation of the `RateCoefficients`
     #[test]
     fn test_calculate_rate_coefficients_system() {
-        let mut test_world = World::new();
-
-        test_world.register::<LaserIndex>();
-        test_world.register::<CoolingLight>();
-        test_world.register::<GaussianBeam>();
-        test_world.register::<LaserDetuningSamplers<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<LaserIntensitySamplers<{ DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<Strontium88_461>();
-        test_world.register::<MagneticFieldSampler>();
-        test_world.register::<RateCoefficients<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
-
+        let mut app = App::new();
+        app.insert_resource(BatchSize::default());
         let wavelength = 461e-9;
-        test_world
-            .create_entity()
-            .with(CoolingLight {
+        app.world
+            .spawn()
+            .insert(CoolingLight {
                 polarization: 1,
                 wavelength,
             })
-            .with(LaserIndex {
+            .insert(LaserIndex {
                 index: 0,
                 initiated: true,
             })
-            .with(GaussianBeam {
+            .insert(GaussianBeam {
                 direction: Vector3::new(1.0, 0.0, 0.0),
                 intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
                 rayleigh_range: 1.0,
                 ellipticity: 0.0,
-            })
-            .build();
+            });
 
         let detuning = -1.0e7;
         let field = Vector3::new(0.0, 0.0, 1.0);
@@ -163,31 +153,29 @@ pub mod tests {
         lds.detuning_sigma_minus = detuning;
         lds.detuning_pi = detuning;
 
-        let atom1 = test_world
-            .create_entity()
-            .with(LaserDetuningSamplers {
-                contents: [lds; DEFAULT_BEAM_LIMIT],
+        let atom1 = app.world
+            .spawn()
+            .insert(LaserDetuningSamplers {
+                contents: [lds; LASER_COUNT],
             })
-            .with(LaserIntensitySamplers {
+            .insert(LaserIntensitySamplers {
                 contents: [LaserIntensitySampler { intensity };
-                    DEFAULT_BEAM_LIMIT],
+                LASER_COUNT],
             })
-            .with(Strontium88_461)
-            .with(MagneticFieldSampler {
+            .insert(Strontium88_461)
+            .insert(MagneticFieldSampler {
                 field,
                 magnitude: 1.0,
                 gradient: Vector3::new(0.0, 0.0, 0.0),
                 jacobian: Matrix3::zeros(),
             })
-            .with(RateCoefficients {
-                contents: [RateCoefficient::<Strontium88_461>::default(); crate::laser::DEFAULT_BEAM_LIMIT],
+            .insert(RateCoefficients {
+                contents: [RateCoefficient::<Strontium88_461>::default(); LASER_COUNT],
             })
-            .build();
+            .id();
 
-        let mut system = CalculateRateCoefficientsSystem::<Strontium88_461, { DEFAULT_BEAM_LIMIT }>::default();
-        system.run_now(&test_world);
-        test_world.maintain();
-        let sampler_storage = test_world.read_storage::<RateCoefficients<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
+        app.add_system(calculate_rate_coefficients::<LASER_COUNT, Strontium88_461>);
+        app.update();
 
         let man_pref = Strontium88_461::rate_prefactor() * intensity;
         let scatter1 = 0.25 * man_pref
@@ -198,8 +186,7 @@ pub mod tests {
             / (detuning.powf(2.) + (Strontium88_461::gamma() / 2.).powf(2.));
 
         assert_approx_eq!(
-            sampler_storage
-                .get(atom1)
+            app.world.entity(atom1).get::<RateCoefficients<Strontium88_461, LASER_COUNT>>()
                 .expect("entity not found")
                 .contents[0]
                 .rate,

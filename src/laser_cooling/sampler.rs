@@ -91,65 +91,48 @@ pub fn calculate_laser_detuning<const N: usize, T : TransitionComponent>(
 
 #[cfg(test)]
 pub mod tests {
-
-    use crate::{laser::DEFAULT_BEAM_LIMIT, species::Strontium88_461, laser_cooling::{transition::AtomicTransition, doppler::DopplerShiftSampler}};
-
+    use crate::{species::Strontium88_461, laser_cooling::{transition::AtomicTransition, doppler::DopplerShiftSampler}};
     use super::*;
     use assert_approx_eq::assert_approx_eq;
-    use specs::{Builder, RunNow, World};
-    extern crate nalgebra;
 
     #[test]
     fn test_calculate_laser_detuning_system() {
-        let mut test_world = World::new();
-        test_world.register::<CoolingLight>();
-        test_world.register::<LaserIndex>();
-        test_world.register::<DopplerShiftSamplers<{ DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<LaserDetuningSamplers<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<Strontium88_461>();
-        test_world.register::<ZeemanShiftSampler<Strontium88_461>>();
-
+        let mut app = App::new();
+        app.insert_resource(BatchSize::default());
         let wavelength = constant::C / Strontium88_461::frequency();
-        test_world
-            .create_entity()
-            .with(CoolingLight {
+        app.world.spawn()
+            .insert(CoolingLight {
                 polarization: 1,
                 wavelength,
             })
-            .with(LaserIndex {
+            .insert(LaserIndex {
                 index: 0,
                 initiated: true,
-            })
-            .build();
+            });
 
         let mut zss = ZeemanShiftSampler::<Strontium88_461>::default();
         zss.sigma_pi = 0.0;
         zss.sigma_plus = 10.0e6;
         zss.sigma_minus = -10.0e6;
 
-        let atom1 = test_world
-            .create_entity()
-            .with(DopplerShiftSamplers {
+        let atom1 = app.world.spawn()
+            .insert(DopplerShiftSamplers {
                 contents: [DopplerShiftSampler {
                     doppler_shift: 10.0e6, //rad/s
-                }; DEFAULT_BEAM_LIMIT],
+                }; 1],
             })
-            .with(Strontium88_461)
-            .with(zss)
-            .with(LaserDetuningSamplers::<Strontium88_461, DEFAULT_BEAM_LIMIT> {
-                contents: [LaserDetuningSampler::default(); DEFAULT_BEAM_LIMIT],
+            .insert(Strontium88_461)
+            .insert(zss)
+            .insert(LaserDetuningSamplers::<Strontium88_461, 1> {
+                contents: [LaserDetuningSampler::default(); 1],
             })
-            .build();
+            .id();
 
-        let mut system = CalculateLaserDetuningSystem::<Strontium88_461, { DEFAULT_BEAM_LIMIT }>::default();
-        system.run_now(&test_world);
-        test_world.maintain();
-        let sampler_storage =
-            test_world.read_storage::<LaserDetuningSamplers<Strontium88_461, { DEFAULT_BEAM_LIMIT }>>();
+        app.add_system(calculate_laser_detuning::<1, Strontium88_461>);
+        app.update();
 
         assert_approx_eq!(
-            sampler_storage
-                .get(atom1)
+            app.world.entity(atom1).get::<LaserDetuningSamplers<Strontium88_461, 1>>()
                 .expect("entity not found")
                 .contents[0]
                 .detuning_sigma_plus,
@@ -158,8 +141,7 @@ pub mod tests {
         );
 
         assert_approx_eq!(
-            sampler_storage
-                .get(atom1)
+            app.world.entity(atom1).get::<LaserDetuningSamplers<Strontium88_461, 1>>()
                 .expect("entity not found")
                 .contents[0]
                 .detuning_sigma_minus,
@@ -167,8 +149,7 @@ pub mod tests {
             1e-2_f64
         );
         assert_approx_eq!(
-            sampler_storage
-                .get(atom1)
+            app.world.entity(atom1).get::<LaserDetuningSamplers<Strontium88_461, 1>>()
                 .expect("entity not found")
                 .contents[0]
                 .detuning_pi,

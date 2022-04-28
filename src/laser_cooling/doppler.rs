@@ -92,60 +92,50 @@ pub mod tests {
     use crate::constant::PI;
     use crate::laser_cooling::CoolingLight;
     use assert_approx_eq::assert_approx_eq;
-    extern crate nalgebra;
-    use crate::laser::{gaussian, DEFAULT_BEAM_LIMIT};
+    use crate::laser::{gaussian};
     use nalgebra::Vector3;
 
     #[test]
     fn test_calculate_doppler_shift_system() {
-        let mut test_world = World::new();
-        test_world.register::<LaserIndex>();
-        test_world.register::<CoolingLight>();
-        test_world.register::<GaussianBeam>();
-        test_world.register::<Velocity>();
-        test_world.register::<DopplerShiftSamplers<{ DEFAULT_BEAM_LIMIT }>>();
-
+        let mut app = App::new();
+        app.insert_resource(BatchSize::default());
+    
         let wavelength = 780e-9;
-        test_world
-            .create_entity()
-            .with(CoolingLight {
+        app.world
+            .spawn()
+            .insert(CoolingLight {
                 polarization: 1,
                 wavelength,
             })
-            .with(LaserIndex {
+            .insert(LaserIndex {
                 index: 0,
                 initiated: true,
             })
-            .with(GaussianBeam {
+            .insert(GaussianBeam {
                 direction: Vector3::new(1.0, 0.0, 0.0),
                 intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
                 rayleigh_range: gaussian::calculate_rayleigh_range(&wavelength, &2.0),
                 ellipticity: 0.0,
-            })
-            .build();
+            });
 
         let atom_velocity = 100.0;
-        let sampler1 = test_world
-            .create_entity()
-            .with(Velocity {
+        let sampler1 = app.world
+            .spawn()
+            .insert(Velocity {
                 vel: Vector3::new(atom_velocity, 0.0, 0.0),
             })
-            .with(DopplerShiftSamplers {
-                contents: [DopplerShiftSampler::default(); crate::laser::DEFAULT_BEAM_LIMIT],
+            .insert(DopplerShiftSamplers {
+                contents: [DopplerShiftSampler::default(); 1],
             })
-            .build();
+            .id();
 
-        let mut system = CalculateDopplerShiftSystem::<{ DEFAULT_BEAM_LIMIT }>;
-        system.run_now(&test_world);
-        test_world.maintain();
-        let sampler_storage =
-            test_world.read_storage::<DopplerShiftSamplers<{ DEFAULT_BEAM_LIMIT }>>();
+        app.add_system(calculate_doppler_shift::<1>);
+        app.update();
 
         assert_approx_eq!(
-            sampler_storage
-                .get(sampler1)
+            app.world.entity(sampler1).get::<DopplerShiftSamplers<1>>()
                 .expect("entity not found")
                 .contents[0]
                 .doppler_shift,

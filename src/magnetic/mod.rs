@@ -168,8 +168,6 @@ impl Plugin for MagneticsPlugin {
 pub mod tests {
     use super::*;
     use crate::atom::Position;
-    use crate::magnetic::quadrupole::QuadrupoleField3D;
-    use assert_approx_eq::assert_approx_eq;
 
     #[test]
     fn test_magnetics_plugin() {

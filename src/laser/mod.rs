@@ -79,12 +79,17 @@ pub mod tests {
 
     /// Test samplers are added to [NewlyCreated] entities.
     #[test]
-    fn test_deflag_new_atoms_system() {
+    fn test_components_added_to_new_atoms() {
+        use crate::{laser::{intensity::LaserIntensitySamplers, intensity_gradient::LaserIntensityGradientSamplers}, integrator::BatchSize};
+        const LASER_SIZE : usize = 4;
+
         let mut app = App::new();
-        //app.add_plugin(InitiatePlugin);
+        app.insert_resource(BatchSize::default());
+        app.add_plugin(LaserPlugin::<LASER_SIZE>);
         
         let test_entity = app.world.spawn().insert(NewlyCreated).id();
         app.update();
-        //assert!(!app.world.entity(test_entity).contains::<NewlyCreated>());
+        assert!(app.world.entity(test_entity).contains::<LaserIntensitySamplers<LASER_SIZE>>());
+        assert!(app.world.entity(test_entity).contains::<LaserIntensityGradientSamplers<LASER_SIZE>>());
     }
 }
