@@ -107,7 +107,7 @@ fn clear_region_tests(
 /// This system deletes all entities with a [RegionTest](struct.RegionTest.html)
 /// component with `Result::Reject` or `Result::Failed`.
 fn delete_failed_region_tests(
-    query: Query<(Entity, &RegionTest)>,
+    query: Query<(Entity, &RegionTest), Without<NewlyCreated>>, //do not create NewlyCreated atoms as other systems may be adding components.
     mut commands: Commands
 ) {
     for (entity, test) in query.iter() {
@@ -231,7 +231,7 @@ pub mod tests {
         app.add_system(perform_region_tests::<Sphere>);
         app.init_resource::<BatchSize>();
         app.update();
-        
+
         for (entity, result) in tests {
             let test_result = app.world.entity(entity).get::<RegionTest>().expect("Could not find entity");
             match test_result.result {
