@@ -3,7 +3,7 @@
 use nalgebra::Vector3;
 use rand;
 use rand::Rng;
-use specs::{Component, HashMapStorage};
+use bevy::prelude::*;
 
 pub trait Volume {
     fn contains(&self, volume_position: &Vector3<f64>, entity_position: &Vector3<f64>) -> bool;
@@ -18,6 +18,8 @@ pub trait Surface {
 }
 
 /// A cylindrical shape
+#[derive(Component)]
+#[component(storage = "SparseSet")]
 pub struct Cylinder {
     /// Radius of the cylindrical volume.
     pub radius: f64,
@@ -44,10 +46,6 @@ impl Cylinder {
             perp_y,
         }
     }
-}
-
-impl Component for Cylinder {
-    type Storage = HashMapStorage<Self>;
 }
 
 impl Volume for Cylinder {
@@ -98,6 +96,8 @@ impl Surface for Cylinder {
 }
 
 /// A sphere.
+#[derive(Component)]
+#[component(storage = "SparseSet")]
 pub struct Sphere {
     pub radius: f64,
 }
@@ -129,11 +129,9 @@ impl Surface for Sphere {
     }
 }
 
-impl Component for Sphere {
-    type Storage = HashMapStorage<Self>;
-}
-
 /// A cuboid.
+#[derive(Component)]
+#[component(storage = "SparseSet")]
 pub struct Cuboid {
     /// The dimension of the cuboid volume, from center to vertex (1,1,1).
     pub half_width: Vector3<f64>,
@@ -185,8 +183,4 @@ impl Surface for Cuboid {
         let position = surface_position + point;
         (position, normal)
     }
-}
-
-impl Component for Cuboid {
-    type Storage = HashMapStorage<Self>;
 }
