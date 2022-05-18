@@ -209,13 +209,13 @@ impl<'a, T> System<'a> for OvenCreateAtomsSystem<T> where T : AtomCreator + 'sta
                     continue;
                 }
 
-                let new_atom = entities.create();
                 let (new_vel, theta) =
                     velocity_generate(speed, &oven.direction, &oven.theta_distribution);
-
+                
                 if theta > oven.max_theta {
                     continue;
                 }
+                let new_atom = entities.create();
                 let start_position = oven_position.pos + oven.get_random_spawn_position();
                 updater.insert(
                     new_atom,
