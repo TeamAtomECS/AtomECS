@@ -1,6 +1,5 @@
 //! Calculations of the Doppler shift.
 use bevy::prelude::*;
-use bevy::tasks::ComputeTaskPool;
 
 use super::CoolingLight;
 use crate::atom::Velocity;
@@ -32,12 +31,11 @@ impl Default for DopplerShiftSampler {
 pub fn calculate_doppler_shift<const N: usize>(
     laser_query: Query<(&CoolingLight, &LaserIndex, &GaussianBeam)>,
     mut atom_query: Query<(&mut DopplerShiftSamplers<N>, &Velocity)>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>
 ) {
 
     // Set samplers to default values first.
-    atom_query.par_for_each_mut(&task_pool, batch_size.0, 
+    atom_query.par_for_each_mut(batch_size.0, 
         |(mut samplers, _vel)| {
             samplers.contents = [DopplerShiftSampler::default(); N];
         }
@@ -62,7 +60,7 @@ pub fn calculate_doppler_shift<const N: usize>(
         laser_array[..max_index].copy_from_slice(slice);
         let number_in_iteration = slice.len();
 
-        atom_query.par_for_each_mut(&task_pool, batch_size.0,
+        atom_query.par_for_each_mut( batch_size.0,
             |(mut sampler, vel)| {
                 for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
                     sampler.contents[index.index].doppler_shift = vel

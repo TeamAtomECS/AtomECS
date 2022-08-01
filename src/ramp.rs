@@ -12,7 +12,7 @@
 //!   * The struct implements `Clone`.
 //!   * The fields can all be multiplied by an f64 and added (eg `f64` and `Vector3<f64>` types).
 
-use bevy::{prelude::*, tasks::ComputeTaskPool};
+use bevy::{prelude::*};
 
 use crate::integrator::{Step, Timestep, BatchSize};
 use std::marker::PhantomData;
@@ -72,14 +72,13 @@ where
 
 fn apply_ramp<T>(
     mut query: Query<(&mut T, &mut Ramp<T>)>,
-    pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
     timestep: Res<Timestep>,
     step: Res<Step>
 ) where
     T: Lerp<T> + Component + Sync + Send + Clone {
         let current_time = step.n as f64 * timestep.delta;
-        query.par_for_each_mut(&pool, batch_size.0, 
+        query.par_for_each_mut(batch_size.0, 
         |(mut comp, mut ramp)| {
             comp.clone_from(&ramp.get_value(current_time));
         }

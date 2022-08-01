@@ -4,7 +4,7 @@ extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::initiate::NewlyCreated;
-use lib::integrator::Timestep;
+use lib::integrator::{Timestep};
 use lib::laser::LaserPlugin;
 use lib::laser::gaussian::GaussianBeam;
 use lib::laser_cooling::force::EmissionForceOption;

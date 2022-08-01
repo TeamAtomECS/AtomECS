@@ -5,7 +5,6 @@ use super::gaussian::{get_gaussian_beam_intensity, CircularMask, GaussianBeam};
 use crate::atom::Position;
 use crate::integrator::BatchSize;
 use crate::laser::index::LaserIndex;
-use bevy::tasks::ComputeTaskPool;
 use serde::Serialize;
 use bevy::prelude::*;
 
@@ -44,10 +43,9 @@ pub struct LaserIntensitySamplers<const N: usize> {
 /// * `N`: a constant `usize` corresponding to the size of the laser sampler array.
 pub fn initialise_laser_intensity_samplers<const N: usize>(
     mut query: Query<&mut LaserIntensitySamplers<N>>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>
 ) {
-    query.par_for_each_mut(&task_pool, batch_size.0, 
+    query.par_for_each_mut(batch_size.0, 
         |mut sampler| {
             sampler.contents = [LaserIntensitySampler::default(); N];
         }
@@ -65,7 +63,6 @@ pub fn sample_laser_intensities<const N: usize, FilterT>(
     mask_query: Query<&CircularMask>,
     frame_query: Query<&Frame>,
     mut sampler_query: Query<(&mut LaserIntensitySamplers<N>, &Position)>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>
 )
 where FilterT : Component
@@ -99,7 +96,7 @@ where FilterT : Component
         laser_array[..max_index].copy_from_slice(slice);
         let number_in_iteration = slice.len();
 
-        sampler_query.par_for_each_mut(&task_pool, batch_size.0, |(mut samplers, pos)| {
+        sampler_query.par_for_each_mut(batch_size.0, |(mut samplers, pos)| {
             for (index, gaussian, mask, frame) in
                 laser_array.iter().take(number_in_iteration)
             {

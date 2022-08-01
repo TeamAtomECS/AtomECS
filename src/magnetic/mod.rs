@@ -1,6 +1,6 @@
 //! Magnetic fields and zeeman shift
 
-use bevy::{prelude::*, tasks::ComputeTaskPool};
+use bevy::{prelude::*};
 use nalgebra::{Vector3, Matrix3};
 
 use crate::{initiate::NewlyCreated, integrator::BatchSize};
@@ -62,11 +62,10 @@ impl Default for MagneticFieldSampler {
 /// System that clears the magnetic field samplers each frame.
 fn clear_magnetic_field_sampler(
     mut query: Query<&mut MagneticFieldSampler>,
-    pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
 ) {
     query.par_for_each_mut(
-        &pool, batch_size.0,
+        batch_size.0,
         |mut sampler| {
             sampler.magnitude = 0.;
             sampler.field = Vector3::new(0.0, 0.0, 0.0);
@@ -82,11 +81,10 @@ fn clear_magnetic_field_sampler(
 /// This system runs after all other magnetic field systems.
 fn calculate_magnetic_field_magnitude(
     mut query: Query<&mut MagneticFieldSampler>,
-    pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
 ) {
     query.par_for_each_mut(
-        &pool, batch_size.0,
+        batch_size.0,
         |mut sampler| {
             sampler.magnitude = sampler.field.norm();
             if sampler.magnitude.is_nan() {
@@ -99,11 +97,10 @@ fn calculate_magnetic_field_magnitude(
 /// Calculates the gradient of the magnitude of the magnetic field.
 fn calculate_magnetic_field_magnitude_gradient(
     mut query: Query<&mut MagneticFieldSampler>,
-    pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
 ) {
     query.par_for_each_mut(
-        &pool, batch_size.0,
+        batch_size.0,
         |mut sampler| {
             let mut gradient = Vector3::new(0.0, 0.0, 0.0);
             for i in 0..3 {

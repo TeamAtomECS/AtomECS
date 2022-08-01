@@ -3,7 +3,7 @@
 extern crate serde;
 use crate::{laser::index::LaserIndex, integrator::BatchSize};
 use serde::Serialize;
-use bevy::{prelude::*, tasks::ComputeTaskPool};
+use bevy::{prelude::*};
 
 use super::CoolingLight;
 
@@ -26,7 +26,6 @@ pub struct CoolingLaserSamplerMasks<const N: usize> {
 pub fn populate_cooling_light_masks<const N: usize>(
     mut query: Query<&mut CoolingLaserSamplerMasks<N>>,
     light_query: Query<&LaserIndex, With<CoolingLight>>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>
 ) {
     let mut masks = [CoolingLaserSamplerMask::default(); N];
@@ -35,7 +34,7 @@ pub fn populate_cooling_light_masks<const N: usize>(
     }
 
     // distribute the masks into atom components.
-    query.par_for_each_mut(&task_pool, batch_size.0, 
+    query.par_for_each_mut(batch_size.0, 
         |mut atom_masks| {
             atom_masks.contents = masks.clone();
         }

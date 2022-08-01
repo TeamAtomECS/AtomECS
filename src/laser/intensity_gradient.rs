@@ -3,7 +3,6 @@
 //! Gradients are currently only calculated for beams marked as [DipoleLight](DipoleLight.struct.html).
 
 use bevy::prelude::*;
-use bevy::tasks::ComputeTaskPool;
 
 use crate::atom::Position;
 use crate::integrator::BatchSize;
@@ -45,13 +44,12 @@ pub struct LaserIntensityGradientSamplers<const N: usize> {
 pub fn sample_gaussian_laser_intensity_gradient<const N: usize, FilterT> (
     laser_query: Query<(&LaserIndex, &GaussianBeam, &Frame), With<FilterT>>,
     mut sampler_query: Query<(&mut LaserIntensityGradientSamplers<N>, &Position)>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>
 )
 where FilterT : Component + Send + Sync
 {
     for (index, beam, frame) in laser_query.iter() {
-        sampler_query.par_for_each_mut(&task_pool, batch_size.0, |(mut sampler, pos)| {
+        sampler_query.par_for_each_mut(batch_size.0, |(mut sampler, pos)| {
             sampler.contents[index.index].gradient =
                 get_gaussian_beam_intensity_gradient(beam, pos, frame);
         });

@@ -6,7 +6,6 @@ use crate::constant;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
 use crate::laser_cooling::photons_scattered::ActualPhotonsScatteredVector;
-use bevy::tasks::ComputeTaskPool;
 use bevy::prelude::*;
 use nalgebra::Vector3;
 use rand_distr;
@@ -29,7 +28,6 @@ const LASER_CACHE_SIZE: usize = 16;
 pub fn calculate_absorption_forces<const N: usize, T : TransitionComponent>(
     laser_query: Query<(&CoolingLight, &LaserIndex, &GaussianBeam)>,
     mut atom_query: Query<(&ActualPhotonsScatteredVector<T,N>, &mut Force), Without<Dark>>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
     timestep: Res<Timestep>
 ) {
@@ -50,7 +48,7 @@ pub fn calculate_absorption_forces<const N: usize, T : TransitionComponent>(
         laser_array[..max_index].copy_from_slice(slice);
         let number_in_iteration = slice.len();
 
-        atom_query.par_for_each_mut(&task_pool, batch_size.0, 
+        atom_query.par_for_each_mut(batch_size.0, 
             |(scattered, mut force)| {
                 for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
                     let new_force = scattered.contents[index.index].scattered * HBAR
@@ -100,7 +98,6 @@ pub struct EmissionForceConfiguration {
 /// produced or derived by random-walk formula and a single random unit vector.
 pub fn calculate_emission_forces<const N: usize, T : TransitionComponent>(
     mut atom_query: Query<(&mut Force, &ActualPhotonsScatteredVector<T,N>), With<T>>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
     rand_opt: Option<Res<EmissionForceOption>>,
     timestep: Res<Timestep>
@@ -112,7 +109,6 @@ pub fn calculate_emission_forces<const N: usize, T : TransitionComponent>(
                 EmissionForceOption::Off => {}
                 EmissionForceOption::On(configuration) => {
                     atom_query.par_for_each_mut(
-                        &task_pool,
                         batch_size.0,
                         |(mut force, kick)| {
                             let total: u64 = kick.calculate_total_scattered();

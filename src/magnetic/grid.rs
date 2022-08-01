@@ -1,7 +1,7 @@
 //! Define magnetic fields using grids.
 use crate::{atom::Position, integrator::BatchSize};
 use crate::magnetic::MagneticFieldSampler;
-use bevy::{prelude::*, tasks::ComputeTaskPool};
+use bevy::{prelude::*};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 
@@ -59,12 +59,11 @@ impl PrecalculatedMagneticFieldGrid {
 pub fn sample_magnetic_grids(
     grid_query: Query<&PrecalculatedMagneticFieldGrid>,
     mut sampler_query: Query<(&Position, &mut MagneticFieldSampler)>,
-    pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
 ) {
     for grid in grid_query.iter() {
         sampler_query.par_for_each_mut(
-            &pool, batch_size.0,
+            batch_size.0,
             |(pos, mut sampler)| {
                 let field = grid.get_field(&pos.pos);
                 sampler.field += field;

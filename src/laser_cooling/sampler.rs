@@ -7,7 +7,6 @@ use crate::integrator::BatchSize;
 use crate::laser::index::LaserIndex;
 use crate::laser_cooling::doppler::DopplerShiftSamplers;
 use super::zeeman::ZeemanShiftSampler;
-use bevy::tasks::ComputeTaskPool;
 use bevy::prelude::*;
 use std::f64;
 use std::marker::PhantomData;
@@ -49,7 +48,6 @@ pub struct LaserDetuningSamplers<T, const N: usize> where T : TransitionComponen
 pub fn calculate_laser_detuning<const N: usize, T : TransitionComponent>(
     laser_query: Query<(&LaserIndex, &CoolingLight)>,
     mut atom_query: Query<(&mut LaserDetuningSamplers<T,N>, &DopplerShiftSamplers<N>, &ZeemanShiftSampler<T>), With<T>>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>
 ) {
     // There are typically only a small number of lasers in a simulation.
@@ -69,7 +67,7 @@ pub fn calculate_laser_detuning<const N: usize, T : TransitionComponent>(
         laser_array[..max_index].copy_from_slice(slice);
         let number_in_iteration = slice.len();
 
-        atom_query.par_for_each_mut(&task_pool, batch_size.0,
+        atom_query.par_for_each_mut(batch_size.0,
             |(mut detuning_sampler, doppler_samplers, zeeman_sampler)| {
                 for (index, cooling) in laser_array.iter().take(number_in_iteration) {
                     let without_zeeman = 2.0

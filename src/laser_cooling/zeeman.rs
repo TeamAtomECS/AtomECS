@@ -5,7 +5,6 @@ use crate::integrator::BatchSize;
 use crate::magnetic::MagneticFieldSampler;
 use crate::constant::HBAR;
 use crate::initiate::NewlyCreated;
-use bevy::tasks::ComputeTaskPool;
 use serde::Serialize;
 use bevy::prelude::*;
 
@@ -49,12 +48,10 @@ pub fn attach_zeeman_shift_samplers_to_newly_created_atoms<T>(
 /// Calculates the Zeeman shift for each atom in each cooling beam.
 pub fn calculate_zeeman_shift<T>(
     mut query: Query<(&mut ZeemanShiftSampler<T>, &MagneticFieldSampler), With<T>>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>
 ) where T : TransitionComponent {
 
     query.par_for_each_mut(
-        &task_pool,
         batch_size.0,
         |(
             mut zeeman,

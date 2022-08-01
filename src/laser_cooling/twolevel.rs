@@ -4,7 +4,7 @@ use crate::integrator::BatchSize;
 
 use super::{rate::RateCoefficients, sampler_masks::CoolingLaserSamplerMasks};
 use serde::{Deserialize, Serialize};
-use bevy::{prelude::*, tasks::ComputeTaskPool};
+use bevy::{prelude::*};
 use std::{fmt, marker::PhantomData};
 
 use super::transition::{TransitionComponent};
@@ -52,10 +52,9 @@ impl<T> TwoLevelPopulation<T> where T : TransitionComponent {
 /// Calculates the TwoLevelPopulation from the natural linewidth and the `RateCoefficients`
 pub fn calculate_two_level_population<const N: usize, T : TransitionComponent>(
     mut atom_query: Query<(&mut TwoLevelPopulation<T>, &CoolingLaserSamplerMasks<N>, &RateCoefficients<T,N>), With<T>>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>
 ) {
-    atom_query.par_for_each_mut(&task_pool, batch_size.0,
+    atom_query.par_for_each_mut(batch_size.0,
         |(mut twolevel, mask, rates)| {
             let mut sum_rates: f64 = 0.;
 

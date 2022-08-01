@@ -12,7 +12,6 @@ use crate::initiate::NewlyCreated;
 use crate::integrator::BatchSize;
 use crate::shapes::{Cuboid, Cylinder, Sphere, Volume};
 use bevy::prelude::*;
-use bevy::tasks::ComputeTaskPool;
 
 
 pub enum VolumeType {
@@ -58,11 +57,9 @@ fn perform_region_tests<T: Volume + Component>(
     volume_query: Query<(&T, &SimulationVolume, &Position)>,
     mut atom_query: Query<(&mut RegionTest, &Position)>,
     batch_size: Res<BatchSize>,
-    task_pool: Res<ComputeTaskPool>
 ) {
     for (volume, sim_volume, vol_pos) in volume_query.iter() {
         atom_query.par_for_each_mut(
-            &task_pool,
             batch_size.0,
             |(mut result, pos)| {
                 match result.result {
@@ -95,10 +92,8 @@ fn perform_region_tests<T: Volume + Component>(
 fn clear_region_tests(
     mut query: Query<&mut RegionTest>,
     batch_size: Res<BatchSize>,
-    task_pool: Res<ComputeTaskPool>
 ) {
     query.par_for_each_mut(
-        &task_pool,
         batch_size.0,
         |mut test| {test.result = Result::Untested}
     );

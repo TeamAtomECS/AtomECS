@@ -12,7 +12,6 @@ use crate::laser::index::LaserIndex;
 use crate::laser::intensity::LaserIntensitySamplers;
 use crate::laser_cooling::sampler::LaserDetuningSamplers;
 use crate::magnetic::MagneticFieldSampler;
-use bevy::tasks::ComputeTaskPool;
 use serde::Serialize;
 use bevy::prelude::*;
 
@@ -52,12 +51,11 @@ pub struct RateCoefficients<T, const N: usize> where T : TransitionComponent {
 pub fn calculate_rate_coefficients<const N: usize, T>(
     laser_query: Query<(&CoolingLight, &LaserIndex, &GaussianBeam)>,
     mut atom_query: Query<(&LaserDetuningSamplers<T,N>, &LaserIntensitySamplers<N>, &MagneticFieldSampler, &mut RateCoefficients<T,N>), With<T>>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>
 ) where T : TransitionComponent {
 
     // First set all rate coefficients to zero.
-    atom_query.par_for_each_mut(&task_pool, batch_size.0,
+    atom_query.par_for_each_mut(batch_size.0,
         |(_, _, _, mut rates)| {
             rates.contents = [RateCoefficient::default(); N];
         }
@@ -66,7 +64,6 @@ pub fn calculate_rate_coefficients<const N: usize, T>(
     // Then calculate for each laser.
     for (cooling, index, gaussian) in laser_query.iter() {
         atom_query.par_for_each_mut(
-            &task_pool,
             batch_size.0,
             |(detunings, intensities, bfield, mut rates)| {
                 let beam_direction_vector = gaussian.direction.normalize();

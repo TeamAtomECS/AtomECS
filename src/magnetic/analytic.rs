@@ -1,6 +1,6 @@
 //! Support for analytically defined fields.
 
-use bevy::{prelude::*, tasks::ComputeTaskPool};
+use bevy::{prelude::*};
 use crate::{atom::Position, integrator::BatchSize};
 use nalgebra::{Matrix3, Vector3};
 use super::MagneticFieldSampler;
@@ -22,13 +22,11 @@ pub trait AnalyticField {
 pub fn calculate_field_contributions<T>(
     fields_query: Query<(&Position, &T)>,
     mut samplers_query: Query<(&Position, &mut MagneticFieldSampler)>,
-    pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
 ) 
 where T : AnalyticField + Component {
     for (origin, field) in fields_query.iter() {
-        samplers_query.par_for_each_mut(
-            &pool, batch_size.0,
+        samplers_query.par_for_each_mut(batch_size.0,
             |(pos, mut sampler)| {
                 // calculate field contribution
                 sampler.field += field.get_field(origin.pos, pos.pos);

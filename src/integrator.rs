@@ -4,7 +4,6 @@ use crate::atom::*;
 use crate::constant;
 use crate::initiate::NewlyCreated;
 use bevy::prelude::*;
-use bevy::tasks::ComputeTaskPool;
 use nalgebra::Vector3;
 
 /// Tracks the number of the current integration step.
@@ -48,7 +47,6 @@ impl Default for BatchSize {
 ///
 /// The timestep duration is specified by the [Timestep] system resource.
 fn velocity_verlet_integrate_position(
-    pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
     timestep: Res<Timestep>,
     mut step: ResMut<Step>,
@@ -57,7 +55,7 @@ fn velocity_verlet_integrate_position(
     step.n += 1;
     let dt = timestep.delta;
 
-    query.par_for_each_mut(&pool, batch_size.0, |(mut pos, mut old_force, vel, force, mass)| {
+    query.par_for_each_mut(batch_size.0, |(mut pos, mut old_force, vel, force, mass)| {
         pos.pos = pos.pos
             + vel.vel * dt
             + force.force / (constant::AMU * mass.value) / 2.0 * dt * dt;
@@ -71,13 +69,12 @@ pub const INTEGRATE_VELOCITY_SYSTEM_NAME: &str = "integrate_velocity";
 ///
 /// The timestep duration is specified by the [Timestep] system resource
 fn velocity_verlet_integrate_velocity(
-    pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
     timestep: Res<Timestep>,
     mut query: Query<(&mut Velocity, &Force, &OldForce, &Mass)>,
 ) {
     let dt = timestep.delta;
-    query.par_for_each_mut(&pool, batch_size.0, |(mut vel, force, old_force, mass)| {
+    query.par_for_each_mut(batch_size.0, |(mut vel, force, old_force, mass)| {
         vel.vel += (force.force + old_force.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
     });
 }
@@ -95,11 +92,10 @@ fn add_old_force_to_new_atoms(
 /// Resets force to zero at the start of each simulation step.
 fn clear_force(
     mut query: Query<&mut Force>,
-    pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
 ) {
     query.par_for_each_mut(
-        &pool, batch_size.0,
+        batch_size.0,
         |mut force| {
             force.force = Vector3::new(0.0,0.0,0.0);
         }

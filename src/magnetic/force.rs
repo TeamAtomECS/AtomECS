@@ -10,7 +10,6 @@ use crate::atom::Force;
 use crate::constant;
 use crate::integrator::BatchSize;
 use bevy::prelude::*;
-use bevy::tasks::ComputeTaskPool;
 
 /// Component that represents the magnetic dipole moment of an atom.
 #[derive(Clone, Component)]
@@ -21,10 +20,9 @@ pub struct MagneticDipole {
 
 pub fn apply_magnetic_forces(
     mut query: Query<(&mut Force, &MagneticFieldSampler, &MagneticDipole)>,
-    pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
 ) {
-    query.par_for_each_mut(&pool, batch_size.0, 
+    query.par_for_each_mut(batch_size.0, 
         |(mut force, sampler, dipole)| {
             let dipole_force = -dipole.mFgF * constant::BOHRMAG * sampler.gradient;
             force.force += dipole_force;

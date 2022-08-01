@@ -8,7 +8,7 @@ use super::sampler_masks::CoolingLaserSamplerMasks;
 use crate::laser_cooling::rate::RateCoefficients;
 use crate::laser_cooling::twolevel::TwoLevelPopulation;
 use serde::{Deserialize, Serialize};
-use bevy::{prelude::*, tasks::ComputeTaskPool};
+use bevy::{prelude::*};
 use std::fmt;
 use std::marker::PhantomData;
 
@@ -41,12 +41,10 @@ impl<T> Default for TotalPhotonsScattered<T> where T : TransitionComponent {
 /// This can be calculated by: Timestep * TwolevelPopulation * Linewidth
 pub fn calculate_mean_total_photons_scattered<T : TransitionComponent>(
     mut query: Query<(&TwoLevelPopulation<T>, &mut TotalPhotonsScattered<T>), With<T>>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
     timestep: Res<Timestep>
 ) {
     query.par_for_each_mut(
-        &task_pool,
         batch_size.0,
         |(twolevel, mut total)| {
             total.total = timestep.delta * T::gamma() * twolevel.excited;
@@ -94,10 +92,9 @@ impl<T, const N: usize> fmt::Display for ExpectedPhotonsScatteredVector<T, N> wh
 /// them between the CoolingLight entities.
 pub fn calculate_expected_photons_scattered<const N: usize, T : TransitionComponent>(
     mut query: Query<(&mut ExpectedPhotonsScatteredVector<T,N>, &RateCoefficients<T,N>, &CoolingLaserSamplerMasks<N>, &TotalPhotonsScattered<T>)>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>
 ) {
-    query.par_for_each_mut(&task_pool, batch_size.0, 
+    query.par_for_each_mut(batch_size.0, 
         |(mut expected, rates, mask, total)| {
             let mut sum_rates: f64 = 0.;
 
@@ -188,13 +185,12 @@ impl Default for ScatteringFluctuationsOption {
 /// by drawing from a Poisson Distribution that has `ExpectedPhotonsScattered` as the lambda parameter.
 pub fn calculate_actual_photons_scattered<const N: usize, T : TransitionComponent>(
     mut query: Query<(&ExpectedPhotonsScatteredVector<T,N>, &mut ActualPhotonsScatteredVector<T,N>)>,
-    task_pool: Res<ComputeTaskPool>,
     batch_size: Res<BatchSize>,
     fluctuations: Res<ScatteringFluctuationsOption>
 ) {
     match fluctuations.as_ref() {
         ScatteringFluctuationsOption::Off => {
-            query.par_for_each_mut(&task_pool, batch_size.0, 
+            query.par_for_each_mut(batch_size.0, 
                 |(expected, mut actual)| {
                     for index in 0..expected.contents.len() {
                         actual.contents[index].scattered = expected.contents[index].scattered;
@@ -203,7 +199,7 @@ pub fn calculate_actual_photons_scattered<const N: usize, T : TransitionComponen
             );
         }
         ScatteringFluctuationsOption::On => {
-            query.par_for_each_mut(&task_pool, batch_size.0,
+            query.par_for_each_mut(batch_size.0,
                 |(expected, mut actual)| {
                     for index in 0..expected.contents.len() {
                         let lambda = expected.contents[index].scattered;
