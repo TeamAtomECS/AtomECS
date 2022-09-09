@@ -14,7 +14,7 @@ use nalgebra::Vector3;
 use specs::prelude::*;
 use std::time::Instant;
 
-const BEAM_NUMBER: usize = 2;
+const BEAM_NUMBER: usize = 1;
 
 fn main() {
     let now = Instant::now();
@@ -23,9 +23,9 @@ fn main() {
     let mut sim_builder = SimulationBuilder::default();
     sim_builder.add_plugin(LaserPlugin::<{BEAM_NUMBER}>);
     sim_builder.add_plugin(DipolePlugin::<{BEAM_NUMBER}>);
-    sim_builder.add_plugin(FileOutputPlugin::<Position, Text, Atom>::new("pos.txt".to_string(), 100));
-    sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new("vel.txt".to_string(), 100));
-    sim_builder.add_plugin(FileOutputPlugin::<Position, XYZ, Atom>::new("position.xyz".to_string(), 100));
+    sim_builder.add_plugin(FileOutputPlugin::<Position, Text, Atom>::new("pos.txt".to_string(), 1));
+    sim_builder.add_plugin(FileOutputPlugin::<Velocity, Text, Atom>::new("vel.txt".to_string(), 1));
+    sim_builder.add_plugin(FileOutputPlugin::<Position, XYZ, Atom>::new("position.xyz".to_string(), 1));
     let mut sim = sim_builder.build();
 
     // Create dipole laser.
@@ -51,34 +51,13 @@ fn main() {
         })
         .build();
 
-    let gaussian_beam = GaussianBeam {
-        intersection: Vector3::new(0.0, 0.0, 0.0),
-        e_radius,
-        power,
-        direction: Vector3::y(),
-        rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &e_radius),
-        ellipticity: 0.0,
-    };
-    sim.world
-        .create_entity()
-        .with(gaussian_beam)
-        .with(dipole::DipoleLight { wavelength })
-        .with(laser::frame::Frame {
-            x_vector: Vector3::x(),
-            y_vector: Vector3::z(),
-        })
-        .build();
-
-    // Define timestep
-    sim.world.insert(Timestep { delta: 1.0e-5 });
-
     // Create a single test atom
     sim.world
         .create_entity()
         .with(atom::Mass { value: 87.0 })
         .with(atom::Force::new())
         .with(atom::Position {
-            pos: Vector3::new(-5.0e-6, 5.0e-6, 5.0e-6),
+            pos: Vector3::new(1.0e-7, 0.0e-7, 0.0e-7),
         })
         .with(atom::Velocity {
             vel: Vector3::new(0.0, 0.0, 0.0),
@@ -90,8 +69,11 @@ fn main() {
         .with(lib::initiate::NewlyCreated)
         .build();
 
+    // Define timestep
+    sim.world.insert(Timestep { delta: 1.0e-5 });
+
     // Run the simulation for a number of steps.
-    for _i in 0..100_000 {
+    for _i in 0..300_000 {
         sim.step();
     }
 
