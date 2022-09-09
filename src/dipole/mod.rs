@@ -46,7 +46,7 @@ impl Component for Polarizability {
     type Storage = VecStorage<Self>;
 }
 impl Polarizability {
-    /// Calculate the polarizability of an atom in a dipole beam of given wavelength, detuned from a strong optical transition.
+    /// Calculate the real part of the polarizability of an atom in a dipole beam of given wavelength, detuned from a strong optical transition.
     ///
     /// The wavelengths of both transitions are in SI units of m.
     /// The linewidth of the optical transition is in SI units of Hz.
@@ -55,12 +55,16 @@ impl Polarizability {
         optical_transition_wavelength: f64,
         optical_transition_linewidth: f64,
     ) -> Polarizability {
+
         let transition_f = constant::C / optical_transition_wavelength;
+
         let dipole_f = constant::C / dipole_beam_wavelength;
-        let prefactor = -3. * constant::PI * constant::C.powf(2.0)
-            / (2. * (2. * constant::PI * transition_f).powf(3.0))
+
+        let prefactor = 3.0 * constant::PI * constant::C.powf(3.0)
+            * constant::EPSILON0/(transition_f.powf(3.0))
             * optical_transition_linewidth
-            * -(1. / (transition_f - dipole_f) + 1. / (transition_f + dipole_f));
+            * (1.0 / (transition_f - dipole_f) + 1.0 / (transition_f + dipole_f));
+
         Polarizability { prefactor }
     }
 }
@@ -83,11 +87,11 @@ impl<'a> System<'a> for AttachIndexToDipoleLightSystem {
 }
 
 /// This plugin implements a dipole force that can be used to confine cold atoms.
-/// 
+///
 /// See also [crate::dipole]
-/// 
+///
 /// # Generic Arguments
-/// 
+///
 /// * `N`: The maximum number of laser beams (must match the `LaserPlugin`).
 pub struct DipolePlugin<const N : usize>;
 impl<const N: usize> Plugin for DipolePlugin<N> {

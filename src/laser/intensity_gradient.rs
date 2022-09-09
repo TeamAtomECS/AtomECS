@@ -173,6 +173,7 @@ pub mod tests {
             1e+5_f64
         );
     }
+
     #[test]
     fn test_sample_laser_intensity_gradient_again_system() {
         let mut test_world = World::new();
@@ -233,8 +234,8 @@ pub mod tests {
             .contents[0]
             .gradient;
 
-        assert_approx_eq!(-8.4628e+7, sim_result_gradient[0], 1e+5_f64);
-        assert_approx_eq!(-4.33992902e+13, sim_result_gradient[1], 1e+8_f64);
-        assert_approx_eq!(-4.33992902e+13, sim_result_gradient[2], 1e+8_f64);
+        assert_approx_eq!( -2.09081e+8, sim_result_gradient[0], 1e+5_f64);
+        assert_approx_eq!(-4.33993e+13, sim_result_gradient[1], 1e+8_f64);
+        assert_approx_eq!(-4.33993e+13, sim_result_gradient[2], 1e+8_f64);
     }
 }

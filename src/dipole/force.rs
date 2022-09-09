@@ -6,6 +6,7 @@ use crate::atom::Force;
 use crate::dipole::DipoleLight;
 use crate::dipole::Polarizability;
 use crate::laser::index::LaserIndex;
+use crate::constant;
 
 /// Calculates forces exerted onto the atoms by dipole laser beams.
 ///
@@ -28,10 +29,13 @@ impl<'a, const N: usize> System<'a> for ApplyDipoleForceSystem<N> {
     ) {
         (&mut force, &polarizability, &gradient_sampler)
             .par_join()
-            .for_each(|(force, polarizability, sampler)| {
+            .for_each( |(force, polarizability, sampler)| {
                 for (index, _dipole) in (&dipole_index, &dipole_light).join() {
-                    force.force +=
-                        polarizability.prefactor * sampler.contents[index.index].gradient;
+
+                    force.force += ( 1.0 / ( 2.0 * constant::EPSILON0 * constant::C ) )
+                        * polarizability.prefactor
+                        * sampler.contents[index.index].gradient;
+
                 }
             });
     }
@@ -50,6 +54,9 @@ pub mod tests {
     use crate::laser::gaussian::GaussianBeam;
     use crate::laser::DEFAULT_BEAM_LIMIT;
     use nalgebra::Vector3;
+    use crate::atom::Position;
+    use crate::laser::frame::Frame;
+    use crate::laser::intensity_gradient::LaserIntensityGradientSampler;
 
     #[test]
     fn test_apply_dipole_force_system() {
@@ -110,46 +117,46 @@ pub mod tests {
     fn test_apply_dipole_force_again_system() {
         let mut test_world = World::new();
 
-        test_world.register::<LaserIndex>();
-        test_world.register::<DipoleLight>();
-        test_world.register::<Force>();
-        test_world.register::<LaserIntensityGradientSamplers<{ DEFAULT_BEAM_LIMIT }>>();
-        test_world.register::<Polarizability>();
+         test_world.register::<LaserIndex>();
+         test_world.register::<DipoleLight>();
+         test_world.register::<Force>();
+         test_world.register::<LaserIntensityGradientSamplers<{ DEFAULT_BEAM_LIMIT }>>();
+         test_world.register::<Polarizability>();
 
-        test_world
-            .create_entity()
-            .with(LaserIndex {
-                index: 0,
-                initiated: true,
-            })
-            .with(DipoleLight {
-                wavelength: 1064.0e-9,
-            })
-            .build();
+         test_world
+             .create_entity()
+             .with(LaserIndex {
+                 index: 0,
+                 initiated: true,
+             })
+             .with(DipoleLight {
+                 wavelength: 1064.0e-9,
+             })
+             .build();
 
-        let transition = Polarizability::calculate_for(1064e-9, 461e-9, 32e6);
-        let atom1 = test_world
-            .create_entity()
-            .with(Force {
-                force: Vector3::new(0.0, 0.0, 0.0),
-            })
-            .with(LaserIntensityGradientSamplers {
-                contents: [crate::laser::intensity_gradient::LaserIntensityGradientSampler {
-                    gradient: Vector3::new(-8.4628e+7, -4.33992902e+13, -4.33992902e+13),
-                }; crate::laser::DEFAULT_BEAM_LIMIT],
-            })
-            .with(transition)
-            .build();
-        let mut system = ApplyDipoleForceSystem::<{ DEFAULT_BEAM_LIMIT }>;
-        system.run_now(&test_world);
-        test_world.maintain();
-        let sampler_storage = test_world.read_storage::<Force>();
-        let sim_result_force = sampler_storage.get(atom1).expect("Entity not found!").force;
+         let transition = Polarizability::calculate_for(1064e-9, 461e-9, 32e6);
+         let atom1 = test_world
+             .create_entity()
+             .with(Force {
+                 force: Vector3::new(0.0, 0.0, 0.0),
+             })
+             .with(LaserIntensityGradientSamplers {
+                 contents: [crate::laser::intensity_gradient::LaserIntensityGradientSampler {
+                     gradient: Vector3::new(-8.4628e+7, -4.33992902e+13, -4.33992902e+13),
+                 }; crate::laser::DEFAULT_BEAM_LIMIT],
+             })
+             .with(transition)
+             .build();
+         let mut system = ApplyDipoleForceSystem::<{ DEFAULT_BEAM_LIMIT }>;
+         system.run_now(&test_world);
+         test_world.maintain();
+         let sampler_storage = test_world.read_storage::<Force>();
+         let sim_result_force = sampler_storage.get(atom1).expect("Entity not found!").force;
 
-        assert_approx_eq!(-6.386888332902177e-29, sim_result_force[0], 3e-30_f64);
-        assert_approx_eq!(-3.11151847e-23, sim_result_force[1], 2e-24_f64);
-        assert_approx_eq!(-3.11151847e-23, sim_result_force[2], 2e-24_f64);
-    }
+         assert_approx_eq!(-6.386888332902177e-29, sim_result_force[0], 3e-30_f64);
+         assert_approx_eq!(-3.11151847e-23, sim_result_force[1], 2e-24_f64);
+         assert_approx_eq!(-3.11151847e-23, sim_result_force[2], 2e-24_f64);
+     }
 
     #[test]
     fn test_apply_dipole_force_and_gradient_system() {
@@ -245,9 +252,12 @@ pub mod tests {
             .get(atom1)
             .expect("Entity not found!")
             .contents;
-        //println!("force is: {}", sim_result_force);
-        //println!("gradient 1 is: {}", sim_result_grad[0].gradient);
-        //println!("gradient 2 is: {}", sim_result_grad[1].gradient);
+
+        println!("force is: {}", sim_result_force);
+        // println!("gradient 1 is: {}", _sim_result_grad);
+        // println!("gradient 2 is: {}", _sim_result_grad[1].gradient);
+
+
 
         assert_approx_eq!(
             0.000000000000000000000000000000000127913190642808,

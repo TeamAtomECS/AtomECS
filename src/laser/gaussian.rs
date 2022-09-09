@@ -209,6 +209,7 @@ pub fn get_gaussian_beam_intensity(
                 / (beam.e_radius.powf(2.0) * (1. + (z / beam.rayleigh_range).powf(2.0))),
         )
 }
+
 /// Computes the rayleigh range for a given beam and wavelength
 pub fn calculate_rayleigh_range(wavelength: &f64, e_radius: &f64) -> f64 {
     2.0 * PI * e_radius.powf(2.0) / wavelength
@@ -230,15 +231,24 @@ pub fn get_gaussian_beam_intensity_gradient(
     let y = rela_coord.dot(&reference_frame.y_vector) * semi_major_axis.powf(0.5);
     let z = rela_coord.dot(&beam.direction);
 
-    let spot_size_squared =
-        2.0 * beam.e_radius.powf(2.0) * (1. + (z / beam.rayleigh_range).powf(2.0));
-    let vector = -4. * (reference_frame.x_vector * x + reference_frame.y_vector * y)
-        + beam.direction * z / (beam.rayleigh_range.powf(2.0) + z.powf(2.0))
-            * (- 2.0 * spot_size_squared + 4. * (x.powf(2.0) + y.powf(2.0)));
-    let intensity = 2. * beam.power / PI / spot_size_squared
-        * EXP.powf(-2. * (x.powf(2.0) + y.powf(2.0)) / spot_size_squared);
+    let spot_size_squared = 2.0 * beam.e_radius.powf(2.0)
+        * (1. + (z / beam.rayleigh_range).powf(2.0));
 
-    intensity / spot_size_squared * vector
+    // let vector = -4.0 * (reference_frame.x_vector * x + reference_frame.y_vector * y)
+    //     - 2.0 * beam.direction * z / ( beam.rayleigh_range.powf(2.0) + z.powf(2.0) ) * (
+    //         spot_size_squared * (
+    //             1.0 + ( z / beam.rayleigh_range ).powf(2.0)
+    //         ) - 2.0 * (x.powf(2.0) + y.powf(2.0))
+    //     );
+
+    let vector = -4.0 * (reference_frame.x_vector * x + reference_frame.y_vector * y)
+        -2.0 * beam.direction * z / ( beam.rayleigh_range.powf(2.0) + z.powf(2.0) )
+        * ( spot_size_squared - 2.0 * ( x.powf(2.0) + y.powf(2.0) ) );
+
+    let intensity = 2.0 * beam.power / ( PI * spot_size_squared )
+        * EXP.powf(-2.0 * (x.powf(2.0) + y.powf(2.0)) / spot_size_squared);
+
+     - intensity / spot_size_squared * vector
 }
 
 #[cfg(test)]
@@ -258,13 +268,13 @@ pub mod tests {
         let beam = GaussianBeam {
             direction: Vector3::z(),
             intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: 70.71067812e-6,
-            power: 100.0,
-            rayleigh_range: calculate_rayleigh_range(&1064.0e-9, &70.71067812e-6),
+            e_radius: 60e-6,
+            power: 10.0,
+            rayleigh_range: calculate_rayleigh_range(&1064.0e-9, &60e-6),
             ellipticity: 0.0,
         };
         let pos1 = Position {
-            pos: Vector3::new(10.0e-6, 0.0, 30.0e-6),
+            pos: Vector3::new(1.0e-7, 1.2e-6, 6.0e-7),
         };
         let grf = Frame {
             x_vector: Vector3::x(),
@@ -272,9 +282,10 @@ pub mod tests {
         };
 
         let gradient = get_gaussian_beam_intensity_gradient(&beam, &pos1, &grf);
-        assert_approx_eq!(gradient[0], -2.49605032e+13, 1e+8_f64);
-        assert_approx_eq!(gradient[1], 0.0, 1e+9_f64);
-        assert_approx_eq!(gradient[2], -2.06143366e+08, 1e+6_f64);
+        println!("{}",gradient[0]);
+        assert_approx_eq!(gradient[0], -4.91021e+10, 1e+9_f64);
+        assert_approx_eq!(gradient[1], -5.89225e+11, 1e+9_f64);
+        assert_approx_eq!(gradient[2],  -9.38334e+6, 1e+9_f64);
     }
 
     #[test]
