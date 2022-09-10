@@ -36,6 +36,7 @@ impl<'a, const N: usize> System<'a> for ApplyDipoleForceSystem<N> {
                         * polarizability.prefactor
                         * sampler.contents[index.index].gradient;
 
+
                 }
             });
     }

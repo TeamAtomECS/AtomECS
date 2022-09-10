@@ -29,7 +29,7 @@ fn main() {
     let mut sim = sim_builder.build();
 
     // Create dipole laser.
-    let power = 10.0;
+    let power = 1.0;
     let e_radius = 60.0e-6 / (2.0_f64.sqrt());
     let wavelength = 1064.0e-9;
 
@@ -37,7 +37,7 @@ fn main() {
         intersection: Vector3::new(0.0, 0.0, 0.0),
         e_radius,
         power,
-        direction: Vector3::x(),
+        direction: Vector3::z(),
         rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &e_radius),
         ellipticity: 0.0,
     };
@@ -46,8 +46,8 @@ fn main() {
         .with(gaussian_beam)
         .with(dipole::DipoleLight { wavelength })
         .with(laser::frame::Frame {
-            x_vector: Vector3::y(),
-            y_vector: Vector3::z(),
+            x_vector: Vector3::x(),
+            y_vector: Vector3::y(),
         })
         .build();
 
@@ -57,7 +57,7 @@ fn main() {
         .with(atom::Mass { value: 87.0 })
         .with(atom::Force::new())
         .with(atom::Position {
-            pos: Vector3::new(1.0e-7, 0.0e-7, 0.0e-7),
+            pos: Vector3::new(1.0e-7, 1.0e-7, 1.0e-7),
         })
         .with(atom::Velocity {
             vel: Vector3::new(0.0, 0.0, 0.0),
@@ -70,10 +70,10 @@ fn main() {
         .build();
 
     // Define timestep
-    sim.world.insert(Timestep { delta: 1.0e-5 });
+    sim.world.insert(Timestep { delta: 1.0e-6 });
 
     // Run the simulation for a number of steps.
-    for _i in 0..300_000 {
+    for _i in 0..200_000 {
         sim.step();
     }
 
