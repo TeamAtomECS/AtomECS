@@ -37,7 +37,7 @@ fn main() {
         intersection: Vector3::new(0.0, 0.0, 0.0),
         e_radius,
         power,
-        direction: Vector3::z(),
+        direction: Vector3::x(),
         rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &e_radius),
         ellipticity: 0.0,
     };
@@ -46,8 +46,8 @@ fn main() {
         .with(gaussian_beam)
         .with(dipole::DipoleLight { wavelength })
         .with(laser::frame::Frame {
-            x_vector: Vector3::x(),
-            y_vector: Vector3::y(),
+            x_vector: Vector3::y(),
+            y_vector: Vector3::z(),
         })
         .build();
 

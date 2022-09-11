@@ -237,22 +237,23 @@ pub fn get_gaussian_beam_intensity_gradient(
     let spot_size_squared =
     2.0 * beam.e_radius.powf(2.0) * (1. + (z / beam.rayleigh_range).powf(2.0));
 
-    let vector = -4.0 * (reference_frame.x_vector * x + reference_frame.y_vector * y)
-        - 2.0 * beam.direction * z / ( beam.rayleigh_range.powf(2.0) + z.powf(2.0) ) * (
-            spot_size_squared * (
-                1.0 + ( z / beam.rayleigh_range ).powf(2.0)
-            ) - 2.0 * (x.powf(2.0) + y.powf(2.0))
-        );
-
     // let vector = -4.0 * (reference_frame.x_vector * x + reference_frame.y_vector * y)
-    //     - 2.0 * beam.direction * (  z / ( beam.rayleigh_range.powf(2.0) + z.powf(2.0) ) )
-    //     * ( spot_size_squared - 2.0 * ( x.powf(2.0) + y.powf(2.0) ) );
+    //     - 2.0 * beam.direction * z / ( beam.rayleigh_range.powf(2.0) + z.powf(2.0) ) * (
+    //         spot_size_squared * (
+    //             1.0 + ( z / beam.rayleigh_range ).powf(2.0)
+    //         ) - 2.0 * (x.powf(2.0) + y.powf(2.0))
+    //     );
+
+    let vector = -4.0 * ( reference_frame.x_vector * x + reference_frame.y_vector * y )
+        - 2.0 * beam.direction * (  z / ( beam.rayleigh_range.powf(2.0) + z.powf(2.0) ) )
+        * ( spot_size_squared - 2.0 * ( x.powf(2.0) + y.powf(2.0) ) );
 
 
     let intensity = 2.0 * beam.power / ( PI * spot_size_squared )
         * EXP.powf(-2.0 * (x.powf(2.0) + y.powf(2.0)) / spot_size_squared);
 
     intensity / spot_size_squared * vector
+
 }
 
 #[cfg(test)]
