@@ -55,28 +55,13 @@ impl Polarizability {
         optical_transition_wavelength: f64,
         optical_transition_linewidth: f64,
     ) -> Polarizability {
-
         let transition_f = constant::C / optical_transition_wavelength;
-
         let dipole_f = constant::C / dipole_beam_wavelength;
-
         let prefactor = ( 3.0 * constant::PI * constant::C.powf(3.0) * constant::EPSILON0 /
-              transition_f.powf(3.0) ) *
-            ( optical_transition_linewidth / (transition_f - dipole_f) +
+              transition_f.powf(3.0) ) * (
+              optical_transition_linewidth / (transition_f - dipole_f) +
               optical_transition_linewidth / (transition_f + dipole_f)
             );
-
-
-        println!("optical transition linewidth {}", optical_transition_linewidth);
-        println!("polarizability {}", prefactor);
-
-        println!("constant::PI = {}", constant::PI);
-        println!("constant::C.powf(3.0) = {}", constant::C.powf(3.0));
-        println!("constant::C = {}", constant::C);
-        println!("constant::EPSILON0 = {}", constant::EPSILON0);
-        println!("transition_f = {}", transition_f);
-        println!("dipole_f = {}", dipole_f);
-
         Polarizability { prefactor }
     }
 }

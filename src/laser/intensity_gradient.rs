@@ -64,11 +64,11 @@ impl<'a, const N: usize> System<'a> for SampleGaussianLaserIntensityGradientSyst
         use rayon::prelude::*;
 
         for (_dipole, index, beam, reference) in
-            (&dipole, &index, &gaussian, &reference_frame).join()
-        {
+            (&dipole, &index, &gaussian, &reference_frame).join() {
             (&pos, &mut sampler).par_join().for_each(|(pos, sampler)| {
-                sampler.contents[index.index].gradient =
-                    get_gaussian_beam_intensity_gradient(beam, pos, reference);
+                sampler.contents[index.index].gradient = get_gaussian_beam_intensity_gradient(
+                    beam, pos, reference
+                );
             });
         }
     }

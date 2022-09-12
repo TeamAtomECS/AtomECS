@@ -33,7 +33,6 @@ impl<'a, const N: usize> System<'a> for ApplyDipoleForceSystem<N> {
                 for (index, _dipole) in (&dipole_index, &dipole_light).join() {
                     force.force += polarizability.prefactor*sampler.contents[index.index].gradient/
                                    ( 2.0 * constant::EPSILON0 * constant::C );
-                    println!("force = {}", force.force)
                 }
             });
     }

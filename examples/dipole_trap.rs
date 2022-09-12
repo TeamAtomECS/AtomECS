@@ -30,7 +30,7 @@ fn main() {
 
     // Create dipole laser.
     let power = 1.0;
-    let e_radius = 60.0e-6 / (2.0_f64.sqrt());
+    let e_radius = 60.0e-6 / 2.0_f64.sqrt();
     let wavelength = 1064.0e-9;
 
     let gaussian_beam = GaussianBeam {
