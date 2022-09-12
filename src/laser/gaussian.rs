@@ -242,7 +242,7 @@ pub fn get_gaussian_beam_intensity_gradient(
     let intensity = 2.0 * beam.power / ( PI * spot_size_squared )
         * EXP.powf(-2.0 * (x.powf(2.0) + y.powf(2.0)) / spot_size_squared);
 
-    intensity / spot_size_squared * vector / 2.0
+    intensity / spot_size_squared * vector
 
 }
 
