@@ -68,8 +68,8 @@ impl GaussianBeam {
         peak_intensity: f64,
         e_radius: f64,
     ) -> Self {
-        let std = e_radius / 2.0_f64.powf(0.5);
-        let power = 2.0 * std::f64::consts::PI * std.powi(2) * peak_intensity;
+        let std = e_radius * 2.0_f64.powf(0.5);
+        let power = 0.5 * std::f64::consts::PI * std.powi(2) * peak_intensity;
         GaussianBeam {
             intersection,
             direction,
@@ -166,20 +166,25 @@ pub fn get_gaussian_beam_intensity(
     mask: Option<&CircularMask>,
     frame: Option<&Frame>,
 ) -> f64 {
+
     let (z, distance_squared) = match frame {
+
         // checking if frame is given (for calculating ellipticity)
         Some(frame) => {
+
             let (x, y, z) = maths::get_relative_coordinates_line_point(
                 &pos.pos,
                 &beam.intersection,
                 &beam.direction,
                 frame,
             );
+
             let semi_major_axis = 1.0 / (1.0 - beam.ellipticity.powf(2.0)).powf(0.5);
 
             // the factor (1.0 / semi_major_axis) is necessary so the overall power of the beam is not changed.
             ( z, (1.0 / semi_major_axis) * ((x).powf(2.0) + (y * semi_major_axis).powf(2.0)), )
         }
+
         // ellipticity will be ignored (i.e. treated as zero) if no `Frame` is supplied.
         None => {
             let (distance, z) = maths::get_minimum_distance_line_point(
@@ -201,12 +206,16 @@ pub fn get_gaussian_beam_intensity(
         }
         None => beam.power,
     };
-    power / PI / beam.e_radius.powf(2.0) / (1.0 + (z / beam.rayleigh_range).powf(2.0))
+    power/ PI / beam.e_radius.powf(2.0) / (1.0 + (z / beam.rayleigh_range).powf(2.0))
         * EXP.powf(
             -distance_squared
                 / (beam.e_radius.powf(2.0) * (1. + (z / beam.rayleigh_range).powf(2.0))),
         )
 }
+
+
+
+
 
 /// Computes the rayleigh range for a given beam and wavelength
 pub fn calculate_rayleigh_range(wavelength: &f64, e_radius: &f64) -> f64 {
