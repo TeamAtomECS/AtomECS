@@ -22,7 +22,7 @@ pub const BOLTZCONST: f64 = 1.38e-23;
 pub const AMU: f64 = 1.6605e-27;
 
 /// Speed of light in SI units of m/s
-pub const C: f64 = 299297458.0;
+pub const C: f64 = 299792458.0;
 
 /// Sqrt of 2
 pub const SQRT2: f64 = std::f64::consts::SQRT_2;
