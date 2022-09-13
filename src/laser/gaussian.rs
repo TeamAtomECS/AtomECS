@@ -69,7 +69,7 @@ impl GaussianBeam {
         e_radius: f64,
     ) -> Self {
         let std = e_radius * 2.0_f64.powf(0.5);
-        let power = 0.5 * std::f64::consts::PI * std.powi(2) * peak_intensity;
+        let power = std::f64::consts::PI * std.powi(2) * peak_intensity;
         GaussianBeam {
             intersection,
             direction,
@@ -102,8 +102,8 @@ impl GaussianBeam {
         e_radius: f64,
         wavelength: f64,
     ) -> Self {
-        let std = e_radius / 2.0_f64.powf(0.5);
-        let power = 2.0 * std::f64::consts::PI * std.powi(2) * peak_intensity;
+        let std = e_radius * 2.0_f64.powf(0.5);
+        let power = std::f64::consts::PI * std.powi(2) * peak_intensity;
         GaussianBeam {
             intersection,
             direction,
@@ -206,16 +206,12 @@ pub fn get_gaussian_beam_intensity(
         }
         None => beam.power,
     };
-    power/ PI / beam.e_radius.powf(2.0) / (1.0 + (z / beam.rayleigh_range).powf(2.0))
-        * EXP.powf(
-            -distance_squared
-                / (beam.e_radius.powf(2.0) * (1. + (z / beam.rayleigh_range).powf(2.0))),
-        )
+
+    let spot_size_squared =
+    2.0 * beam.e_radius.powf(2.0) * (1. + (z / beam.rayleigh_range).powf(2.0));
+
+     2.0 * power / ( PI * spot_size_squared ) * EXP.powf(-2.0 * distance_squared / spot_size_squared)
 }
-
-
-
-
 
 /// Computes the rayleigh range for a given beam and wavelength
 pub fn calculate_rayleigh_range(wavelength: &f64, e_radius: &f64) -> f64 {
@@ -243,15 +239,17 @@ pub fn get_gaussian_beam_intensity_gradient(
     let spot_size_squared =
     2.0 * beam.e_radius.powf(2.0) * (1. + (z / beam.rayleigh_range).powf(2.0));
 
-    let vector = -4.0 * ( reference_frame.x_vector * x + reference_frame.y_vector * y )
+
+    // this will match mathematica if the ebam directionis mult py 2
+    let vector = - 4.0 * ( reference_frame.x_vector * x + reference_frame.y_vector * y )
         + 2.0 * beam.direction * (  z / ( beam.rayleigh_range.powf(2.0) + z.powf(2.0) ) )
-        * ( x.powf(2.0) + y.powf(2.0) - spot_size_squared/2.0 );
+        * ( 2.0 * (x.powf(2.0) + y.powf(2.0)) - spot_size_squared);
 
 
     let intensity = 2.0 * beam.power / ( PI * spot_size_squared )
         * EXP.powf(-2.0 * (x.powf(2.0) + y.powf(2.0)) / spot_size_squared);
 
-    intensity / spot_size_squared * vector
+     vector * intensity / spot_size_squared
 
 }
 

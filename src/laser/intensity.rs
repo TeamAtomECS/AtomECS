@@ -153,39 +153,45 @@ pub mod tests {
         test_world.register::<Position>();
         test_world.register::<LaserIntensitySamplers<{ DEFAULT_BEAM_LIMIT }>>();
 
+        let beam = GaussianBeam {
+            direction: Vector3::x(),
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: 2.0,
+            power: 1.0,
+            rayleigh_range: gaussian::calculate_rayleigh_range(&461.0e-9, &2.0),
+            ellipticity: 0.0,
+        };
+
         test_world
             .create_entity()
             .with(LaserIndex {
                 index: 0,
                 initiated: true,
             })
-            .with(GaussianBeam {
-                direction: Vector3::new(1.0, 0.0, 0.0),
-                intersection: Vector3::new(0.0, 0.0, 0.0),
-                e_radius: 2.0,
-                power: 1.0,
-                rayleigh_range: gaussian::calculate_rayleigh_range(&461.0e-9, &2.0),
-                ellipticity: 0.0,
-            })
+            .with(beam)
             .build();
 
         let atom1 = test_world
             .create_entity()
-            .with(Position { pos: Vector3::y() })
+            .with(Position { pos: Vector3::new( 0.0, 1.0, 0.0 ) })
             .with(LaserIntensitySamplers {
                 contents: [LaserIntensitySampler::default(); crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .build();
 
         let mut system = SampleLaserIntensitySystem::<{ DEFAULT_BEAM_LIMIT }>;
+
         system.run_now(&test_world);
+
         test_world.maintain();
-        let sampler_storage =
-            test_world.read_storage::<LaserIntensitySamplers<{ DEFAULT_BEAM_LIMIT }>>();
+
+        let sampler_storage = test_world.read_storage::<LaserIntensitySamplers<{
+            DEFAULT_BEAM_LIMIT
+        }>>();
 
         let actual_intensity = gaussian::get_gaussian_beam_intensity(
             &GaussianBeam {
-                direction: Vector3::new(1.0, 0.0, 0.0),
+                direction: Vector3::x(),
                 intersection: Vector3::new(0.0, 0.0, 0.0),
                 e_radius: 2.0,
                 power: 1.0,
@@ -196,6 +202,33 @@ pub mod tests {
             None,
             None,
         );
+        //
+        // println!("rayleigh = {}", beam.rayleigh_range);
+        //
+        // println!( "sampler_storage = {},",
+        //     sampler_storage
+        //     .get(atom1)
+        //     .expect("entity not found")
+        //     .contents[0]
+        //     .intensity
+        // );
+        //
+        // println!( "actual_intensity = {},",
+        //     actual_intensity
+        // );
+        //
+        // assert_approx_eq!(
+        //     sampler_storage
+        //         .get(atom1)
+        //         .expect("entity not found")
+        //         .contents[0]
+        //         .intensity,
+        //     actual_intensity,
+        //     1e-6_f64
+        // );
+        //
+        // assert_approx_eq!(1.0_f64, 2.0_f64);
+
 
         assert_approx_eq!(
             sampler_storage

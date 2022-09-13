@@ -185,17 +185,21 @@ pub mod tests {
         test_world.register::<Frame>();
         test_world.register::<DipoleLight>();
 
+        let e_rad = 70.71067812e-6;
+
         let beam = GaussianBeam {
             direction: Vector3::x(),
             intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: 70.71067812e-6,
+            e_radius: e_rad,
             power: 100.0,
             rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
                 &1064.0e-9,
-                &70.71067812e-6,
+                &e_rad,
             ),
             ellipticity: 0.0,
         };
+
+        // println!("rayleigh_range: {}", beam.rayleigh_range);
 
         test_world
             .create_entity()
@@ -205,8 +209,8 @@ pub mod tests {
             })
             .with(beam)
             .with(Frame {
-                x_vector: Vector3::y(),
-                y_vector: Vector3::z(),
+                x_vector: Vector3::z(),
+                y_vector: Vector3::y(),
             })
             .with(DipoleLight {
                 wavelength: 1064.0e-9,
@@ -223,6 +227,9 @@ pub mod tests {
                     crate::laser::DEFAULT_BEAM_LIMIT],
             })
             .build();
+
+
+
         let mut system = SampleGaussianLaserIntensityGradientSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
@@ -233,6 +240,9 @@ pub mod tests {
             .expect("Entity not found!")
             .contents[0]
             .gradient;
+
+        println!("the sin_resutl_gradient = {}",sim_result_gradient );
+
 
         assert_approx_eq!( -2.09081e+8, sim_result_gradient[0], 1e+5_f64);
         assert_approx_eq!(-4.33993e+13, sim_result_gradient[1], 1e+8_f64);

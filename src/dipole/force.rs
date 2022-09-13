@@ -51,9 +51,9 @@ pub mod tests {
     use crate::laser::gaussian::GaussianBeam;
     use crate::laser::DEFAULT_BEAM_LIMIT;
     use nalgebra::Vector3;
-    use crate::atom::Position;
-    use crate::laser::frame::Frame;
-    use crate::laser::intensity_gradient::LaserIntensityGradientSampler;
+    // use crate::atom::Position;
+    // use crate::laser::frame::Frame;
+    // use crate::laser::intensity_gradient::LaserIntensityGradientSampler;
 
     #[test]
     fn test_apply_dipole_force_system() {
@@ -179,6 +179,9 @@ pub mod tests {
             rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
             ellipticity: 0.0,
         };
+
+        println!("rayleigh_range {}", gaussian_beam.rayleigh_range);
+
         test_world
             .create_entity()
             .with(gaussian_beam)
@@ -194,6 +197,7 @@ pub mod tests {
                 y_vector: Vector3::z(),
             })
             .build();
+
         let gaussian_beam = GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius,
@@ -202,6 +206,7 @@ pub mod tests {
             rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
             ellipticity: 0.0,
         };
+
         test_world
             .create_entity()
             .with(gaussian_beam)
@@ -219,6 +224,7 @@ pub mod tests {
             .build();
 
         let transition = Polarizability::calculate_for(1064e-9, 460.7e-9, 32e6);
+
         let atom1 = test_world
             .create_entity()
             .with(crate::atom::Position {
@@ -251,23 +257,22 @@ pub mod tests {
             .contents;
 
         println!("force is: {}", sim_result_force);
-        // println!("gradient 1 is: {}", _sim_result_grad);
-        // println!("gradient 2 is: {}", _sim_result_grad[1].gradient);
+        println!("gradient 1 is: {}",  _sim_result_grad[0].gradient);
 
 
 
         assert_approx_eq!(
-            0.000000000000000000000000000000000127913190642808,
+            3.17164e-32,
             sim_result_force[0],
             3e-46_f64
         );
         assert_approx_eq!(
-            0.000000000000000000000000000000000127913190642808,
+            3.17164e-32,
             sim_result_force[1],
             2e-46_f64
         );
         assert_approx_eq!(
-            0.000000000000000000000000000000000511875188257342,
+            2.2692e-31,
             sim_result_force[2],
             2e-46_f64
         );
