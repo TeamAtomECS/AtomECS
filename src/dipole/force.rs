@@ -150,9 +150,11 @@ pub mod tests {
          let sampler_storage = test_world.read_storage::<Force>();
          let sim_result_force = sampler_storage.get(atom1).expect("Entity not found!").force;
 
-         assert_approx_eq!(-6.386888332902177e-29, sim_result_force[0], 3e-30_f64);
-         assert_approx_eq!(-3.11151847e-23, sim_result_force[1], 2e-24_f64);
-         assert_approx_eq!(-3.11151847e-23, sim_result_force[2], 2e-24_f64);
+         println!("force = {}", sim_result_force);
+
+         assert_approx_eq!(-1.579e-26, sim_result_force[0], 3e-30_f64);
+         assert_approx_eq!(-8.097e-21, sim_result_force[1], 2e-24_f64);
+         assert_approx_eq!(-8.097e-21, sim_result_force[2], 2e-24_f64);
      }
 
     #[test]
@@ -257,24 +259,21 @@ pub mod tests {
             .contents;
 
         println!("force is: {}", sim_result_force);
-        println!("gradient 1 is: {}",  _sim_result_grad[0].gradient);
-
-
 
         assert_approx_eq!(
-            3.17164e-32,
+            3.17e-32,
             sim_result_force[0],
-            3e-46_f64
+            5e-33_f64
         );
         assert_approx_eq!(
-            3.17164e-32,
+            3.17e-32,
             sim_result_force[1],
-            2e-46_f64
+            5e-33_f64
         );
         assert_approx_eq!(
-            2.2692e-31,
+            1.28e-31,
             sim_result_force[2],
-            2e-46_f64
+            5e-33_f64
         );
     }
 }

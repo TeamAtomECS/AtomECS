@@ -199,8 +199,6 @@ pub mod tests {
             ellipticity: 0.0,
         };
 
-        // println!("rayleigh_range: {}", beam.rayleigh_range);
-
         test_world
             .create_entity()
             .with(LaserIndex {
@@ -228,8 +226,6 @@ pub mod tests {
             })
             .build();
 
-
-
         let mut system = SampleGaussianLaserIntensityGradientSystem::<{ DEFAULT_BEAM_LIMIT }>;
         system.run_now(&test_world);
         test_world.maintain();
@@ -240,9 +236,6 @@ pub mod tests {
             .expect("Entity not found!")
             .contents[0]
             .gradient;
-
-        println!("the sin_resutl_gradient = {}",sim_result_gradient );
-
 
         assert_approx_eq!( -2.09081e+8, sim_result_gradient[0], 1e+5_f64);
         assert_approx_eq!(-4.33993e+13, sim_result_gradient[1], 1e+8_f64);

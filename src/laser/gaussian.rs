@@ -68,8 +68,8 @@ impl GaussianBeam {
         peak_intensity: f64,
         e_radius: f64,
     ) -> Self {
-        let std = e_radius * 2.0_f64.powf(0.5);
-        let power = std::f64::consts::PI * std.powi(2) * peak_intensity;
+        let std = e_radius / 2.0_f64.powf(0.5);
+        let power = 2.0 * std::f64::consts::PI * std.powi(2) * peak_intensity;
         GaussianBeam {
             intersection,
             direction,
@@ -102,8 +102,8 @@ impl GaussianBeam {
         e_radius: f64,
         wavelength: f64,
     ) -> Self {
-        let std = e_radius * 2.0_f64.powf(0.5);
-        let power = std::f64::consts::PI * std.powi(2) * peak_intensity;
+        let std = e_radius / 2.0_f64.powf(0.5);
+        let power = 2.0 * std::f64::consts::PI * std.powi(2) * peak_intensity;
         GaussianBeam {
             intersection,
             direction,
@@ -210,7 +210,7 @@ pub fn get_gaussian_beam_intensity(
     let spot_size_squared =
     2.0 * beam.e_radius.powf(2.0) * (1. + (z / beam.rayleigh_range).powf(2.0));
 
-     2.0 * power / ( PI * spot_size_squared ) * EXP.powf(-2.0 * distance_squared / spot_size_squared)
+    2.0 * power / ( PI * spot_size_squared ) * EXP.powf(-2.0 * distance_squared / spot_size_squared)
 }
 
 /// Computes the rayleigh range for a given beam and wavelength
@@ -231,24 +231,24 @@ pub fn get_gaussian_beam_intensity_gradient(
 
     // ellipticity treatment
     let semi_major_axis = 1.0 / (1.0 - beam.ellipticity.powf(2.0)).powf(0.5);
-
     let x = rela_coord.dot(&reference_frame.x_vector) / semi_major_axis.powf(0.5);
     let y = rela_coord.dot(&reference_frame.y_vector) * semi_major_axis.powf(0.5);
     let z = rela_coord.dot(&beam.direction);
 
+    //Calculate the spot_size_squared for convenience of later calculations.
     let spot_size_squared =
     2.0 * beam.e_radius.powf(2.0) * (1. + (z / beam.rayleigh_range).powf(2.0));
 
-
-    // this will match mathematica if the ebam directionis mult py 2
+    //Calculating the gradient vector for grad(I(r,z)).
     let vector = - 4.0 * ( reference_frame.x_vector * x + reference_frame.y_vector * y )
         + 2.0 * beam.direction * (  z / ( beam.rayleigh_range.powf(2.0) + z.powf(2.0) ) )
         * ( 2.0 * (x.powf(2.0) + y.powf(2.0)) - spot_size_squared);
 
-
+    //Calculate the intensity at pos (x, y, z).
     let intensity = 2.0 * beam.power / ( PI * spot_size_squared )
         * EXP.powf(-2.0 * (x.powf(2.0) + y.powf(2.0)) / spot_size_squared);
 
+    //Returns the full grad(I) with correct magnitude and direction.
      vector * intensity / spot_size_squared
 
 }

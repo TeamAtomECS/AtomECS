@@ -202,32 +202,6 @@ pub mod tests {
             None,
             None,
         );
-        //
-        // println!("rayleigh = {}", beam.rayleigh_range);
-        //
-        // println!( "sampler_storage = {},",
-        //     sampler_storage
-        //     .get(atom1)
-        //     .expect("entity not found")
-        //     .contents[0]
-        //     .intensity
-        // );
-        //
-        // println!( "actual_intensity = {},",
-        //     actual_intensity
-        // );
-        //
-        // assert_approx_eq!(
-        //     sampler_storage
-        //         .get(atom1)
-        //         .expect("entity not found")
-        //         .contents[0]
-        //         .intensity,
-        //     actual_intensity,
-        //     1e-6_f64
-        // );
-        //
-        // assert_approx_eq!(1.0_f64, 2.0_f64);
 
 
         assert_approx_eq!(
