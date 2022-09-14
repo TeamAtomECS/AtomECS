@@ -150,8 +150,6 @@ pub mod tests {
          let sampler_storage = test_world.read_storage::<Force>();
          let sim_result_force = sampler_storage.get(atom1).expect("Entity not found!").force;
 
-         println!("force = {}", sim_result_force);
-
          assert_approx_eq!(-1.579e-26, sim_result_force[0], 3e-30_f64);
          assert_approx_eq!(-8.097e-21, sim_result_force[1], 2e-24_f64);
          assert_approx_eq!(-8.097e-21, sim_result_force[2], 2e-24_f64);
@@ -181,8 +179,6 @@ pub mod tests {
             rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
             ellipticity: 0.0,
         };
-
-        println!("rayleigh_range {}", gaussian_beam.rayleigh_range);
 
         test_world
             .create_entity()
@@ -257,8 +253,6 @@ pub mod tests {
             .get(atom1)
             .expect("Entity not found!")
             .contents;
-
-        println!("force is: {}", sim_result_force);
 
         assert_approx_eq!(
             3.17e-32,

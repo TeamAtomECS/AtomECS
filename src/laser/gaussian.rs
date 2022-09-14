@@ -284,7 +284,7 @@ pub mod tests {
         };
 
         let gradient = get_gaussian_beam_intensity_gradient(&beam, &pos1, &grf);
-        println!("{}",gradient[0]);
+
         assert_approx_eq!(gradient[0], -4.91021e+10, 1e+9_f64);
         assert_approx_eq!(gradient[1], -5.89225e+11, 1e+9_f64);
         assert_approx_eq!(gradient[2],  -9.38334e+6, 1e+9_f64);
