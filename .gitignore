@@ -16,3 +16,4 @@
 *.blend
 *.blend1
 .idea/
+*/.ds_store
