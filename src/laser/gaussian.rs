@@ -68,8 +68,9 @@ impl GaussianBeam {
         peak_intensity: f64,
         e_radius: f64,
     ) -> Self {
-        let std = e_radius / 2.0_f64.powf(0.5);
-        let power = 2.0 * std::f64::consts::PI * std.powi(2) * peak_intensity;
+
+        let power = std::f64::consts::PI * e_radius.powi(2) * peak_intensity;
+
         GaussianBeam {
             intersection,
             direction,
@@ -102,8 +103,9 @@ impl GaussianBeam {
         e_radius: f64,
         wavelength: f64,
     ) -> Self {
-        let std = e_radius / 2.0_f64.powf(0.5);
-        let power = 2.0 * std::f64::consts::PI * std.powi(2) * peak_intensity;
+
+        let power = std::f64::consts::PI * e_radius.powi(2) * peak_intensity;
+
         GaussianBeam {
             intersection,
             direction,
