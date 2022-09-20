@@ -12,6 +12,7 @@ use crate::atom::Position;
 use crate::laser::index::LaserIndex;
 use serde::Serialize;
 use specs::prelude::*;
+use std::fmt;
 
 const LASER_CACHE_SIZE: usize = 16;
 
@@ -31,6 +32,14 @@ impl Default for LaserIntensitySampler {
     }
 }
 
+impl Component for LaserIntensitySampler {
+    type Storage = VecStorage<Self>;
+}
+impl fmt::Display for LaserIntensitySampler {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.intensity)
+}}
+
 /// Component that holds a list of `LaserIntensitySamplers`
 #[derive(Copy, Clone, Serialize)]
 pub struct LaserIntensitySamplers<const N: usize> {
@@ -41,6 +50,12 @@ pub struct LaserIntensitySamplers<const N: usize> {
 
 impl<const N: usize> Component for LaserIntensitySamplers<N> {
     type Storage = VecStorage<Self>;
+}
+
+impl<const N: usize> fmt::Display for LaserIntensitySamplers<N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {}, 0.0)", self.contents[0], self.contents[1])
+    }
 }
 
 /// This system initialises all `LaserIntensitySamplers` to a NAN value.

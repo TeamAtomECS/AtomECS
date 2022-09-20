@@ -40,11 +40,11 @@ pub struct FileOutputPlugin<C,F,A>
     phantom_f: PhantomData<F>,
     phantom_a: PhantomData<A>
 }
-impl<C,F,A> FileOutputPlugin<C,F,A> 
-    where 
+impl<C,F,A> FileOutputPlugin<C,F,A>
+    where
         C: Component + Clone,
         A: Component,
-        F: Format<C, BufWriter<File>> 
+        F: Format<C, BufWriter<File>>
 {
     pub fn new(file_name: String, interval: u64) -> FileOutputPlugin<C,F,A>
     {
@@ -53,13 +53,13 @@ impl<C,F,A> FileOutputPlugin<C,F,A>
             interval,
             phantom_a: PhantomData,
             phantom_c: PhantomData,
-            phantom_f: PhantomData 
+            phantom_f: PhantomData
         }
     }
 }
 
-impl<C,F,A> Plugin for FileOutputPlugin<C,F,A> 
-where 
+impl<C,F,A> Plugin for FileOutputPlugin<C,F,A>
+where
     C: Component + Clone + Sync + Send + 'static,
     A: Component + Sync + Send + 'static,
     F: Format<C, BufWriter<File>> + Sync + Send + 'static
