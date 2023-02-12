@@ -17,9 +17,7 @@ pub struct LaserIndex {
 }
 
 /// Assigns a unique [LaserIndex] to each laser.
-pub fn index_lasers(
-    mut query: Query<&mut LaserIndex>
-) {
+pub fn index_lasers(mut query: Query<&mut LaserIndex>) {
     let mut iter = 0;
     let mut need_to_assign_indices = false;
     for index in query.iter() {
@@ -44,20 +42,22 @@ pub mod tests {
     fn test_index_lasers() {
         let mut app = App::new();
 
-        let test_entity_1 = app.world
-            .spawn()
-            .insert(LaserIndex::default())
-            .id();
-        let test_entity_2 = app.world
-            .spawn()
-            .insert(LaserIndex::default())
-            .id();
+        let test_entity_1 = app.world.spawn(LaserIndex::default()).id();
+        let test_entity_2 = app.world.spawn(LaserIndex::default()).id();
 
         app.add_system(index_lasers);
         app.update();
 
-        let index_1 = app.world.entity(test_entity_1).get::<LaserIndex>().expect("entity not found");
-        let index_2 = app.world.entity(test_entity_2).get::<LaserIndex>().expect("entity not found");
+        let index_1 = app
+            .world
+            .entity(test_entity_1)
+            .get::<LaserIndex>()
+            .expect("entity not found");
+        let index_2 = app
+            .world
+            .entity(test_entity_2)
+            .get::<LaserIndex>()
+            .expect("entity not found");
         assert_ne!(index_1.index, index_2.index);
     }
 }

@@ -2,19 +2,19 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
+use bevy::prelude::*;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::initiate::NewlyCreated;
-use lib::integrator::{Timestep};
-use lib::laser::LaserPlugin;
+use lib::integrator::Timestep;
 use lib::laser::gaussian::GaussianBeam;
+use lib::laser::LaserPlugin;
 use lib::laser_cooling::force::EmissionForceOption;
 use lib::laser_cooling::photons_scattered::ScatteringFluctuationsOption;
 use lib::laser_cooling::{CoolingLight, LaserCoolingPlugin};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
-use lib::species::{Rubidium87_780D2};
+use lib::species::Rubidium87_780D2;
 use nalgebra::Vector3;
 use rand_distr::{Distribution, Normal};
-use bevy::prelude::*;
 use std::fs::read_to_string;
 use std::fs::File;
 use std::time::Instant;
@@ -42,7 +42,7 @@ pub struct SimulationOutput {
     pub time: f64,
 }
 
-const BEAM_NUMBER : usize = 6;
+const BEAM_NUMBER: usize = 6;
 
 fn main() {
     //Load configuration if one exists.
@@ -53,8 +53,8 @@ fn main() {
     };
 
     let mut app = App::new();
-    app.add_plugin(LaserPlugin::<{BEAM_NUMBER}>);
-    app.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, {BEAM_NUMBER}>::default());
+    app.add_plugin(LaserPlugin::<{ BEAM_NUMBER }>);
+    app.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, { BEAM_NUMBER }>::default());
     app.add_plugins(DefaultPlugins);
     app.add_plugin(atomecs::integrator::IntegrationPlugin);
     app.add_plugin(atomecs::initiate::InitiatePlugin);
@@ -63,12 +63,11 @@ fn main() {
     app.add_system(atomecs::output::console_output::console_output);
     //app.add_startup_system(setup_world);
 
-    // TODO: Configure bevy compute pool size   
+    // TODO: Configure bevy compute pool size
 
     // Create magnetic field.
     app.world
-        .spawn()
-        .insert(QuadrupoleField3D::gauss_per_cm(18.2, Vector3::z()))
+        .spawn(QuadrupoleField3D::gauss_per_cm(18.2, Vector3::z()))
         .insert(Position {
             pos: Vector3::new(0.0, 0.0, 0.0),
         });
@@ -80,8 +79,7 @@ fn main() {
     let beam_centre = Vector3::new(0.0, 0.0, 0.0);
 
     app.world
-        .spawn()
-        .insert(GaussianBeam {
+        .spawn(GaussianBeam {
             intersection: beam_centre,
             e_radius: radius,
             power,
@@ -90,12 +88,10 @@ fn main() {
             ellipticity: 0.0,
         })
         .insert(CoolingLight::for_transition::<Rubidium87_780D2>(
-            detuning,
-            -1,
+            detuning, -1,
         ));
     app.world
-        .spawn()
-        .insert(GaussianBeam {
+        .spawn(GaussianBeam {
             intersection: beam_centre,
             e_radius: radius,
             power,
@@ -104,12 +100,10 @@ fn main() {
             ellipticity: 0.0,
         })
         .insert(CoolingLight::for_transition::<Rubidium87_780D2>(
-            detuning,
-            -1,
+            detuning, -1,
         ));
     app.world
-        .spawn()
-        .insert(GaussianBeam {
+        .spawn(GaussianBeam {
             intersection: beam_centre,
             e_radius: radius,
             power,
@@ -118,12 +112,10 @@ fn main() {
             ellipticity: 0.0,
         })
         .insert(CoolingLight::for_transition::<Rubidium87_780D2>(
-            detuning,
-            1,
+            detuning, 1,
         ));
     app.world
-        .spawn()
-        .insert(GaussianBeam {
+        .spawn(GaussianBeam {
             intersection: beam_centre,
             e_radius: radius,
             power,
@@ -132,12 +124,10 @@ fn main() {
             ellipticity: 0.0,
         })
         .insert(CoolingLight::for_transition::<Rubidium87_780D2>(
-            detuning,
-            1,
+            detuning, 1,
         ));
     app.world
-        .spawn()
-        .insert(GaussianBeam {
+        .spawn(GaussianBeam {
             intersection: beam_centre,
             e_radius: radius,
             power,
@@ -146,12 +136,10 @@ fn main() {
             ellipticity: 0.0,
         })
         .insert(CoolingLight::for_transition::<Rubidium87_780D2>(
-            detuning,
-            1,
+            detuning, 1,
         ));
     app.world
-        .spawn()
-        .insert(GaussianBeam {
+        .spawn(GaussianBeam {
             intersection: beam_centre,
             e_radius: radius,
             power,
@@ -160,8 +148,7 @@ fn main() {
             ellipticity: 0.0,
         })
         .insert(CoolingLight::for_transition::<Rubidium87_780D2>(
-            detuning,
-            1,
+            detuning, 1,
         ));
 
     // Define timestep
@@ -174,8 +161,7 @@ fn main() {
     // Add atoms
     for _ in 0..configuration.n_atoms {
         app.world
-            .spawn()
-            .insert(Position {
+            .spawn(Position {
                 pos: Vector3::new(
                     pos_dist.sample(&mut rng),
                     pos_dist.sample(&mut rng),
@@ -200,7 +186,8 @@ fn main() {
     //  * Allow photon numbers to fluctuate.
     //  * Allow random force from emission of photons.
     app.world.insert_resource(EmissionForceOption::default());
-    app.world.insert_resource(ScatteringFluctuationsOption::default());
+    app.world
+        .insert_resource(ScatteringFluctuationsOption::default());
 
     let loop_start = Instant::now();
 

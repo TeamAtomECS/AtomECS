@@ -1,14 +1,14 @@
 //! A module that implements systems and components for calculating optical scattering forces in AtomECS.
 
-use std::marker::PhantomData;
 use crate::constant;
 use crate::initiate::NewlyCreated;
 use crate::ramp::Lerp;
-use serde::{Deserialize, Serialize};
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::marker::PhantomData;
 use transition::AtomicTransition;
 
-use self::{transition::TransitionComponent, photons_scattered::ScatteringFluctuationsOption};
+use self::{photons_scattered::ScatteringFluctuationsOption, transition::TransitionComponent};
 
 pub mod doppler;
 pub mod force;
@@ -16,10 +16,10 @@ pub mod photons_scattered;
 pub mod rate;
 pub mod repump;
 pub mod sampler;
-pub mod twolevel;
-pub mod transition;
-pub mod zeeman;
 mod sampler_masks;
+pub mod transition;
+pub mod twolevel;
+pub mod zeeman;
 
 /// A component representing light properties used for laser cooling.
 ///
@@ -70,7 +70,10 @@ impl CoolingLight {
     /// * `detuning`: Detuning of the laser from transition in units of MHz
     ///
     /// * `polarization`: Polarization of the cooling beam.
-    pub fn for_transition<T>(detuning: f64, polarization: i32) -> Self where T : AtomicTransition {
+    pub fn for_transition<T>(detuning: f64, polarization: i32) -> Self
+    where
+        T: AtomicTransition,
+    {
         let freq = T::frequency() + detuning * 1.0e6;
         CoolingLight {
             wavelength: constant::C / freq,
@@ -81,15 +84,25 @@ impl CoolingLight {
 
 /// Attaches components required for laser calculations to laser beams with a [CoolingLight] component.
 pub fn attach_components_to_cooling_lasers(
-    requires_query: Query<Entity, (With<CoolingLight>, Without<crate::laser::RequiresIntensityCalculation>)>,
+    requires_query: Query<
+        Entity,
+        (
+            With<CoolingLight>,
+            Without<crate::laser::RequiresIntensityCalculation>,
+        ),
+    >,
     index_query: Query<Entity, (With<CoolingLight>, Without<crate::laser::index::LaserIndex>)>,
-    mut commands: Commands
+    mut commands: Commands,
 ) {
     for e in requires_query.iter() {
-        commands.entity(e).insert(crate::laser::RequiresIntensityCalculation);
+        commands
+            .entity(e)
+            .insert(crate::laser::RequiresIntensityCalculation);
     }
     for e in index_query.iter() {
-        commands.entity(e).insert(crate::laser::index::LaserIndex::default());
+        commands
+            .entity(e)
+            .insert(crate::laser::index::LaserIndex::default());
     }
 }
 
@@ -99,16 +112,17 @@ pub fn attach_components_to_cooling_lasers(
 /// the `NewlyCreated` component.
 pub fn attach_components_to_newly_created_atoms<const N: usize, T>(
     query: Query<Entity, (With<NewlyCreated>, With<T>)>,
-    mut commands: Commands
-) 
-where T : TransitionComponent
+    mut commands: Commands,
+) where
+    T: TransitionComponent,
 {
     for entity in query.iter() {
-        commands.entity(entity)
+        commands
+            .entity(entity)
             .insert(doppler::DopplerShiftSamplers {
                 contents: [doppler::DopplerShiftSampler::default(); N],
             })
-            .insert(sampler::LaserDetuningSamplers::<T,N> {
+            .insert(sampler::LaserDetuningSamplers::<T, N> {
                 contents: [sampler::LaserDetuningSampler::default(); N],
             })
             .insert(rate::RateCoefficients {
@@ -116,10 +130,10 @@ where T : TransitionComponent
             })
             .insert(twolevel::TwoLevelPopulation::<T>::default())
             .insert(photons_scattered::TotalPhotonsScattered::<T>::default())
-            .insert(photons_scattered::ExpectedPhotonsScatteredVector::<T,N> {
+            .insert(photons_scattered::ExpectedPhotonsScatteredVector::<T, N> {
                 contents: [photons_scattered::ExpectedPhotonsScattered::default(); N],
             })
-            .insert(photons_scattered::ActualPhotonsScatteredVector::<T,N> {
+            .insert(photons_scattered::ActualPhotonsScatteredVector::<T, N> {
                 contents: [photons_scattered::ActualPhotonsScattered::default(); N],
             })
             .insert(sampler_masks::CoolingLaserSamplerMasks {
@@ -145,21 +159,26 @@ pub enum LaserCoolingSystems {
     CalculateAbsorptionForces,
     CalculateEmissionForces,
     AttachZeemanSamplersToNewlyCreatedAtoms,
-    MakeAtomsDark
+    MakeAtomsDark,
 }
 
 /// This plugin performs simulations of laser cooling using a two-level rate equation approach.
-/// 
+///
 /// For more information see [crate::laser_cooling].
-/// 
+///
 /// # Generic Arguments
-/// 
+///
 /// * `T`: The laser cooling transition to solve the two-level system for.
-/// 
+///
 /// * `N`: The maximum number of laser beams (must match the `LaserPlugin`).
 #[derive(Default)]
-pub struct LaserCoolingPlugin<T, const N : usize>(PhantomData<T>) where T : TransitionComponent;
-impl<T, const N : usize> Plugin for LaserCoolingPlugin<T, N> where T : TransitionComponent {
+pub struct LaserCoolingPlugin<T, const N: usize>(PhantomData<T>)
+where
+    T: TransitionComponent;
+impl<T, const N: usize> Plugin for LaserCoolingPlugin<T, N>
+where
+    T: TransitionComponent,
+{
     fn build(&self, app: &mut App) {
         app.add_system_set(
             // Note - not sure yet how this plays with multiple cooling transitions.#
@@ -167,82 +186,82 @@ impl<T, const N : usize> Plugin for LaserCoolingPlugin<T, N> where T : Transitio
             //  Maybe it is automatically assured because they will have the same labels?
             //  How generally to ensure the parallel systems all operate in the right order?
             //  Need to make sure each <T> 'stays in its lane', e.g. only writes values for those lasers.
-            SystemSet::new()    
-            .label(LaserCoolingSystems::Set)
-            .with_system(
-                attach_components_to_newly_created_atoms::<N, T>
-                .label(LaserCoolingSystems::AttachComponentsToNewlyCreatedAtoms)
-            )
-            .with_system(
-                zeeman::attach_zeeman_shift_samplers_to_newly_created_atoms::<T>
-                .label(LaserCoolingSystems::AttachZeemanSamplersToNewlyCreatedAtoms)
-            )
-            .with_system(
-                attach_components_to_cooling_lasers
-                .label(LaserCoolingSystems::AttachComponentsToCoolingLasers)
-            )
-            .with_system(
-                sampler_masks::populate_cooling_light_masks::<N>
-                .label(LaserCoolingSystems::PopulateCoolingLightMasks)
-                .after(crate::laser::LaserSystems::IndexLasers)
-            )
-            .with_system(
-                doppler::calculate_doppler_shift::<N>
-                .label(LaserCoolingSystems::CalculateDopplerShift)
-                .after(crate::laser::LaserSystems::IndexLasers)
-            )
-            .with_system(
-                zeeman::calculate_zeeman_shift::<T>
-                .label(LaserCoolingSystems::CalculateZeemanShift)
-                .after(crate::magnetic::MagneticSystems::CalculateMagneticFieldMagnitude)
-            )
-            .with_system(
-                sampler::calculate_laser_detuning::<N,T>
-                .label(LaserCoolingSystems::CalculateLaserDetuning)
-                .after(LaserCoolingSystems::CalculateZeemanShift)
-                .after(LaserCoolingSystems::CalculateDopplerShift)
-            )
-            .with_system(
-                rate::calculate_rate_coefficients::<N,T>
-                .label(LaserCoolingSystems::CalculateRateCoefficients)
-                .after(LaserCoolingSystems::CalculateLaserDetuning)
-            )
-            .with_system(
-                twolevel::calculate_two_level_population::<N, T>
-                .label(LaserCoolingSystems::CalculateTwoLevelPopulation)
-                .after(LaserCoolingSystems::CalculateRateCoefficients)
-                .after(LaserCoolingSystems::PopulateCoolingLightMasks)
-            )
-            .with_system(
-                photons_scattered::calculate_mean_total_photons_scattered::<T>
-                .label(LaserCoolingSystems::CalculateMeanTotalPhotonsScattered)
-                .after(LaserCoolingSystems::CalculateTwoLevelPopulation)
-            )
-            .with_system(
-                photons_scattered::calculate_expected_photons_scattered::<N, T>
-                .label(LaserCoolingSystems::CalculateExpectedPhotonsScattered)
-                .after(LaserCoolingSystems::CalculateMeanTotalPhotonsScattered)
-            )
-            .with_system(
-                photons_scattered::calculate_actual_photons_scattered::<N, T>
-                .label(LaserCoolingSystems::CalculateActualPhotonsScattered)
-                .after(LaserCoolingSystems::CalculateExpectedPhotonsScattered)
-            )
-            .with_system(
-                force::calculate_absorption_forces::<N, T>
-                .label(LaserCoolingSystems::CalculateAbsorptionForces)
-                .after(LaserCoolingSystems::CalculateActualPhotonsScattered)
-            )
-            .with_system(
-                force::calculate_emission_forces::<N, T>
-                .label(LaserCoolingSystems::CalculateEmissionForces)
-                .after(LaserCoolingSystems::CalculateAbsorptionForces)
-            )
-            .with_system(
-                repump::make_atoms_dark::<T>
-                .label(LaserCoolingSystems::MakeAtomsDark)
-                .after(LaserCoolingSystems::CalculateAbsorptionForces)
-            )
+            SystemSet::new()
+                .label(LaserCoolingSystems::Set)
+                .with_system(
+                    attach_components_to_newly_created_atoms::<N, T>
+                        .label(LaserCoolingSystems::AttachComponentsToNewlyCreatedAtoms),
+                )
+                .with_system(
+                    zeeman::attach_zeeman_shift_samplers_to_newly_created_atoms::<T>
+                        .label(LaserCoolingSystems::AttachZeemanSamplersToNewlyCreatedAtoms),
+                )
+                .with_system(
+                    attach_components_to_cooling_lasers
+                        .label(LaserCoolingSystems::AttachComponentsToCoolingLasers),
+                )
+                .with_system(
+                    sampler_masks::populate_cooling_light_masks::<N>
+                        .label(LaserCoolingSystems::PopulateCoolingLightMasks)
+                        .after(crate::laser::LaserSystems::IndexLasers),
+                )
+                .with_system(
+                    doppler::calculate_doppler_shift::<N>
+                        .label(LaserCoolingSystems::CalculateDopplerShift)
+                        .after(crate::laser::LaserSystems::IndexLasers),
+                )
+                .with_system(
+                    zeeman::calculate_zeeman_shift::<T>
+                        .label(LaserCoolingSystems::CalculateZeemanShift)
+                        .after(crate::magnetic::MagneticSystems::CalculateMagneticFieldMagnitude),
+                )
+                .with_system(
+                    sampler::calculate_laser_detuning::<N, T>
+                        .label(LaserCoolingSystems::CalculateLaserDetuning)
+                        .after(LaserCoolingSystems::CalculateZeemanShift)
+                        .after(LaserCoolingSystems::CalculateDopplerShift),
+                )
+                .with_system(
+                    rate::calculate_rate_coefficients::<N, T>
+                        .label(LaserCoolingSystems::CalculateRateCoefficients)
+                        .after(LaserCoolingSystems::CalculateLaserDetuning),
+                )
+                .with_system(
+                    twolevel::calculate_two_level_population::<N, T>
+                        .label(LaserCoolingSystems::CalculateTwoLevelPopulation)
+                        .after(LaserCoolingSystems::CalculateRateCoefficients)
+                        .after(LaserCoolingSystems::PopulateCoolingLightMasks),
+                )
+                .with_system(
+                    photons_scattered::calculate_mean_total_photons_scattered::<T>
+                        .label(LaserCoolingSystems::CalculateMeanTotalPhotonsScattered)
+                        .after(LaserCoolingSystems::CalculateTwoLevelPopulation),
+                )
+                .with_system(
+                    photons_scattered::calculate_expected_photons_scattered::<N, T>
+                        .label(LaserCoolingSystems::CalculateExpectedPhotonsScattered)
+                        .after(LaserCoolingSystems::CalculateMeanTotalPhotonsScattered),
+                )
+                .with_system(
+                    photons_scattered::calculate_actual_photons_scattered::<N, T>
+                        .label(LaserCoolingSystems::CalculateActualPhotonsScattered)
+                        .after(LaserCoolingSystems::CalculateExpectedPhotonsScattered),
+                )
+                .with_system(
+                    force::calculate_absorption_forces::<N, T>
+                        .label(LaserCoolingSystems::CalculateAbsorptionForces)
+                        .after(LaserCoolingSystems::CalculateActualPhotonsScattered),
+                )
+                .with_system(
+                    force::calculate_emission_forces::<N, T>
+                        .label(LaserCoolingSystems::CalculateEmissionForces)
+                        .after(LaserCoolingSystems::CalculateAbsorptionForces),
+                )
+                .with_system(
+                    repump::make_atoms_dark::<T>
+                        .label(LaserCoolingSystems::MakeAtomsDark)
+                        .after(LaserCoolingSystems::CalculateAbsorptionForces),
+                ),
         );
         app.world.init_resource::<ScatteringFluctuationsOption>()
     }
@@ -251,7 +270,7 @@ impl<T, const N : usize> Plugin for LaserCoolingPlugin<T, N> where T : Transitio
 #[cfg(test)]
 pub mod tests {
 
-    use crate::{species::Rubidium87_780D2, laser::index::LaserIndex};
+    use crate::{laser::index::LaserIndex, species::Rubidium87_780D2};
 
     use super::*;
     use assert_approx_eq::assert_approx_eq;
@@ -260,8 +279,9 @@ pub mod tests {
     fn test_add_index_component_to_cooling_lights() {
         let mut app = App::new();
 
-        let test_entity = app.world.spawn()
-            .insert(CoolingLight {
+        let test_entity = app
+            .world
+            .spawn(CoolingLight {
                 polarization: 1,
                 wavelength: 780e-9,
             })

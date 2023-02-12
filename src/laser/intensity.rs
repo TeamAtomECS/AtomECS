@@ -5,8 +5,8 @@ use super::gaussian::{get_gaussian_beam_intensity, CircularMask, GaussianBeam};
 use crate::atom::Position;
 use crate::integrator::BatchSize;
 use crate::laser::index::LaserIndex;
-use serde::Serialize;
 use bevy::prelude::*;
+use serde::Serialize;
 
 const LASER_CACHE_SIZE: usize = 16;
 
@@ -37,25 +37,23 @@ pub struct LaserIntensitySamplers<const N: usize> {
 /// This system initialises all `LaserIntensitySamplers` to a NAN value.
 ///
 /// It also ensures that the size of the `LaserIntensitySamplers` components match the number of CoolingLight entities in the world.
-/// 
+///
 /// # Generic Arguments
-/// 
+///
 /// * `N`: a constant `usize` corresponding to the size of the laser sampler array.
 pub fn initialise_laser_intensity_samplers<const N: usize>(
     mut query: Query<&mut LaserIntensitySamplers<N>>,
-    batch_size: Res<BatchSize>
+    batch_size: Res<BatchSize>,
 ) {
-    query.par_for_each_mut(batch_size.0, 
-        |mut sampler| {
-            sampler.contents = [LaserIntensitySampler::default(); N];
-        }
-    )
+    query.par_for_each_mut(batch_size.0, |mut sampler| {
+        sampler.contents = [LaserIntensitySampler::default(); N];
+    })
 }
 
 /// System that calculates the intensity of [GaussianBeam] lasers at the [Position] of each [LaserIntensitySamplers].
 ///
 /// # Generic Arguments
-/// 
+///
 /// * `N`: a constant `usize` corresponding to the size of the laser sampler array.
 /// * `FilterT`: a component type used to filter which beams intensity will be calculated for, e.g. `CoolingLight`.
 pub fn sample_laser_intensities<const N: usize, FilterT>(
@@ -63,9 +61,9 @@ pub fn sample_laser_intensities<const N: usize, FilterT>(
     mask_query: Query<&CircularMask>,
     frame_query: Query<&Frame>,
     mut sampler_query: Query<(&mut LaserIntensitySamplers<N>, &Position)>,
-    batch_size: Res<BatchSize>
-)
-where FilterT : Component
+    batch_size: Res<BatchSize>,
+) where
+    FilterT: Component,
 {
     // There are typically only a small number of lasers in a simulation.
     // For a speedup, cache the required components into thread memory,
@@ -78,14 +76,20 @@ where FilterT : Component
     );
     let mut laser_cache: Vec<CachedLaser> = Vec::new();
     for (laser_entity, index, gaussian) in laser_query.iter() {
-        laser_cache.push(
-            (
-                *index,
-                *gaussian,
-                if mask_query.contains(laser_entity) { Some(mask_query.get(laser_entity).unwrap().clone()) } else { None },
-                if frame_query.contains(laser_entity) { Some(frame_query.get(laser_entity).unwrap().clone()) } else { None }
-            )
-        );
+        laser_cache.push((
+            *index,
+            *gaussian,
+            if mask_query.contains(laser_entity) {
+                Some(mask_query.get(laser_entity).unwrap().clone())
+            } else {
+                None
+            },
+            if frame_query.contains(laser_entity) {
+                Some(frame_query.get(laser_entity).unwrap().clone())
+            } else {
+                None
+            },
+        ));
     }
 
     // Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
@@ -97,19 +101,11 @@ where FilterT : Component
         let number_in_iteration = slice.len();
 
         sampler_query.par_for_each_mut(batch_size.0, |(mut samplers, pos)| {
-            for (index, gaussian, mask, frame) in
-                laser_array.iter().take(number_in_iteration)
-            {
-                
-                samplers.contents[index.index].intensity = get_gaussian_beam_intensity(
-                    gaussian,
-                    pos,
-                    mask.as_ref(),
-                    frame.as_ref(),
-                );
+            for (index, gaussian, mask, frame) in laser_array.iter().take(number_in_iteration) {
+                samplers.contents[index.index].intensity =
+                    get_gaussian_beam_intensity(gaussian, pos, mask.as_ref(), frame.as_ref());
             }
-            }
-        );
+        });
     }
 }
 
@@ -117,9 +113,9 @@ where FilterT : Component
 pub mod tests {
 
     use super::*;
+    use crate::laser::gaussian;
     use crate::laser::index::LaserIndex;
     use assert_approx_eq::assert_approx_eq;
-    use crate::laser::gaussian;
     use nalgebra::Vector3;
 
     #[derive(Component)]
@@ -132,8 +128,7 @@ pub mod tests {
         app.insert_resource(BatchSize::default());
 
         app.world
-            .spawn()
-            .insert(LaserIndex {
+            .spawn(LaserIndex {
                 index: 0,
                 initiated: true,
             })
@@ -147,9 +142,9 @@ pub mod tests {
                 ellipticity: 0.0,
             });
 
-        let atom1 = app.world
-            .spawn()
-            .insert(Position { pos: Vector3::y() })
+        let atom1 = app
+            .world
+            .spawn(Position { pos: Vector3::y() })
             .insert(LaserIntensitySamplers {
                 contents: [LaserIntensitySampler::default(); 1],
             })
@@ -173,7 +168,8 @@ pub mod tests {
         );
 
         assert_approx_eq!(
-            app.world.entity(atom1)
+            app.world
+                .entity(atom1)
                 .get::<LaserIntensitySamplers::<1>>()
                 .expect("entity not found")
                 .contents[0]
@@ -183,17 +179,15 @@ pub mod tests {
         );
     }
 
-
     /// Tests that laser intensity samplers are reinitialised to zero at the start of the frame.
     #[test]
     fn test_initialise_laser_intensity_samplers() {
-
         let mut app = App::new();
         app.insert_resource(BatchSize::default());
 
-        let atom1 = app.world
-            .spawn()
-            .insert(Position { pos: Vector3::y() })
+        let atom1 = app
+            .world
+            .spawn(Position { pos: Vector3::y() })
             .insert(LaserIntensitySamplers {
                 contents: [LaserIntensitySampler { intensity: 1.0 }; 1],
             })
@@ -202,12 +196,13 @@ pub mod tests {
         app.add_system(initialise_laser_intensity_samplers::<1>);
         app.update();
 
-        assert!(
-            app.world.entity(atom1)
+        assert!(app
+            .world
+            .entity(atom1)
             .get::<LaserIntensitySamplers::<1>>()
             .expect("entity not found")
             .contents[0]
-            .intensity.is_nan()
-        );
+            .intensity
+            .is_nan());
     }
 }

@@ -12,7 +12,7 @@
 use bevy::prelude::*;
 
 /// A marker component that indicates an entity has been created within the last frame.
-/// 
+///
 /// The main use of this component is to allow different modules to identify when an atom has been created and to attach any appropriate components required.
 /// For instance, a [NewlyCreated] atom could have a field sampler added to it so that magnetic systems will be able to calculate fields at the atom's position.
 #[derive(Component, Default)]
@@ -27,10 +27,7 @@ pub struct NewlyCreated;
 ///
 /// This system runs *just before* new atoms are added to the world.
 /// Thus, any atoms flagged as [NewlyCreated] from the previous frame are deflagged before the new flagged atoms are created.
-fn deflag_new_atoms(
-    mut commands: Commands,
-    query: Query<Entity, With<NewlyCreated>>
-) {
+fn deflag_new_atoms(mut commands: Commands, query: Query<Entity, With<NewlyCreated>>) {
     for ent in query.iter() {
         commands.entity(ent).remove::<NewlyCreated>();
     }
@@ -38,16 +35,18 @@ fn deflag_new_atoms(
 
 #[derive(PartialEq, Clone, Hash, Debug, Eq, SystemLabel)]
 pub enum InitiateSystems {
-    DeflagNewAtoms
+    DeflagNewAtoms,
 }
 
 pub struct InitiatePlugin;
 impl Plugin for InitiatePlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_to_stage(CoreStage::Update, deflag_new_atoms.label(InitiateSystems::DeflagNewAtoms));
+        app.add_system_to_stage(
+            CoreStage::Update,
+            deflag_new_atoms.label(InitiateSystems::DeflagNewAtoms),
+        );
     }
 }
-
 
 pub mod tests {
     #[allow(unused_imports)]
@@ -58,8 +57,8 @@ pub mod tests {
     fn test_deflag_new_atoms_system() {
         let mut app = App::new();
         app.add_plugin(InitiatePlugin);
-        
-        let test_entity = app.world.spawn().insert(NewlyCreated).id();
+
+        let test_entity = app.world.spawn(NewlyCreated).id();
         app.update();
         assert!(!app.world.entity(test_entity).contains::<NewlyCreated>());
     }

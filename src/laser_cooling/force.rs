@@ -1,7 +1,7 @@
 //! Calculation of the forces exerted on the atom by the CoolingLight entities
 
+use super::transition::TransitionComponent;
 use super::CoolingLight;
-use super::transition::{TransitionComponent};
 use crate::constant;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
@@ -13,7 +13,7 @@ use rand_distr::{Distribution, Normal, UnitSphere};
 
 use crate::atom::Force;
 use crate::constant::HBAR;
-use crate::integrator::{Timestep, BatchSize};
+use crate::integrator::{BatchSize, Timestep};
 
 use crate::laser_cooling::repump::*;
 
@@ -25,11 +25,11 @@ const LASER_CACHE_SIZE: usize = 16;
 /// s already populated with the correct terms. Furthermore, it is assumed that a
 /// `CoolingLightIndex` is present and assigned for all cooling lasers, with an index
 /// corresponding to the entries in the `ActualPhotonsScatteredVector` vector.
-pub fn calculate_absorption_forces<const N: usize, T : TransitionComponent>(
+pub fn calculate_absorption_forces<const N: usize, T: TransitionComponent>(
     laser_query: Query<(&CoolingLight, &LaserIndex, &GaussianBeam)>,
-    mut atom_query: Query<(&ActualPhotonsScatteredVector<T,N>, &mut Force), Without<Dark>>,
+    mut atom_query: Query<(&ActualPhotonsScatteredVector<T, N>, &mut Force), Without<Dark>>,
     batch_size: Res<BatchSize>,
-    timestep: Res<Timestep>
+    timestep: Res<Timestep>,
 ) {
     // There are typically only a small number of lasers in a simulation.
     // For a speedup, cache the required components into thread memory,
@@ -48,24 +48,21 @@ pub fn calculate_absorption_forces<const N: usize, T : TransitionComponent>(
         laser_array[..max_index].copy_from_slice(slice);
         let number_in_iteration = slice.len();
 
-        atom_query.par_for_each_mut(batch_size.0, 
-            |(scattered, mut force)| {
-                for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
-                    let new_force = scattered.contents[index.index].scattered * HBAR
-                        / timestep.delta
-                        * gaussian.direction.normalize()
-                        * cooling.wavenumber();
-                    force.force += new_force;
-                }
+        atom_query.par_for_each_mut(batch_size.0, |(scattered, mut force)| {
+            for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
+                let new_force = scattered.contents[index.index].scattered * HBAR / timestep.delta
+                    * gaussian.direction.normalize()
+                    * cooling.wavenumber();
+                force.force += new_force;
             }
-        );
+        });
     }
 }
 
 /// A resource that indicates that the simulation should apply random forces
 /// to simulate the random walk fluctuations due to spontaneous
 /// emission.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Resource)]
 pub enum EmissionForceOption {
     Off,
     On(EmissionForceConfiguration),
@@ -96,11 +93,11 @@ pub struct EmissionForceConfiguration {
 ///
 /// Uses an internal threshold of 5 to decide if the random vektor is iteratively
 /// produced or derived by random-walk formula and a single random unit vector.
-pub fn calculate_emission_forces<const N: usize, T : TransitionComponent>(
-    mut atom_query: Query<(&mut Force, &ActualPhotonsScatteredVector<T,N>), With<T>>,
+pub fn calculate_emission_forces<const N: usize, T: TransitionComponent>(
+    mut atom_query: Query<(&mut Force, &ActualPhotonsScatteredVector<T, N>), With<T>>,
     batch_size: Res<BatchSize>,
     rand_opt: Option<Res<EmissionForceOption>>,
-    timestep: Res<Timestep>
+    timestep: Res<Timestep>,
 ) {
     match rand_opt {
         None => (),
@@ -108,39 +105,34 @@ pub fn calculate_emission_forces<const N: usize, T : TransitionComponent>(
             match *opt {
                 EmissionForceOption::Off => {}
                 EmissionForceOption::On(configuration) => {
-                    atom_query.par_for_each_mut(
-                        batch_size.0,
-                        |(mut force, kick)| {
-                            let total: u64 = kick.calculate_total_scattered();
-                            let mut rng = rand::thread_rng();
-                            let omega = 2.0 * constant::PI * T::frequency();
-                            let force_one_kick =
-                                constant::HBAR * omega / constant::C / timestep.delta;
-                            if total > configuration.explicit_threshold {
-                                // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
-                                //Three-Dimensional Random Walk Processes*
-                                let normal = Normal::new(
-                                    0.0,
-                                    (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
-                                )
-                                .unwrap();
+                    atom_query.par_for_each_mut(batch_size.0, |(mut force, kick)| {
+                        let total: u64 = kick.calculate_total_scattered();
+                        let mut rng = rand::thread_rng();
+                        let omega = 2.0 * constant::PI * T::frequency();
+                        let force_one_kick = constant::HBAR * omega / constant::C / timestep.delta;
+                        if total > configuration.explicit_threshold {
+                            // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
+                            //Three-Dimensional Random Walk Processes*
+                            let normal = Normal::new(
+                                0.0,
+                                (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
+                            )
+                            .unwrap();
 
-                                let force_n_kicks = Vector3::new(
-                                    normal.sample(&mut rng),
-                                    normal.sample(&mut rng),
-                                    normal.sample(&mut rng),
-                                );
-                                force.force += force_n_kicks;
-                            } else {
-                                // explicit random walk implementation
-                                for _i in 0..total {
-                                    let v: [f64; 3] = UnitSphere.sample(&mut rng);
-                                    force.force +=
-                                        force_one_kick * Vector3::new(v[0], v[1], v[2]);
-                                }
+                            let force_n_kicks = Vector3::new(
+                                normal.sample(&mut rng),
+                                normal.sample(&mut rng),
+                                normal.sample(&mut rng),
+                            );
+                            force.force += force_n_kicks;
+                        } else {
+                            // explicit random walk implementation
+                            for _i in 0..total {
+                                let v: [f64; 3] = UnitSphere.sample(&mut rng);
+                                force.force += force_one_kick * Vector3::new(v[0], v[1], v[2]);
                             }
                         }
-                    );
+                    });
                 }
             }
         }
@@ -158,10 +150,10 @@ pub mod tests {
     use crate::species::Strontium88_461;
     use assert_approx_eq::assert_approx_eq;
     extern crate nalgebra;
-    use crate::laser::{gaussian};
+    use crate::laser::gaussian;
     use nalgebra::Vector3;
 
-    const LASER_COUNT : usize = 4;
+    const LASER_COUNT: usize = 4;
 
     /// Tests the correct implementation of the `CalculateAbsorptionForceSystem`
     #[test]
@@ -173,8 +165,8 @@ pub mod tests {
         app.insert_resource(Timestep { delta: time_delta });
 
         let wavelength = Strontium88_461::wavelength();
-        app.world.spawn()
-            .insert(CoolingLight {
+        app.world
+            .spawn(CoolingLight {
                 polarization: 1,
                 wavelength,
             })
@@ -195,8 +187,9 @@ pub mod tests {
         let mut aps = ActualPhotonsScattered::<Strontium88_461>::default();
         aps.scattered = number_scattered;
 
-        let atom1 = app.world.spawn()
-            .insert(ActualPhotonsScatteredVector {
+        let atom1 = app
+            .world
+            .spawn(ActualPhotonsScatteredVector {
                 contents: [aps; LASER_COUNT],
             })
             .insert(Force::default())
@@ -207,7 +200,11 @@ pub mod tests {
 
         let actual_force_x = number_scattered * HBAR * 2. * PI / wavelength / time_delta;
         assert_approx_eq!(
-            app.world.entity(atom1).get::<Force>().expect("entity not found").force[0],
+            app.world
+                .entity(atom1)
+                .get::<Force>()
+                .expect("entity not found")
+                .force[0],
             actual_force_x,
             1e-20_f64
         );
@@ -225,8 +222,9 @@ pub mod tests {
 
         let mut aps = ActualPhotonsScattered::<Strontium88_461>::default();
         aps.scattered = number_scattered;
-        let atom1 = app.world.spawn()
-            .insert(ActualPhotonsScatteredVector {
+        let atom1 = app
+            .world
+            .spawn(ActualPhotonsScatteredVector {
                 contents: [aps; LASER_COUNT],
             })
             .insert(Force::default())
@@ -236,12 +234,13 @@ pub mod tests {
         app.add_system(calculate_emission_forces::<LASER_COUNT, Strontium88_461>);
         app.update();
 
-        let max_force_total = number_scattered * 2. * PI * Strontium88_461::frequency()
-            / constant::C
-            * HBAR
-            / time_delta;
+        let max_force_total =
+            number_scattered * 2. * PI * Strontium88_461::frequency() / constant::C * HBAR
+                / time_delta;
         assert_approx_eq!(
-            app.world.entity(atom1).get::<Force>()
+            app.world
+                .entity(atom1)
+                .get::<Force>()
                 .expect("entity not found")
                 .force
                 .norm(),

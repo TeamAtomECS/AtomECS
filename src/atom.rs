@@ -67,7 +67,7 @@ pub struct InitialVelocity {
     pub vel: Vector3<f64>,
 }
 
-/// Force applies to an entity, with respect to cartesian x,y,z axes.
+/// Force applied to an entity, with respect to cartesian x,y,z axes.
 ///
 /// SI units (Newtons)
 #[derive(Copy, Clone, Component)]

@@ -41,12 +41,12 @@ pub struct LaserIntensityGradientSamplers<const N: usize> {
 /// `Frame` to account for different ellipiticies in the future.
 /// The result is stored in the `LaserIntensityGradientSamplers` component that each
 /// atom is associated with.
-pub fn sample_gaussian_laser_intensity_gradient<const N: usize, FilterT> (
+pub fn sample_gaussian_laser_intensity_gradient<const N: usize, FilterT>(
     laser_query: Query<(&LaserIndex, &GaussianBeam, &Frame), With<FilterT>>,
     mut sampler_query: Query<(&mut LaserIntensityGradientSamplers<N>, &Position)>,
-    batch_size: Res<BatchSize>
-)
-where FilterT : Component + Send + Sync
+    batch_size: Res<BatchSize>,
+) where
+    FilterT: Component + Send + Sync,
 {
     for (index, beam, frame) in laser_query.iter() {
         sampler_query.par_for_each_mut(batch_size.0, |(mut sampler, pos)| {
@@ -67,7 +67,6 @@ pub mod tests {
 
     #[test]
     fn test_sample_laser_intensity_gradient_system() {
-        
         let mut app = App::new();
         app.insert_resource(BatchSize::default());
 
@@ -84,8 +83,7 @@ pub mod tests {
         };
 
         app.world
-            .spawn()
-            .insert(LaserIndex {
+            .spawn(LaserIndex {
                 index: 0,
                 initiated: true,
             })
@@ -96,19 +94,22 @@ pub mod tests {
             })
             .insert(TestComp);
 
-        let atom1 = app.world.spawn()
-            .insert(Position {
+        let atom1 = app
+            .world
+            .spawn(Position {
                 pos: Vector3::new(10.0e-6, 0.0, 30.0e-6),
             })
             .insert(LaserIntensityGradientSamplers {
                 contents: [LaserIntensityGradientSampler::default(); 1],
             })
             .id();
-        
+
         app.add_system(sample_gaussian_laser_intensity_gradient::<1, TestComp>);
         app.update();
 
-        let sim_result_gradient = app.world.entity(atom1)
+        let sim_result_gradient = app
+            .world
+            .entity(atom1)
             .get::<LaserIntensityGradientSamplers<1>>()
             .expect("Entity not found!")
             .contents[0]
@@ -159,8 +160,8 @@ pub mod tests {
             ellipticity: 0.0,
         };
 
-        app.world.spawn()
-            .insert(LaserIndex {
+        app.world
+            .spawn(LaserIndex {
                 index: 0,
                 initiated: true,
             })
@@ -171,20 +172,22 @@ pub mod tests {
             })
             .insert(TestComp);
 
-        let atom1 = app.world.spawn()
-            .insert(Position {
+        let atom1 = app
+            .world
+            .spawn(Position {
                 pos: Vector3::new(20.0e-6, 20.0e-6, 20.0e-6),
             })
             .insert(LaserIntensityGradientSamplers {
-                contents: [LaserIntensityGradientSampler::default();
-                    1],
+                contents: [LaserIntensityGradientSampler::default(); 1],
             })
             .id();
 
         app.add_system(sample_gaussian_laser_intensity_gradient::<1, TestComp>);
         app.update();
 
-        let sim_result_gradient = app.world.entity(atom1)
+        let sim_result_gradient = app
+            .world
+            .entity(atom1)
             .get::<LaserIntensityGradientSamplers<1>>()
             .expect("Entity not found!")
             .contents[0]

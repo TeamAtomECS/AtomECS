@@ -4,37 +4,46 @@ extern crate serde;
 
 use std::marker::PhantomData;
 
+use super::transition::TransitionComponent;
 use super::CoolingLight;
-use super::transition::{TransitionComponent};
 use crate::integrator::BatchSize;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
 use crate::laser::intensity::LaserIntensitySamplers;
 use crate::laser_cooling::sampler::LaserDetuningSamplers;
 use crate::magnetic::MagneticFieldSampler;
-use serde::Serialize;
 use bevy::prelude::*;
+use serde::Serialize;
 
 /// Represents the rate coefficient of the atom with respect to a specific [CoolingLight] entity, for the given transition.
 #[derive(Clone, Copy, Serialize)]
-pub struct RateCoefficient<T> where T : TransitionComponent {
+pub struct RateCoefficient<T>
+where
+    T: TransitionComponent,
+{
     /// rate coefficient in Hz
     pub rate: f64,
-    phantom: PhantomData<T>
+    phantom: PhantomData<T>,
 }
-impl<T> Default for RateCoefficient<T> where T : TransitionComponent {
+impl<T> Default for RateCoefficient<T>
+where
+    T: TransitionComponent,
+{
     fn default() -> Self {
         RateCoefficient {
             /// rate coefficient in Hz
             rate: f64::NAN,
-            phantom: PhantomData
+            phantom: PhantomData,
         }
     }
 }
 
 /// Component that holds a Vector of `RateCoefficient`
 #[derive(Clone, Copy, Serialize, Component)]
-pub struct RateCoefficients<T, const N: usize> where T : TransitionComponent {
+pub struct RateCoefficients<T, const N: usize>
+where
+    T: TransitionComponent,
+{
     /// Vector of `RateCoefficient` where each entry corresponds to a different CoolingLight entity
     #[serde(with = "serde_arrays")]
     pub contents: [RateCoefficient<T>; N],
@@ -50,16 +59,23 @@ pub struct RateCoefficients<T, const N: usize> where T : TransitionComponent {
 /// field vector. For fully polarized CoolingLight all projection pre-factors add up to 1.
 pub fn calculate_rate_coefficients<const N: usize, T>(
     laser_query: Query<(&CoolingLight, &LaserIndex, &GaussianBeam)>,
-    mut atom_query: Query<(&LaserDetuningSamplers<T,N>, &LaserIntensitySamplers<N>, &MagneticFieldSampler, &mut RateCoefficients<T,N>), With<T>>,
-    batch_size: Res<BatchSize>
-) where T : TransitionComponent {
-
+    mut atom_query: Query<
+        (
+            &LaserDetuningSamplers<T, N>,
+            &LaserIntensitySamplers<N>,
+            &MagneticFieldSampler,
+            &mut RateCoefficients<T, N>,
+        ),
+        With<T>,
+    >,
+    batch_size: Res<BatchSize>,
+) where
+    T: TransitionComponent,
+{
     // First set all rate coefficients to zero.
-    atom_query.par_for_each_mut(batch_size.0,
-        |(_, _, _, mut rates)| {
-            rates.contents = [RateCoefficient::default(); N];
-        }
-    );
+    atom_query.par_for_each_mut(batch_size.0, |(_, _, _, mut rates)| {
+        rates.contents = [RateCoefficient::default(); N];
+    });
 
     // Then calculate for each laser.
     for (cooling, index, gaussian) in laser_query.iter() {
@@ -75,8 +91,7 @@ pub fn calculate_rate_coefficients<const N: usize, T>(
                         .dot(&bfield.field.normalize())
                 };
 
-                let prefactor =
-                    T::rate_prefactor() * intensities.contents[index.index].intensity;
+                let prefactor = T::rate_prefactor() * intensities.contents[index.index].intensity;
                 let gamma = T::gamma();
 
                 let scatter1 =
@@ -90,10 +105,9 @@ pub fn calculate_rate_coefficients<const N: usize, T>(
                             + (gamma / 2.0).powi(2));
 
                 let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor
-                    / (detunings.contents[index.index].detuning_pi.powi(2)
-                        + (gamma / 2.0).powi(2));
+                    / (detunings.contents[index.index].detuning_pi.powi(2) + (gamma / 2.0).powi(2));
                 rates.contents[index.index].rate = scatter1 + scatter2 + scatter3;
-            }
+            },
         );
     }
 }
@@ -104,17 +118,17 @@ pub mod tests {
     use super::*;
 
     use crate::laser::index::LaserIndex;
-    use crate::laser_cooling::CoolingLight;
     use crate::laser_cooling::transition::AtomicTransition;
+    use crate::laser_cooling::CoolingLight;
     use crate::species::Strontium88_461;
     use assert_approx_eq::assert_approx_eq;
     use nalgebra::{Matrix3, Vector3};
 
-    use crate::laser::intensity::{LaserIntensitySamplers, LaserIntensitySampler};
-    use crate::laser_cooling::sampler::{LaserDetuningSamplers, LaserDetuningSampler};
+    use crate::laser::intensity::{LaserIntensitySampler, LaserIntensitySamplers};
+    use crate::laser_cooling::sampler::{LaserDetuningSampler, LaserDetuningSamplers};
     use crate::magnetic::MagneticFieldSampler;
 
-    const LASER_COUNT : usize = 4;
+    const LASER_COUNT: usize = 4;
 
     /// Tests the correct implementation of the `RateCoefficients`
     #[test]
@@ -123,8 +137,7 @@ pub mod tests {
         app.insert_resource(BatchSize::default());
         let wavelength = 461e-9;
         app.world
-            .spawn()
-            .insert(CoolingLight {
+            .spawn(CoolingLight {
                 polarization: 1,
                 wavelength,
             })
@@ -150,14 +163,13 @@ pub mod tests {
         lds.detuning_sigma_minus = detuning;
         lds.detuning_pi = detuning;
 
-        let atom1 = app.world
-            .spawn()
-            .insert(LaserDetuningSamplers {
+        let atom1 = app
+            .world
+            .spawn(LaserDetuningSamplers {
                 contents: [lds; LASER_COUNT],
             })
             .insert(LaserIntensitySamplers {
-                contents: [LaserIntensitySampler { intensity };
-                LASER_COUNT],
+                contents: [LaserIntensitySampler { intensity }; LASER_COUNT],
             })
             .insert(Strontium88_461)
             .insert(MagneticFieldSampler {
@@ -175,15 +187,17 @@ pub mod tests {
         app.update();
 
         let man_pref = Strontium88_461::rate_prefactor() * intensity;
-        let scatter1 = 0.25 * man_pref
-            / (detuning.powf(2.0) + (Strontium88_461::gamma() / 2.).powf(2.0));
-        let scatter2 = 0.25 * man_pref
-            / (detuning.powf(2.0) + (Strontium88_461::gamma() / 2.).powf(2.0));
-        let scatter3 = 0.5 * man_pref
-            / (detuning.powf(2.) + (Strontium88_461::gamma() / 2.).powf(2.));
+        let scatter1 =
+            0.25 * man_pref / (detuning.powf(2.0) + (Strontium88_461::gamma() / 2.).powf(2.0));
+        let scatter2 =
+            0.25 * man_pref / (detuning.powf(2.0) + (Strontium88_461::gamma() / 2.).powf(2.0));
+        let scatter3 =
+            0.5 * man_pref / (detuning.powf(2.) + (Strontium88_461::gamma() / 2.).powf(2.));
 
         assert_approx_eq!(
-            app.world.entity(atom1).get::<RateCoefficients<Strontium88_461, LASER_COUNT>>()
+            app.world
+                .entity(atom1)
+                .get::<RateCoefficients<Strontium88_461, LASER_COUNT>>()
                 .expect("entity not found")
                 .contents[0]
                 .rate,

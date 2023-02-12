@@ -10,17 +10,15 @@ use bevy::prelude::*;
 /// A system that deletes entities which have been marked for destruction using the [ToBeDestroyed] component.
 fn delete_to_be_destroyed_entities(
     query: Query<Entity, With<ToBeDestroyed>>,
-    mut commands: Commands
+    mut commands: Commands,
 ) {
-    query.for_each(
-        |entity| {
-            commands.entity(entity).despawn();
-        }
-    );
+    query.for_each(|entity| {
+        commands.entity(entity).despawn();
+    });
 }
 
 /// This plugin implements removal of atoms marked as [ToBeDestroyed].
-/// 
+///
 /// See also [crate::destructor].
 pub struct DestroyAtomsPlugin;
 impl Plugin for DestroyAtomsPlugin {
@@ -46,12 +44,15 @@ pub mod tests {
 
     #[test]
     fn test_to_be_destroyed_system() {
-
         let mut app = App::new();
         app.add_plugin(DestroyAtomsPlugin);
-        
-        let test_entity1 = app.world.spawn().insert(Position::default()).id();
-        let test_entity2 = app.world.spawn().insert(Position::default()).insert(ToBeDestroyed).id();
+
+        let test_entity1 = app.world.spawn(Position::default()).id();
+        let test_entity2 = app
+            .world
+            .spawn(Position::default())
+            .insert(ToBeDestroyed)
+            .id();
         app.update();
         assert!(app.world.get_entity(test_entity1).is_some());
         assert!(app.world.get_entity(test_entity2).is_none());

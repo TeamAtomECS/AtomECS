@@ -1,4 +1,8 @@
-//! A set of modules used for integration the motion of laser-cooled atoms.
+//! # AtomECS
+//!
+//! AtomECS is a high-performance code for simulating the motion of ultracold atoms.
+//!
+//! See the repository [readme](https://github.com/TeamAtomECS/AtomEC) for more information.
 
 #[macro_use]
 extern crate atomecs_derive;

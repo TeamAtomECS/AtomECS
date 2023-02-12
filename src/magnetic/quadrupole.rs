@@ -1,9 +1,8 @@
 //! Magnetic quadrupole fields
 
+use super::analytic::AnalyticField;
 use bevy::prelude::*;
 use nalgebra::{Unit, Vector3};
-use super::analytic::AnalyticField;
-
 
 /// A component representing a 3D quadrupole field.
 #[derive(Clone, Copy, Component)]
@@ -100,7 +99,10 @@ pub mod tests {
     fn test_quadrupole_3d_field() {
         let pos = Vector3::new(1.0, 1.0, 1.0);
         let centre = Vector3::new(0., 1., 0.);
-        let quad_field = QuadrupoleField3D { gradient: 1.0, direction: Vector3::z() };
+        let quad_field = QuadrupoleField3D {
+            gradient: 1.0,
+            direction: Vector3::z(),
+        };
         let field = quad_field.get_field(centre, pos);
         assert_eq!(field, Vector3::new(1., 0., -2.));
     }
@@ -108,23 +110,24 @@ pub mod tests {
     #[test]
 
     fn test_3d_quadrupole_systems() {
-        use crate::magnetic::analytic::calculate_field_contributions;
         use crate::atom::Position;
+        use crate::magnetic::analytic::calculate_field_contributions;
         use crate::magnetic::MagneticFieldSampler;
-    
+
         let mut app = App::new();
         app.insert_resource(BatchSize::default());
         app.add_system(calculate_field_contributions::<QuadrupoleField3D>);
 
-        let atom1 = app.world.spawn()
-        .insert(Position {
+        let atom1 = app
+            .world
+            .spawn(Position {
                 pos: Vector3::new(0.02, 0.01, -0.05),
             })
-        .insert(MagneticFieldSampler::default())
-        .id();
+            .insert(MagneticFieldSampler::default())
+            .id();
 
-        app.world.spawn()
-            .insert(QuadrupoleField3D {
+        app.world
+            .spawn(QuadrupoleField3D {
                 gradient: 1.0,
                 direction: Vector3::new(0.0, 0.0, 1.0),
             })
@@ -132,8 +135,8 @@ pub mod tests {
                 pos: Vector3::new(0.0, 0.0, 0.0),
             });
 
-        app.world.spawn()
-            .insert(QuadrupoleField3D {
+        app.world
+            .spawn(QuadrupoleField3D {
                 gradient: 2.0,
                 direction: Vector3::new(1.0, 0.0, 1.0).normalize(),
             })
@@ -143,7 +146,10 @@ pub mod tests {
 
         app.update();
 
-        let test_jacobian = app.world.entity(atom1).get::<MagneticFieldSampler>()
+        let test_jacobian = app
+            .world
+            .entity(atom1)
+            .get::<MagneticFieldSampler>()
             .expect("entity not found")
             .jacobian;
 
@@ -163,7 +169,11 @@ pub mod tests {
         let pos = Vector3::new(1.0, 1.0, 1.0);
         let centre = Vector3::new(0., 0.5, 0.);
         let gradient = 1.;
-        let quad_field = QuadrupoleField2D { gradient, direction_out: Vector3::y(), direction_in: Vector3::x() };
+        let quad_field = QuadrupoleField2D {
+            gradient,
+            direction_out: Vector3::y(),
+            direction_in: Vector3::x(),
+        };
         let field = quad_field.get_field(centre, pos);
         assert_eq!(field, Vector3::new(-1., 0.5, 0.));
     }

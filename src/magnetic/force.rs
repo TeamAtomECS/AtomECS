@@ -22,12 +22,10 @@ pub fn apply_magnetic_forces(
     mut query: Query<(&mut Force, &MagneticFieldSampler, &MagneticDipole)>,
     batch_size: Res<BatchSize>,
 ) {
-    query.par_for_each_mut(batch_size.0, 
-        |(mut force, sampler, dipole)| {
-            let dipole_force = -dipole.mFgF * constant::BOHRMAG * sampler.gradient;
-            force.force += dipole_force;
-        }
-    )
+    query.par_for_each_mut(batch_size.0, |(mut force, sampler, dipole)| {
+        let dipole_force = -dipole.mFgF * constant::BOHRMAG * sampler.gradient;
+        force.force += dipole_force;
+    })
 }
 
 #[cfg(test)]
@@ -44,9 +42,9 @@ pub mod tests {
         app.add_system(apply_magnetic_forces);
         app.insert_resource(BatchSize::default());
 
-        let atom1 = app.world
-            .spawn()
-            .insert(MagneticFieldSampler {
+        let atom1 = app
+            .world
+            .spawn(MagneticFieldSampler {
                 field: Vector3::new(0.0, 0.0, 0.0),
                 magnitude: 2.0,
                 gradient: Vector3::new(1.0, -0.5, 2.0),
@@ -56,9 +54,14 @@ pub mod tests {
             .insert(Force::default())
             .id();
 
-        
-            app.update();
-        let force = app.world.get_entity(atom1).expect("entity not found").get::<Force>().expect("Force not found").force;
+        app.update();
+        let force = app
+            .world
+            .get_entity(atom1)
+            .expect("entity not found")
+            .get::<Force>()
+            .expect("Force not found")
+            .force;
 
         let real_force = Vector3::new(
             -0.5 * constant::BOHRMAG,

@@ -31,15 +31,12 @@ impl Default for DopplerShiftSampler {
 pub fn calculate_doppler_shift<const N: usize>(
     laser_query: Query<(&CoolingLight, &LaserIndex, &GaussianBeam)>,
     mut atom_query: Query<(&mut DopplerShiftSamplers<N>, &Velocity)>,
-    batch_size: Res<BatchSize>
+    batch_size: Res<BatchSize>,
 ) {
-
     // Set samplers to default values first.
-    atom_query.par_for_each_mut(batch_size.0, 
-        |(mut samplers, _vel)| {
-            samplers.contents = [DopplerShiftSampler::default(); N];
-        }
-    );
+    atom_query.par_for_each_mut(batch_size.0, |(mut samplers, _vel)| {
+        samplers.contents = [DopplerShiftSampler::default(); N];
+    });
 
     // Enumerate through lasers and calculate for each.
     //
@@ -60,16 +57,14 @@ pub fn calculate_doppler_shift<const N: usize>(
         laser_array[..max_index].copy_from_slice(slice);
         let number_in_iteration = slice.len();
 
-        atom_query.par_for_each_mut( batch_size.0,
-            |(mut sampler, vel)| {
-                for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
-                    sampler.contents[index.index].doppler_shift = vel
-                        .vel
-                        .dot(&(gaussian.direction.normalize() * cooling.wavenumber()));
-                }
-            });
+        atom_query.par_for_each_mut(batch_size.0, |(mut sampler, vel)| {
+            for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
+                sampler.contents[index.index].doppler_shift = vel
+                    .vel
+                    .dot(&(gaussian.direction.normalize() * cooling.wavenumber()));
+            }
+        });
     }
-
 }
 
 /// Component that holds a list of [DopplerShiftSampler]s
@@ -88,20 +83,19 @@ pub mod tests {
 
     use super::*;
     use crate::constant::PI;
+    use crate::laser::gaussian;
     use crate::laser_cooling::CoolingLight;
     use assert_approx_eq::assert_approx_eq;
-    use crate::laser::{gaussian};
     use nalgebra::Vector3;
 
     #[test]
     fn test_calculate_doppler_shift_system() {
         let mut app = App::new();
         app.insert_resource(BatchSize::default());
-    
+
         let wavelength = 780e-9;
         app.world
-            .spawn()
-            .insert(CoolingLight {
+            .spawn(CoolingLight {
                 polarization: 1,
                 wavelength,
             })
@@ -119,9 +113,9 @@ pub mod tests {
             });
 
         let atom_velocity = 100.0;
-        let sampler1 = app.world
-            .spawn()
-            .insert(Velocity {
+        let sampler1 = app
+            .world
+            .spawn(Velocity {
                 vel: Vector3::new(atom_velocity, 0.0, 0.0),
             })
             .insert(DopplerShiftSamplers {
@@ -133,7 +127,9 @@ pub mod tests {
         app.update();
 
         assert_approx_eq!(
-            app.world.entity(sampler1).get::<DopplerShiftSamplers<1>>()
+            app.world
+                .entity(sampler1)
+                .get::<DopplerShiftSamplers<1>>()
                 .expect("entity not found")
                 .contents[0]
                 .doppler_shift,

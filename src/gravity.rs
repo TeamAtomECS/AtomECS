@@ -4,8 +4,8 @@ use crate::atom::{Force, Mass};
 use crate::constant;
 use crate::integrator::INTEGRATE_POSITION_SYSTEM_NAME;
 use crate::simulation::Plugin;
+use bevy::prelude::*;
 use nalgebra::Vector3;
-use specs::prelude::*;
 
 /// A resource that indicates that the simulation should apply the force of gravity.
 pub struct ApplyGravityOption;
@@ -25,18 +25,17 @@ impl<'a> System<'a> for ApplyGravitationalForceSystem {
         match gravity_option {
             None => (),
             Some(_) => {
-                (&mut force, &mass)
-                    .par_join()
-                    .for_each(|(force, mass)| {
-                        force.force += mass.value * constant::AMU * constant::GC * Vector3::new(0., 0., -1.);
-                    });
+                (&mut force, &mass).par_join().for_each(|(force, mass)| {
+                    force.force +=
+                        mass.value * constant::AMU * constant::GC * Vector3::new(0., 0., -1.);
+                });
             }
         }
     }
 }
 
 /// This plugin implements the force of gravity.
-/// 
+///
 /// See also [crate::gravity].
 pub struct GravityPlugin;
 impl Plugin for GravityPlugin {
@@ -45,9 +44,9 @@ impl Plugin for GravityPlugin {
             ApplyGravitationalForceSystem,
             "add_gravity",
             &["clear", INTEGRATE_POSITION_SYSTEM_NAME],
-        );  
+        );
     }
-    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
+    fn deps(&self) -> Vec<Box<dyn Plugin>> {
         Vec::new()
     }
 }

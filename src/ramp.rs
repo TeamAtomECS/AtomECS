@@ -12,9 +12,9 @@
 //!   * The struct implements `Clone`.
 //!   * The fields can all be multiplied by an f64 and added (eg `f64` and `Vector3<f64>` types).
 
-use bevy::{prelude::*};
+use bevy::prelude::*;
 
-use crate::integrator::{Step, Timestep, BatchSize};
+use crate::integrator::{BatchSize, Step, Timestep};
 use std::marker::PhantomData;
 
 pub trait Lerp<T> {
@@ -63,10 +63,7 @@ where
     }
 
     pub fn new(keyframes: Vec<(f64, T)>) -> Self {
-        Ramp {
-            keyframes,
-            prev: 0,
-        }
+        Ramp { keyframes, prev: 0 }
     }
 }
 
@@ -74,25 +71,26 @@ fn apply_ramp<T>(
     mut query: Query<(&mut T, &mut Ramp<T>)>,
     batch_size: Res<BatchSize>,
     timestep: Res<Timestep>,
-    step: Res<Step>
+    step: Res<Step>,
 ) where
-    T: Lerp<T> + Component + Sync + Send + Clone {
-        let current_time = step.n as f64 * timestep.delta;
-        query.par_for_each_mut(batch_size.0, 
-        |(mut comp, mut ramp)| {
-            comp.clone_from(&ramp.get_value(current_time));
-        }
-        );
+    T: Lerp<T> + Component + Sync + Send + Clone,
+{
+    let current_time = step.n as f64 * timestep.delta;
+    query.par_for_each_mut(batch_size.0, |(mut comp, mut ramp)| {
+        comp.clone_from(&ramp.get_value(current_time));
+    });
 }
 
 /// Implements ramping of a given component type.
 pub struct RampPlugin<T>
-where T: Lerp<T> + Component + Sync + Send + Clone {
-    phantom: PhantomData<T>
+where
+    T: Lerp<T> + Component + Sync + Send + Clone,
+{
+    phantom: PhantomData<T>,
 }
 impl<T> Default for RampPlugin<T>
 where
-T: Lerp<T> + Component + Sync + Send + Clone,
+    T: Lerp<T> + Component + Sync + Send + Clone,
 {
     fn default() -> Self {
         Self {
@@ -101,9 +99,10 @@ T: Lerp<T> + Component + Sync + Send + Clone,
     }
 }
 
-
 impl<T> Plugin for RampPlugin<T>
-where T: Lerp<T> + Component + Sync + Send + Clone {
+where
+    T: Lerp<T> + Component + Sync + Send + Clone,
+{
     fn build(&self, app: &mut App) {
         app.add_system_to_stage(CoreStage::Update, apply_ramp::<T>);
     }
@@ -124,7 +123,8 @@ pub mod tests {
         let frames = vec![
             (0.0, ALerpComp { value: 0.0 }),
             (1.0, ALerpComp { value: 1.0 }),
-            (2.0, ALerpComp { value: 0.0 })];
+            (2.0, ALerpComp { value: 0.0 }),
+        ];
         let mut ramp = Ramp {
             prev: 0,
             keyframes: frames,
@@ -159,22 +159,21 @@ pub mod tests {
     #[test]
     fn test_ramp_system() {
         use assert_approx_eq::assert_approx_eq;
-        
+
         let mut app = App::new();
         app.add_plugin(RampPlugin::<ALerpComp>::default());
         app.add_plugin(crate::integrator::IntegrationPlugin);
 
         let frames = vec![
             (0.0, ALerpComp { value: 0.0 }),
-            (1.0, ALerpComp { value: 1.0 })];
+            (1.0, ALerpComp { value: 1.0 }),
+        ];
         let ramp = Ramp {
             prev: 0,
             keyframes: frames,
         };
 
-        let test_entity = app.world.spawn().insert(ALerpComp { value: 0.0 })
-            .insert(ramp)
-            .id();
+        let test_entity = app.world.spawn(ALerpComp { value: 0.0 }).insert(ramp).id();
 
         let dt = 0.1;
         app.world.insert_resource(Timestep { delta: dt });
@@ -185,7 +184,11 @@ pub mod tests {
             app.update();
 
             assert_approx_eq!(
-                app.world.entity(test_entity).get::<ALerpComp>().expect("could not get component.").value,
+                app.world
+                    .entity(test_entity)
+                    .get::<ALerpComp>()
+                    .expect("could not get component.")
+                    .value,
                 i as f64 * dt,
                 std::f64::EPSILON
             );

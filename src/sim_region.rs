@@ -13,7 +13,6 @@ use crate::integrator::BatchSize;
 use crate::shapes::{Cuboid, Cylinder, Sphere, Volume};
 use bevy::prelude::*;
 
-
 pub enum VolumeType {
     /// Entities within the volume are accepted
     Inclusive,
@@ -59,51 +58,40 @@ fn perform_region_tests<T: Volume + Component>(
     batch_size: Res<BatchSize>,
 ) {
     for (volume, sim_volume, vol_pos) in volume_query.iter() {
-        atom_query.par_for_each_mut(
-            batch_size.0,
-            |(mut result, pos)| {
-                match result.result {
-                    Result::Reject => (),
-                    _ => {
-                        let contained = volume.contains(&vol_pos.pos, &pos.pos);
-                        match sim_volume.volume_type {
-                            VolumeType::Inclusive => {
-                                if contained {
-                                    result.result = Result::Accept;
-                                } else if let Result::Untested = result.result {
-                                    result.result = Result::Failed
-                                }
-                            }
-                            VolumeType::Exclusive => {
-                                if contained {
-                                    result.result = Result::Reject;
-                                }
-                            }
+        atom_query.par_for_each_mut(batch_size.0, |(mut result, pos)| match result.result {
+            Result::Reject => (),
+            _ => {
+                let contained = volume.contains(&vol_pos.pos, &pos.pos);
+                match sim_volume.volume_type {
+                    VolumeType::Inclusive => {
+                        if contained {
+                            result.result = Result::Accept;
+                        } else if let Result::Untested = result.result {
+                            result.result = Result::Failed
+                        }
+                    }
+                    VolumeType::Exclusive => {
+                        if contained {
+                            result.result = Result::Reject;
                         }
                     }
                 }
             }
-        );
+        });
     }
 }
 
 /// This system sets all [RegionTest](struct.RegionTest.html) results
 /// to the value `Result::Untested`.
-fn clear_region_tests(
-    mut query: Query<&mut RegionTest>,
-    batch_size: Res<BatchSize>,
-) {
-    query.par_for_each_mut(
-        batch_size.0,
-        |mut test| {test.result = Result::Untested}
-    );
+fn clear_region_tests(mut query: Query<&mut RegionTest>, batch_size: Res<BatchSize>) {
+    query.par_for_each_mut(batch_size.0, |mut test| test.result = Result::Untested);
 }
 
 /// This system deletes all entities with a [RegionTest](struct.RegionTest.html)
 /// component with `Result::Reject` or `Result::Failed`.
 fn delete_failed_region_tests(
     query: Query<(Entity, &RegionTest), Without<NewlyCreated>>, //do not create NewlyCreated atoms as other systems may be adding components.
-    mut commands: Commands
+    mut commands: Commands,
 ) {
     for (entity, test) in query.iter() {
         match test.result {
@@ -119,14 +107,12 @@ fn delete_failed_region_tests(
 /// to all entities that are [NewlyCreated](struct.NewlyCreated.html).
 pub fn attach_region_tests_to_newly_created(
     query: Query<Entity, With<NewlyCreated>>,
-    mut commands: Commands
+    mut commands: Commands,
 ) {
     for entity in query.iter() {
-        commands.entity(entity).insert(
-            RegionTest {
-                result: Result::Untested,
-            },
-        );
+        commands.entity(entity).insert(RegionTest {
+            result: Result::Untested,
+        });
     }
 }
 
@@ -136,25 +122,44 @@ pub enum SimRegionSystems {
     ClearRegionTests,
     RegionTestVolume,
     DeleteRegionTestFailure,
-    AttachRegionTestsToNewlyCreated
+    AttachRegionTestsToNewlyCreated,
 }
 
 /// This plugin implements simulation bounds, and the removal of atoms which leave them.
-/// 
+///
 /// See also [crate::sim_region]
 #[derive(Default)]
 pub struct SimulationRegionPlugin;
 impl Plugin for SimulationRegionPlugin {
     fn build(&self, app: &mut App) {
-        
         app.add_system_set(
-            SystemSet::new().label(SimRegionSystems::Set)
-            .with_system(clear_region_tests.label(SimRegionSystems::ClearRegionTests))
-            .with_system(perform_region_tests::<Sphere>.label(SimRegionSystems::RegionTestVolume).after(SimRegionSystems::ClearRegionTests))
-            .with_system(perform_region_tests::<Cuboid>.label(SimRegionSystems::RegionTestVolume).after(SimRegionSystems::ClearRegionTests))
-            .with_system(perform_region_tests::<Cylinder>.label(SimRegionSystems::RegionTestVolume).after(SimRegionSystems::ClearRegionTests))
-            .with_system(delete_failed_region_tests.label(SimRegionSystems::DeleteRegionTestFailure).after(SimRegionSystems::RegionTestVolume))
-            .with_system(attach_region_tests_to_newly_created.label(SimRegionSystems::AttachRegionTestsToNewlyCreated))
+            SystemSet::new()
+                .label(SimRegionSystems::Set)
+                .with_system(clear_region_tests.label(SimRegionSystems::ClearRegionTests))
+                .with_system(
+                    perform_region_tests::<Sphere>
+                        .label(SimRegionSystems::RegionTestVolume)
+                        .after(SimRegionSystems::ClearRegionTests),
+                )
+                .with_system(
+                    perform_region_tests::<Cuboid>
+                        .label(SimRegionSystems::RegionTestVolume)
+                        .after(SimRegionSystems::ClearRegionTests),
+                )
+                .with_system(
+                    perform_region_tests::<Cylinder>
+                        .label(SimRegionSystems::RegionTestVolume)
+                        .after(SimRegionSystems::ClearRegionTests),
+                )
+                .with_system(
+                    delete_failed_region_tests
+                        .label(SimRegionSystems::DeleteRegionTestFailure)
+                        .after(SimRegionSystems::RegionTestVolume),
+                )
+                .with_system(
+                    attach_region_tests_to_newly_created
+                        .label(SimRegionSystems::AttachRegionTestsToNewlyCreated),
+                ),
         );
         app.init_resource::<BatchSize>();
     }
@@ -170,8 +175,9 @@ pub mod tests {
     fn test_clear_region_tests_system() {
         let mut app = App::new();
 
-        let tester = app.world.spawn()
-            .insert(RegionTest {
+        let tester = app
+            .world
+            .spawn(RegionTest {
                 result: Result::Accept,
             })
             .id();
@@ -179,7 +185,11 @@ pub mod tests {
         app.add_plugin(SimulationRegionPlugin);
         app.update();
 
-        let test = app.world.entity(tester).get::<RegionTest>().expect("Could not find entity");
+        let test = app
+            .world
+            .entity(tester)
+            .get::<RegionTest>()
+            .expect("Could not find entity");
         match test.result {
             Result::Untested => (),
             _ => panic!("Result not set to Result::Untested."),
@@ -195,8 +205,8 @@ pub mod tests {
 
         let sphere_pos = Vector3::new(1.0, 1.0, 1.0);
         let sphere_radius = 1.0;
-        app.world.spawn()
-            .insert(Position { pos: sphere_pos })
+        app.world
+            .spawn(Position { pos: sphere_pos })
             .insert(Sphere {
                 radius: sphere_radius,
             })
@@ -212,8 +222,9 @@ pub mod tests {
                 rng.gen_range(-2.0..2.0),
                 rng.gen_range(-2.0..2.0),
             );
-            let entity = app.world.spawn()
-                .insert(RegionTest {
+            let entity = app
+                .world
+                .spawn(RegionTest {
                     result: Result::Untested,
                 })
                 .insert(Position { pos })
@@ -228,7 +239,11 @@ pub mod tests {
         app.update();
 
         for (entity, result) in tests {
-            let test_result = app.world.entity(entity).get::<RegionTest>().expect("Could not find entity");
+            let test_result = app
+                .world
+                .entity(entity)
+                .get::<RegionTest>()
+                .expect("Could not find entity");
             match test_result.result {
                 Result::Failed => assert!(!result, "Incorrect Failed"),
                 Result::Accept => assert!(result, "Incorrect Accept"),
@@ -239,7 +254,6 @@ pub mod tests {
 
     #[test]
     fn test_cuboid_contains() {
-
         use rand;
         use rand::Rng;
         let mut rng = rand::thread_rng();
@@ -247,11 +261,9 @@ pub mod tests {
 
         let cuboid_pos = Vector3::new(1.0, 1.0, 1.0);
         let half_width = Vector3::new(0.2, 0.3, 0.1);
-        app.world.spawn()
-            .insert(Position { pos: cuboid_pos })
-            .insert(Cuboid {
-                half_width,
-            })
+        app.world
+            .spawn(Position { pos: cuboid_pos })
+            .insert(Cuboid { half_width })
             .insert(SimulationVolume {
                 volume_type: VolumeType::Inclusive,
             });
@@ -264,22 +276,21 @@ pub mod tests {
                 rng.gen_range(-2.0..2.0),
                 rng.gen_range(-2.0..2.0),
             );
-            let entity = app.world.spawn()
-                .insert(RegionTest {
+            let entity = app
+                .world
+                .spawn(RegionTest {
                     result: Result::Untested,
                 })
                 .insert(Position { pos })
                 .id();
 
             let delta = pos - cuboid_pos;
-            tests.push(
-                (
-                    entity,
-                    delta[0].abs() < half_width[0]
+            tests.push((
+                entity,
+                delta[0].abs() < half_width[0]
                     && delta[1].abs() < half_width[1]
                     && delta[2].abs() < half_width[2],
-                )
-            );
+            ));
         }
 
         app.add_system(perform_region_tests::<Cuboid>);
@@ -287,7 +298,11 @@ pub mod tests {
         app.update();
 
         for (entity, result) in tests {
-            let test_result = app.world.entity(entity).get::<RegionTest>().expect("Could not find entity");
+            let test_result = app
+                .world
+                .entity(entity)
+                .get::<RegionTest>()
+                .expect("Could not find entity");
             match test_result.result {
                 Result::Failed => assert!(!result, "Incorrect Failed"),
                 Result::Accept => assert!(result, "Incorrect Accept"),
@@ -300,7 +315,7 @@ pub mod tests {
     fn test_region_tests_are_added() {
         let mut app = App::new();
         app.add_plugin(SimulationRegionPlugin);
-        let sampler_entity = app.world.spawn().insert(NewlyCreated).id();
+        let sampler_entity = app.world.spawn(NewlyCreated).id();
         app.update();
         assert!(app.world.entity(sampler_entity).contains::<RegionTest>());
     }

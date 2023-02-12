@@ -1,12 +1,12 @@
 //! Calculation of the total detuning for specific atoms and CoolingLight entities
 
-use super::CoolingLight;
 use super::transition::TransitionComponent;
+use super::zeeman::ZeemanShiftSampler;
+use super::CoolingLight;
 use crate::constant;
 use crate::integrator::BatchSize;
 use crate::laser::index::LaserIndex;
 use crate::laser_cooling::doppler::DopplerShiftSamplers;
-use super::zeeman::ZeemanShiftSampler;
 use bevy::prelude::*;
 use std::f64;
 use std::marker::PhantomData;
@@ -16,39 +16,55 @@ const LASER_CACHE_SIZE: usize = 16;
 
 /// Represents total detuning of the atom's transition with respect to each beam
 #[derive(Clone, Copy)]
-pub struct LaserDetuningSampler<T> where T : TransitionComponent {
+pub struct LaserDetuningSampler<T>
+where
+    T: TransitionComponent,
+{
     /// Laser detuning of the sigma plus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_plus: f64,
     /// Laser detuning of the sigma minus transition with respect to laser beam, in SI units of rad/s
     pub detuning_sigma_minus: f64,
     /// Laser detuning of the pi transition with respect to laser beam, in SI units of rad/s
     pub detuning_pi: f64,
-    phantom: PhantomData<T>
+    phantom: PhantomData<T>,
 }
 
-impl<T> Default for LaserDetuningSampler<T> where T : TransitionComponent {
+impl<T> Default for LaserDetuningSampler<T>
+where
+    T: TransitionComponent,
+{
     fn default() -> Self {
         LaserDetuningSampler {
             detuning_sigma_plus: f64::NAN,
             detuning_sigma_minus: f64::NAN,
             detuning_pi: f64::NAN,
-            phantom: PhantomData
+            phantom: PhantomData,
         }
     }
 }
 
 /// Component that holds a vector of `LaserDetuningSampler`
 #[derive(Component)]
-pub struct LaserDetuningSamplers<T, const N: usize> where T : TransitionComponent {
+pub struct LaserDetuningSamplers<T, const N: usize>
+where
+    T: TransitionComponent,
+{
     /// List of `LaserDetuningSampler`s
     pub contents: [LaserDetuningSampler<T>; N],
 }
 
 /// Calculates the total laser detuning for each atom with respect to each [CoolingLight].
-pub fn calculate_laser_detuning<const N: usize, T : TransitionComponent>(
+pub fn calculate_laser_detuning<const N: usize, T: TransitionComponent>(
     laser_query: Query<(&LaserIndex, &CoolingLight)>,
-    mut atom_query: Query<(&mut LaserDetuningSamplers<T,N>, &DopplerShiftSamplers<N>, &ZeemanShiftSampler<T>), With<T>>,
-    batch_size: Res<BatchSize>
+    mut atom_query: Query<
+        (
+            &mut LaserDetuningSamplers<T, N>,
+            &DopplerShiftSamplers<N>,
+            &ZeemanShiftSampler<T>,
+        ),
+        With<T>,
+    >,
+    batch_size: Res<BatchSize>,
 ) {
     // There are typically only a small number of lasers in a simulation.
     // For a speedup, cache the required components into thread memory,
@@ -56,7 +72,7 @@ pub fn calculate_laser_detuning<const N: usize, T : TransitionComponent>(
     type CachedLaser = (LaserIndex, CoolingLight);
     let mut laser_cache: Vec<CachedLaser> = Vec::new();
     for (index, cooling) in laser_query.iter() {
-            laser_cache.push((*index, *cooling));
+        laser_cache.push((*index, *cooling));
     }
 
     // Perform the iteration over atoms, `LASER_CACHE_SIZE` at a time.
@@ -67,13 +83,13 @@ pub fn calculate_laser_detuning<const N: usize, T : TransitionComponent>(
         laser_array[..max_index].copy_from_slice(slice);
         let number_in_iteration = slice.len();
 
-        atom_query.par_for_each_mut(batch_size.0,
+        atom_query.par_for_each_mut(
+            batch_size.0,
             |(mut detuning_sampler, doppler_samplers, zeeman_sampler)| {
                 for (index, cooling) in laser_array.iter().take(number_in_iteration) {
-                    let without_zeeman = 2.0
-                        * constant::PI
-                        * (constant::C / cooling.wavelength - T::frequency())
-                        - doppler_samplers.contents[index.index].doppler_shift;
+                    let without_zeeman =
+                        2.0 * constant::PI * (constant::C / cooling.wavelength - T::frequency())
+                            - doppler_samplers.contents[index.index].doppler_shift;
 
                     detuning_sampler.contents[index.index].detuning_sigma_plus =
                         without_zeeman - zeeman_sampler.sigma_plus;
@@ -89,8 +105,11 @@ pub fn calculate_laser_detuning<const N: usize, T : TransitionComponent>(
 
 #[cfg(test)]
 pub mod tests {
-    use crate::{species::Strontium88_461, laser_cooling::{transition::AtomicTransition, doppler::DopplerShiftSampler}};
     use super::*;
+    use crate::{
+        laser_cooling::{doppler::DopplerShiftSampler, transition::AtomicTransition},
+        species::Strontium88_461,
+    };
     use assert_approx_eq::assert_approx_eq;
 
     #[test]
@@ -98,8 +117,8 @@ pub mod tests {
         let mut app = App::new();
         app.insert_resource(BatchSize::default());
         let wavelength = constant::C / Strontium88_461::frequency();
-        app.world.spawn()
-            .insert(CoolingLight {
+        app.world
+            .spawn(CoolingLight {
                 polarization: 1,
                 wavelength,
             })
@@ -113,8 +132,9 @@ pub mod tests {
         zss.sigma_plus = 10.0e6;
         zss.sigma_minus = -10.0e6;
 
-        let atom1 = app.world.spawn()
-            .insert(DopplerShiftSamplers {
+        let atom1 = app
+            .world
+            .spawn(DopplerShiftSamplers {
                 contents: [DopplerShiftSampler {
                     doppler_shift: 10.0e6, //rad/s
                 }; 1],
@@ -130,7 +150,9 @@ pub mod tests {
         app.update();
 
         assert_approx_eq!(
-            app.world.entity(atom1).get::<LaserDetuningSamplers<Strontium88_461, 1>>()
+            app.world
+                .entity(atom1)
+                .get::<LaserDetuningSamplers<Strontium88_461, 1>>()
                 .expect("entity not found")
                 .contents[0]
                 .detuning_sigma_plus,
@@ -139,7 +161,9 @@ pub mod tests {
         );
 
         assert_approx_eq!(
-            app.world.entity(atom1).get::<LaserDetuningSamplers<Strontium88_461, 1>>()
+            app.world
+                .entity(atom1)
+                .get::<LaserDetuningSamplers<Strontium88_461, 1>>()
                 .expect("entity not found")
                 .contents[0]
                 .detuning_sigma_minus,
@@ -147,7 +171,9 @@ pub mod tests {
             1e-2_f64
         );
         assert_approx_eq!(
-            app.world.entity(atom1).get::<LaserDetuningSamplers<Strontium88_461, 1>>()
+            app.world
+                .entity(atom1)
+                .get::<LaserDetuningSamplers<Strontium88_461, 1>>()
                 .expect("entity not found")
                 .contents[0]
                 .detuning_pi,

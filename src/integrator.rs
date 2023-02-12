@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use nalgebra::Vector3;
 
 /// Tracks the number of the current integration step.
+#[derive(Resource)]
 pub struct Step {
     pub n: u64,
 }
@@ -23,6 +24,7 @@ impl Default for Step {
 /// For a typical magneto-optical trap simulation, the timestep should be around 1us.
 /// Decreasing the timestep further will not improve the accuracy, and will require more integration steps
 /// to simulate the same total simulation time.
+#[derive(Resource)]
 pub struct Timestep {
     /// Duration of the simulation timestep, in SI units of seconds.
     pub delta: f64,
@@ -35,6 +37,7 @@ impl Default for Timestep {
 
 pub const INTEGRATE_POSITION_SYSTEM_NAME: &str = "integrate_position";
 
+#[derive(Resource)]
 pub struct BatchSize(pub usize);
 impl Default for BatchSize {
     fn default() -> Self {
@@ -55,12 +58,14 @@ fn velocity_verlet_integrate_position(
     step.n += 1;
     let dt = timestep.delta;
 
-    query.par_for_each_mut(batch_size.0, |(mut pos, mut old_force, vel, force, mass)| {
-        pos.pos = pos.pos
-            + vel.vel * dt
-            + force.force / (constant::AMU * mass.value) / 2.0 * dt * dt;
-        old_force.0 = *force;
-    });
+    query.par_for_each_mut(
+        batch_size.0,
+        |(mut pos, mut old_force, vel, force, mass)| {
+            pos.pos =
+                pos.pos + vel.vel * dt + force.force / (constant::AMU * mass.value) / 2.0 * dt * dt;
+            old_force.0 = *force;
+        },
+    );
 }
 
 pub const INTEGRATE_VELOCITY_SYSTEM_NAME: &str = "integrate_velocity";
@@ -82,7 +87,7 @@ fn velocity_verlet_integrate_velocity(
 /// Adds [OldForce] components to [NewlyCreated] atoms.
 fn add_old_force_to_new_atoms(
     mut commands: Commands,
-    query: Query<Entity, (With<NewlyCreated>, Without<OldForce>)>
+    query: Query<Entity, (With<NewlyCreated>, Without<OldForce>)>,
 ) {
     for ent in query.iter() {
         commands.entity(ent).insert(OldForce::default());
@@ -90,16 +95,10 @@ fn add_old_force_to_new_atoms(
 }
 
 /// Resets force to zero at the start of each simulation step.
-fn clear_force(
-    mut query: Query<&mut Force>,
-    batch_size: Res<BatchSize>,
-) {
-    query.par_for_each_mut(
-        batch_size.0,
-        |mut force| {
-            force.force = Vector3::new(0.0,0.0,0.0);
-        }
-    )
+fn clear_force(mut query: Query<&mut Force>, batch_size: Res<BatchSize>) {
+    query.par_for_each_mut(batch_size.0, |mut force| {
+        force.force = Vector3::new(0.0, 0.0, 0.0);
+    })
 }
 
 /// Stores the value of the force calculation from the previous frame.
@@ -117,7 +116,7 @@ pub enum IntegrationSystems {
 #[derive(Debug, Hash, PartialEq, Eq, Clone, StageLabel)]
 pub enum IntegrationStages {
     BeginIntegration,
-    EndIntegration
+    EndIntegration,
 }
 
 pub struct IntegrationPlugin;
@@ -128,24 +127,38 @@ impl Plugin for IntegrationPlugin {
         app.world.insert_resource(Timestep::default());
         // Add stages for begin/end integration. Stages are used to guarantee all systems have completed.
         // By default, systems are added to CoreStage::Update. We want our integrator to sandwich either side of these.
-        app.add_stage_before(CoreStage::Update, IntegrationStages::BeginIntegration, SystemStage::parallel());
-        app.add_stage_after(CoreStage::Update, IntegrationStages::EndIntegration, SystemStage::parallel());
-        app.add_system_to_stage(IntegrationStages::BeginIntegration, 
-            velocity_verlet_integrate_position.label(IntegrationSystems::VelocityVerletIntegratePosition)
+        app.add_stage_before(
+            CoreStage::Update,
+            IntegrationStages::BeginIntegration,
+            SystemStage::parallel(),
         );
-        app.add_system_to_stage(IntegrationStages::BeginIntegration, 
-            clear_force.label(IntegrationSystems::ClearForce).after(IntegrationSystems::VelocityVerletIntegratePosition)
+        app.add_stage_after(
+            CoreStage::Update,
+            IntegrationStages::EndIntegration,
+            SystemStage::parallel(),
         );
-        app.add_system_to_stage(IntegrationStages::BeginIntegration, 
-            add_old_force_to_new_atoms.label(IntegrationSystems::AddOldForceToNewAtoms)
+        app.add_system_to_stage(
+            IntegrationStages::BeginIntegration,
+            velocity_verlet_integrate_position
+                .label(IntegrationSystems::VelocityVerletIntegratePosition),
         );
-        app.add_system_to_stage(IntegrationStages::EndIntegration, 
-            velocity_verlet_integrate_velocity.label(IntegrationSystems::VelocityVerletIntegrateVelocity)
+        app.add_system_to_stage(
+            IntegrationStages::BeginIntegration,
+            clear_force
+                .label(IntegrationSystems::ClearForce)
+                .after(IntegrationSystems::VelocityVerletIntegratePosition),
+        );
+        app.add_system_to_stage(
+            IntegrationStages::BeginIntegration,
+            add_old_force_to_new_atoms.label(IntegrationSystems::AddOldForceToNewAtoms),
+        );
+        app.add_system_to_stage(
+            IntegrationStages::EndIntegration,
+            velocity_verlet_integrate_velocity
+                .label(IntegrationSystems::VelocityVerletIntegrateVelocity),
         );
     }
 }
-
-
 
 pub mod tests {
     #[allow(unused_imports)]
@@ -156,7 +169,7 @@ pub mod tests {
         let mut app = App::new();
         app.add_plugin(IntegrationPlugin);
 
-        let test_entity = app.world.spawn().insert(NewlyCreated).id();
+        let test_entity = app.world.spawn(NewlyCreated).id();
         app.update();
         assert!(
             app.world.entity(test_entity).contains::<OldForce>(),
@@ -172,10 +185,8 @@ pub mod tests {
         fn get_force_for_test() -> Vector3<f64> {
             Vector3::new(1.0, 0.0, 0.0)
         }
-    
-        fn set_force_for_testing(
-            mut query: Query<&mut Force>
-        ) {
+
+        fn set_force_for_testing(mut query: Query<&mut Force>) {
             for mut force in query.iter_mut() {
                 force.force = get_force_for_test();
             }
@@ -187,18 +198,16 @@ pub mod tests {
         let force = get_force_for_test();
         let mass = 1.0;
 
-        let test_entity = app.world
-            .spawn()
-            .insert(Position {
+        let test_entity = app
+            .world
+            .spawn(Position {
                 pos: Vector3::new(0.0, 0.0, 0.0),
             })
             .insert(Velocity {
                 vel: Vector3::new(0.0, 0.0, 0.0),
             })
             .insert(Force { force })
-            .insert(OldForce {
-                0: Force { force },
-            })
+            .insert(OldForce { 0: Force { force } })
             .insert(Mass {
                 value: mass / constant::AMU,
             })
@@ -206,7 +215,6 @@ pub mod tests {
 
         let dt = 1.0e-3;
         app.world.insert_resource(Timestep { delta: dt });
-        
 
         // run simulation loop 1_000 times.
         let n_steps = 1_000;
@@ -216,17 +224,27 @@ pub mod tests {
 
         let a = force / mass;
         let expected_v = a * (n_steps as f64 * dt);
-        
+
         assert_approx_eq::assert_approx_eq!(
             expected_v.norm(),
-            app.world.entity(test_entity).get::<Velocity>().expect("test_entity does not have velocity.").vel.norm(),
+            app.world
+                .entity(test_entity)
+                .get::<Velocity>()
+                .expect("test_entity does not have velocity.")
+                .vel
+                .norm(),
             expected_v.norm() * 0.01
         );
 
         let expected_x = a * (n_steps as f64 * dt).powi(2) / 2.0;
         assert_approx_eq::assert_approx_eq!(
             expected_x.norm(),
-            app.world.entity(test_entity).get::<Position>().expect("test_entity does not have velocity.").pos.norm(),
+            app.world
+                .entity(test_entity)
+                .get::<Position>()
+                .expect("test_entity does not have velocity.")
+                .pos
+                .norm(),
             expected_x.norm() * 0.01
         );
     }

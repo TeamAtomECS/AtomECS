@@ -1,7 +1,7 @@
 //! Magnetic fields and zeeman shift
 
-use bevy::{prelude::*};
-use nalgebra::{Vector3, Matrix3};
+use bevy::prelude::*;
+use nalgebra::{Matrix3, Vector3};
 
 use crate::{initiate::NewlyCreated, integrator::BatchSize};
 
@@ -64,15 +64,12 @@ fn clear_magnetic_field_sampler(
     mut query: Query<&mut MagneticFieldSampler>,
     batch_size: Res<BatchSize>,
 ) {
-    query.par_for_each_mut(
-        batch_size.0,
-        |mut sampler| {
-            sampler.magnitude = 0.;
-            sampler.field = Vector3::new(0.0, 0.0, 0.0);
-            sampler.gradient = Vector3::new(0.0, 0.0, 0.0);
-            sampler.jacobian = Matrix3::zeros();
-        }
-    );
+    query.par_for_each_mut(batch_size.0, |mut sampler| {
+        sampler.magnitude = 0.;
+        sampler.field = Vector3::new(0.0, 0.0, 0.0);
+        sampler.gradient = Vector3::new(0.0, 0.0, 0.0);
+        sampler.jacobian = Matrix3::zeros();
+    });
 }
 
 /// System that calculates the magnitude of the magnetic field.
@@ -83,15 +80,12 @@ fn calculate_magnetic_field_magnitude(
     mut query: Query<&mut MagneticFieldSampler>,
     batch_size: Res<BatchSize>,
 ) {
-    query.par_for_each_mut(
-        batch_size.0,
-        |mut sampler| {
-            sampler.magnitude = sampler.field.norm();
-            if sampler.magnitude.is_nan() {
-                sampler.magnitude = 0.0;
-            }
+    query.par_for_each_mut(batch_size.0, |mut sampler| {
+        sampler.magnitude = sampler.field.norm();
+        if sampler.magnitude.is_nan() {
+            sampler.magnitude = 0.0;
         }
-    );
+    });
 }
 
 /// Calculates the gradient of the magnitude of the magnetic field.
@@ -99,27 +93,26 @@ fn calculate_magnetic_field_magnitude_gradient(
     mut query: Query<&mut MagneticFieldSampler>,
     batch_size: Res<BatchSize>,
 ) {
-    query.par_for_each_mut(
-        batch_size.0,
-        |mut sampler| {
-            let mut gradient = Vector3::new(0.0, 0.0, 0.0);
-            for i in 0..3 {
-                gradient[i] =
-                    (1.0 / (sampler.magnitude)) * (sampler.field.dot(&sampler.jacobian.column(i)));
-            }
-            sampler.gradient = gradient;
+    query.par_for_each_mut(batch_size.0, |mut sampler| {
+        let mut gradient = Vector3::new(0.0, 0.0, 0.0);
+        for i in 0..3 {
+            gradient[i] =
+                (1.0 / (sampler.magnitude)) * (sampler.field.dot(&sampler.jacobian.column(i)));
         }
-    );
+        sampler.gradient = gradient;
+    });
 }
 
 /// Attachs the MagneticFieldSampler component to newly created atoms.
 /// This allows other magnetic Systems to interact with the atom, eg to calculate fields at their location.
 fn attach_field_samplers_to_new_atoms(
     query: Query<Entity, (With<NewlyCreated>, Without<MagneticFieldSampler>)>,
-    mut commands: Commands
+    mut commands: Commands,
 ) {
     for entity in query.iter() {
-        commands.entity(entity).insert(MagneticFieldSampler::default());
+        commands
+            .entity(entity)
+            .insert(MagneticFieldSampler::default());
     }
 }
 
@@ -135,7 +128,7 @@ pub enum MagneticSystems {
     CalculateMagneticFieldMagnitude,
     CalculateMagneticFieldMagnitudeGradient,
     ApplyMagneticForces,
-    AttachFieldSamplersToNewAtoms
+    AttachFieldSamplersToNewAtoms,
 }
 
 /// A plugin responsible for calculating magnetic fields.
@@ -146,17 +139,51 @@ impl Plugin for MagneticsPlugin {
     fn build(&self, app: &mut App) {
         //add_magnetics_systems_to_dispatch(&mut builder.dispatcher_builder, &[]);
         app.add_system_set(
-            SystemSet::new().label(MagneticSystems::Group)
-            .with_system(clear_magnetic_field_sampler.label(MagneticSystems::ClearMagneticFieldSamplers))
-            .with_system(analytic::calculate_field_contributions::<quadrupole::QuadrupoleField3D>.label(MagneticSystems::Sample3DQuadrupoleFields).after(MagneticSystems::ClearMagneticFieldSamplers))
-            .with_system(analytic::calculate_field_contributions::<quadrupole::QuadrupoleField2D>.label(MagneticSystems::Sample2DQuadrupoleFields).after(MagneticSystems::Sample3DQuadrupoleFields))
-            .with_system(analytic::calculate_field_contributions::<uniform::UniformMagneticField>.label(MagneticSystems::SampleUniformMagneticFields).after(MagneticSystems::Sample2DQuadrupoleFields))
-            .with_system(top::rotate_uniform_fields.label(MagneticSystems::RotateTOPFields))
-            .with_system(grid::sample_magnetic_grids.label(MagneticSystems::SampleMagneticGrids).after(MagneticSystems::SampleUniformMagneticFields))
-            .with_system(calculate_magnetic_field_magnitude.label(MagneticSystems::CalculateMagneticFieldMagnitude).after(MagneticSystems::SampleMagneticGrids))
-            .with_system(calculate_magnetic_field_magnitude_gradient.label(MagneticSystems::CalculateMagneticFieldMagnitudeGradient).after(MagneticSystems::CalculateMagneticFieldMagnitude))
-            .with_system(force::apply_magnetic_forces.label(MagneticSystems::ApplyMagneticForces).after(MagneticSystems::CalculateMagneticFieldMagnitudeGradient))
-            .with_system(attach_field_samplers_to_new_atoms.label(MagneticSystems::AttachFieldSamplersToNewAtoms))
+            SystemSet::new()
+                .label(MagneticSystems::Group)
+                .with_system(
+                    clear_magnetic_field_sampler.label(MagneticSystems::ClearMagneticFieldSamplers),
+                )
+                .with_system(
+                    analytic::calculate_field_contributions::<quadrupole::QuadrupoleField3D>
+                        .label(MagneticSystems::Sample3DQuadrupoleFields)
+                        .after(MagneticSystems::ClearMagneticFieldSamplers),
+                )
+                .with_system(
+                    analytic::calculate_field_contributions::<quadrupole::QuadrupoleField2D>
+                        .label(MagneticSystems::Sample2DQuadrupoleFields)
+                        .after(MagneticSystems::Sample3DQuadrupoleFields),
+                )
+                .with_system(
+                    analytic::calculate_field_contributions::<uniform::UniformMagneticField>
+                        .label(MagneticSystems::SampleUniformMagneticFields)
+                        .after(MagneticSystems::Sample2DQuadrupoleFields),
+                )
+                .with_system(top::rotate_uniform_fields.label(MagneticSystems::RotateTOPFields))
+                .with_system(
+                    grid::sample_magnetic_grids
+                        .label(MagneticSystems::SampleMagneticGrids)
+                        .after(MagneticSystems::SampleUniformMagneticFields),
+                )
+                .with_system(
+                    calculate_magnetic_field_magnitude
+                        .label(MagneticSystems::CalculateMagneticFieldMagnitude)
+                        .after(MagneticSystems::SampleMagneticGrids),
+                )
+                .with_system(
+                    calculate_magnetic_field_magnitude_gradient
+                        .label(MagneticSystems::CalculateMagneticFieldMagnitudeGradient)
+                        .after(MagneticSystems::CalculateMagneticFieldMagnitude),
+                )
+                .with_system(
+                    force::apply_magnetic_forces
+                        .label(MagneticSystems::ApplyMagneticForces)
+                        .after(MagneticSystems::CalculateMagneticFieldMagnitudeGradient),
+                )
+                .with_system(
+                    attach_field_samplers_to_new_atoms
+                        .label(MagneticSystems::AttachFieldSamplersToNewAtoms),
+                ),
         );
     }
 }
@@ -164,7 +191,10 @@ impl Plugin for MagneticsPlugin {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::{atom::Position, integrator::{Timestep, BatchSize, Step}};
+    use crate::{
+        atom::Position,
+        integrator::{BatchSize, Step, Timestep},
+    };
 
     #[test]
     fn test_magnetics_plugin() {
@@ -176,8 +206,8 @@ pub mod tests {
         //test_world.insert(crate::integrator::Step { n: 0 });
         //test_world.insert(crate::integrator::Timestep { delta: 1.0e-6 });
 
-        app.world.spawn()
-            .insert(uniform::UniformMagneticField {
+        app.world
+            .spawn(uniform::UniformMagneticField {
                 field: Vector3::new(2.0, 0.0, 0.0),
             })
             .insert(quadrupole::QuadrupoleField3D::gauss_per_cm(
@@ -188,8 +218,9 @@ pub mod tests {
                 pos: Vector3::new(0.0, 0.0, 0.0),
             });
 
-        let test_entity = app.world.spawn()
-            .insert(Position {
+        let test_entity = app
+            .world
+            .spawn(Position {
                 pos: Vector3::new(1.0, 1.0, 1.0),
             })
             .insert(MagneticFieldSampler::default())
@@ -197,11 +228,12 @@ pub mod tests {
 
         app.update();
 
-        let sampler = app.world.entity(test_entity).get::<MagneticFieldSampler>().expect("Cannot find entity");
-        assert_eq!(
-            sampler.field,
-            Vector3::new(2.0 + 1.0, 1.0, -2.0)
-        );
+        let sampler = app
+            .world
+            .entity(test_entity)
+            .get::<MagneticFieldSampler>()
+            .expect("Cannot find entity");
+        assert_eq!(sampler.field, Vector3::new(2.0 + 1.0, 1.0, -2.0));
     }
 
     /// Tests that magnetic field samplers are added to newly created atoms.
@@ -212,9 +244,12 @@ pub mod tests {
         app.insert_resource(BatchSize::default());
         app.insert_resource(Timestep { delta: 1.0e-6 });
         app.add_plugin(MagneticsPlugin);
-        let sampler_entity = app.world.spawn().insert(NewlyCreated).id();
+        let sampler_entity = app.world.spawn(NewlyCreated).id();
         app.update();
-        assert!(app.world.entity(sampler_entity).contains::<MagneticFieldSampler>());
+        assert!(app
+            .world
+            .entity(sampler_entity)
+            .contains::<MagneticFieldSampler>());
     }
 
     // Test correct calculation of magnetic field gradient
@@ -226,24 +261,28 @@ pub mod tests {
         app.insert_resource(BatchSize::default());
         app.insert_resource(Timestep { delta: 1.0e-6 });
 
-        let atom1 = app.world
-            .spawn()
-            .insert(Position {
+        let atom1 = app
+            .world
+            .spawn(Position {
                 pos: Vector3::new(2.0, 1.0, -5.0),
             })
             .insert(MagneticFieldSampler::default())
             .id();
 
         app.world
-            .spawn()
-            .insert(quadrupole::QuadrupoleField3D::gauss_per_cm(2.0, Vector3::z()))
+            .spawn(quadrupole::QuadrupoleField3D::gauss_per_cm(
+                2.0,
+                Vector3::z(),
+            ))
             .insert(Position {
                 pos: Vector3::new(0.0, 0.0, 0.0),
             });
 
         app.world
-            .spawn()
-            .insert(quadrupole::QuadrupoleField3D::gauss_per_cm(1.0, Vector3::z()))
+            .spawn(quadrupole::QuadrupoleField3D::gauss_per_cm(
+                1.0,
+                Vector3::z(),
+            ))
             .insert(Position {
                 pos: Vector3::new(0.0, 0.0, 0.0),
             });
@@ -251,7 +290,10 @@ pub mod tests {
         app.add_plugin(MagneticsPlugin);
         app.update();
 
-        let test_gradient = app.world.entity(atom1).get::<MagneticFieldSampler>()
+        let test_gradient = app
+            .world
+            .entity(atom1)
+            .get::<MagneticFieldSampler>()
             .expect("entity not found")
             .gradient;
 
