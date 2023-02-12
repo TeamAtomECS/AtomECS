@@ -43,9 +43,9 @@ impl PrecalculatedMagneticFieldGrid {
                 .max(0)
                 .min(self.extent_cells[2] - 1),
         );
-        self.extent_cells[2] as i32
-            * (self.extent_cells[1] as i32 * (cell_id[0] as i32) + (cell_id[1] as i32))
-            + (cell_id[2] as i32)
+        self.extent_cells[2]
+            * (self.extent_cells[1] * cell_id[0] + cell_id[1])
+            + cell_id[2]
     }
 
     pub fn get_field(&self, pos: &Vector3<f64>) -> Vector3<f64> {

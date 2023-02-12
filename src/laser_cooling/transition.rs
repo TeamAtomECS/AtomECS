@@ -65,7 +65,7 @@ macro_rules! transition {
             /// Linewidth of the laser cooling transition, Hz.
             fn linewidth() -> f64 { $linewidth }
             /// Wavelength of the laser cooling transition, m.
-            fn wavelength() -> f64 { crate::constant::C / $frequency }
+            fn wavelength() -> f64 { $crate::constant::C / $frequency }
             /// The dependence of the sigma_+ transition on magnetic fields.
             /// The sigma_+ transition is shifted by `mup * field.magnitude / h` Hz.
             /// The units of mup are of Energy per magnetic field, ie Joules/Tesla.

@@ -8,14 +8,11 @@ use nalgebra::Vector3;
 
 /// Tracks the number of the current integration step.
 #[derive(Resource)]
+#[derive(Default)]
 pub struct Step {
     pub n: u64,
 }
-impl Default for Step {
-    fn default() -> Self {
-        Step { n: 0 }
-    }
-}
+
 
 /// The timestep used for the integration.
 ///
@@ -207,7 +204,7 @@ pub mod tests {
                 vel: Vector3::new(0.0, 0.0, 0.0),
             })
             .insert(Force { force })
-            .insert(OldForce { 0: Force { force } })
+            .insert(OldForce(Force { force }))
             .insert(Mass {
                 value: mass / constant::AMU,
             })

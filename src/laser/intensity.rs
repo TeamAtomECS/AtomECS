@@ -80,12 +80,12 @@ pub fn sample_laser_intensities<const N: usize, FilterT>(
             *index,
             *gaussian,
             if mask_query.contains(laser_entity) {
-                Some(mask_query.get(laser_entity).unwrap().clone())
+                Some(*mask_query.get(laser_entity).unwrap())
             } else {
                 None
             },
             if frame_query.contains(laser_entity) {
-                Some(frame_query.get(laser_entity).unwrap().clone())
+                Some(*frame_query.get(laser_entity).unwrap())
             } else {
                 None
             },

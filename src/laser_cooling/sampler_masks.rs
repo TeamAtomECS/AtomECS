@@ -36,7 +36,7 @@ pub fn populate_cooling_light_masks<const N: usize>(
     // distribute the masks into atom components.
     query.par_for_each_mut(batch_size.0, 
         |mut atom_masks| {
-            atom_masks.contents = masks.clone();
+            atom_masks.contents = masks;
         }
     );
 }

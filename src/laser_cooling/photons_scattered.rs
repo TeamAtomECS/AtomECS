@@ -204,15 +204,13 @@ where
 /// Otherwise, the entries of `ActualPhotonsScatteredVector` will be identical with those of
 /// `ExpectedPhotonsScatteredVector`.
 #[derive(Clone, Copy, Resource)]
+#[derive(Default)]
 pub enum ScatteringFluctuationsOption {
     Off,
+    #[default]
     On,
 }
-impl Default for ScatteringFluctuationsOption {
-    fn default() -> Self {
-        ScatteringFluctuationsOption::On
-    }
-}
+
 
 /// Calcutates the actual number of photons scattered by each CoolingLight entity in one iteration step
 /// by drawing from a Poisson Distribution that has `ExpectedPhotonsScattered` as the lambda parameter.
@@ -240,8 +238,8 @@ pub fn calculate_actual_photons_scattered<const N: usize, T: TransitionComponent
                         0.0
                     } else {
                         let poisson = Poisson::new(lambda).unwrap();
-                        let drawn_number = poisson.sample(&mut rand::thread_rng());
-                        drawn_number as f64
+                        
+                        poisson.sample(&mut rand::thread_rng())
                     }
                 }
             });
