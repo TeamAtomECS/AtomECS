@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use nalgebra::{Matrix3, Vector3};
 
-use crate::{initiate::NewlyCreated, integrator::BatchSize};
+use crate::{initiate::NewlyCreated, integrator::AtomECSBatchStrategy};
 
 pub mod analytic;
 pub mod force;
@@ -62,45 +62,54 @@ impl Default for MagneticFieldSampler {
 /// System that clears the magnetic field samplers each frame.
 fn clear_magnetic_field_sampler(
     mut query: Query<&mut MagneticFieldSampler>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
-    query.par_for_each_mut(batch_size.0, |mut sampler| {
-        sampler.magnitude = 0.;
-        sampler.field = Vector3::new(0.0, 0.0, 0.0);
-        sampler.gradient = Vector3::new(0.0, 0.0, 0.0);
-        sampler.jacobian = Matrix3::zeros();
-    });
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|mut sampler| {
+            sampler.magnitude = 0.;
+            sampler.field = Vector3::new(0.0, 0.0, 0.0);
+            sampler.gradient = Vector3::new(0.0, 0.0, 0.0);
+            sampler.jacobian = Matrix3::zeros();
+        });
 }
 
 /// System that calculates the magnitude of the magnetic field.
 ///
 /// The magnetic field magnitude is frequently used, so it makes sense to calculate it once and cache the result.
 /// This system runs after all other magnetic field systems.
-fn calculate_magnetic_field_magnitude(
+pub fn calculate_magnetic_field_magnitude(
     mut query: Query<&mut MagneticFieldSampler>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
-    query.par_for_each_mut(batch_size.0, |mut sampler| {
-        sampler.magnitude = sampler.field.norm();
-        if sampler.magnitude.is_nan() {
-            sampler.magnitude = 0.0;
-        }
-    });
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|mut sampler| {
+            sampler.magnitude = sampler.field.norm();
+            if sampler.magnitude.is_nan() {
+                sampler.magnitude = 0.0;
+            }
+        });
 }
 
 /// Calculates the gradient of the magnitude of the magnetic field.
 fn calculate_magnetic_field_magnitude_gradient(
     mut query: Query<&mut MagneticFieldSampler>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
-    query.par_for_each_mut(batch_size.0, |mut sampler| {
-        let mut gradient = Vector3::new(0.0, 0.0, 0.0);
-        for i in 0..3 {
-            gradient[i] =
-                (1.0 / (sampler.magnitude)) * (sampler.field.dot(&sampler.jacobian.column(i)));
-        }
-        sampler.gradient = gradient;
-    });
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|mut sampler| {
+            let mut gradient = Vector3::new(0.0, 0.0, 0.0);
+            for i in 0..3 {
+                gradient[i] =
+                    (1.0 / (sampler.magnitude)) * (sampler.field.dot(&sampler.jacobian.column(i)));
+            }
+            sampler.gradient = gradient;
+        });
 }
 
 /// Attachs the MagneticFieldSampler component to newly created atoms.
@@ -116,19 +125,10 @@ fn attach_field_samplers_to_new_atoms(
     }
 }
 
-#[derive(PartialEq, Clone, Hash, Debug, Eq, SystemLabel)]
-pub enum MagneticSystems {
-    Group,
-    ClearMagneticFieldSamplers,
-    Sample3DQuadrupoleFields,
-    Sample2DQuadrupoleFields,
-    SampleUniformMagneticFields,
-    SampleMagneticGrids,
-    RotateTOPFields,
-    CalculateMagneticFieldMagnitude,
-    CalculateMagneticFieldMagnitudeGradient,
-    ApplyMagneticForces,
-    AttachFieldSamplersToNewAtoms,
+#[derive(PartialEq, Clone, Hash, Debug, Eq, SystemSet)]
+pub enum MagneticSystemsSet {
+    Set,
+    SampleFields,
 }
 
 /// A plugin responsible for calculating magnetic fields.
@@ -138,52 +138,25 @@ pub struct MagneticsPlugin;
 impl Plugin for MagneticsPlugin {
     fn build(&self, app: &mut App) {
         //add_magnetics_systems_to_dispatch(&mut builder.dispatcher_builder, &[]);
-        app.add_system_set(
-            SystemSet::new()
-                .label(MagneticSystems::Group)
-                .with_system(
-                    clear_magnetic_field_sampler.label(MagneticSystems::ClearMagneticFieldSamplers),
-                )
-                .with_system(
-                    analytic::calculate_field_contributions::<quadrupole::QuadrupoleField3D>
-                        .label(MagneticSystems::Sample3DQuadrupoleFields)
-                        .after(MagneticSystems::ClearMagneticFieldSamplers),
-                )
-                .with_system(
-                    analytic::calculate_field_contributions::<quadrupole::QuadrupoleField2D>
-                        .label(MagneticSystems::Sample2DQuadrupoleFields)
-                        .after(MagneticSystems::Sample3DQuadrupoleFields),
-                )
-                .with_system(
-                    analytic::calculate_field_contributions::<uniform::UniformMagneticField>
-                        .label(MagneticSystems::SampleUniformMagneticFields)
-                        .after(MagneticSystems::Sample2DQuadrupoleFields),
-                )
-                .with_system(top::rotate_uniform_fields.label(MagneticSystems::RotateTOPFields))
-                .with_system(
-                    grid::sample_magnetic_grids
-                        .label(MagneticSystems::SampleMagneticGrids)
-                        .after(MagneticSystems::SampleUniformMagneticFields),
-                )
-                .with_system(
-                    calculate_magnetic_field_magnitude
-                        .label(MagneticSystems::CalculateMagneticFieldMagnitude)
-                        .after(MagneticSystems::SampleMagneticGrids),
-                )
-                .with_system(
-                    calculate_magnetic_field_magnitude_gradient
-                        .label(MagneticSystems::CalculateMagneticFieldMagnitudeGradient)
-                        .after(MagneticSystems::CalculateMagneticFieldMagnitude),
-                )
-                .with_system(
-                    force::apply_magnetic_forces
-                        .label(MagneticSystems::ApplyMagneticForces)
-                        .after(MagneticSystems::CalculateMagneticFieldMagnitudeGradient),
-                )
-                .with_system(
-                    attach_field_samplers_to_new_atoms
-                        .label(MagneticSystems::AttachFieldSamplersToNewAtoms),
-                ),
+
+        app.add_systems(
+            (
+                clear_magnetic_field_sampler.before(MagneticSystemsSet::SampleFields),
+                analytic::calculate_field_contributions::<quadrupole::QuadrupoleField3D>
+                    .in_set(MagneticSystemsSet::SampleFields),
+                analytic::calculate_field_contributions::<quadrupole::QuadrupoleField2D>
+                    .in_set(MagneticSystemsSet::SampleFields),
+                analytic::calculate_field_contributions::<uniform::UniformMagneticField>
+                    .in_set(MagneticSystemsSet::SampleFields),
+                top::rotate_uniform_fields.in_set(MagneticSystemsSet::SampleFields),
+                grid::sample_magnetic_grids.in_set(MagneticSystemsSet::SampleFields),
+                calculate_magnetic_field_magnitude.after(MagneticSystemsSet::SampleFields),
+                calculate_magnetic_field_magnitude_gradient
+                    .after(calculate_magnetic_field_magnitude),
+                force::apply_magnetic_forces.after(calculate_magnetic_field_magnitude_gradient),
+                attach_field_samplers_to_new_atoms,
+            )
+                .in_set(MagneticSystemsSet::Set),
         );
     }
 }
@@ -193,14 +166,14 @@ pub mod tests {
     use super::*;
     use crate::{
         atom::Position,
-        integrator::{BatchSize, Step, Timestep},
+        integrator::{AtomECSBatchStrategy, Step, Timestep},
     };
 
     #[test]
     fn test_magnetics_plugin() {
         let mut app = App::new();
         app.add_plugin(MagneticsPlugin);
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         app.insert_resource(Timestep::default());
         app.insert_resource(Step::default());
         //test_world.insert(crate::integrator::Step { n: 0 });
@@ -241,7 +214,7 @@ pub mod tests {
     fn test_field_samplers_are_added() {
         let mut app = App::new();
         app.insert_resource(Step { n: 0 });
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         app.insert_resource(Timestep { delta: 1.0e-6 });
         app.add_plugin(MagneticsPlugin);
         let sampler_entity = app.world.spawn(NewlyCreated).id();
@@ -258,7 +231,7 @@ pub mod tests {
     fn test_magnetic_gradient_system() {
         let mut app = App::new();
         app.insert_resource(Step { n: 0 });
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         app.insert_resource(Timestep { delta: 1.0e-6 });
 
         let atom1 = app

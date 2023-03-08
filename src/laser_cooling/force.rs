@@ -13,7 +13,7 @@ use rand_distr::{Distribution, Normal, UnitSphere};
 
 use crate::atom::Force;
 use crate::constant::HBAR;
-use crate::integrator::{BatchSize, Timestep};
+use crate::integrator::{AtomECSBatchStrategy, Timestep};
 
 use crate::laser_cooling::repump::*;
 
@@ -28,7 +28,7 @@ const LASER_CACHE_SIZE: usize = 16;
 pub fn calculate_absorption_forces<const N: usize, T: TransitionComponent>(
     laser_query: Query<(&CoolingLight, &LaserIndex, &GaussianBeam)>,
     mut atom_query: Query<(&ActualPhotonsScatteredVector<T, N>, &mut Force), Without<Dark>>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
     timestep: Res<Timestep>,
 ) {
     // There are typically only a small number of lasers in a simulation.
@@ -48,14 +48,18 @@ pub fn calculate_absorption_forces<const N: usize, T: TransitionComponent>(
         laser_array[..max_index].copy_from_slice(slice);
         let number_in_iteration = slice.len();
 
-        atom_query.par_for_each_mut(batch_size.0, |(scattered, mut force)| {
-            for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
-                let new_force = scattered.contents[index.index].scattered * HBAR / timestep.delta
-                    * gaussian.direction.normalize()
-                    * cooling.wavenumber();
-                force.force += new_force;
-            }
-        });
+        atom_query
+            .par_iter_mut()
+            .batching_strategy(batch_strategy.0.clone())
+            .for_each_mut(|(scattered, mut force)| {
+                for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
+                    let new_force = scattered.contents[index.index].scattered * HBAR
+                        / timestep.delta
+                        * gaussian.direction.normalize()
+                        * cooling.wavenumber();
+                    force.force += new_force;
+                }
+            });
     }
 }
 
@@ -95,7 +99,7 @@ pub struct EmissionForceConfiguration {
 /// produced or derived by random-walk formula and a single random unit vector.
 pub fn calculate_emission_forces<const N: usize, T: TransitionComponent>(
     mut atom_query: Query<(&mut Force, &ActualPhotonsScatteredVector<T, N>), With<T>>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
     rand_opt: Option<Res<EmissionForceOption>>,
     timestep: Res<Timestep>,
 ) {
@@ -105,34 +109,38 @@ pub fn calculate_emission_forces<const N: usize, T: TransitionComponent>(
             match *opt {
                 EmissionForceOption::Off => {}
                 EmissionForceOption::On(configuration) => {
-                    atom_query.par_for_each_mut(batch_size.0, |(mut force, kick)| {
-                        let total: u64 = kick.calculate_total_scattered();
-                        let mut rng = rand::thread_rng();
-                        let omega = 2.0 * constant::PI * T::frequency();
-                        let force_one_kick = constant::HBAR * omega / constant::C / timestep.delta;
-                        if total > configuration.explicit_threshold {
-                            // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
-                            //Three-Dimensional Random Walk Processes*
-                            let normal = Normal::new(
-                                0.0,
-                                (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
-                            )
-                            .unwrap();
+                    atom_query
+                        .par_iter_mut()
+                        .batching_strategy(batch_strategy.0.clone())
+                        .for_each_mut(|(mut force, kick)| {
+                            let total: u64 = kick.calculate_total_scattered();
+                            let mut rng = rand::thread_rng();
+                            let omega = 2.0 * constant::PI * T::frequency();
+                            let force_one_kick =
+                                constant::HBAR * omega / constant::C / timestep.delta;
+                            if total > configuration.explicit_threshold {
+                                // see HSIUNG, HSIUNG,GORDUS,1960, A Closed General Solution of the Probability Distribution Function for
+                                //Three-Dimensional Random Walk Processes*
+                                let normal = Normal::new(
+                                    0.0,
+                                    (total as f64 * force_one_kick.powf(2.0) / 3.0).powf(0.5),
+                                )
+                                .unwrap();
 
-                            let force_n_kicks = Vector3::new(
-                                normal.sample(&mut rng),
-                                normal.sample(&mut rng),
-                                normal.sample(&mut rng),
-                            );
-                            force.force += force_n_kicks;
-                        } else {
-                            // explicit random walk implementation
-                            for _i in 0..total {
-                                let v: [f64; 3] = UnitSphere.sample(&mut rng);
-                                force.force += force_one_kick * Vector3::new(v[0], v[1], v[2]);
+                                let force_n_kicks = Vector3::new(
+                                    normal.sample(&mut rng),
+                                    normal.sample(&mut rng),
+                                    normal.sample(&mut rng),
+                                );
+                                force.force += force_n_kicks;
+                            } else {
+                                // explicit random walk implementation
+                                for _i in 0..total {
+                                    let v: [f64; 3] = UnitSphere.sample(&mut rng);
+                                    force.force += force_one_kick * Vector3::new(v[0], v[1], v[2]);
+                                }
                             }
-                        }
-                    });
+                        });
                 }
             }
         }
@@ -161,7 +169,7 @@ pub mod tests {
         let mut app = App::new();
 
         let time_delta = 1.0e-5;
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         app.insert_resource(Timestep { delta: time_delta });
 
         let wavelength = Strontium88_461::wavelength();
@@ -214,7 +222,7 @@ pub mod tests {
     #[test]
     fn test_apply_emission_forces_system() {
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         let time_delta = 1.0e-5;
         app.insert_resource(Timestep { delta: time_delta });
 

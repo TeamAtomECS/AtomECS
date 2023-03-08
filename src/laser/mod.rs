@@ -47,49 +47,32 @@ pub struct RequiresIntensityGradientCalculation;
 pub struct LaserPlugin<const N: usize>;
 impl<const N: usize> Plugin for LaserPlugin<N> {
     fn build(&self, app: &mut App) {
-        app.add_system_set(
-            SystemSet::new()
-                .label(LaserSystems::Set)
-                .with_system(
-                    attach_laser_components_to_newly_created_atoms::<N>
-                        .label(LaserSystems::AttachLaserComponentsToNewlyCreatedAtoms),
-                )
-                .with_system(
-                    index::index_lasers
-                        .label(LaserSystems::IndexLasers)
-                        .label(LaserSystems::SamplersReady),
-                )
-                .with_system(
-                    intensity::initialise_laser_intensity_samplers::<N>
-                        .label(LaserSystems::InitialiseLaserIntensitySamplers)
-                        .label(LaserSystems::SamplersReady),
-                )
-                .with_system(
-                    intensity::sample_laser_intensities::<N, RequiresIntensityCalculation>
-                        .label(LaserSystems::SampleLaserIntensities)
-                        .after(LaserSystems::SamplersReady),
-                )
-                .with_system(
-                    intensity_gradient::sample_gaussian_laser_intensity_gradient::<
-                        N,
-                        RequiresIntensityGradientCalculation,
-                    >
-                        .label(LaserSystems::SampleLaserIntensityGradients)
-                        .after(LaserSystems::SamplersReady),
-                ),
+        app.add_systems(
+            (
+                attach_laser_components_to_newly_created_atoms::<N>,
+                index::index_lasers
+                    .in_set(LaserSystemsSet::SamplersReady)
+                    .in_set(LaserSystemsSet::IndexLasers),
+                intensity::initialise_laser_intensity_samplers::<N>
+                    .in_set(LaserSystemsSet::SamplersReady),
+                intensity::sample_laser_intensities::<N, RequiresIntensityCalculation>
+                    .after(LaserSystemsSet::SamplersReady),
+                intensity_gradient::sample_gaussian_laser_intensity_gradient::<
+                    N,
+                    RequiresIntensityGradientCalculation,
+                >
+                    .after(LaserSystemsSet::SamplersReady),
+            )
+                .in_set(LaserSystemsSet::Set),
         );
     }
 }
 
-#[derive(PartialEq, Clone, Hash, Debug, Eq, SystemLabel)]
-pub enum LaserSystems {
+#[derive(PartialEq, Clone, Hash, Debug, Eq, SystemSet)]
+pub enum LaserSystemsSet {
     Set,
-    AttachLaserComponentsToNewlyCreatedAtoms,
-    IndexLasers,
     SamplersReady,
-    InitialiseLaserIntensitySamplers,
-    SampleLaserIntensities,
-    SampleLaserIntensityGradients,
+    IndexLasers,
 }
 
 pub mod tests {
@@ -100,7 +83,7 @@ pub mod tests {
     #[test]
     fn test_components_added_to_new_atoms() {
         use crate::{
-            integrator::BatchSize,
+            integrator::AtomECSBatchStrategy,
             laser::{
                 intensity::LaserIntensitySamplers,
                 intensity_gradient::LaserIntensityGradientSamplers,
@@ -109,7 +92,7 @@ pub mod tests {
         const LASER_SIZE: usize = 4;
 
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         app.add_plugin(LaserPlugin::<LASER_SIZE>);
 
         let test_entity = app.world.spawn(NewlyCreated).id();

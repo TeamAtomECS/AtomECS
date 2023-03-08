@@ -13,7 +13,7 @@ resolver = "2"
 
 [dependencies]
 atomecs-derive = "0.1.0"
-bevy = { version = "0.9", default-features = false, features = []}
+bevy = { version = "0.10", default-features = false, features = []}
 nalgebra = { version = "0.30.1", features = ["serde-serialize"] }
 rand = "0.8.3"
 rand_distr = "0.4.0"

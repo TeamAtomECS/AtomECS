@@ -1,6 +1,6 @@
 //! Calculation of the steady-state twolevel populations
 
-use crate::integrator::BatchSize;
+use crate::integrator::AtomECSBatchStrategy;
 
 use super::{rate::RateCoefficients, sampler_masks::CoolingLaserSamplerMasks};
 use bevy::prelude::*;
@@ -71,19 +71,22 @@ pub fn calculate_two_level_population<const N: usize, T: TransitionComponent>(
         ),
         With<T>,
     >,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
-    atom_query.par_for_each_mut(batch_size.0, |(mut twolevel, mask, rates)| {
-        let mut sum_rates: f64 = 0.;
+    atom_query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|(mut twolevel, mask, rates)| {
+            let mut sum_rates: f64 = 0.;
 
-        for count in 0..rates.contents.len() {
-            if mask.contents[count].filled {
-                sum_rates += rates.contents[count].rate;
+            for count in 0..rates.contents.len() {
+                if mask.contents[count].filled {
+                    sum_rates += rates.contents[count].rate;
+                }
             }
-        }
-        twolevel.excited = sum_rates / (T::gamma() + 2. * sum_rates);
-        twolevel.calculate_ground_state();
-    });
+            twolevel.excited = sum_rates / (T::gamma() + 2. * sum_rates);
+            twolevel.calculate_ground_state();
+        });
 }
 
 #[cfg(test)]
@@ -104,7 +107,7 @@ pub mod tests {
     #[test]
     fn test_calculate_twolevel_population_system() {
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
 
         // this test runs with two lasers only and we have to tell this the mask
         let mut active_lasers = [CoolingLaserSamplerMask { filled: false }; LASER_COUNT];
@@ -151,7 +154,7 @@ pub mod tests {
     #[test]
     fn test_popn_high_intensity_limit() {
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         // this test runs with two lasers only and we have to tell this the mask
         let mut active_lasers = [CoolingLaserSamplerMask { filled: true }; LASER_COUNT];
         active_lasers[0] = CoolingLaserSamplerMask { filled: true };

@@ -142,24 +142,11 @@ pub fn attach_components_to_newly_created_atoms<const N: usize, T>(
     }
 }
 
-#[derive(PartialEq, Clone, Hash, Debug, Eq, SystemLabel)]
-pub enum LaserCoolingSystems {
+#[derive(PartialEq, Clone, Hash, Debug, Eq, SystemSet)]
+pub enum LaserCoolingSystemsSet {
     Set,
-    AttachComponentsToNewlyCreatedAtoms,
-    AttachComponentsToCoolingLasers,
-    PopulateCoolingLightMasks,
-    CalculateDopplerShift,
-    CalculateZeemanShift,
-    CalculateLaserDetuning,
-    CalculateRateCoefficients,
-    CalculateTwoLevelPopulation,
-    CalculateMeanTotalPhotonsScattered,
-    CalculateExpectedPhotonsScattered,
-    CalculateActualPhotonsScattered,
-    CalculateAbsorptionForces,
-    CalculateEmissionForces,
-    AttachZeemanSamplersToNewlyCreatedAtoms,
-    MakeAtomsDark,
+    DetuningRequirements,
+    TwoLevelPopulationRequirements,
 }
 
 /// This plugin performs simulations of laser cooling using a two-level rate equation approach.
@@ -180,90 +167,55 @@ where
     T: TransitionComponent,
 {
     fn build(&self, app: &mut App) {
-        app.add_system_set(
-            // Note - not sure yet how this plays with multiple cooling transitions.#
-            //  E.g., Populate cooling masks will run twice if two plugins are added? How to guarantee safety?
-            //  Maybe it is automatically assured because they will have the same labels?
-            //  How generally to ensure the parallel systems all operate in the right order?
-            //  Need to make sure each <T> 'stays in its lane', e.g. only writes values for those lasers.
-            SystemSet::new()
-                .label(LaserCoolingSystems::Set)
-                .with_system(
-                    attach_components_to_newly_created_atoms::<N, T>
-                        .label(LaserCoolingSystems::AttachComponentsToNewlyCreatedAtoms),
-                )
-                .with_system(
-                    zeeman::attach_zeeman_shift_samplers_to_newly_created_atoms::<T>
-                        .label(LaserCoolingSystems::AttachZeemanSamplersToNewlyCreatedAtoms),
-                )
-                .with_system(
-                    attach_components_to_cooling_lasers
-                        .label(LaserCoolingSystems::AttachComponentsToCoolingLasers),
-                )
-                .with_system(
-                    sampler_masks::populate_cooling_light_masks::<N>
-                        .label(LaserCoolingSystems::PopulateCoolingLightMasks)
-                        .after(crate::laser::LaserSystems::IndexLasers),
-                )
-                .with_system(
-                    doppler::calculate_doppler_shift::<N>
-                        .label(LaserCoolingSystems::CalculateDopplerShift)
-                        .after(crate::laser::LaserSystems::IndexLasers),
-                )
-                .with_system(
-                    zeeman::calculate_zeeman_shift::<T>
-                        .label(LaserCoolingSystems::CalculateZeemanShift)
-                        .after(crate::magnetic::MagneticSystems::CalculateMagneticFieldMagnitude),
-                )
-                .with_system(
-                    sampler::calculate_laser_detuning::<N, T>
-                        .label(LaserCoolingSystems::CalculateLaserDetuning)
-                        .after(LaserCoolingSystems::CalculateZeemanShift)
-                        .after(LaserCoolingSystems::CalculateDopplerShift),
-                )
-                .with_system(
-                    rate::calculate_rate_coefficients::<N, T>
-                        .label(LaserCoolingSystems::CalculateRateCoefficients)
-                        .after(LaserCoolingSystems::CalculateLaserDetuning),
-                )
-                .with_system(
-                    twolevel::calculate_two_level_population::<N, T>
-                        .label(LaserCoolingSystems::CalculateTwoLevelPopulation)
-                        .after(LaserCoolingSystems::CalculateRateCoefficients)
-                        .after(LaserCoolingSystems::PopulateCoolingLightMasks),
-                )
-                .with_system(
-                    photons_scattered::calculate_mean_total_photons_scattered::<T>
-                        .label(LaserCoolingSystems::CalculateMeanTotalPhotonsScattered)
-                        .after(LaserCoolingSystems::CalculateTwoLevelPopulation),
-                )
-                .with_system(
-                    photons_scattered::calculate_expected_photons_scattered::<N, T>
-                        .label(LaserCoolingSystems::CalculateExpectedPhotonsScattered)
-                        .after(LaserCoolingSystems::CalculateMeanTotalPhotonsScattered),
-                )
-                .with_system(
-                    photons_scattered::calculate_actual_photons_scattered::<N, T>
-                        .label(LaserCoolingSystems::CalculateActualPhotonsScattered)
-                        .after(LaserCoolingSystems::CalculateExpectedPhotonsScattered),
-                )
-                .with_system(
-                    force::calculate_absorption_forces::<N, T>
-                        .label(LaserCoolingSystems::CalculateAbsorptionForces)
-                        .after(LaserCoolingSystems::CalculateActualPhotonsScattered),
-                )
-                .with_system(
-                    force::calculate_emission_forces::<N, T>
-                        .label(LaserCoolingSystems::CalculateEmissionForces)
-                        .after(LaserCoolingSystems::CalculateAbsorptionForces),
-                )
-                .with_system(
-                    repump::make_atoms_dark::<T>
-                        .label(LaserCoolingSystems::MakeAtomsDark)
-                        .after(LaserCoolingSystems::CalculateAbsorptionForces),
-                ),
+        app.add_systems(
+            (
+                attach_components_to_newly_created_atoms::<N, T>,
+                zeeman::attach_zeeman_shift_samplers_to_newly_created_atoms::<T>,
+                attach_components_to_cooling_lasers,
+            )
+                .in_set(LaserCoolingSystemsSet::Set),
         );
-        app.world.init_resource::<ScatteringFluctuationsOption>()
+        app.add_systems(
+            (
+                sampler_masks::populate_cooling_light_masks::<N>
+                    .in_set(LaserCoolingSystemsSet::TwoLevelPopulationRequirements)
+                    .after(crate::laser::LaserSystemsSet::IndexLasers),
+                doppler::calculate_doppler_shift::<N>
+                    .in_set(LaserCoolingSystemsSet::DetuningRequirements)
+                    .after(crate::laser::LaserSystemsSet::IndexLasers),
+                zeeman::calculate_zeeman_shift::<T>
+                    .in_set(LaserCoolingSystemsSet::DetuningRequirements)
+                    .after(crate::magnetic::calculate_magnetic_field_magnitude),
+                sampler::calculate_laser_detuning::<N, T>
+                    .after(LaserCoolingSystemsSet::DetuningRequirements),
+                rate::calculate_rate_coefficients::<N, T>
+                    .in_set(LaserCoolingSystemsSet::TwoLevelPopulationRequirements)
+                    .after(sampler::calculate_laser_detuning::<N, T>),
+                twolevel::calculate_two_level_population::<N, T>
+                    .after(LaserCoolingSystemsSet::TwoLevelPopulationRequirements),
+                photons_scattered::calculate_mean_total_photons_scattered::<T>
+                    .after(twolevel::calculate_two_level_population::<N, T>),
+                photons_scattered::calculate_expected_photons_scattered::<N, T>
+                    .after(photons_scattered::calculate_mean_total_photons_scattered::<T>),
+                photons_scattered::calculate_actual_photons_scattered::<N, T>
+                    .after(photons_scattered::calculate_expected_photons_scattered::<N, T>),
+                force::calculate_absorption_forces::<N, T>
+                    .after(photons_scattered::calculate_actual_photons_scattered::<N, T>),
+                force::calculate_emission_forces::<N, T>
+                    .after(force::calculate_absorption_forces::<N, T>),
+                repump::make_atoms_dark::<T>.after(force::calculate_absorption_forces::<N, T>),
+            )
+                .in_set(LaserCoolingSystemsSet::Set),
+        );
+
+        // Note - not sure yet how this plays with multiple cooling transitions.#
+        //  E.g., Populate cooling masks will run twice if two plugins are added? How to guarantee safety?
+        //  Maybe it is automatically assured because they will have the same labels?
+        //  How generally to ensure the parallel systems all operate in the right order?
+        //  Need to make sure each <T> 'stays in its lane', e.g. only writes values for those lasers.
+        //
+        // Have a base non-generic plugin, which does non-generic components, and add a generic plugin for species-specific systems?
+        app.world.init_resource::<ScatteringFluctuationsOption>();
     }
 }
 

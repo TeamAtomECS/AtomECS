@@ -4,7 +4,7 @@ use super::transition::TransitionComponent;
 use super::zeeman::ZeemanShiftSampler;
 use super::CoolingLight;
 use crate::constant;
-use crate::integrator::BatchSize;
+use crate::integrator::AtomECSBatchStrategy;
 use crate::laser::index::LaserIndex;
 use crate::laser_cooling::doppler::DopplerShiftSamplers;
 use bevy::prelude::*;
@@ -64,7 +64,7 @@ pub fn calculate_laser_detuning<const N: usize, T: TransitionComponent>(
         ),
         With<T>,
     >,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
     // There are typically only a small number of lasers in a simulation.
     // For a speedup, cache the required components into thread memory,
@@ -83,9 +83,10 @@ pub fn calculate_laser_detuning<const N: usize, T: TransitionComponent>(
         laser_array[..max_index].copy_from_slice(slice);
         let number_in_iteration = slice.len();
 
-        atom_query.par_for_each_mut(
-            batch_size.0,
-            |(mut detuning_sampler, doppler_samplers, zeeman_sampler)| {
+        atom_query
+            .par_iter_mut()
+            .batching_strategy(batch_strategy.0.clone())
+            .for_each_mut(|(mut detuning_sampler, doppler_samplers, zeeman_sampler)| {
                 for (index, cooling) in laser_array.iter().take(number_in_iteration) {
                     let without_zeeman =
                         2.0 * constant::PI * (constant::C / cooling.wavelength - T::frequency())
@@ -98,8 +99,7 @@ pub fn calculate_laser_detuning<const N: usize, T: TransitionComponent>(
                     detuning_sampler.contents[index.index].detuning_pi =
                         without_zeeman - zeeman_sampler.sigma_pi;
                 }
-            },
-        );
+            });
     }
 }
 
@@ -115,7 +115,7 @@ pub mod tests {
     #[test]
     fn test_calculate_laser_detuning_system() {
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         let wavelength = constant::C / Strontium88_461::frequency();
         app.world
             .spawn(CoolingLight {

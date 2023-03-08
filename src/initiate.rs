@@ -33,18 +33,10 @@ fn deflag_new_atoms(mut commands: Commands, query: Query<Entity, With<NewlyCreat
     }
 }
 
-#[derive(PartialEq, Clone, Hash, Debug, Eq, SystemLabel)]
-pub enum InitiateSystems {
-    DeflagNewAtoms,
-}
-
 pub struct InitiatePlugin;
 impl Plugin for InitiatePlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_to_stage(
-            CoreStage::Update,
-            deflag_new_atoms.label(InitiateSystems::DeflagNewAtoms),
-        );
+        app.add_system(deflag_new_atoms.in_base_set(CoreSet::Update));
     }
 }
 

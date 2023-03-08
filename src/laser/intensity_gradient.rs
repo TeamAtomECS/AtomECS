@@ -5,7 +5,7 @@
 use bevy::prelude::*;
 
 use crate::atom::Position;
-use crate::integrator::BatchSize;
+use crate::integrator::AtomECSBatchStrategy;
 use crate::laser::frame::Frame;
 use crate::laser::gaussian::{get_gaussian_beam_intensity_gradient, GaussianBeam};
 use crate::laser::index::LaserIndex;
@@ -44,15 +44,18 @@ pub struct LaserIntensityGradientSamplers<const N: usize> {
 pub fn sample_gaussian_laser_intensity_gradient<const N: usize, FilterT>(
     laser_query: Query<(&LaserIndex, &GaussianBeam, &Frame), With<FilterT>>,
     mut sampler_query: Query<(&mut LaserIntensityGradientSamplers<N>, &Position)>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) where
     FilterT: Component + Send + Sync,
 {
     for (index, beam, frame) in laser_query.iter() {
-        sampler_query.par_for_each_mut(batch_size.0, |(mut sampler, pos)| {
-            sampler.contents[index.index].gradient =
-                get_gaussian_beam_intensity_gradient(beam, pos, frame);
-        });
+        sampler_query
+            .par_iter_mut()
+            .batching_strategy(batch_strategy.0.clone())
+            .for_each_mut(|(mut sampler, pos)| {
+                sampler.contents[index.index].gradient =
+                    get_gaussian_beam_intensity_gradient(beam, pos, frame);
+            });
     }
 }
 
@@ -68,7 +71,7 @@ pub mod tests {
     #[test]
     fn test_sample_laser_intensity_gradient_system() {
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
 
         let beam = GaussianBeam {
             direction: Vector3::z(),
@@ -146,7 +149,7 @@ pub mod tests {
     #[test]
     fn test_sample_laser_intensity_gradient_numbers() {
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
 
         let beam = GaussianBeam {
             direction: Vector3::x(),

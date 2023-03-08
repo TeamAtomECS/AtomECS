@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use super::CoolingLight;
 use crate::atom::Velocity;
-use crate::integrator::BatchSize;
+use crate::integrator::AtomECSBatchStrategy;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
 use serde::Serialize;
@@ -31,12 +31,15 @@ impl Default for DopplerShiftSampler {
 pub fn calculate_doppler_shift<const N: usize>(
     laser_query: Query<(&CoolingLight, &LaserIndex, &GaussianBeam)>,
     mut atom_query: Query<(&mut DopplerShiftSamplers<N>, &Velocity)>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
     // Set samplers to default values first.
-    atom_query.par_for_each_mut(batch_size.0, |(mut samplers, _vel)| {
-        samplers.contents = [DopplerShiftSampler::default(); N];
-    });
+    atom_query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|(mut samplers, _vel)| {
+            samplers.contents = [DopplerShiftSampler::default(); N];
+        });
 
     // Enumerate through lasers and calculate for each.
     //
@@ -57,13 +60,16 @@ pub fn calculate_doppler_shift<const N: usize>(
         laser_array[..max_index].copy_from_slice(slice);
         let number_in_iteration = slice.len();
 
-        atom_query.par_for_each_mut(batch_size.0, |(mut sampler, vel)| {
-            for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
-                sampler.contents[index.index].doppler_shift = vel
-                    .vel
-                    .dot(&(gaussian.direction.normalize() * cooling.wavenumber()));
-            }
-        });
+        atom_query
+            .par_iter_mut()
+            .batching_strategy(batch_strategy.0.clone())
+            .for_each_mut(|(mut sampler, vel)| {
+                for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
+                    sampler.contents[index.index].doppler_shift = vel
+                        .vel
+                        .dot(&(gaussian.direction.normalize() * cooling.wavenumber()));
+                }
+            });
     }
 }
 
@@ -91,7 +97,7 @@ pub mod tests {
     #[test]
     fn test_calculate_doppler_shift_system() {
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
 
         let wavelength = 780e-9;
         app.world

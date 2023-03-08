@@ -14,7 +14,7 @@
 
 use bevy::prelude::*;
 
-use crate::integrator::{BatchSize, Step, Timestep};
+use crate::integrator::{AtomECSBatchStrategy, Step, Timestep};
 use std::marker::PhantomData;
 
 pub trait Lerp<T> {
@@ -69,16 +69,19 @@ where
 
 fn apply_ramp<T>(
     mut query: Query<(&mut T, &mut Ramp<T>)>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
     timestep: Res<Timestep>,
     step: Res<Step>,
 ) where
     T: Lerp<T> + Component + Sync + Send + Clone,
 {
     let current_time = step.n as f64 * timestep.delta;
-    query.par_for_each_mut(batch_size.0, |(mut comp, mut ramp)| {
-        comp.clone_from(&ramp.get_value(current_time));
-    });
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|(mut comp, mut ramp)| {
+            comp.clone_from(&ramp.get_value(current_time));
+        });
 }
 
 /// Implements ramping of a given component type.
@@ -104,7 +107,7 @@ where
     T: Lerp<T> + Component + Sync + Send + Clone,
 {
     fn build(&self, app: &mut App) {
-        app.add_system_to_stage(CoreStage::Update, apply_ramp::<T>);
+        app.add_system(apply_ramp::<T>.in_base_set(CoreSet::Update));
     }
 }
 

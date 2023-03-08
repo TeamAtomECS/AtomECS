@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 
 use crate::constant::HBAR;
 use crate::initiate::NewlyCreated;
-use crate::integrator::BatchSize;
+use crate::integrator::AtomECSBatchStrategy;
 use crate::magnetic::MagneticFieldSampler;
 use bevy::prelude::*;
 use serde::Serialize;
@@ -58,15 +58,18 @@ pub fn attach_zeeman_shift_samplers_to_newly_created_atoms<T>(
 /// Calculates the Zeeman shift for each atom in each cooling beam.
 pub fn calculate_zeeman_shift<T>(
     mut query: Query<(&mut ZeemanShiftSampler<T>, &MagneticFieldSampler), With<T>>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) where
     T: TransitionComponent,
 {
-    query.par_for_each_mut(batch_size.0, |(mut zeeman, magnetic_field)| {
-        zeeman.sigma_plus = T::mup() / HBAR * magnetic_field.magnitude;
-        zeeman.sigma_minus = T::mum() / HBAR * magnetic_field.magnitude;
-        zeeman.sigma_pi = T::muz() / HBAR * magnetic_field.magnitude;
-    });
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|(mut zeeman, magnetic_field)| {
+            zeeman.sigma_plus = T::mup() / HBAR * magnetic_field.magnitude;
+            zeeman.sigma_minus = T::mum() / HBAR * magnetic_field.magnitude;
+            zeeman.sigma_pi = T::muz() / HBAR * magnetic_field.magnitude;
+        });
 }
 
 #[cfg(test)]
@@ -82,7 +85,7 @@ pub mod tests {
     #[test]
     fn test_calculate_zeeman_shift_system() {
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         let atom = app
             .world
             .spawn(MagneticFieldSampler {
@@ -125,7 +128,7 @@ pub mod tests {
     #[test]
     fn test_attach_zeeman_sampler_to_newly_created_atoms() {
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         let atom = app.world.spawn(NewlyCreated).insert(Strontium88_461).id();
 
         app.add_system(attach_zeeman_shift_samplers_to_newly_created_atoms::<Strontium88_461>);

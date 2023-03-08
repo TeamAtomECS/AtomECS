@@ -1,9 +1,9 @@
 //! Support for analytically defined fields.
 
-use bevy::{prelude::*};
-use crate::{atom::Position, integrator::BatchSize};
-use nalgebra::{Matrix3, Vector3};
 use super::MagneticFieldSampler;
+use crate::{atom::Position, integrator::AtomECSBatchStrategy};
+use bevy::prelude::*;
+use nalgebra::{Matrix3, Vector3};
 
 pub trait AnalyticField {
     /// Calculates the magnetic field.
@@ -22,12 +22,15 @@ pub trait AnalyticField {
 pub fn calculate_field_contributions<T>(
     fields_query: Query<(&Position, &T)>,
     mut samplers_query: Query<(&Position, &mut MagneticFieldSampler)>,
-    batch_size: Res<BatchSize>,
-) 
-where T : AnalyticField + Component {
+    batch_strategy: Res<AtomECSBatchStrategy>,
+) where
+    T: AnalyticField + Component,
+{
     for (origin, field) in fields_query.iter() {
-        samplers_query.par_for_each_mut(batch_size.0,
-            |(pos, mut sampler)| {
+        samplers_query
+            .par_iter_mut()
+            .batching_strategy(batch_strategy.0.clone())
+            .for_each_mut(|(pos, mut sampler)| {
                 // calculate field contribution
                 sampler.field += field.get_field(origin.pos, pos.pos);
 
@@ -35,8 +38,8 @@ where T : AnalyticField + Component {
                     //calculate jacobian
                     let mut jacobian = Matrix3::<f64>::zeros();
                     let delta = 1e-7; // Is there a better way to choose this number?
-                    // Strictly speaking to be accurate it depends on the length scale over which
-                    // the magnetic field changes
+                                      // Strictly speaking to be accurate it depends on the length scale over which
+                                      // the magnetic field changes
                     for i in 0..3 {
                         let mut pos_plus_dr = pos.pos;
                         let mut pos_minus_dr = pos.pos;
@@ -50,7 +53,6 @@ where T : AnalyticField + Component {
                     }
                     sampler.jacobian += jacobian;
                 }
-            }
-        );
+            });
     }
 }

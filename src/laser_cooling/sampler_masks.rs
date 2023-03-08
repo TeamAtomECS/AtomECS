@@ -1,9 +1,9 @@
 //! Masks to describe which lasers are used for [CoolingLight] calculations.
 
 extern crate serde;
-use crate::{laser::index::LaserIndex, integrator::BatchSize};
+use crate::{integrator::AtomECSBatchStrategy, laser::index::LaserIndex};
+use bevy::prelude::*;
 use serde::Serialize;
-use bevy::{prelude::*};
 
 use super::CoolingLight;
 
@@ -26,7 +26,7 @@ pub struct CoolingLaserSamplerMasks<const N: usize> {
 pub fn populate_cooling_light_masks<const N: usize>(
     mut query: Query<&mut CoolingLaserSamplerMasks<N>>,
     light_query: Query<&LaserIndex, With<CoolingLight>>,
-    batch_size: Res<BatchSize>
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
     let mut masks = [CoolingLaserSamplerMask::default(); N];
     for index in light_query.iter() {
@@ -34,9 +34,10 @@ pub fn populate_cooling_light_masks<const N: usize>(
     }
 
     // distribute the masks into atom components.
-    query.par_for_each_mut(batch_size.0, 
-        |mut atom_masks| {
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|mut atom_masks| {
             atom_masks.contents = masks;
-        }
-    );
+        });
 }

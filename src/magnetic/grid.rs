@@ -1,7 +1,7 @@
 //! Define magnetic fields using grids.
-use crate::{atom::Position, integrator::BatchSize};
 use crate::magnetic::MagneticFieldSampler;
-use bevy::{prelude::*};
+use crate::{atom::Position, integrator::AtomECSBatchStrategy};
+use bevy::prelude::*;
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 
@@ -43,9 +43,7 @@ impl PrecalculatedMagneticFieldGrid {
                 .max(0)
                 .min(self.extent_cells[2] - 1),
         );
-        self.extent_cells[2]
-            * (self.extent_cells[1] * cell_id[0] + cell_id[1])
-            + cell_id[2]
+        self.extent_cells[2] * (self.extent_cells[1] * cell_id[0] + cell_id[1]) + cell_id[2]
     }
 
     pub fn get_field(&self, pos: &Vector3<f64>) -> Vector3<f64> {
@@ -59,15 +57,15 @@ impl PrecalculatedMagneticFieldGrid {
 pub fn sample_magnetic_grids(
     grid_query: Query<&PrecalculatedMagneticFieldGrid>,
     mut sampler_query: Query<(&Position, &mut MagneticFieldSampler)>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
     for grid in grid_query.iter() {
-        sampler_query.par_for_each_mut(
-            batch_size.0,
-            |(pos, mut sampler)| {
+        sampler_query
+            .par_iter_mut()
+            .batching_strategy(batch_strategy.0.clone())
+            .for_each_mut(|(pos, mut sampler)| {
                 let field = grid.get_field(&pos.pos);
                 sampler.field += field;
-            }
-        );
+            });
     }
 }

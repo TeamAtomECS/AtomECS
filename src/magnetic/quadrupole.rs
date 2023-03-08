@@ -88,7 +88,7 @@ impl AnalyticField for QuadrupoleField2D {
 #[cfg(test)]
 pub mod tests {
 
-    use crate::integrator::BatchSize;
+    use crate::integrator::AtomECSBatchStrategy;
 
     use super::*;
     extern crate nalgebra;
@@ -115,7 +115,7 @@ pub mod tests {
         use crate::magnetic::MagneticFieldSampler;
 
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         app.add_system(calculate_field_contributions::<QuadrupoleField3D>);
 
         let atom1 = app

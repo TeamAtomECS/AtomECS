@@ -3,16 +3,15 @@
 use crate::atom::*;
 use crate::constant;
 use crate::initiate::NewlyCreated;
+use bevy::ecs::query::BatchingStrategy;
 use bevy::prelude::*;
 use nalgebra::Vector3;
 
 /// Tracks the number of the current integration step.
-#[derive(Resource)]
-#[derive(Default)]
+#[derive(Resource, Default)]
 pub struct Step {
     pub n: u64,
 }
-
 
 /// The timestep used for the integration.
 ///
@@ -34,11 +33,11 @@ impl Default for Timestep {
 
 pub const INTEGRATE_POSITION_SYSTEM_NAME: &str = "integrate_position";
 
-#[derive(Resource)]
-pub struct BatchSize(pub usize);
-impl Default for BatchSize {
+#[derive(Resource, Clone)]
+pub struct AtomECSBatchStrategy(pub BatchingStrategy);
+impl Default for AtomECSBatchStrategy {
     fn default() -> Self {
-        BatchSize(1024)
+        AtomECSBatchStrategy(BatchingStrategy::fixed(1024))
     }
 }
 
@@ -47,7 +46,7 @@ impl Default for BatchSize {
 ///
 /// The timestep duration is specified by the [Timestep] system resource.
 fn velocity_verlet_integrate_position(
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
     timestep: Res<Timestep>,
     mut step: ResMut<Step>,
     mut query: Query<(&mut Position, &mut OldForce, &Velocity, &Force, &Mass)>,
@@ -55,14 +54,14 @@ fn velocity_verlet_integrate_position(
     step.n += 1;
     let dt = timestep.delta;
 
-    query.par_for_each_mut(
-        batch_size.0,
-        |(mut pos, mut old_force, vel, force, mass)| {
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|(mut pos, mut old_force, vel, force, mass)| {
             pos.pos =
                 pos.pos + vel.vel * dt + force.force / (constant::AMU * mass.value) / 2.0 * dt * dt;
             old_force.0 = *force;
-        },
-    );
+        });
 }
 
 pub const INTEGRATE_VELOCITY_SYSTEM_NAME: &str = "integrate_velocity";
@@ -71,14 +70,17 @@ pub const INTEGRATE_VELOCITY_SYSTEM_NAME: &str = "integrate_velocity";
 ///
 /// The timestep duration is specified by the [Timestep] system resource
 fn velocity_verlet_integrate_velocity(
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
     timestep: Res<Timestep>,
     mut query: Query<(&mut Velocity, &Force, &OldForce, &Mass)>,
 ) {
     let dt = timestep.delta;
-    query.par_for_each_mut(batch_size.0, |(mut vel, force, old_force, mass)| {
-        vel.vel += (force.force + old_force.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
-    });
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|(mut vel, force, old_force, mass)| {
+            vel.vel += (force.force + old_force.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
+        });
 }
 
 /// Adds [OldForce] components to [NewlyCreated] atoms.
@@ -92,26 +94,22 @@ fn add_old_force_to_new_atoms(
 }
 
 /// Resets force to zero at the start of each simulation step.
-fn clear_force(mut query: Query<&mut Force>, batch_size: Res<BatchSize>) {
-    query.par_for_each_mut(batch_size.0, |mut force| {
-        force.force = Vector3::new(0.0, 0.0, 0.0);
-    })
+fn clear_force(mut query: Query<&mut Force>, batch_strategy: Res<AtomECSBatchStrategy>) {
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|mut force| {
+            force.force = Vector3::new(0.0, 0.0, 0.0);
+        })
 }
 
 /// Stores the value of the force calculation from the previous frame.
 #[derive(Component, Default)]
 pub struct OldForce(Force);
 
-#[derive(PartialEq, Clone, Hash, Debug, Eq, SystemLabel)]
-pub enum IntegrationSystems {
-    VelocityVerletIntegratePosition,
-    VelocityVerletIntegrateVelocity,
-    AddOldForceToNewAtoms,
-    ClearForce,
-}
-
-#[derive(Debug, Hash, PartialEq, Eq, Clone, StageLabel)]
-pub enum IntegrationStages {
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum IntegrationSet {
+    IntegrationSystems,
     BeginIntegration,
     EndIntegration,
 }
@@ -119,41 +117,28 @@ pub enum IntegrationStages {
 pub struct IntegrationPlugin;
 impl Plugin for IntegrationPlugin {
     fn build(&self, app: &mut App) {
-        app.world.insert_resource(BatchSize::default());
+        app.world.insert_resource(AtomECSBatchStrategy::default());
         app.world.insert_resource(Step::default());
         app.world.insert_resource(Timestep::default());
-        // Add stages for begin/end integration. Stages are used to guarantee all systems have completed.
-        // By default, systems are added to CoreStage::Update. We want our integrator to sandwich either side of these.
-        app.add_stage_before(
-            CoreStage::Update,
-            IntegrationStages::BeginIntegration,
-            SystemStage::parallel(),
+        // By default, systems are added to CoreSet::Update. We want our integrator to sandwich either side of these.
+        app.configure_set(
+            IntegrationSet::BeginIntegration
+                .before(CoreSet::Update)
+                .in_base_set(CoreSet::PreUpdate),
         );
-        app.add_stage_after(
-            CoreStage::Update,
-            IntegrationStages::EndIntegration,
-            SystemStage::parallel(),
+        app.configure_set(
+            IntegrationSet::EndIntegration
+                .after(CoreSet::Update)
+                .in_base_set(CoreSet::PostUpdate),
         );
-        app.add_system_to_stage(
-            IntegrationStages::BeginIntegration,
-            velocity_verlet_integrate_position
-                .label(IntegrationSystems::VelocityVerletIntegratePosition),
-        );
-        app.add_system_to_stage(
-            IntegrationStages::BeginIntegration,
+        app.add_system(velocity_verlet_integrate_position.in_set(IntegrationSet::BeginIntegration));
+        app.add_system(
             clear_force
-                .label(IntegrationSystems::ClearForce)
-                .after(IntegrationSystems::VelocityVerletIntegratePosition),
+                .in_set(IntegrationSet::BeginIntegration)
+                .after(velocity_verlet_integrate_position),
         );
-        app.add_system_to_stage(
-            IntegrationStages::BeginIntegration,
-            add_old_force_to_new_atoms.label(IntegrationSystems::AddOldForceToNewAtoms),
-        );
-        app.add_system_to_stage(
-            IntegrationStages::EndIntegration,
-            velocity_verlet_integrate_velocity
-                .label(IntegrationSystems::VelocityVerletIntegrateVelocity),
-        );
+        app.add_system(add_old_force_to_new_atoms.in_set(IntegrationSet::BeginIntegration));
+        app.add_system(velocity_verlet_integrate_velocity.in_set(IntegrationSet::EndIntegration));
     }
 }
 
@@ -189,7 +174,7 @@ pub mod tests {
             }
         }
 
-        app.add_system_to_stage(CoreStage::Update, set_force_for_testing);
+        app.add_system(set_force_for_testing);
 
         // create a particle with known force and mass
         let force = get_force_for_test();

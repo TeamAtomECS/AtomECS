@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 
 use super::transition::TransitionComponent;
 use super::CoolingLight;
-use crate::integrator::BatchSize;
+use crate::integrator::AtomECSBatchStrategy;
 use crate::laser::gaussian::GaussianBeam;
 use crate::laser::index::LaserIndex;
 use crate::laser::intensity::LaserIntensitySamplers;
@@ -68,20 +68,24 @@ pub fn calculate_rate_coefficients<const N: usize, T>(
         ),
         With<T>,
     >,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) where
     T: TransitionComponent,
 {
     // First set all rate coefficients to zero.
-    atom_query.par_for_each_mut(batch_size.0, |(_, _, _, mut rates)| {
-        rates.contents = [RateCoefficient::default(); N];
-    });
+    atom_query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|(_, _, _, mut rates)| {
+            rates.contents = [RateCoefficient::default(); N];
+        });
 
     // Then calculate for each laser.
     for (cooling, index, gaussian) in laser_query.iter() {
-        atom_query.par_for_each_mut(
-            batch_size.0,
-            |(detunings, intensities, bfield, mut rates)| {
+        atom_query
+            .par_iter_mut()
+            .batching_strategy(batch_strategy.0.clone())
+            .for_each_mut(|(detunings, intensities, bfield, mut rates)| {
                 let beam_direction_vector = gaussian.direction.normalize();
                 let costheta = if bfield.field.norm_squared() < (10.0 * f64::EPSILON) {
                     0.0
@@ -107,8 +111,7 @@ pub fn calculate_rate_coefficients<const N: usize, T>(
                 let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor
                     / (detunings.contents[index.index].detuning_pi.powi(2) + (gamma / 2.0).powi(2));
                 rates.contents[index.index].rate = scatter1 + scatter2 + scatter3;
-            },
-        );
+            });
     }
 }
 
@@ -134,7 +137,7 @@ pub mod tests {
     #[test]
     fn test_calculate_rate_coefficients_system() {
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         let wavelength = 461e-9;
         app.world
             .spawn(CoolingLight {

@@ -4,7 +4,7 @@ use rand;
 use rand_distr::{Distribution, Poisson};
 
 use super::sampler_masks::CoolingLaserSamplerMasks;
-use crate::integrator::{BatchSize, Timestep};
+use crate::integrator::{AtomECSBatchStrategy, Timestep};
 use crate::laser_cooling::rate::RateCoefficients;
 use crate::laser_cooling::twolevel::TwoLevelPopulation;
 use bevy::prelude::*;
@@ -47,12 +47,15 @@ where
 /// This can be calculated by: Timestep * TwolevelPopulation * Linewidth
 pub fn calculate_mean_total_photons_scattered<T: TransitionComponent>(
     mut query: Query<(&TwoLevelPopulation<T>, &mut TotalPhotonsScattered<T>), With<T>>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
     timestep: Res<Timestep>,
 ) {
-    query.par_for_each_mut(batch_size.0, |(twolevel, mut total)| {
-        total.total = timestep.delta * T::gamma() * twolevel.excited;
-    });
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|(twolevel, mut total)| {
+            total.total = timestep.delta * T::gamma() * twolevel.excited;
+        });
 }
 
 /// The number of photons scattered by the atom from a single, specific beam
@@ -112,24 +115,27 @@ pub fn calculate_expected_photons_scattered<const N: usize, T: TransitionCompone
         &CoolingLaserSamplerMasks<N>,
         &TotalPhotonsScattered<T>,
     )>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
-    query.par_for_each_mut(batch_size.0, |(mut expected, rates, mask, total)| {
-        let mut sum_rates: f64 = 0.;
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|(mut expected, rates, mask, total)| {
+            let mut sum_rates: f64 = 0.;
 
-        for index in 0..rates.contents.len() {
-            if mask.contents[index].filled {
-                sum_rates += rates.contents[index].rate;
+            for index in 0..rates.contents.len() {
+                if mask.contents[index].filled {
+                    sum_rates += rates.contents[index].rate;
+                }
             }
-        }
 
-        for index in 0..expected.contents.len() {
-            if mask.contents[index].filled {
-                expected.contents[index].scattered =
-                    rates.contents[index].rate / sum_rates * total.total;
+            for index in 0..expected.contents.len() {
+                if mask.contents[index].filled {
+                    expected.contents[index].scattered =
+                        rates.contents[index].rate / sum_rates * total.total;
+                }
             }
-        }
-    });
+        });
 }
 
 /// The number of photons actually scattered by the atom from a single, specific beam
@@ -203,14 +209,12 @@ where
 ///
 /// Otherwise, the entries of `ActualPhotonsScatteredVector` will be identical with those of
 /// `ExpectedPhotonsScatteredVector`.
-#[derive(Clone, Copy, Resource)]
-#[derive(Default)]
+#[derive(Clone, Copy, Resource, Default)]
 pub enum ScatteringFluctuationsOption {
     Off,
     #[default]
     On,
 }
-
 
 /// Calcutates the actual number of photons scattered by each CoolingLight entity in one iteration step
 /// by drawing from a Poisson Distribution that has `ExpectedPhotonsScattered` as the lambda parameter.
@@ -219,30 +223,36 @@ pub fn calculate_actual_photons_scattered<const N: usize, T: TransitionComponent
         &ExpectedPhotonsScatteredVector<T, N>,
         &mut ActualPhotonsScatteredVector<T, N>,
     )>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
     fluctuations: Res<ScatteringFluctuationsOption>,
 ) {
     match fluctuations.as_ref() {
         ScatteringFluctuationsOption::Off => {
-            query.par_for_each_mut(batch_size.0, |(expected, mut actual)| {
-                for index in 0..expected.contents.len() {
-                    actual.contents[index].scattered = expected.contents[index].scattered;
-                }
-            });
+            query
+                .par_iter_mut()
+                .batching_strategy(batch_strategy.0.clone())
+                .for_each_mut(|(expected, mut actual)| {
+                    for index in 0..expected.contents.len() {
+                        actual.contents[index].scattered = expected.contents[index].scattered;
+                    }
+                });
         }
         ScatteringFluctuationsOption::On => {
-            query.par_for_each_mut(batch_size.0, |(expected, mut actual)| {
-                for index in 0..expected.contents.len() {
-                    let lambda = expected.contents[index].scattered;
-                    actual.contents[index].scattered = if lambda <= 1.0e-5 || lambda.is_nan() {
-                        0.0
-                    } else {
-                        let poisson = Poisson::new(lambda).unwrap();
-                        
-                        poisson.sample(&mut rand::thread_rng())
+            query
+                .par_iter_mut()
+                .batching_strategy(batch_strategy.0.clone())
+                .for_each_mut(|(expected, mut actual)| {
+                    for index in 0..expected.contents.len() {
+                        let lambda = expected.contents[index].scattered;
+                        actual.contents[index].scattered = if lambda <= 1.0e-5 || lambda.is_nan() {
+                            0.0
+                        } else {
+                            let poisson = Poisson::new(lambda).unwrap();
+
+                            poisson.sample(&mut rand::thread_rng())
+                        }
                     }
-                }
-            });
+                });
         }
     }
 }
@@ -267,7 +277,7 @@ pub mod tests {
     fn test_calculate_mean_total_photons_scattered_system() {
         let mut app = App::new();
         let time_delta = 1.0e-6;
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         app.insert_resource(Timestep { delta: time_delta });
 
         let mut tlp = TwoLevelPopulation::<Strontium88_461>::default();
@@ -301,7 +311,7 @@ pub mod tests {
     #[test]
     fn test_calculate_expected_photons_scattered_system() {
         let mut app = App::new();
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
         //We assume 16 beams with equal `RateCoefficient`s for this test
         let mut rc = RateCoefficient::<Strontium88_461>::default();
         rc.rate = 1_000_000.0;

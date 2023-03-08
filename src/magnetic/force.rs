@@ -8,7 +8,7 @@
 use super::MagneticFieldSampler;
 use crate::atom::Force;
 use crate::constant;
-use crate::integrator::BatchSize;
+use crate::integrator::AtomECSBatchStrategy;
 use bevy::prelude::*;
 
 /// Component that represents the magnetic dipole moment of an atom.
@@ -20,12 +20,15 @@ pub struct MagneticDipole {
 
 pub fn apply_magnetic_forces(
     mut query: Query<(&mut Force, &MagneticFieldSampler, &MagneticDipole)>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
-    query.par_for_each_mut(batch_size.0, |(mut force, sampler, dipole)| {
-        let dipole_force = -dipole.mFgF * constant::BOHRMAG * sampler.gradient;
-        force.force += dipole_force;
-    })
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|(mut force, sampler, dipole)| {
+            let dipole_force = -dipole.mFgF * constant::BOHRMAG * sampler.gradient;
+            force.force += dipole_force;
+        })
 }
 
 #[cfg(test)]
@@ -40,7 +43,7 @@ pub mod tests {
     fn test_apply_magnetic_force_system() {
         let mut app = App::new();
         app.add_system(apply_magnetic_forces);
-        app.insert_resource(BatchSize::default());
+        app.insert_resource(AtomECSBatchStrategy::default());
 
         let atom1 = app
             .world

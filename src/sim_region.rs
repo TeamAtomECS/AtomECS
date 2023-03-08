@@ -9,7 +9,7 @@
 
 use crate::atom::Position;
 use crate::initiate::NewlyCreated;
-use crate::integrator::BatchSize;
+use crate::integrator::AtomECSBatchStrategy;
 use crate::shapes::{Cuboid, Cylinder, Sphere, Volume};
 use bevy::prelude::*;
 
@@ -55,36 +55,45 @@ pub struct SimulationVolume {
 fn perform_region_tests<T: Volume + Component>(
     volume_query: Query<(&T, &SimulationVolume, &Position)>,
     mut atom_query: Query<(&mut RegionTest, &Position)>,
-    batch_size: Res<BatchSize>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
     for (volume, sim_volume, vol_pos) in volume_query.iter() {
-        atom_query.par_for_each_mut(batch_size.0, |(mut result, pos)| match result.result {
-            Result::Reject => (),
-            _ => {
-                let contained = volume.contains(&vol_pos.pos, &pos.pos);
-                match sim_volume.volume_type {
-                    VolumeType::Inclusive => {
-                        if contained {
-                            result.result = Result::Accept;
-                        } else if let Result::Untested = result.result {
-                            result.result = Result::Failed
+        atom_query
+            .par_iter_mut()
+            .batching_strategy(batch_strategy.0.clone())
+            .for_each_mut(|(mut result, pos)| match result.result {
+                Result::Reject => (),
+                _ => {
+                    let contained = volume.contains(&vol_pos.pos, &pos.pos);
+                    match sim_volume.volume_type {
+                        VolumeType::Inclusive => {
+                            if contained {
+                                result.result = Result::Accept;
+                            } else if let Result::Untested = result.result {
+                                result.result = Result::Failed
+                            }
                         }
-                    }
-                    VolumeType::Exclusive => {
-                        if contained {
-                            result.result = Result::Reject;
+                        VolumeType::Exclusive => {
+                            if contained {
+                                result.result = Result::Reject;
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
     }
 }
 
 /// This system sets all [RegionTest](struct.RegionTest.html) results
 /// to the value `Result::Untested`.
-fn clear_region_tests(mut query: Query<&mut RegionTest>, batch_size: Res<BatchSize>) {
-    query.par_for_each_mut(batch_size.0, |mut test| test.result = Result::Untested);
+fn clear_region_tests(
+    mut query: Query<&mut RegionTest>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
+) {
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each_mut(|mut test| test.result = Result::Untested);
 }
 
 /// This system deletes all entities with a [RegionTest](struct.RegionTest.html)
@@ -116,13 +125,10 @@ pub fn attach_region_tests_to_newly_created(
     }
 }
 
-#[derive(PartialEq, Clone, Hash, Debug, Eq, SystemLabel)]
-pub enum SimRegionSystems {
+#[derive(PartialEq, Clone, Hash, Debug, Eq, SystemSet)]
+pub enum SimRegionSet {
     Set,
-    ClearRegionTests,
     RegionTestVolume,
-    DeleteRegionTestFailure,
-    AttachRegionTestsToNewlyCreated,
 }
 
 /// This plugin implements simulation bounds, and the removal of atoms which leave them.
@@ -132,36 +138,18 @@ pub enum SimRegionSystems {
 pub struct SimulationRegionPlugin;
 impl Plugin for SimulationRegionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(
-            SystemSet::new()
-                .label(SimRegionSystems::Set)
-                .with_system(clear_region_tests.label(SimRegionSystems::ClearRegionTests))
-                .with_system(
-                    perform_region_tests::<Sphere>
-                        .label(SimRegionSystems::RegionTestVolume)
-                        .after(SimRegionSystems::ClearRegionTests),
-                )
-                .with_system(
-                    perform_region_tests::<Cuboid>
-                        .label(SimRegionSystems::RegionTestVolume)
-                        .after(SimRegionSystems::ClearRegionTests),
-                )
-                .with_system(
-                    perform_region_tests::<Cylinder>
-                        .label(SimRegionSystems::RegionTestVolume)
-                        .after(SimRegionSystems::ClearRegionTests),
-                )
-                .with_system(
-                    delete_failed_region_tests
-                        .label(SimRegionSystems::DeleteRegionTestFailure)
-                        .after(SimRegionSystems::RegionTestVolume),
-                )
-                .with_system(
-                    attach_region_tests_to_newly_created
-                        .label(SimRegionSystems::AttachRegionTestsToNewlyCreated),
-                ),
+        app.add_systems(
+            (
+                clear_region_tests.before(SimRegionSet::RegionTestVolume),
+                perform_region_tests::<Sphere>.in_set(SimRegionSet::RegionTestVolume),
+                perform_region_tests::<Cuboid>.in_set(SimRegionSet::RegionTestVolume),
+                perform_region_tests::<Cylinder>.in_set(SimRegionSet::RegionTestVolume),
+                delete_failed_region_tests.after(SimRegionSet::RegionTestVolume),
+                attach_region_tests_to_newly_created,
+            )
+                .in_set(SimRegionSet::Set),
         );
-        app.init_resource::<BatchSize>();
+        app.init_resource::<AtomECSBatchStrategy>();
     }
 }
 
@@ -235,7 +223,7 @@ pub mod tests {
         }
 
         app.add_system(perform_region_tests::<Sphere>);
-        app.init_resource::<BatchSize>();
+        app.init_resource::<AtomECSBatchStrategy>();
         app.update();
 
         for (entity, result) in tests {
@@ -294,7 +282,7 @@ pub mod tests {
         }
 
         app.add_system(perform_region_tests::<Cuboid>);
-        app.init_resource::<BatchSize>();
+        app.init_resource::<AtomECSBatchStrategy>();
         app.update();
 
         for (entity, result) in tests {
