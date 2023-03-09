@@ -99,7 +99,7 @@ pub fn calculate_rate_coefficients<const N: usize, T>(
                 let gamma = T::gamma();
 
                 let scatter1 =
-                    0.25 * (cooling.polarization as f64 * costheta + 1.).powf(2.) * prefactor
+                    0.25 * (cooling.polarization as f64 * costheta + 1.).powi(2) * prefactor
                         / (detunings.contents[index.index].detuning_sigma_plus.powi(2)
                             + (gamma / 2.0).powi(2));
 
@@ -108,7 +108,7 @@ pub fn calculate_rate_coefficients<const N: usize, T>(
                         / (detunings.contents[index.index].detuning_sigma_minus.powi(2)
                             + (gamma / 2.0).powi(2));
 
-                let scatter3 = 0.5 * (1. - costheta.powf(2.)) * prefactor
+                let scatter3 = 0.5 * (1. - costheta.powi(2)) * prefactor
                     / (detunings.contents[index.index].detuning_pi.powi(2) + (gamma / 2.0).powi(2));
                 rates.contents[index.index].rate = scatter1 + scatter2 + scatter3;
             });
