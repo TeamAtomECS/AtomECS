@@ -2,6 +2,7 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
+use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::initiate::NewlyCreated;
@@ -55,7 +56,14 @@ fn main() {
     let mut app = App::new();
     app.add_plugin(LaserPlugin::<{ BEAM_NUMBER }>);
     app.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, { BEAM_NUMBER }>::default());
-    app.add_plugins(DefaultPlugins);
+    app.add_plugins(
+        DefaultPlugins.set(TaskPoolPlugin {
+            task_pool_options: TaskPoolOptions::with_num_threads(10),
+        }), // .set(LogPlugin {
+            //     level: Level::DEBUG,
+            //     filter: "bevy_core=trace".to_string(),
+            // }),
+    );
     app.add_plugin(atomecs::integrator::IntegrationPlugin);
     app.add_plugin(atomecs::initiate::InitiatePlugin);
     app.add_plugin(atomecs::magnetic::MagneticsPlugin);
