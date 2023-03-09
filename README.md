@@ -1,7 +1,11 @@
 # AtomECS
 > Simulate cold atoms with rust.
 
-**New:** Paper out now on [arxiv](https://arxiv.org/abs/2105.06447)
+
+
+Paper out now on [arxiv](https://arxiv.org/abs/2105.06447)
+
+**NOTE: Work is ongoing to change the backend** - see the `specs` branch and [this issue](https://github.com/TeamAtomECS/AtomECS/issues/3) for details! You can also run a number of demos from the bevy branch in your browser [here](https://teamatomecs.github.io/AtomECSDemos/).
 
 [![crate_version](https://img.shields.io/crates/v/atomecs.svg?style=flat)](https://crates.io/crates/atomecs)
 [![crate_version](https://img.shields.io/badge/docs-latest-blue.svg?style=flat)](https://docs.rs/atomecs)
