@@ -13,12 +13,11 @@ pub mod tests {
     use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
     use crate::laser_cooling::transition::AtomicTransition;
     use crate::laser_cooling::{CoolingLight, LaserCoolingPlugin};
-    use crate::simulation::SimulationBuilder;
     use crate::species::Rubidium87_780D2;
     extern crate nalgebra;
     use assert_approx_eq::assert_approx_eq;
+    use bevy::prelude::*;
     use nalgebra::Vector3;
-    use specs::prelude::*;
 
     #[test]
     fn single_beam_scattering_rates_v_detuning() {
@@ -48,90 +47,77 @@ pub mod tests {
         let detuning_megahz = delta / (2.0 * std::f64::consts::PI * 1.0e6);
 
         // Create simulation dispatcher
-        let mut sim_builder = SimulationBuilder::default();
-        sim_builder.add_plugin(LaserPlugin::<{ BEAM_NUMBER }>);
-        sim_builder.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, { BEAM_NUMBER }>::default());
-        let mut sim = sim_builder.build();
+        let mut simulation = App::new();
+        simulation.add_plugin(LaserPlugin::<{ BEAM_NUMBER }>);
+        simulation.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, { BEAM_NUMBER }>::default());
 
         // add laser to test world.
-        sim.world
-            .create_entity()
-            .with(CoolingLight::for_transition::<Rubidium87_780D2>(
+        simulation
+            .world
+            .spawn(CoolingLight::for_transition::<Rubidium87_780D2>(
                 detuning_megahz,
                 1,
             ))
-            .with(LaserIndex::default())
-            .with(GaussianBeam::from_peak_intensity_with_rayleigh_range(
+            .insert(LaserIndex::default())
+            .insert(GaussianBeam::from_peak_intensity_with_rayleigh_range(
                 Vector3::new(0.0, 0.0, 0.0),
                 Vector3::new(-1.0, 0.0, 0.0),
                 intensity,
                 0.01,
                 780.0e-9,
-            ))
-            .build();
+            ));
 
         // Configure timestep to be one us so that calculated rates are MHz.
         let dt = 1.0e-6;
-        sim.world.insert(Timestep { delta: dt });
+        simulation.world.insert_resource(Timestep { delta: dt });
 
         // add an atom to the world. We don't add force nor mass, because we don't need them.
-        let atom = sim
+        let atom = simulation
             .world
-            .create_entity()
-            .with(Position {
+            .spawn(Position {
                 pos: Vector3::new(0.0, 0.0, 0.0),
             })
-            .with(Velocity {
+            .insert(Velocity {
                 vel: Vector3::new(0.0, 0.0, 0.0),
             })
-            .with(transition)
-            .with(Atom)
-            .with(NewlyCreated)
-            .with(Force::new())
-            .with(Mass { value: 87.0 })
-            .build();
+            .insert(transition)
+            .insert(Atom)
+            .insert(NewlyCreated)
+            .insert(Force::default())
+            .insert(Mass { value: 87.0 })
+            .id();
 
-        sim.world
-            .create_entity()
-            .with(crate::magnetic::uniform::UniformMagneticField::gauss(
+        simulation
+            .world
+            .spawn(crate::magnetic::uniform::UniformMagneticField::gauss(
                 Vector3::new(0.1, 0.0, 0.0),
-            ))
-            .build();
+            ));
 
         // The first step is to add required components to new atoms.
-        sim.step();
+        simulation.update();
 
         // Reset position and velocity to zero.
-        assert!(sim
+        simulation
             .world
-            .write_storage::<Position>()
-            .insert(
-                atom,
-                Position {
-                    pos: Vector3::new(0.0, 0.0, 0.0),
-                },
-            )
-            .is_ok());
-        assert!(sim
+            .get_mut::<Position>(atom)
+            .expect("Atom not found")
+            .as_mut()
+            .pos = Vector3::default();
+        simulation
             .world
-            .write_storage::<Velocity>()
-            .insert(
-                atom,
-                Velocity {
-                    vel: Vector3::new(0.0, 0.0, 0.0),
-                },
-            )
-            .is_ok());
+            .get_mut::<Velocity>(atom)
+            .expect("Atom not found")
+            .as_mut()
+            .vel = Vector3::default();
 
         // Second step to calculate values over completed atoms.
-        sim.step();
+        simulation.update();
 
         let expected_scattered =
             analytic_scattering_rate(intensity, i_sat, delta, Rubidium87_780D2::gamma());
-        let total_scattered = sim
+        let total_scattered = simulation
             .world
-            .read_storage::<TotalPhotonsScattered<Rubidium87_780D2>>()
-            .get(atom)
+            .get::<TotalPhotonsScattered<Rubidium87_780D2>>(atom)
             .expect("Could not find atom in storage.")
             .total
             / dt;
@@ -145,10 +131,9 @@ pub mod tests {
         let k = 2.0 * std::f64::consts::PI * Rubidium87_780D2::frequency() / crate::constant::C;
         let photon_momentum = crate::constant::HBAR * k;
         let analytic_force = (expected_scattered * dt) * photon_momentum / dt;
-        let measured_force = sim
+        let measured_force = simulation
             .world
-            .read_storage::<Force>()
-            .get(atom)
+            .get::<Force>(atom)
             .expect("Atom does not have force component.")
             .force;
         assert_approx_eq!(
