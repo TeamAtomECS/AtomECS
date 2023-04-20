@@ -1,114 +1,81 @@
-//! Plugin functionality for AtomECS
-//! 
-//! Allows a simulation to be created in a flexible manner by combining different plugins.
+//! Utility for creating simulations with a minimal set of commonly used plugins.
 
-use std::{any::{Any, type_name}};
-use specs::prelude::*;
+use bevy::{core::TaskPoolThreadAssignmentPolicy, log::LogPlugin, prelude::*};
 
-use crate::{magnetic::MagneticsPlugin, atom::{AtomPlugin, ClearForceSystem}, sim_region::SimulationRegionPlugin, integrator::{VelocityVerletIntegratePositionSystem, INTEGRATE_POSITION_SYSTEM_NAME, INTEGRATE_VELOCITY_SYSTEM_NAME, VelocityVerletIntegrateVelocitySystem, Step}, gravity::GravityPlugin, destructor::DestroyAtomsPlugin, output::console_output::ConsoleOutputSystem};
-
-/// A simulation in AtomECS.
-pub struct Simulation {
-    pub world: World,
-    pub dispatcher: Dispatcher<'static, 'static>
-}
-impl Simulation {
-    pub fn step(&mut self) {
-        self.dispatcher.dispatch(&self.world);
-        self.world.maintain();
-    }
-}
+use crate::{
+    destructor::DestroyAtomsPlugin, gravity::GravityPlugin, initiate::InitiatePlugin,
+    integrator::IntegrationPlugin, magnetic::MagneticsPlugin,
+    output::console_output::console_output, sim_region::SimulationRegionPlugin,
+};
 
 /// Used to construct a simulation in AtomECS.
+///
+/// You can build a simulation in AtomECS by directly adding systems and plugins to your simulation app.
+/// This struct provides a convenient way to create a simulation with a minimal set of plugins and resources.
 pub struct SimulationBuilder {
-    pub world: World,
-    pub dispatcher_builder: DispatcherBuilder<'static, 'static>,
-    end_frame_systems_added: bool,
-    plugins: Vec<Box<dyn Plugin>>
+    app: App,
 }
+
 impl SimulationBuilder {
     pub fn new() -> Self {
-        let mut dispatcher_builder = DispatcherBuilder::default();
-
-        dispatcher_builder.add(
-            VelocityVerletIntegratePositionSystem,
-            INTEGRATE_POSITION_SYSTEM_NAME,
-            &[],
-        );
-        dispatcher_builder
-            .add(ClearForceSystem, "clear", &[INTEGRATE_POSITION_SYSTEM_NAME]);
-
-        SimulationBuilder {
-            world: World::new(),
-            dispatcher_builder,
-            end_frame_systems_added: false,
-            plugins: Vec::new()
-        }
+        SimulationBuilder { app: App::new() }
     }
 
     /// Add a [Plugin] to the [SimulationBuilder]
+    ///
+    /// Plugin dependency should be enforced in individual plugin modules via `app.is_plugin_added`;
+    /// panic if the plugins required are not already added.
     pub fn add_plugin(&mut self, plugin: impl Plugin) {
-        self.check_plugin_dependencies(&plugin);
-        plugin.build(self);
-        self.plugins.push(Box::new(plugin));
+        self.app.add_plugin(plugin);
     }
 
-    fn check_plugin_dependencies(&self, plugin: &impl Plugin) {
-        for dep in plugin.deps() {
-            if !self.plugins.iter().map(|p| p.name()).any(|n| n == dep.name()) {
-                panic!("Cannot add plugin {}: it requires a {} plugin, which has not yet been added.", plugin.name(), dep.name());
-            }
-        }
-    }
-
-    /// Builds a [Simulation] from the [SimulationBuilder].
-    pub fn build(mut self) -> Simulation {
-
-        if !self.end_frame_systems_added {
-            self.add_end_frame_systems();
-        }
-
-        let mut dispatcher = self.dispatcher_builder.build();
-        dispatcher.setup(&mut self.world);
-
-        self.world.insert(Step { n: 0 });
-
-        Simulation {
-            world: self.world,
-            dispatcher
-        }
-    }
-
-    pub fn add_end_frame_systems(&mut self) {
-        self.dispatcher_builder.add_barrier();
-        self.dispatcher_builder.add(
-            VelocityVerletIntegrateVelocitySystem,
-            INTEGRATE_VELOCITY_SYSTEM_NAME,
-            &[
-                // No deps specified now - implicit in the barrier.
-            ],
-        );
-        self.dispatcher_builder.add(ConsoleOutputSystem, "", &[INTEGRATE_VELOCITY_SYSTEM_NAME]);
-        self.end_frame_systems_added = true;
+    /// Finalises the SimulationBuilder and gets the App from it.
+    pub fn build(self) -> App {
+        self.app
     }
 }
 impl Default for SimulationBuilder {
-    fn default() -> Self
-    {
+    fn default() -> Self {
         let mut builder = Self::new();
-        builder.add_plugin(AtomPlugin);
-        builder.add_plugin(MagneticsPlugin);
-        builder.add_plugin(SimulationRegionPlugin);
-        builder.add_plugin(GravityPlugin);
-        builder.add_plugin(DestroyAtomsPlugin);
+
+        let task_pool_options = TaskPoolOptions {
+            // Use 25% of cores for IO, at least 1, no more than 4
+            io: TaskPoolThreadAssignmentPolicy {
+                min_threads: 0,
+                max_threads: 0,
+                percent: 0.0,
+            },
+
+            // Use 25% of cores for async compute, at least 1, no more than 4
+            async_compute: TaskPoolThreadAssignmentPolicy {
+                min_threads: 0,
+                max_threads: 0,
+                percent: 0.0,
+            },
+            min_total_threads: 1,
+            max_total_threads: usize::MAX,
+            compute: TaskPoolThreadAssignmentPolicy {
+                min_threads: 1,
+                max_threads: usize::MAX,
+                percent: 100.0,
+            },
+        };
+
+        builder.app.add_plugin(LogPlugin::default());
+        builder.app.add_plugin(TaskPoolPlugin {
+            //task_pool_options: TaskPoolOptions::with_num_threads(10),
+            task_pool_options,
+        });
+
+        builder.app.add_plugin(IntegrationPlugin);
+        builder.app.add_plugin(MagneticsPlugin);
+        builder.app.add_plugin(SimulationRegionPlugin);
+        builder.app.add_plugin(GravityPlugin);
+        builder.app.add_plugin(DestroyAtomsPlugin);
+        builder.app.add_plugin(InitiatePlugin);
+        builder.app.add_system(console_output);
         builder
     }
 }
 
-pub const DEFAULT_BEAM_NUMBER : usize = 8;
-
-pub trait Plugin : Any + Send + Sync {
-    fn build(&self, builder: &mut SimulationBuilder);
-    fn name(&self) -> &str { type_name::<Self>() }
-    fn deps(&self) -> Vec::<Box<dyn Plugin>>;
-}
+pub const DEFAULT_BEAM_NUMBER: usize = 8;
