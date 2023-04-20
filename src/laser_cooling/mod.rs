@@ -1,8 +1,8 @@
 //! A module that implements systems and components for calculating optical scattering forces in AtomECS.
 
-use crate::constant;
 use crate::initiate::NewlyCreated;
 use crate::ramp::Lerp;
+use crate::{constant, laser::LaserPlugin};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
@@ -167,6 +167,9 @@ where
     T: TransitionComponent,
 {
     fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<LaserPlugin<N>>() {
+            panic!("This plugin requires a LaserPlugin<N> to be added to the app first.");
+        }
         app.add_systems(
             (
                 attach_components_to_newly_created_atoms::<N, T>,

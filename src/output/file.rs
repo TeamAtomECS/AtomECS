@@ -1,9 +1,12 @@
 //! Writes output files containing atomic trajectories.
+//!
+//! To add file output to your simulation, add one or more `FileOutputPlugin`s, which determine
+//! the component written to file and the output format used.
+
 use crate::atom::Atom;
 use crate::integrator::Step;
-use crate::simulation::Plugin;
+use bevy::prelude::*;
 use nalgebra::Vector3;
-use specs::{Component, Entities, Entity, Join, ReadExpect, ReadStorage, System};
 use std::fmt::Display;
 use std::fs::File;
 use std::io;
@@ -20,121 +23,118 @@ use byteorder::{LittleEndian, WriteBytesExt};
 /// This system writes data `C` of entities associated with `A` to a file at a defined interval.
 /// The data type `C` must be a [Component](specs::Component) and implement the
 /// [Clone](struct.Clone.html) trait.
-pub struct OutputSystem<C: Component + Clone, W: Write, F: Format<C, W>, A = Atom> {
+#[derive(Resource)]
+struct FileOutputResource<C: Component + Clone, F: Format<C, BufWriter<File>>, A = Atom> {
     /// Number of integration steps between each file output.
-    interval: u64,
-    /// The [Write](std::io::Write)able output stream.
+    pub interval: u64,
+    /// The file name of the output file.
+    pub file_name: String,
+    /// Stream where output is written.
+    stream: Option<BufWriter<File>>,
     atom_flag: PhantomData<A>,
-    stream: W,
     formatter: PhantomData<F>,
+    /// The [Write](std::io::Write)able output stream.
     marker: PhantomData<C>,
 }
 
-pub struct FileOutputPlugin<C,F,A>
-    where C: Component + Clone,
-    F: Format<C, BufWriter<File>>
-{
+struct FileOutputPlugin<C: Component + Clone, F: Format<C, BufWriter<File>>, A = Atom> {
+    c_marker: PhantomData<C>,
+    f_marker: PhantomData<F>,
+    a_marker: PhantomData<A>,
     file_name: String,
     interval: u64,
-    phantom_c: PhantomData<C>,
-    phantom_f: PhantomData<F>,
-    phantom_a: PhantomData<A>
 }
-impl<C,F,A> FileOutputPlugin<C,F,A> 
-    where 
-        C: Component + Clone,
-        A: Component,
-        F: Format<C, BufWriter<File>> 
+
+impl<C, F, A> FileOutputPlugin<C, F, A>
+where
+    C: Component + Clone + Sync + Send,
+    A: Component + Sync + Send,
+    F: Format<C, BufWriter<File>> + Sync + Send,
 {
-    pub fn new(file_name: String, interval: u64) -> FileOutputPlugin<C,F,A>
-    {
+    pub fn new(file_name: String, interval: u64) -> Self {
         FileOutputPlugin {
+            c_marker: PhantomData,
+            f_marker: PhantomData,
+            a_marker: PhantomData,
             file_name,
             interval,
-            phantom_a: PhantomData,
-            phantom_c: PhantomData,
-            phantom_f: PhantomData 
         }
     }
 }
 
-impl<C,F,A> Plugin for FileOutputPlugin<C,F,A> 
-where 
+impl<C, F, A> Plugin for FileOutputPlugin<C, F, A>
+where
     C: Component + Clone + Sync + Send + 'static,
     A: Component + Sync + Send + 'static,
-    F: Format<C, BufWriter<File>> + Sync + Send + 'static
+    F: Format<C, BufWriter<File>> + Sync + Send + 'static,
 {
-    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
-        builder.dispatcher_builder.add(
-            new_with_filter::<C, F, A>(self.file_name.clone(), self.interval),
-            "",
-            &[],
-        );
-    }
-    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
-        Vec::new()
-    }
-}
-
-/// Creates a new [OutputSystem](struct.OutputSystem.html) to write per-entity [Component](specs::Component) data
-/// according to the specified [Format](struct.Format.html).
-///
-/// The interval specifies how often, in integration steps, the file should be written.
-///
-/// Only component data of entities associated with a component given by `A` is written down.
-///
-/// For example, `new_with_filter::<Position, Text, Atom>("pos.txt", 10).
-fn new_with_filter<C, F, A>(
-    file_name: String,
-    interval: u64,
-) -> OutputSystem<C, BufWriter<File>, F, A>
-where
-    C: Component + Clone,
-    A: Component,
-    F: Format<C, BufWriter<File>>,
-{
-    let path = Path::new(&file_name);
-    let display = path.display();
-    let file = match File::create(&path) {
-        Err(why) => panic!("couldn't open {}: {}", display, why),
-        Ok(file) => file,
-    };
-    let writer = BufWriter::new(file);
-    OutputSystem {
-        interval,
-        atom_flag: PhantomData,
-        stream: writer,
-        formatter: PhantomData,
-        marker: PhantomData,
+    fn build(&self, app: &mut App) {
+        app.insert_resource(FileOutputResource::<C, F, A> {
+            interval: self.interval,
+            file_name: self.file_name.clone(),
+            stream: None,
+            atom_flag: PhantomData,
+            formatter: PhantomData,
+            marker: PhantomData,
+        });
+        app.add_system(update_writers::<C, F, A>);
     }
 }
 
-impl<'a, C, A, W, F> System<'a> for OutputSystem<C, W, F, A>
-where
+fn update_writers<C, F, A>(
+    step: Res<Step>,
+    mut outputter: ResMut<FileOutputResource<C, F, A>>,
+    query: Query<(Entity, &C), With<A>>,
+) where
     C: Component + Clone,
     A: Component,
-    W: Write,
-    F: Format<C, W>,
+    F: Format<C, BufWriter<File>> + Send + Sync + 'static,
 {
-    type SystemData = (
-        Entities<'a>,
-        ReadStorage<'a, C>,
-        ReadStorage<'a, A>,
-        ReadExpect<'a, Step>,
-    );
+    // if the stream is not opened, open it.
+    if outputter.stream.is_none() {
+        let path = Path::new(&outputter.file_name);
+        let display = path.display();
+        let file = match File::create(&path) {
+            Err(why) => panic!("couldn't open {}: {}", display, why),
+            Ok(file) => file,
+        };
+        let writer = BufWriter::new(file);
+        outputter.stream = Option::Some(writer);
+    }
 
-    fn run(&mut self, (entities, data, atom_flags, step): Self::SystemData) {
-        if step.n % self.interval == 0 {
-            let atom_number = (&atom_flags).join().count();
-            F::write_frame_header(&mut self.stream, step.n, atom_number).expect("Could not write.");
+    if step.n % outputter.interval == 0 {
+        let atom_number = (query.into_iter()).count();
+        F::write_frame_header(
+            &mut outputter.stream.as_mut().expect("File writer not open"),
+            step.n,
+            atom_number,
+        )
+        .expect("Could not write.");
 
-            // write each entity
-            for (data, _, ent) in (&data, &atom_flags, &entities).join() {
-                F::write_atom(&mut self.stream, ent, data.clone()).expect("Could not write.");
-            }
+        // write each entity
+        for (ent, c) in query.iter() {
+            F::write_atom(
+                &mut outputter.stream.as_mut().expect("File writer not open"),
+                ent,
+                c.clone(),
+            )
+            .expect("Could not write.");
         }
     }
 }
+
+// /// Creates a new [OutputSystem](struct.OutputSystem.html) to write per-entity [Component](specs::Component) data
+// /// according to the specified [Format](struct.Format.html).
+// ///
+// /// The interval specifies how often, in integration steps, the file should be written.
+// ///
+// /// Only component data of entities associated with a component given by `A` is written down.
+// ///
+// /// For example, `new_with_filter::<Position, Text, Atom>("pos.txt", 10).
+// fn new_with_filter<C, F, A>(
+//     file_name: String,
+//     interval: u64,
+// ) -> OutputSystem<C, BufWriter<File>, F, A>
 
 /// A trait implemented for each file output format.
 pub trait Format<C, W>
@@ -169,7 +169,13 @@ where
     }
 
     fn write_atom(writer: &mut W, atom: Entity, data: C) -> Result<(), io::Error> {
-        writeln!(writer, "{:?},{:?}: {}", atom.gen().id(), atom.id(), data)?;
+        writeln!(
+            writer,
+            "{:?},{:?}: {}",
+            atom.generation(),
+            atom.index(),
+            data
+        )?;
         Ok(())
     }
 }
@@ -190,8 +196,8 @@ where
         writeln!(
             writer,
             "{:?},{:?}, {}",
-            atom.gen().id(),
-            atom.id(),
+            atom.generation(),
+            atom.index(),
             serialized
         )?;
         Ok(())
@@ -243,8 +249,8 @@ where
     }
 
     fn write_atom(writer: &mut W, atom: Entity, data: C) -> Result<(), io::Error> {
-        writer.write_i32::<Endianness>(atom.gen().id())?;
-        writer.write_u32::<Endianness>(atom.id())?;
+        writer.write_u32::<Endianness>(atom.generation())?;
+        writer.write_u32::<Endianness>(atom.index())?;
         for element in data.data() {
             writer.write_f64::<Endianness>(element)?;
         }
