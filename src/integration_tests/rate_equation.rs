@@ -10,9 +10,12 @@ pub mod tests {
     use crate::laser::gaussian::GaussianBeam;
     use crate::laser::index::LaserIndex;
     use crate::laser::LaserPlugin;
-    use crate::laser_cooling::photons_scattered::TotalPhotonsScattered;
+    use crate::laser_cooling::photons_scattered::{
+        ScatteringFluctuationsOption, TotalPhotonsScattered,
+    };
     use crate::laser_cooling::transition::AtomicTransition;
     use crate::laser_cooling::{CoolingLight, LaserCoolingPlugin};
+    use crate::simulation;
     use crate::species::Rubidium87_780D2;
     extern crate nalgebra;
     use assert_approx_eq::assert_approx_eq;
@@ -47,9 +50,12 @@ pub mod tests {
         let detuning_megahz = delta / (2.0 * std::f64::consts::PI * 1.0e6);
 
         // Create simulation dispatcher
-        let mut simulation = App::new();
+        let mut simulation = simulation::SimulationBuilder::default().build();
         simulation.add_plugin(LaserPlugin::<{ BEAM_NUMBER }>);
         simulation.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, { BEAM_NUMBER }>::default());
+
+        // Disable scattering
+        simulation.insert_resource(ScatteringFluctuationsOption::Off);
 
         // add laser to test world.
         simulation
@@ -124,7 +130,7 @@ pub mod tests {
         assert_approx_eq!(
             total_scattered,
             expected_scattered,
-            expected_scattered.abs() * 0.05
+            expected_scattered.abs() * 0.01
         );
 
         // Compare the magnitude of the calculated force.

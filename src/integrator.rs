@@ -64,8 +64,6 @@ fn velocity_verlet_integrate_position(
         });
 }
 
-pub const INTEGRATE_VELOCITY_SYSTEM_NAME: &str = "integrate_velocity";
-
 /// Integrates velocity using the velocity-verlet method, and the average of `Force` this frame and `OldForce` from the previous frame.
 ///
 /// The timestep duration is specified by the [Timestep] system resource
