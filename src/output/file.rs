@@ -94,7 +94,7 @@ fn update_writers<C, F, A>(
     if outputter.stream.is_none() {
         let path = Path::new(&outputter.file_name);
         let display = path.display();
-        let file = match File::create(&path) {
+        let file = match File::create(path) {
             Err(why) => panic!("couldn't open {}: {}", display, why),
             Ok(file) => file,
         };
@@ -105,7 +105,7 @@ fn update_writers<C, F, A>(
     if step.n % outputter.interval == 0 {
         let atom_number = (query.into_iter()).count();
         F::write_frame_header(
-            &mut outputter.stream.as_mut().expect("File writer not open"),
+            outputter.stream.as_mut().expect("File writer not open"),
             step.n,
             atom_number,
         )
@@ -114,7 +114,7 @@ fn update_writers<C, F, A>(
         // write each entity
         for (ent, c) in query.iter() {
             F::write_atom(
-                &mut outputter.stream.as_mut().expect("File writer not open"),
+                outputter.stream.as_mut().expect("File writer not open"),
                 ent,
                 c.clone(),
             )

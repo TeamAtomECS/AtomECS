@@ -2,7 +2,7 @@
 
 extern crate atomecs as lib;
 extern crate nalgebra;
-use bevy::log::{Level, LogPlugin};
+
 use bevy::prelude::*;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::initiate::NewlyCreated;

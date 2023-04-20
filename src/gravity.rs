@@ -8,16 +8,11 @@ use nalgebra::Vector3;
 
 /// A resource that indicates that the simulation should apply the force of gravity.
 #[derive(Resource)]
+#[derive(Default)]
 pub struct GravityConfiguration {
     pub apply_gravity: bool,
 }
-impl Default for GravityConfiguration {
-    fn default() -> Self {
-        Self {
-            apply_gravity: false,
-        }
-    }
-}
+
 
 fn apply_gravitational_forces(
     batch_strategy: Res<AtomECSBatchStrategy>,
