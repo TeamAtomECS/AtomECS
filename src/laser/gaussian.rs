@@ -232,7 +232,8 @@ pub fn get_gaussian_beam_intensity_gradient(
 
     let spot_size_squared =
         2.0 * beam.e_radius.powf(2.0) * (1. + (z / beam.rayleigh_range).powf(2.0));
-    let vector = -4. * (reference_frame.x_vector * x + reference_frame.y_vector * y)
+    let vector = -4. * (reference_frame.x_vector / semi_major_axis.powf(0.5) * x + reference_frame.y_vector * y * semi_major_axis.powf(0.5)) 
+    // /semi_major_axis.powf(0.5) AND *semi_major_axis.powf(0.5) here accounts for the chain rule when calculation gradient force
         + beam.direction * z / (beam.rayleigh_range.powf(2.0) + z.powf(2.0))
             * (- 2.0 * spot_size_squared + 4. * (x.powf(2.0) + y.powf(2.0)));
     let intensity = 2. * beam.power / PI / spot_size_squared
@@ -274,7 +275,31 @@ pub mod tests {
         let gradient = get_gaussian_beam_intensity_gradient(&beam, &pos1, &grf);
         assert_approx_eq!(gradient[0], -2.49605032e+13, 1e+8_f64);
         assert_approx_eq!(gradient[1], 0.0, 1e+9_f64);
-        assert_approx_eq!(gradient[2], -2.06143366e+08, 1e+6_f64);
+        assert_approx_eq!(gradient[2], -4.20876029e+08, 1e+6_f64); // Modified by Yijun on 2024/07/16
+    }
+
+    #[test] // added by Yijun on 2024/07/16 to test the gradient calculation for a beam with ellipticity
+    fn test_get_elliptic_gaussian_beam_intensity_gradient() {
+        let beam = GaussianBeam {
+            direction: Vector3::z(),
+            intersection: Vector3::new(0.0, 0.0, 0.0),
+            e_radius: 70.71067812e-6,
+            power: 100.0,
+            rayleigh_range: calculate_rayleigh_range(&1064.0e-9, &70.71067812e-6),
+            ellipticity: 0.5,
+        };
+        let pos1 = Position {
+            pos: Vector3::new(10.0e-6, 10.0e-6, 30.0e-6),
+        };
+        let grf = Frame {
+            x_vector: Vector3::x(),
+            y_vector: Vector3::y(),
+        };
+
+        let gradient = get_gaussian_beam_intensity_gradient(&beam, &pos1, &grf);
+        assert_approx_eq!(gradient[0], -2.11796152e+13, 1e+8_f64);
+        assert_approx_eq!(gradient[1], -2.82394869e+13, 1e+9_f64);
+        assert_approx_eq!(gradient[2], -4.03781010e+08, 1e+6_f64); 
     }
 
     #[test]

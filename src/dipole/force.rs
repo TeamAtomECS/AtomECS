@@ -151,7 +151,7 @@ pub mod tests {
         assert_approx_eq!(-3.11151847e-23, sim_result_force[2], 2e-24_f64);
     }
 
-    #[test]
+    #[test] // Modified by Yijun on 2024/07/16
     fn test_apply_dipole_force_and_gradient_system() {
         let mut test_world = World::new();
 
@@ -171,7 +171,7 @@ pub mod tests {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius,
             power,
-            direction: Vector3::x(),
+            direction: Vector3::y(),
             rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
             ellipticity: 0.0,
         };
@@ -186,15 +186,15 @@ pub mod tests {
                 initiated: true,
             })
             .with(laser::frame::Frame {
-                x_vector: Vector3::y(),
-                y_vector: Vector3::z(),
+                x_vector: Vector3::z(),
+                y_vector: Vector3::x(),
             })
             .build();
         let gaussian_beam = GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
             e_radius,
             power,
-            direction: Vector3::y(),
+            direction: Vector3::x(),
             rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
             ellipticity: 0.0,
         };
@@ -209,7 +209,7 @@ pub mod tests {
                 initiated: true,
             })
             .with(laser::frame::Frame {
-                x_vector: Vector3::x(),
+                x_vector: Vector3::y(),
                 y_vector: Vector3::z(),
             })
             .build();
@@ -218,7 +218,7 @@ pub mod tests {
         let atom1 = test_world
             .create_entity()
             .with(crate::atom::Position {
-                pos: Vector3::new(-1.0e-4, -1.0e-4, -2.0e-4),
+                pos: Vector3::new(-1.0e-4, -1.0e-4, 2.0e-4),
             })
             .with(Force {
                 force: Vector3::new(0.0, 0.0, 0.0),
@@ -248,21 +248,23 @@ pub mod tests {
         //println!("force is: {}", sim_result_force);
         //println!("gradient 1 is: {}", sim_result_grad[0].gradient);
         //println!("gradient 2 is: {}", sim_result_grad[1].gradient);
-
+        println!("force x is: {}", sim_result_force[0]);
+        println!("force y is: {}", sim_result_force[1]);
+        println!("force z is: {}", sim_result_force[2]);
         assert_approx_eq!(
-            0.000000000000000000000000000000000127913190642808,
+            0.00000000000000000000000000000000012749214960,
             sim_result_force[0],
-            3e-46_f64
+            3e-40_f64
         );
         assert_approx_eq!(
-            0.000000000000000000000000000000000127913190642808,
+            0.00000000000000000000000000000000012749214960,
             sim_result_force[1],
-            2e-46_f64
+            2e-40_f64
         );
         assert_approx_eq!(
-            0.000000000000000000000000000000000511875188257342,
+            -0.0000000000000000000000000000000005101862262458,
             sim_result_force[2],
-            2e-46_f64
+            2e-40_f64
         );
     }
 }

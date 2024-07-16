@@ -173,7 +173,7 @@ pub mod tests {
             1e+5_f64
         );
     }
-    #[test]
+    #[test] // modified by Yijun on 2024/07/16
     fn test_sample_laser_intensity_gradient_again_system() {
         let mut test_world = World::new();
 
@@ -204,8 +204,8 @@ pub mod tests {
             })
             .with(beam)
             .with(Frame {
-                x_vector: Vector3::y(),
-                y_vector: Vector3::z(),
+                x_vector: Vector3::z(),
+                y_vector: Vector3::y(),
             })
             .with(DipoleLight {
                 wavelength: 1064.0e-9,
@@ -215,7 +215,7 @@ pub mod tests {
         let atom1 = test_world
             .create_entity()
             .with(Position {
-                pos: Vector3::new(20.0e-6, 20.0e-6, 20.0e-6),
+                pos: Vector3::new(20.0e-6, 25.0e-6, 20.0e-6),
             })
             .with(LaserIntensityGradientSamplers {
                 contents: [LaserIntensityGradientSampler::default();
@@ -232,9 +232,9 @@ pub mod tests {
             .expect("Entity not found!")
             .contents[0]
             .gradient;
-
-        assert_approx_eq!(-8.4628e+7, sim_result_gradient[0], 1e+5_f64);
-        assert_approx_eq!(-4.33992902e+13, sim_result_gradient[1], 1e+8_f64);
-        assert_approx_eq!(-4.33992902e+13, sim_result_gradient[2], 1e+8_f64);
+        println!("Gradient: x = {}, y = {}, z = {}", sim_result_gradient[0], sim_result_gradient[1], sim_result_gradient[2]);
+        assert_approx_eq!(-1.89173404e+08, sim_result_gradient[0], 1e+5_f64);
+        assert_approx_eq!(-5.18620162e+13, sim_result_gradient[1], 1e+8_f64);
+        assert_approx_eq!(-4.14896130e+13, sim_result_gradient[2], 1e+8_f64);
     }
 }
