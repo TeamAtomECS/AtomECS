@@ -116,17 +116,17 @@ pub mod tests {
 
         let mut app = App::new();
         app.insert_resource(AtomECSBatchStrategy::default());
-        app.add_system(calculate_field_contributions::<QuadrupoleField3D>);
+        app.add_systems(Update, calculate_field_contributions::<QuadrupoleField3D>);
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(Position {
                 pos: Vector3::new(0.02, 0.01, -0.05),
             })
             .insert(MagneticFieldSampler::default())
             .id();
 
-        app.world
+        app.world_mut()
             .spawn(QuadrupoleField3D {
                 gradient: 1.0,
                 direction: Vector3::new(0.0, 0.0, 1.0),
@@ -135,7 +135,7 @@ pub mod tests {
                 pos: Vector3::new(0.0, 0.0, 0.0),
             });
 
-        app.world
+        app.world_mut()
             .spawn(QuadrupoleField3D {
                 gradient: 2.0,
                 direction: Vector3::new(1.0, 0.0, 1.0).normalize(),
@@ -147,7 +147,7 @@ pub mod tests {
         app.update();
 
         let test_jacobian = app
-            .world
+            .world()
             .entity(atom1)
             .get::<MagneticFieldSampler>()
             .expect("entity not found")

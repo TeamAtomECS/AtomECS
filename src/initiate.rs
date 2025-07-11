@@ -36,7 +36,7 @@ fn deflag_new_atoms(mut commands: Commands, query: Query<Entity, With<NewlyCreat
 pub struct InitiatePlugin;
 impl Plugin for InitiatePlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(deflag_new_atoms.in_base_set(CoreSet::Update));
+        app.add_systems(Update, deflag_new_atoms);
     }
 }
 
@@ -48,10 +48,10 @@ pub mod tests {
     #[test]
     fn test_deflag_new_atoms_system() {
         let mut app = App::new();
-        app.add_plugin(InitiatePlugin);
+        app.add_plugins(InitiatePlugin);
 
-        let test_entity = app.world.spawn(NewlyCreated).id();
+        let test_entity = app.world_mut().spawn(NewlyCreated).id();
         app.update();
-        assert!(!app.world.entity(test_entity).contains::<NewlyCreated>());
+        assert!(!app.world().entity(test_entity).contains::<NewlyCreated>());
     }
 }

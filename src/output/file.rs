@@ -24,7 +24,7 @@ use byteorder::{LittleEndian, WriteBytesExt};
 /// The data type `C` must be a [Component](specs::Component) and implement the
 /// [Clone](struct.Clone.html) trait.
 #[derive(Resource)]
-struct FileOutputResource<C: Component + Clone, F: Format<C, BufWriter<File>>, A = Atom> {
+pub struct FileOutputResource<C: Component + Clone, F: Format<C, BufWriter<File>>, A = Atom> {
     /// Number of integration steps between each file output.
     pub interval: u64,
     /// The file name of the output file.
@@ -37,7 +37,7 @@ struct FileOutputResource<C: Component + Clone, F: Format<C, BufWriter<File>>, A
     marker: PhantomData<C>,
 }
 
-struct FileOutputPlugin<C: Component + Clone, F: Format<C, BufWriter<File>>, A = Atom> {
+pub struct FileOutputPlugin<C: Component + Clone, F: Format<C, BufWriter<File>>, A = Atom> {
     c_marker: PhantomData<C>,
     f_marker: PhantomData<F>,
     a_marker: PhantomData<A>,
@@ -77,7 +77,7 @@ where
             formatter: PhantomData,
             marker: PhantomData,
         });
-        app.add_system(update_writers::<C, F, A>);
+        app.add_systems(Update, update_writers::<C, F, A>);
     }
 }
 

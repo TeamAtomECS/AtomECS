@@ -42,19 +42,19 @@ pub mod tests {
     fn test_index_lasers() {
         let mut app = App::new();
 
-        let test_entity_1 = app.world.spawn(LaserIndex::default()).id();
-        let test_entity_2 = app.world.spawn(LaserIndex::default()).id();
+        let test_entity_1 = app.world_mut().spawn(LaserIndex::default()).id();
+        let test_entity_2 = app.world_mut().spawn(LaserIndex::default()).id();
 
-        app.add_system(index_lasers);
+        app.add_systems(Update, index_lasers);
         app.update();
 
         let index_1 = app
-            .world
+            .world()
             .entity(test_entity_1)
             .get::<LaserIndex>()
             .expect("entity not found");
         let index_2 = app
-            .world
+            .world()
             .entity(test_entity_2)
             .get::<LaserIndex>()
             .expect("entity not found");

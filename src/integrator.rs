@@ -3,7 +3,7 @@
 use crate::atom::*;
 use crate::constant;
 use crate::initiate::NewlyCreated;
-use bevy::ecs::query::BatchingStrategy;
+use bevy::ecs::batching::BatchingStrategy;
 use bevy::prelude::*;
 use nalgebra::Vector3;
 
@@ -57,7 +57,7 @@ fn velocity_verlet_integrate_position(
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|(mut pos, mut old_force, vel, force, mass)| {
+        .for_each(|(mut pos, mut old_force, vel, force, mass)| {
             pos.pos =
                 pos.pos + vel.vel * dt + force.force / (constant::AMU * mass.value) / 2.0 * dt * dt;
             old_force.0 = *force;
@@ -76,7 +76,7 @@ fn velocity_verlet_integrate_velocity(
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|(mut vel, force, old_force, mass)| {
+        .for_each(|(mut vel, force, old_force, mass)| {
             vel.vel += (force.force + old_force.0.force) / (constant::AMU * mass.value) / 2.0 * dt;
         });
 }
@@ -96,10 +96,10 @@ fn clear_force(mut query: Query<&mut Force>, batch_strategy: Res<AtomECSBatchStr
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|mut force| {
+        .for_each(|mut force| {
             force.force = Vector3::new(0.0, 0.0, 0.0);
-        })
-}
+        });
+    }
 
 /// Stores the value of the force calculation from the previous frame.
 #[derive(Component, Default)]
@@ -115,28 +115,25 @@ pub enum IntegrationSet {
 pub struct IntegrationPlugin;
 impl Plugin for IntegrationPlugin {
     fn build(&self, app: &mut App) {
-        app.world.insert_resource(AtomECSBatchStrategy::default());
-        app.world.insert_resource(Step::default());
-        app.world.insert_resource(Timestep::default());
+        app.world_mut().insert_resource(AtomECSBatchStrategy::default());
+        app.world_mut().insert_resource(Step::default());
+        app.world_mut().insert_resource(Timestep::default());
         // By default, systems are added to CoreSet::Update. We want our integrator to sandwich either side of these.
-        app.configure_set(
-            IntegrationSet::BeginIntegration
-                .before(CoreSet::Update)
-                .in_base_set(CoreSet::PreUpdate),
+
+        app.configure_sets(PreUpdate,
+            IntegrationSet::BeginIntegration,
         );
-        app.configure_set(
-            IntegrationSet::EndIntegration
-                .after(CoreSet::Update)
-                .in_base_set(CoreSet::PostUpdate),
+        app.configure_sets(PostUpdate,
+            IntegrationSet::EndIntegration,
         );
-        app.add_system(velocity_verlet_integrate_position.in_set(IntegrationSet::BeginIntegration));
-        app.add_system(
+        app.add_systems(PreUpdate, velocity_verlet_integrate_position.in_set(IntegrationSet::BeginIntegration));
+        app.add_systems(PreUpdate, 
             clear_force
                 .in_set(IntegrationSet::BeginIntegration)
                 .after(velocity_verlet_integrate_position),
         );
-        app.add_system(add_old_force_to_new_atoms.in_set(IntegrationSet::BeginIntegration));
-        app.add_system(velocity_verlet_integrate_velocity.in_set(IntegrationSet::EndIntegration));
+        app.add_systems(PreUpdate, add_old_force_to_new_atoms.in_set(IntegrationSet::BeginIntegration));
+        app.add_systems(PostUpdate, velocity_verlet_integrate_velocity.in_set(IntegrationSet::EndIntegration));
     }
 }
 
@@ -147,12 +144,12 @@ pub mod tests {
     #[test]
     fn test_add_old_force_system() {
         let mut app = App::new();
-        app.add_plugin(IntegrationPlugin);
+        app.add_plugins(IntegrationPlugin);
 
-        let test_entity = app.world.spawn(NewlyCreated).id();
+        let test_entity = app.world_mut().spawn(NewlyCreated).id();
         app.update();
         assert!(
-            app.world.entity(test_entity).contains::<OldForce>(),
+            app.world().entity(test_entity).contains::<OldForce>(),
             "OldForce component not added to test entity."
         );
     }
@@ -160,7 +157,7 @@ pub mod tests {
     #[test]
     fn test_velocity_verlet_integration() {
         let mut app = App::new();
-        app.add_plugin(IntegrationPlugin);
+        app.add_plugins(IntegrationPlugin);
 
         fn get_force_for_test() -> Vector3<f64> {
             Vector3::new(1.0, 0.0, 0.0)
@@ -172,14 +169,14 @@ pub mod tests {
             }
         }
 
-        app.add_system(set_force_for_testing);
+        app.add_systems(Update, set_force_for_testing);
 
         // create a particle with known force and mass
         let force = get_force_for_test();
         let mass = 1.0;
 
         let test_entity = app
-            .world
+            .world_mut()
             .spawn(Position {
                 pos: Vector3::new(0.0, 0.0, 0.0),
             })
@@ -194,10 +191,11 @@ pub mod tests {
             .id();
 
         let dt = 1.0e-3;
-        app.world.insert_resource(Timestep { delta: dt });
+        app.world_mut().insert_resource(Timestep { delta: dt });
 
         // run simulation loop 1_000 times.
-        let n_steps = 1_000;
+        
+        let n_steps = 50000;
         for _i in 0..n_steps {
             app.update()
         }
@@ -207,7 +205,7 @@ pub mod tests {
 
         assert_approx_eq::assert_approx_eq!(
             expected_v.norm(),
-            app.world
+            app.world()
                 .entity(test_entity)
                 .get::<Velocity>()
                 .expect("test_entity does not have velocity.")
@@ -219,7 +217,7 @@ pub mod tests {
         let expected_x = a * (n_steps as f64 * dt).powi(2) / 2.0;
         assert_approx_eq::assert_approx_eq!(
             expected_x.norm(),
-            app.world
+            app.world()
                 .entity(test_entity)
                 .get::<Position>()
                 .expect("test_entity does not have velocity.")

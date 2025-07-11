@@ -76,7 +76,7 @@ pub fn calculate_rate_coefficients<const N: usize, T>(
     atom_query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|(_, _, _, mut rates)| {
+        .for_each(|(_, _, _, mut rates)| {
             rates.contents = [RateCoefficient::default(); N];
         });
 
@@ -85,7 +85,7 @@ pub fn calculate_rate_coefficients<const N: usize, T>(
         atom_query
             .par_iter_mut()
             .batching_strategy(batch_strategy.0.clone())
-            .for_each_mut(|(detunings, intensities, bfield, mut rates)| {
+            .for_each(|(detunings, intensities, bfield, mut rates)| {
                 let beam_direction_vector = gaussian.direction.normalize();
                 let costheta = if bfield.field.norm_squared() < (10.0 * f64::EPSILON) {
                     0.0
@@ -139,7 +139,7 @@ pub mod tests {
         let mut app = App::new();
         app.insert_resource(AtomECSBatchStrategy::default());
         let wavelength = 461e-9;
-        app.world
+        app.world_mut()
             .spawn(CoolingLight {
                 polarization: 1,
                 wavelength,
@@ -167,7 +167,7 @@ pub mod tests {
         lds.detuning_pi = detuning;
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(LaserDetuningSamplers {
                 contents: [lds; LASER_COUNT],
             })
@@ -186,7 +186,7 @@ pub mod tests {
             })
             .id();
 
-        app.add_system(calculate_rate_coefficients::<LASER_COUNT, Strontium88_461>);
+        app.add_systems(Update, calculate_rate_coefficients::<LASER_COUNT, Strontium88_461>);
         app.update();
 
         let man_pref = Strontium88_461::rate_prefactor() * intensity;
@@ -198,7 +198,7 @@ pub mod tests {
             0.5 * man_pref / (detuning.powf(2.) + (Strontium88_461::gamma() / 2.).powf(2.));
 
         assert_approx_eq!(
-            app.world
+            app.world()
                 .entity(atom1)
                 .get::<RateCoefficients<Strontium88_461, LASER_COUNT>>()
                 .expect("entity not found")

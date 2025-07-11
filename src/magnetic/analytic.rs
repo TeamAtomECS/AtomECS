@@ -30,7 +30,7 @@ pub fn calculate_field_contributions<T>(
         samplers_query
             .par_iter_mut()
             .batching_strategy(batch_strategy.0.clone())
-            .for_each_mut(|(pos, mut sampler)| {
+            .for_each(|(pos, mut sampler)| {
                 // calculate field contribution
                 sampler.field += field.get_field(origin.pos, pos.pos);
 

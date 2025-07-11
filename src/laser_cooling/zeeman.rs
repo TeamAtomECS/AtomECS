@@ -65,7 +65,7 @@ pub fn calculate_zeeman_shift<T>(
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|(mut zeeman, magnetic_field)| {
+        .for_each(|(mut zeeman, magnetic_field)| {
             zeeman.sigma_plus = T::mup() / HBAR * magnetic_field.magnitude;
             zeeman.sigma_minus = T::mum() / HBAR * magnetic_field.magnitude;
             zeeman.sigma_pi = T::muz() / HBAR * magnetic_field.magnitude;
@@ -87,7 +87,7 @@ pub mod tests {
         let mut app = App::new();
         app.insert_resource(AtomECSBatchStrategy::default());
         let atom = app
-            .world
+            .world_mut()
             .spawn(MagneticFieldSampler {
                 field: Vector3::new(0.0, 0.0, 1.0),
                 magnitude: 1.0,
@@ -98,11 +98,11 @@ pub mod tests {
             .insert(Strontium88_461)
             .id();
 
-        app.add_system(calculate_zeeman_shift::<Strontium88_461>);
+        app.add_systems(Update, calculate_zeeman_shift::<Strontium88_461>);
         app.update();
 
         let result = app
-            .world
+            .world()
             .entity(atom)
             .get::<ZeemanShiftSampler<Strontium88_461>>()
             .expect("entity not found");
@@ -129,13 +129,13 @@ pub mod tests {
     fn test_attach_zeeman_sampler_to_newly_created_atoms() {
         let mut app = App::new();
         app.insert_resource(AtomECSBatchStrategy::default());
-        let atom = app.world.spawn(NewlyCreated).insert(Strontium88_461).id();
+        let atom = app.world_mut().spawn(NewlyCreated).insert(Strontium88_461).id();
 
-        app.add_system(attach_zeeman_shift_samplers_to_newly_created_atoms::<Strontium88_461>);
+        app.add_systems(Update, attach_zeeman_shift_samplers_to_newly_created_atoms::<Strontium88_461>);
         app.update();
 
         assert!(app
-            .world
+            .world()
             .entity(atom)
             .contains::<ZeemanShiftSampler<Strontium88_461>>());
     }

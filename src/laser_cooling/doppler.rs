@@ -37,7 +37,7 @@ pub fn calculate_doppler_shift<const N: usize>(
     atom_query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|(mut samplers, _vel)| {
+        .for_each(|(mut samplers, _vel)| {
             samplers.contents = [DopplerShiftSampler::default(); N];
         });
 
@@ -63,7 +63,7 @@ pub fn calculate_doppler_shift<const N: usize>(
         atom_query
             .par_iter_mut()
             .batching_strategy(batch_strategy.0.clone())
-            .for_each_mut(|(mut sampler, vel)| {
+            .for_each(|(mut sampler, vel)| {
                 for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
                     sampler.contents[index.index].doppler_shift = vel
                         .vel
@@ -100,7 +100,7 @@ pub mod tests {
         app.insert_resource(AtomECSBatchStrategy::default());
 
         let wavelength = 780e-9;
-        app.world
+        app.world_mut()
             .spawn(CoolingLight {
                 polarization: 1,
                 wavelength,
@@ -120,7 +120,7 @@ pub mod tests {
 
         let atom_velocity = 100.0;
         let sampler1 = app
-            .world
+            .world_mut()
             .spawn(Velocity {
                 vel: Vector3::new(atom_velocity, 0.0, 0.0),
             })
@@ -129,11 +129,11 @@ pub mod tests {
             })
             .id();
 
-        app.add_system(calculate_doppler_shift::<1>);
+        app.add_systems(Update, calculate_doppler_shift::<1>);
         app.update();
 
         assert_approx_eq!(
-            app.world
+            app.world()
                 .entity(sampler1)
                 .get::<DopplerShiftSamplers<1>>()
                 .expect("entity not found")

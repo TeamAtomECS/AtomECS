@@ -47,7 +47,7 @@ pub struct RequiresIntensityGradientCalculation;
 pub struct LaserPlugin<const N: usize>;
 impl<const N: usize> Plugin for LaserPlugin<N> {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        app.add_systems(Update,
             (
                 attach_laser_components_to_newly_created_atoms::<N>,
                 index::index_lasers
@@ -93,16 +93,16 @@ pub mod tests {
 
         let mut app = App::new();
         app.insert_resource(AtomECSBatchStrategy::default());
-        app.add_plugin(LaserPlugin::<LASER_SIZE>);
+        app.add_plugins(LaserPlugin::<LASER_SIZE>);
 
-        let test_entity = app.world.spawn(NewlyCreated).id();
+        let test_entity = app.world_mut().spawn(NewlyCreated).id();
         app.update();
         assert!(app
-            .world
+            .world()
             .entity(test_entity)
             .contains::<LaserIntensitySamplers<LASER_SIZE>>());
         assert!(app
-            .world
+            .world()
             .entity(test_entity)
             .contains::<LaserIntensityGradientSamplers<LASER_SIZE>>());
     }

@@ -13,6 +13,7 @@
 //!   * The fields can all be multiplied by an f64 and added (eg `f64` and `Vector3<f64>` types).
 
 use bevy::prelude::*;
+use bevy::ecs::component::Mutable;
 
 use crate::integrator::{AtomECSBatchStrategy, Step, Timestep};
 use std::marker::PhantomData;
@@ -73,13 +74,13 @@ fn apply_ramp<T>(
     timestep: Res<Timestep>,
     step: Res<Step>,
 ) where
-    T: Lerp<T> + Component + Sync + Send + Clone,
+    T: Lerp<T> + Component<Mutability = Mutable> + Sync + Send + Clone,
 {
     let current_time = step.n as f64 * timestep.delta;
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|(mut comp, mut ramp)| {
+        .for_each(|(mut comp, mut ramp)| {
             comp.clone_from(&ramp.get_value(current_time));
         });
 }
@@ -87,7 +88,7 @@ fn apply_ramp<T>(
 /// Implements ramping of a given component type.
 pub struct RampPlugin<T>
 where
-    T: Lerp<T> + Component + Sync + Send + Clone,
+    T: Lerp<T> + Component + Clone,
 {
     phantom: PhantomData<T>,
 }
@@ -104,10 +105,10 @@ where
 
 impl<T> Plugin for RampPlugin<T>
 where
-    T: Lerp<T> + Component + Sync + Send + Clone,
+    T: Lerp<T> + Component<Mutability = Mutable> + Clone,
 {
     fn build(&self, app: &mut App) {
-        app.add_system(apply_ramp::<T>.in_base_set(CoreSet::Update));
+        app.add_systems(Update, apply_ramp::<T>);
     }
 }
 
@@ -164,8 +165,8 @@ pub mod tests {
         use assert_approx_eq::assert_approx_eq;
 
         let mut app = App::new();
-        app.add_plugin(RampPlugin::<ALerpComp>::default());
-        app.add_plugin(crate::integrator::IntegrationPlugin);
+        app.add_plugins(RampPlugin::<ALerpComp>::default());
+        app.add_plugins(crate::integrator::IntegrationPlugin);
 
         let frames = vec![
             (0.0, ALerpComp { value: 0.0 }),
@@ -176,18 +177,18 @@ pub mod tests {
             keyframes: frames,
         };
 
-        let test_entity = app.world.spawn(ALerpComp { value: 0.0 }).insert(ramp).id();
+        let test_entity = app.world_mut().spawn(ALerpComp { value: 0.0 }).insert(ramp).id();
 
         let dt = 0.1;
-        app.world.insert_resource(Timestep { delta: dt });
-        app.world.insert_resource(Step { n: 0 });
+        app.world_mut().insert_resource(Timestep { delta: dt });
+        app.world_mut().insert_resource(Step { n: 0 });
 
         // Perform dispatcher loop to ramp components.
         for i in 1..10 {
             app.update();
 
             assert_approx_eq!(
-                app.world
+                app.world()
                     .entity(test_entity)
                     .get::<ALerpComp>()
                     .expect("could not get component.")

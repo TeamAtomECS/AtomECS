@@ -63,7 +63,7 @@ pub fn sample_magnetic_grids(
         sampler_query
             .par_iter_mut()
             .batching_strategy(batch_strategy.0.clone())
-            .for_each_mut(|(pos, mut sampler)| {
+            .for_each(|(pos, mut sampler)| {
                 let field = grid.get_field(&pos.pos);
                 sampler.field += field;
             });

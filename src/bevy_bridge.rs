@@ -1,4 +1,4 @@
-use bevy::{ecs::query::BatchingStrategy, prelude::*};
+use bevy::{ecs::batching::BatchingStrategy, prelude::*};
 
 use crate::atom::Position;
 
@@ -10,7 +10,7 @@ pub fn copy_positions(mut query: Query<(&Position, &mut Transform)>, scale: Res<
     query
         .par_iter_mut()
         .batching_strategy(BatchingStrategy::fixed(512))
-        .for_each_mut(|(pos, mut transform)| {
+        .for_each(|(pos, mut transform)| {
             transform.translation = Vec3::new(
                 (scale.0 * pos.pos[0]) as f32,
                 (scale.0 * pos.pos[1]) as f32,

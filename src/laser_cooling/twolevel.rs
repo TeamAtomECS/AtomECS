@@ -76,7 +76,7 @@ pub fn calculate_two_level_population<const N: usize, T: TransitionComponent>(
     atom_query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|(mut twolevel, mask, rates)| {
+        .for_each(|(mut twolevel, mask, rates)| {
             let mut sum_rates: f64 = 0.;
 
             for count in 0..rates.contents.len() {
@@ -118,7 +118,7 @@ pub mod tests {
         rc.rate = 1_000_000.0;
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(RateCoefficients {
                 contents: [rc; LASER_COUNT],
             })
@@ -129,7 +129,7 @@ pub mod tests {
             .insert(TwoLevelPopulation::<Strontium88_461>::default())
             .id();
 
-        app.add_system(calculate_two_level_population::<LASER_COUNT, Strontium88_461>);
+        app.add_systems(Update, calculate_two_level_population::<LASER_COUNT, Strontium88_461>);
         app.update();
 
         let mut sum_rates = 0.0;
@@ -141,7 +141,7 @@ pub mod tests {
         }
 
         assert_approx_eq!(
-            app.world
+            app.world()
                 .entity(atom1)
                 .get::<TwoLevelPopulation::<Strontium88_461>>()
                 .expect("entity not found")
@@ -164,7 +164,7 @@ pub mod tests {
         rc.rate = 1.0e10;
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(RateCoefficients {
                 contents: [rc; LASER_COUNT],
             })
@@ -175,11 +175,11 @@ pub mod tests {
             .insert(TwoLevelPopulation::<Strontium88_461>::default())
             .id();
 
-        app.add_system(calculate_two_level_population::<LASER_COUNT, Strontium88_461>);
+        app.add_systems(Update, calculate_two_level_population::<LASER_COUNT, Strontium88_461>);
         app.update();
 
         assert_approx_eq!(
-            app.world
+            app.world()
                 .entity(atom1)
                 .get::<TwoLevelPopulation::<Strontium88_461>>()
                 .expect("entity not found")

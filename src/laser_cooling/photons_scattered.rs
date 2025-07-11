@@ -53,7 +53,7 @@ pub fn calculate_mean_total_photons_scattered<T: TransitionComponent>(
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|(twolevel, mut total)| {
+        .for_each(|(twolevel, mut total)| {
             total.total = timestep.delta * T::gamma() * twolevel.excited;
         });
 }
@@ -120,7 +120,7 @@ pub fn calculate_expected_photons_scattered<const N: usize, T: TransitionCompone
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|(mut expected, rates, mask, total)| {
+        .for_each(|(mut expected, rates, mask, total)| {
             let mut sum_rates: f64 = 0.;
 
             for index in 0..rates.contents.len() {
@@ -231,7 +231,7 @@ pub fn calculate_actual_photons_scattered<const N: usize, T: TransitionComponent
             query
                 .par_iter_mut()
                 .batching_strategy(batch_strategy.0.clone())
-                .for_each_mut(|(expected, mut actual)| {
+                .for_each(|(expected, mut actual)| {
                     for index in 0..expected.contents.len() {
                         actual.contents[index].scattered = expected.contents[index].scattered;
                     }
@@ -241,7 +241,7 @@ pub fn calculate_actual_photons_scattered<const N: usize, T: TransitionComponent
             query
                 .par_iter_mut()
                 .batching_strategy(batch_strategy.0.clone())
-                .for_each_mut(|(expected, mut actual)| {
+                .for_each(|(expected, mut actual)| {
                     for index in 0..expected.contents.len() {
                         let lambda = expected.contents[index].scattered;
                         actual.contents[index].scattered = if lambda <= 1.0e-5 || lambda.is_nan() {
@@ -249,7 +249,7 @@ pub fn calculate_actual_photons_scattered<const N: usize, T: TransitionComponent
                         } else {
                             let poisson = Poisson::new(lambda).unwrap();
 
-                            poisson.sample(&mut rand::thread_rng())
+                            poisson.sample(&mut rand::rng())
                         }
                     }
                 });
@@ -285,19 +285,19 @@ pub mod tests {
         tlp.excited = 0.3;
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(TotalPhotonsScattered::<Strontium88_461>::default())
             .insert(Strontium88_461)
             .insert(tlp)
             .id();
 
-        app.add_system(calculate_mean_total_photons_scattered::<Strontium88_461>);
+        app.add_systems(Update, calculate_mean_total_photons_scattered::<Strontium88_461>);
         app.update();
 
         let scattered = Strontium88_461::gamma() * 0.3 * time_delta;
 
         assert_approx_eq!(
-            app.world
+            app.world()
                 .entity(atom1)
                 .get::<TotalPhotonsScattered<Strontium88_461>>()
                 .expect("entity not found")
@@ -319,7 +319,7 @@ pub mod tests {
         tps.total = 8.0;
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(tps)
             .insert(CoolingLaserSamplerMasks {
                 contents: [CoolingLaserSamplerMask { filled: true }; LASER_COUNT],
@@ -332,13 +332,13 @@ pub mod tests {
             })
             .id();
 
-        app.add_system(calculate_expected_photons_scattered::<LASER_COUNT, Strontium88_461>);
+        app.add_systems(Update, calculate_expected_photons_scattered::<LASER_COUNT, Strontium88_461>);
         app.update();
 
         let scattered = 8.0 / LASER_COUNT as f64;
 
         assert_approx_eq!(
-            app.world
+            app.world()
                 .entity(atom1)
                 .get::<ExpectedPhotonsScatteredVector<Strontium88_461, LASER_COUNT>>()
                 .expect("entity not found")

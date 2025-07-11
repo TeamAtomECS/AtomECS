@@ -170,7 +170,7 @@ where
         if !app.is_plugin_added::<LaserPlugin<N>>() {
             panic!("This plugin requires a LaserPlugin<N> to be added to the app first.");
         }
-        app.add_systems(
+        app.add_systems(Update,
             (
                 attach_components_to_newly_created_atoms::<N, T>,
                 zeeman::attach_zeeman_shift_samplers_to_newly_created_atoms::<T>,
@@ -178,7 +178,7 @@ where
             )
                 .in_set(LaserCoolingSystemsSet::Set),
         );
-        app.add_systems(
+        app.add_systems(Update,
             (
                 sampler_masks::populate_cooling_light_masks::<N>
                     .in_set(LaserCoolingSystemsSet::TwoLevelPopulationRequirements)
@@ -218,7 +218,7 @@ where
         //  Need to make sure each <T> 'stays in its lane', e.g. only writes values for those lasers.
         //
         // Have a base non-generic plugin, which does non-generic components, and add a generic plugin for species-specific systems?
-        app.world.init_resource::<ScatteringFluctuationsOption>();
+        app.world_mut().init_resource::<ScatteringFluctuationsOption>();
     }
 }
 
@@ -235,17 +235,17 @@ pub mod tests {
         let mut app = App::new();
 
         let test_entity = app
-            .world
+            .world_mut()
             .spawn(CoolingLight {
                 polarization: 1,
                 wavelength: 780e-9,
             })
             .id();
 
-        app.add_system(attach_components_to_cooling_lasers);
+        app.add_systems(Update, attach_components_to_cooling_lasers);
         app.update();
 
-        assert!(app.world.entity(test_entity).contains::<LaserIndex>());
+        assert!(app.world().entity(test_entity).contains::<LaserIndex>());
     }
 
     #[test]

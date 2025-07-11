@@ -23,7 +23,7 @@ fn apply_gravitational_forces(
         query
             .par_iter_mut()
             .batching_strategy(batch_strategy.0.clone())
-            .for_each_mut(|(mut force, mass)| {
+            .for_each(|(mut force, mass)| {
                 force.force +=
                     mass.value * constant::AMU * constant::GC * Vector3::new(0., 0., -1.);
             });
@@ -36,8 +36,8 @@ fn apply_gravitational_forces(
 pub struct GravityPlugin;
 impl Plugin for GravityPlugin {
     fn build(&self, app: &mut App) {
-        app.world.insert_resource(GravityConfiguration::default());
-        app.add_system(apply_gravitational_forces);
+        app.world_mut().insert_resource(GravityConfiguration::default());
+        app.add_systems(Update, apply_gravitational_forces);
     }
 }
 
@@ -53,10 +53,10 @@ pub mod tests {
     #[test]
     fn test_apply_gravitational_force_system() {
         let mut simulation = App::new();
-        simulation.add_plugin(GravityPlugin);
+        simulation.add_plugins(GravityPlugin);
         simulation.insert_resource(AtomECSBatchStrategy::default());
         let atom = simulation
-            .world
+            .world_mut()
             .spawn(Mass { value: 1.0 })
             .insert(Force {
                 force: Vector3::new(0.0, 0.0, 0.0),
@@ -70,7 +70,7 @@ pub mod tests {
         simulation.update();
         assert_approx_eq!(
             simulation
-                .world
+                .world()
                 .get::<Force>(atom)
                 .expect("entity not found")
                 .force[2],
@@ -85,7 +85,7 @@ pub mod tests {
         simulation.update();
         assert_approx_eq!(
             simulation
-                .world
+                .world()
                 .get::<Force>(atom)
                 .expect("entity not found")
                 .force[2],

@@ -54,8 +54,8 @@ fn main() {
     };
 
     let mut app = App::new();
-    app.add_plugin(LaserPlugin::<{ BEAM_NUMBER }>);
-    app.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, { BEAM_NUMBER }>::default());
+    app.add_plugins(LaserPlugin::<{ BEAM_NUMBER }>);
+    app.add_plugins(LaserCoolingPlugin::<Rubidium87_780D2, { BEAM_NUMBER }>::default());
     app.add_plugins(
         DefaultPlugins.set(TaskPoolPlugin {
             task_pool_options: TaskPoolOptions::with_num_threads(10),
@@ -64,17 +64,17 @@ fn main() {
             //     filter: "bevy_core=trace".to_string(),
             // }),
     );
-    app.add_plugin(atomecs::integrator::IntegrationPlugin);
-    app.add_plugin(atomecs::initiate::InitiatePlugin);
-    app.add_plugin(atomecs::magnetic::MagneticsPlugin);
-    app.add_plugin(atomecs::sim_region::SimulationRegionPlugin);
-    app.add_system(atomecs::output::console_output::console_output);
+    app.add_plugins(atomecs::integrator::IntegrationPlugin);
+    app.add_plugins(atomecs::initiate::InitiatePlugin);
+    app.add_plugins(atomecs::magnetic::MagneticsPlugin);
+    app.add_plugins(atomecs::sim_region::SimulationRegionPlugin);
+    app.add_systems(Update, atomecs::output::console_output::console_output);
     //app.add_startup_system(setup_world);
 
     // TODO: Configure bevy compute pool size
 
     // Create magnetic field.
-    app.world
+    app.world_mut()
         .spawn(QuadrupoleField3D::gauss_per_cm(18.2, Vector3::z()))
         .insert(Position {
             pos: Vector3::new(0.0, 0.0, 0.0),
@@ -86,7 +86,7 @@ fn main() {
     let radius = 66.7e-3 / (2.0_f64.sqrt());
     let beam_centre = Vector3::new(0.0, 0.0, 0.0);
 
-    app.world
+    app.world_mut()
         .spawn(GaussianBeam {
             intersection: beam_centre,
             e_radius: radius,
@@ -98,7 +98,7 @@ fn main() {
         .insert(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning, -1,
         ));
-    app.world
+    app.world_mut()
         .spawn(GaussianBeam {
             intersection: beam_centre,
             e_radius: radius,
@@ -110,7 +110,7 @@ fn main() {
         .insert(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning, -1,
         ));
-    app.world
+    app.world_mut()
         .spawn(GaussianBeam {
             intersection: beam_centre,
             e_radius: radius,
@@ -122,7 +122,7 @@ fn main() {
         .insert(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning, 1,
         ));
-    app.world
+    app.world_mut()
         .spawn(GaussianBeam {
             intersection: beam_centre,
             e_radius: radius,
@@ -134,7 +134,7 @@ fn main() {
         .insert(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning, 1,
         ));
-    app.world
+    app.world_mut()
         .spawn(GaussianBeam {
             intersection: beam_centre,
             e_radius: radius,
@@ -146,7 +146,7 @@ fn main() {
         .insert(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning, 1,
         ));
-    app.world
+    app.world_mut()
         .spawn(GaussianBeam {
             intersection: beam_centre,
             e_radius: radius,
@@ -160,7 +160,7 @@ fn main() {
         ));
 
     // Define timestep
-    app.world.insert_resource(Timestep { delta: 1.0e-6 });
+    app.world_mut().insert_resource(Timestep { delta: 1.0e-6 });
 
     let vel_dist = Normal::new(0.0, 0.22).unwrap();
     let pos_dist = Normal::new(0.0, 1.2e-4).unwrap();
@@ -168,7 +168,7 @@ fn main() {
 
     // Add atoms
     for _ in 0..configuration.n_atoms {
-        app.world
+        app.world_mut()
             .spawn(Position {
                 pos: Vector3::new(
                     pos_dist.sample(&mut rng),
@@ -193,8 +193,8 @@ fn main() {
     // Enable fluctuation options
     //  * Allow photon numbers to fluctuate.
     //  * Allow random force from emission of photons.
-    app.world.insert_resource(EmissionForceOption::default());
-    app.world
+    app.world_mut().insert_resource(EmissionForceOption::default());
+    app.world_mut()
         .insert_resource(ScatteringFluctuationsOption::default());
 
     let loop_start = Instant::now();

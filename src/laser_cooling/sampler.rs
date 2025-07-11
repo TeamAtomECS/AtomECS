@@ -86,7 +86,7 @@ pub fn calculate_laser_detuning<const N: usize, T: TransitionComponent>(
         atom_query
             .par_iter_mut()
             .batching_strategy(batch_strategy.0.clone())
-            .for_each_mut(|(mut detuning_sampler, doppler_samplers, zeeman_sampler)| {
+            .for_each(|(mut detuning_sampler, doppler_samplers, zeeman_sampler)| {
                 for (index, cooling) in laser_array.iter().take(number_in_iteration) {
                     let without_zeeman =
                         2.0 * constant::PI * (constant::C / cooling.wavelength - T::frequency())
@@ -117,7 +117,7 @@ pub mod tests {
         let mut app = App::new();
         app.insert_resource(AtomECSBatchStrategy::default());
         let wavelength = constant::C / Strontium88_461::frequency();
-        app.world
+        app.world_mut()
             .spawn(CoolingLight {
                 polarization: 1,
                 wavelength,
@@ -133,7 +133,7 @@ pub mod tests {
         zss.sigma_minus = -10.0e6;
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(DopplerShiftSamplers {
                 contents: [DopplerShiftSampler {
                     doppler_shift: 10.0e6, //rad/s
@@ -146,11 +146,11 @@ pub mod tests {
             })
             .id();
 
-        app.add_system(calculate_laser_detuning::<1, Strontium88_461>);
+        app.add_systems(Update, calculate_laser_detuning::<1, Strontium88_461>);
         app.update();
 
         assert_approx_eq!(
-            app.world
+            app.world()
                 .entity(atom1)
                 .get::<LaserDetuningSamplers<Strontium88_461, 1>>()
                 .expect("entity not found")
@@ -161,7 +161,7 @@ pub mod tests {
         );
 
         assert_approx_eq!(
-            app.world
+            app.world()
                 .entity(atom1)
                 .get::<LaserDetuningSamplers<Strontium88_461, 1>>()
                 .expect("entity not found")
@@ -171,7 +171,7 @@ pub mod tests {
             1e-2_f64
         );
         assert_approx_eq!(
-            app.world
+            app.world()
                 .entity(atom1)
                 .get::<LaserDetuningSamplers<Strontium88_461, 1>>()
                 .expect("entity not found")

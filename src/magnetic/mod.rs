@@ -67,7 +67,7 @@ fn clear_magnetic_field_sampler(
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|mut sampler| {
+        .for_each(|mut sampler| {
             sampler.magnitude = 0.;
             sampler.field = Vector3::new(0.0, 0.0, 0.0);
             sampler.gradient = Vector3::new(0.0, 0.0, 0.0);
@@ -86,7 +86,7 @@ pub fn calculate_magnetic_field_magnitude(
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|mut sampler| {
+        .for_each(|mut sampler| {
             sampler.magnitude = sampler.field.norm();
             if sampler.magnitude.is_nan() {
                 sampler.magnitude = 0.0;
@@ -102,7 +102,7 @@ fn calculate_magnetic_field_magnitude_gradient(
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|mut sampler| {
+        .for_each(|mut sampler| {
             let mut gradient = Vector3::new(0.0, 0.0, 0.0);
             for i in 0..3 {
                 gradient[i] =
@@ -139,7 +139,7 @@ impl Plugin for MagneticsPlugin {
     fn build(&self, app: &mut App) {
         //add_magnetics_systems_to_dispatch(&mut builder.dispatcher_builder, &[]);
 
-        app.add_systems(
+        app.add_systems(Update,
             (
                 clear_magnetic_field_sampler.before(MagneticSystemsSet::SampleFields),
                 analytic::calculate_field_contributions::<quadrupole::QuadrupoleField3D>
@@ -172,14 +172,14 @@ pub mod tests {
     #[test]
     fn test_magnetics_plugin() {
         let mut app = App::new();
-        app.add_plugin(MagneticsPlugin);
+        app.add_plugins(MagneticsPlugin);
         app.insert_resource(AtomECSBatchStrategy::default());
         app.insert_resource(Timestep::default());
         app.insert_resource(Step::default());
         //test_world.insert(crate::integrator::Step { n: 0 });
         //test_world.insert(crate::integrator::Timestep { delta: 1.0e-6 });
 
-        app.world
+        app.world_mut()
             .spawn(uniform::UniformMagneticField {
                 field: Vector3::new(2.0, 0.0, 0.0),
             })
@@ -192,7 +192,7 @@ pub mod tests {
             });
 
         let test_entity = app
-            .world
+            .world_mut()
             .spawn(Position {
                 pos: Vector3::new(1.0, 1.0, 1.0),
             })
@@ -202,7 +202,7 @@ pub mod tests {
         app.update();
 
         let sampler = app
-            .world
+            .world()
             .entity(test_entity)
             .get::<MagneticFieldSampler>()
             .expect("Cannot find entity");
@@ -216,11 +216,11 @@ pub mod tests {
         app.insert_resource(Step { n: 0 });
         app.insert_resource(AtomECSBatchStrategy::default());
         app.insert_resource(Timestep { delta: 1.0e-6 });
-        app.add_plugin(MagneticsPlugin);
-        let sampler_entity = app.world.spawn(NewlyCreated).id();
+        app.add_plugins(MagneticsPlugin);
+        let sampler_entity = app.world_mut().spawn(NewlyCreated).id();
         app.update();
         assert!(app
-            .world
+            .world()
             .entity(sampler_entity)
             .contains::<MagneticFieldSampler>());
     }
@@ -235,14 +235,14 @@ pub mod tests {
         app.insert_resource(Timestep { delta: 1.0e-6 });
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(Position {
                 pos: Vector3::new(2.0, 1.0, -5.0),
             })
             .insert(MagneticFieldSampler::default())
             .id();
 
-        app.world
+        app.world_mut()
             .spawn(quadrupole::QuadrupoleField3D::gauss_per_cm(
                 2.0,
                 Vector3::z(),
@@ -251,7 +251,7 @@ pub mod tests {
                 pos: Vector3::new(0.0, 0.0, 0.0),
             });
 
-        app.world
+        app.world_mut()
             .spawn(quadrupole::QuadrupoleField3D::gauss_per_cm(
                 1.0,
                 Vector3::z(),
@@ -260,11 +260,11 @@ pub mod tests {
                 pos: Vector3::new(0.0, 0.0, 0.0),
             });
 
-        app.add_plugin(MagneticsPlugin);
+        app.add_plugins(MagneticsPlugin);
         app.update();
 
         let test_gradient = app
-            .world
+            .world()
             .entity(atom1)
             .get::<MagneticFieldSampler>()
             .expect("entity not found")

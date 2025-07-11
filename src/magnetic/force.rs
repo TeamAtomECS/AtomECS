@@ -25,7 +25,7 @@ pub fn apply_magnetic_forces(
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|(mut force, sampler, dipole)| {
+        .for_each(|(mut force, sampler, dipole)| {
             let dipole_force = -dipole.mFgF * constant::BOHRMAG * sampler.gradient;
             force.force += dipole_force;
         })
@@ -42,11 +42,11 @@ pub mod tests {
     #[test]
     fn test_apply_magnetic_force_system() {
         let mut app = App::new();
-        app.add_system(apply_magnetic_forces);
+        app.add_systems(Update, apply_magnetic_forces);
         app.insert_resource(AtomECSBatchStrategy::default());
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(MagneticFieldSampler {
                 field: Vector3::new(0.0, 0.0, 0.0),
                 magnitude: 2.0,
@@ -59,7 +59,7 @@ pub mod tests {
 
         app.update();
         let force = app
-            .world
+            .world()
             .get_entity(atom1)
             .expect("entity not found")
             .get::<Force>()

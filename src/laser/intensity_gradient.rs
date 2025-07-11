@@ -52,7 +52,7 @@ pub fn sample_gaussian_laser_intensity_gradient<const N: usize, FilterT>(
         sampler_query
             .par_iter_mut()
             .batching_strategy(batch_strategy.0.clone())
-            .for_each_mut(|(mut sampler, pos)| {
+            .for_each(|(mut sampler, pos)| {
                 sampler.contents[index.index].gradient =
                     get_gaussian_beam_intensity_gradient(beam, pos, frame);
             });
@@ -85,7 +85,7 @@ pub mod tests {
             ellipticity: 0.0,
         };
 
-        app.world
+        app.world_mut()
             .spawn(LaserIndex {
                 index: 0,
                 initiated: true,
@@ -98,7 +98,7 @@ pub mod tests {
             .insert(TestComp);
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(Position {
                 pos: Vector3::new(10.0e-6, 0.0, 30.0e-6),
             })
@@ -107,11 +107,11 @@ pub mod tests {
             })
             .id();
 
-        app.add_system(sample_gaussian_laser_intensity_gradient::<1, TestComp>);
+        app.add_systems(Update, sample_gaussian_laser_intensity_gradient::<1, TestComp>);
         app.update();
 
         let sim_result_gradient = app
-            .world
+            .world()
             .entity(atom1)
             .get::<LaserIntensityGradientSamplers<1>>()
             .expect("Entity not found!")
@@ -163,7 +163,7 @@ pub mod tests {
             ellipticity: 0.0,
         };
 
-        app.world
+        app.world_mut()
             .spawn(LaserIndex {
                 index: 0,
                 initiated: true,
@@ -176,7 +176,7 @@ pub mod tests {
             .insert(TestComp);
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(Position {
                 pos: Vector3::new(20.0e-6, 20.0e-6, 20.0e-6),
             })
@@ -185,11 +185,11 @@ pub mod tests {
             })
             .id();
 
-        app.add_system(sample_gaussian_laser_intensity_gradient::<1, TestComp>);
+        app.add_systems(Update, sample_gaussian_laser_intensity_gradient::<1, TestComp>);
         app.update();
 
         let sim_result_gradient = app
-            .world
+            .world()
             .entity(atom1)
             .get::<LaserIntensityGradientSamplers<1>>()
             .expect("Entity not found!")

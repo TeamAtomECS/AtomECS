@@ -67,17 +67,17 @@ impl Surface for Cylinder {
         surface_position: &Vector3<f64>,
     ) -> (Vector3<f64>, Vector3<f64>) {
         // Should we spawn a point on the ends or the sleeve?
-        let mut rng = rand::thread_rng();
-        let spawn_on_ends = rng.gen_range(0.0..1.0) < (self.radius / (self.length + self.radius));
+        let mut rng = rand::rng();
+        let spawn_on_ends = rng.random_range(0.0..1.0) < (self.radius / (self.length + self.radius));
 
         if spawn_on_ends {
             //pick a side
-            let sign = match rng.gen::<bool>() {
+            let sign = match rng.random::<bool>() {
                 true => 1.0,
                 false => -1.0,
             };
-            let angle = rng.gen_range(0.0..2.0 * std::f64::consts::PI);
-            let f: f64 = rng.gen_range(0.0..1.0);
+            let angle = rng.random_range(0.0..2.0 * std::f64::consts::PI);
+            let f: f64 = rng.random_range(0.0..1.0);
             let radius = self.radius * f.sqrt();
             let normal = sign * self.direction;
             let point = surface_position
@@ -86,8 +86,8 @@ impl Surface for Cylinder {
                 + normal * self.length / 2.0;
             (point, normal)
         } else {
-            let angle = rng.gen_range(0.0..2.0 * std::f64::consts::PI);
-            let axial = rng.gen_range(-self.length..self.length) / 2.0;
+            let angle = rng.random_range(0.0..2.0 * std::f64::consts::PI);
+            let axial = rng.random_range(-self.length..self.length) / 2.0;
             let normal = self.perp_x * angle.cos() + self.perp_y * angle.sin();
             let point = surface_position + normal * self.radius + self.direction * axial;
             (point, normal)
@@ -114,10 +114,10 @@ impl Surface for Sphere {
         &self,
         surface_position: &Vector3<f64>,
     ) -> (Vector3<f64>, Vector3<f64>) {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
-        let theta = rng.gen_range(0.0..std::f64::consts::PI);
-        let phi = rng.gen_range(0.0..2.0 * std::f64::consts::PI);
+        let theta = rng.random_range(0.0..std::f64::consts::PI);
+        let phi = rng.random_range(0.0..2.0 * std::f64::consts::PI);
 
         let normal = Vector3::new(
             theta.sin() * phi.cos(),
@@ -151,16 +151,16 @@ impl Surface for Cuboid {
         &self,
         surface_position: &Vector3<f64>,
     ) -> (Vector3<f64>, Vector3<f64>) {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         let mut point = Vector3::new(
-            rng.gen_range(-self.half_width[0]..self.half_width[0]),
-            rng.gen_range(-self.half_width[1]..self.half_width[1]),
-            rng.gen_range(-self.half_width[2]..self.half_width[2]),
+            rng.random_range(-self.half_width[0]..self.half_width[0]),
+            rng.random_range(-self.half_width[1]..self.half_width[1]),
+            rng.random_range(-self.half_width[2]..self.half_width[2]),
         );
 
         // move to a random edge
-        let edge = rng.gen_range(0..6);
+        let edge = rng.random_range(0..6);
         match edge {
             0 => point[0] = -self.half_width[0],
             1 => point[0] = self.half_width[0],

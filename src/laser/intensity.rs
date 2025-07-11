@@ -48,7 +48,7 @@ pub fn initialise_laser_intensity_samplers<const N: usize>(
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|mut sampler| {
+        .for_each(|mut sampler| {
             sampler.contents = [LaserIntensitySampler::default(); N];
         })
 }
@@ -106,7 +106,7 @@ pub fn sample_laser_intensities<const N: usize, FilterT>(
         sampler_query
             .par_iter_mut()
             .batching_strategy(batch_strategy.0.clone())
-            .for_each_mut(|(mut samplers, pos)| {
+            .for_each(|(mut samplers, pos)| {
                 for (index, gaussian, mask, frame) in laser_array.iter().take(number_in_iteration) {
                     samplers.contents[index.index].intensity =
                         get_gaussian_beam_intensity(gaussian, pos, mask.as_ref(), frame.as_ref());
@@ -133,7 +133,7 @@ pub mod tests {
         let mut app = App::new();
         app.insert_resource(AtomECSBatchStrategy::default());
 
-        app.world
+        app.world_mut()
             .spawn(LaserIndex {
                 index: 0,
                 initiated: true,
@@ -149,14 +149,14 @@ pub mod tests {
             });
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(Position { pos: Vector3::y() })
             .insert(LaserIntensitySamplers {
                 contents: [LaserIntensitySampler::default(); 1],
             })
             .id();
 
-        app.add_system(sample_laser_intensities::<1, TestComp>);
+        app.add_systems(Update, sample_laser_intensities::<1, TestComp>);
         app.update();
 
         let actual_intensity = gaussian::get_gaussian_beam_intensity(
@@ -174,7 +174,7 @@ pub mod tests {
         );
 
         assert_approx_eq!(
-            app.world
+            app.world()
                 .entity(atom1)
                 .get::<LaserIntensitySamplers::<1>>()
                 .expect("entity not found")
@@ -192,18 +192,18 @@ pub mod tests {
         app.insert_resource(AtomECSBatchStrategy::default());
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(Position { pos: Vector3::y() })
             .insert(LaserIntensitySamplers {
                 contents: [LaserIntensitySampler { intensity: 1.0 }; 1],
             })
             .id();
 
-        app.add_system(initialise_laser_intensity_samplers::<1>);
+        app.add_systems(Update, initialise_laser_intensity_samplers::<1>);
         app.update();
 
         assert!(app
-            .world
+            .world()
             .entity(atom1)
             .get::<LaserIntensitySamplers::<1>>()
             .expect("entity not found")

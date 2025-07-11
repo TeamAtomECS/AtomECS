@@ -1,6 +1,6 @@
 //! Utility for creating simulations with a minimal set of commonly used plugins.
 
-use bevy::{core::TaskPoolThreadAssignmentPolicy, log::LogPlugin, prelude::*};
+use bevy::{app::TaskPoolThreadAssignmentPolicy, log::LogPlugin, prelude::*};
 
 use crate::{
     destructor::DestroyAtomsPlugin, gravity::GravityPlugin, initiate::InitiatePlugin,
@@ -25,8 +25,8 @@ impl SimulationBuilder {
     ///
     /// Plugin dependency should be enforced in individual plugin modules via `app.is_plugin_added`;
     /// panic if the plugins required are not already added.
-    pub fn add_plugin(&mut self, plugin: impl Plugin) {
-        self.app.add_plugin(plugin);
+    pub fn add_plugins(&mut self, plugin: impl Plugin) {
+        self.app.add_plugins(plugin);
     }
 
     /// Finalises the SimulationBuilder and gets the App from it.
@@ -44,6 +44,8 @@ impl Default for SimulationBuilder {
                 min_threads: 0,
                 max_threads: 0,
                 percent: 0.0,
+                on_thread_spawn: None,
+                on_thread_destroy: None,
             },
 
             // Use 25% of cores for async compute, at least 1, no more than 4
@@ -51,6 +53,8 @@ impl Default for SimulationBuilder {
                 min_threads: 0,
                 max_threads: 0,
                 percent: 0.0,
+                on_thread_spawn: None,
+                on_thread_destroy: None,
             },
             min_total_threads: 1,
             max_total_threads: usize::MAX,
@@ -58,22 +62,24 @@ impl Default for SimulationBuilder {
                 min_threads: 1,
                 max_threads: usize::MAX,
                 percent: 100.0,
+                on_thread_spawn: None,
+                on_thread_destroy: None,
             },
         };
 
-        builder.app.add_plugin(LogPlugin::default());
-        builder.app.add_plugin(TaskPoolPlugin {
+        builder.app.add_plugins(LogPlugin::default());
+        builder.app.add_plugins(TaskPoolPlugin {
             //task_pool_options: TaskPoolOptions::with_num_threads(10),
             task_pool_options,
         });
 
-        builder.app.add_plugin(IntegrationPlugin);
-        builder.app.add_plugin(MagneticsPlugin);
-        builder.app.add_plugin(SimulationRegionPlugin);
-        builder.app.add_plugin(GravityPlugin);
-        builder.app.add_plugin(DestroyAtomsPlugin);
-        builder.app.add_plugin(InitiatePlugin);
-        builder.app.add_system(console_output);
+        builder.app.add_plugins(IntegrationPlugin);
+        builder.app.add_plugins(MagneticsPlugin);
+        builder.app.add_plugins(SimulationRegionPlugin);
+        builder.app.add_plugins(GravityPlugin);
+        builder.app.add_plugins(DestroyAtomsPlugin);
+        builder.app.add_plugins(InitiatePlugin);
+        builder.app.add_systems(Update, console_output);
         builder
     }
 }

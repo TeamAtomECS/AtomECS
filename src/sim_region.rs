@@ -61,7 +61,7 @@ fn perform_region_tests<T: Volume + Component>(
         atom_query
             .par_iter_mut()
             .batching_strategy(batch_strategy.0.clone())
-            .for_each_mut(|(mut result, pos)| match result.result {
+            .for_each(|(mut result, pos)| match result.result {
                 Result::Reject => (),
                 _ => {
                     let contained = volume.contains(&vol_pos.pos, &pos.pos);
@@ -93,13 +93,13 @@ fn clear_region_tests(
     query
         .par_iter_mut()
         .batching_strategy(batch_strategy.0.clone())
-        .for_each_mut(|mut test| test.result = Result::Untested);
+        .for_each(|mut test| test.result = Result::Untested);
 }
 
 /// This system deletes all entities with a [RegionTest](struct.RegionTest.html)
 /// component with `Result::Reject` or `Result::Failed`.
 fn delete_failed_region_tests(
-    query: Query<(Entity, &RegionTest), Without<NewlyCreated>>, //do not create NewlyCreated atoms as other systems may be adding components.
+    query: Query<(Entity, &RegionTest), Without<NewlyCreated>>, //do not destroy NewlyCreated atoms as other systems may be adding components.
     mut commands: Commands,
 ) {
     for (entity, test) in query.iter() {
@@ -138,7 +138,7 @@ pub enum SimRegionSet {
 pub struct SimulationRegionPlugin;
 impl Plugin for SimulationRegionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        app.add_systems(Update, 
             (
                 clear_region_tests.before(SimRegionSet::RegionTestVolume),
                 perform_region_tests::<Sphere>.in_set(SimRegionSet::RegionTestVolume),
@@ -164,17 +164,17 @@ pub mod tests {
         let mut app = App::new();
 
         let tester = app
-            .world
+            .world_mut()
             .spawn(RegionTest {
                 result: Result::Accept,
             })
             .id();
 
-        app.add_plugin(SimulationRegionPlugin);
+        app.add_plugins(SimulationRegionPlugin);
         app.update();
 
         let test = app
-            .world
+            .world()
             .entity(tester)
             .get::<RegionTest>()
             .expect("Could not find entity");
@@ -188,12 +188,12 @@ pub mod tests {
     fn test_sphere_contains() {
         use rand;
         use rand::Rng;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut app = App::new();
 
         let sphere_pos = Vector3::new(1.0, 1.0, 1.0);
         let sphere_radius = 1.0;
-        app.world
+        app.world_mut()
             .spawn(Position { pos: sphere_pos })
             .insert(Sphere {
                 radius: sphere_radius,
@@ -206,12 +206,12 @@ pub mod tests {
         let mut tests = Vec::<(Entity, bool)>::new();
         for _ in 0..100 {
             let pos = Vector3::new(
-                rng.gen_range(-2.0..2.0),
-                rng.gen_range(-2.0..2.0),
-                rng.gen_range(-2.0..2.0),
+                rng.random_range(-2.0..2.0),
+                rng.random_range(-2.0..2.0),
+                rng.random_range(-2.0..2.0),
             );
             let entity = app
-                .world
+                .world_mut()
                 .spawn(RegionTest {
                     result: Result::Untested,
                 })
@@ -222,13 +222,13 @@ pub mod tests {
             tests.push((entity, delta.norm_squared() < sphere_radius * sphere_radius));
         }
 
-        app.add_system(perform_region_tests::<Sphere>);
+        app.add_systems(Update, perform_region_tests::<Sphere>);
         app.init_resource::<AtomECSBatchStrategy>();
         app.update();
 
         for (entity, result) in tests {
             let test_result = app
-                .world
+                .world()
                 .entity(entity)
                 .get::<RegionTest>()
                 .expect("Could not find entity");
@@ -244,12 +244,12 @@ pub mod tests {
     fn test_cuboid_contains() {
         use rand;
         use rand::Rng;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut app = App::new();
 
         let cuboid_pos = Vector3::new(1.0, 1.0, 1.0);
         let half_width = Vector3::new(0.2, 0.3, 0.1);
-        app.world
+        app.world_mut()
             .spawn(Position { pos: cuboid_pos })
             .insert(Cuboid { half_width })
             .insert(SimulationVolume {
@@ -260,12 +260,12 @@ pub mod tests {
         let mut tests = Vec::<(Entity, bool)>::new();
         for _ in 0..100 {
             let pos = Vector3::new(
-                rng.gen_range(-2.0..2.0),
-                rng.gen_range(-2.0..2.0),
-                rng.gen_range(-2.0..2.0),
+                rng.random_range(-2.0..2.0),
+                rng.random_range(-2.0..2.0),
+                rng.random_range(-2.0..2.0),
             );
             let entity = app
-                .world
+                .world_mut()
                 .spawn(RegionTest {
                     result: Result::Untested,
                 })
@@ -281,13 +281,13 @@ pub mod tests {
             ));
         }
 
-        app.add_system(perform_region_tests::<Cuboid>);
+        app.add_systems(Update, perform_region_tests::<Cuboid>);
         app.init_resource::<AtomECSBatchStrategy>();
         app.update();
 
         for (entity, result) in tests {
             let test_result = app
-                .world
+                .world()
                 .entity(entity)
                 .get::<RegionTest>()
                 .expect("Could not find entity");
@@ -302,9 +302,9 @@ pub mod tests {
     #[test]
     fn test_region_tests_are_added() {
         let mut app = App::new();
-        app.add_plugin(SimulationRegionPlugin);
-        let sampler_entity = app.world.spawn(NewlyCreated).id();
+        app.add_plugins(SimulationRegionPlugin);
+        let sampler_entity = app.world_mut().spawn(NewlyCreated).id();
         app.update();
-        assert!(app.world.entity(sampler_entity).contains::<RegionTest>());
+        assert!(app.world().entity(sampler_entity).contains::<RegionTest>());
     }
 }

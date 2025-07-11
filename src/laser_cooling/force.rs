@@ -51,7 +51,7 @@ pub fn calculate_absorption_forces<const N: usize, T: TransitionComponent>(
         atom_query
             .par_iter_mut()
             .batching_strategy(batch_strategy.0.clone())
-            .for_each_mut(|(scattered, mut force)| {
+            .for_each(|(scattered, mut force)| {
                 for (cooling, index, gaussian) in laser_array.iter().take(number_in_iteration) {
                     let new_force = scattered.contents[index.index].scattered * HBAR
                         / timestep.delta
@@ -112,9 +112,9 @@ pub fn calculate_emission_forces<const N: usize, T: TransitionComponent>(
                     atom_query
                         .par_iter_mut()
                         .batching_strategy(batch_strategy.0.clone())
-                        .for_each_mut(|(mut force, kick)| {
+                        .for_each(|(mut force, kick)| {
                             let total: u64 = kick.calculate_total_scattered();
-                            let mut rng = rand::thread_rng();
+                            let mut rng = rand::rng();
                             let omega = 2.0 * constant::PI * T::frequency();
                             let force_one_kick =
                                 constant::HBAR * omega / constant::C / timestep.delta;
@@ -173,7 +173,7 @@ pub mod tests {
         app.insert_resource(Timestep { delta: time_delta });
 
         let wavelength = Strontium88_461::wavelength();
-        app.world
+        app.world_mut()
             .spawn(CoolingLight {
                 polarization: 1,
                 wavelength,
@@ -196,19 +196,19 @@ pub mod tests {
         aps.scattered = number_scattered;
 
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(ActualPhotonsScatteredVector {
                 contents: [aps; LASER_COUNT],
             })
             .insert(Force::default())
             .id();
 
-        app.add_system(calculate_absorption_forces::<LASER_COUNT, Strontium88_461>);
+        app.add_systems(Update, calculate_absorption_forces::<LASER_COUNT, Strontium88_461>);
         app.update();
 
         let actual_force_x = number_scattered * HBAR * 2. * PI / wavelength / time_delta;
         assert_approx_eq!(
-            app.world
+            app.world()
                 .entity(atom1)
                 .get::<Force>()
                 .expect("entity not found")
@@ -231,7 +231,7 @@ pub mod tests {
         let mut aps = ActualPhotonsScattered::<Strontium88_461>::default();
         aps.scattered = number_scattered;
         let atom1 = app
-            .world
+            .world_mut()
             .spawn(ActualPhotonsScatteredVector {
                 contents: [aps; LASER_COUNT],
             })
@@ -239,14 +239,14 @@ pub mod tests {
             .insert(Strontium88_461)
             .id();
 
-        app.add_system(calculate_emission_forces::<LASER_COUNT, Strontium88_461>);
+        app.add_systems(Update, calculate_emission_forces::<LASER_COUNT, Strontium88_461>);
         app.update();
 
         let max_force_total =
             number_scattered * 2. * PI * Strontium88_461::frequency() / constant::C * HBAR
                 / time_delta;
         assert_approx_eq!(
-            app.world
+            app.world()
                 .entity(atom1)
                 .get::<Force>()
                 .expect("entity not found")

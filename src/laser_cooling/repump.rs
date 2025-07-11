@@ -20,8 +20,8 @@ pub struct RepumpLoss {
 
 impl RepumpLoss {
     pub fn if_loss(&self, number_scattering_events: f64) -> bool {
-        let mut rng = rand::thread_rng();
-        let result: f64 = rng.gen_range(0.0..1.0);
+        let mut rng = rand::rng();
+        let result: f64 = rng.random_range(0.0..1.0);
         result < (1.0 - self.depump_chance).powf(number_scattering_events)
     }
 }

@@ -51,15 +51,15 @@ pub mod tests {
 
         // Create simulation dispatcher
         let mut simulation = simulation::SimulationBuilder::default().build();
-        simulation.add_plugin(LaserPlugin::<{ BEAM_NUMBER }>);
-        simulation.add_plugin(LaserCoolingPlugin::<Rubidium87_780D2, { BEAM_NUMBER }>::default());
+        simulation.add_plugins(LaserPlugin::<{ BEAM_NUMBER }>);
+        simulation.add_plugins(LaserCoolingPlugin::<Rubidium87_780D2, { BEAM_NUMBER }>::default());
 
         // Disable scattering
         simulation.insert_resource(ScatteringFluctuationsOption::Off);
 
         // add laser to test world.
         simulation
-            .world
+            .world_mut()
             .spawn(CoolingLight::for_transition::<Rubidium87_780D2>(
                 detuning_megahz,
                 1,
@@ -75,11 +75,11 @@ pub mod tests {
 
         // Configure timestep to be one us so that calculated rates are MHz.
         let dt = 1.0e-6;
-        simulation.world.insert_resource(Timestep { delta: dt });
+        simulation.world_mut().insert_resource(Timestep { delta: dt });
 
         // add an atom to the world. We don't add force nor mass, because we don't need them.
         let atom = simulation
-            .world
+            .world_mut()
             .spawn(Position {
                 pos: Vector3::new(0.0, 0.0, 0.0),
             })
@@ -94,7 +94,7 @@ pub mod tests {
             .id();
 
         simulation
-            .world
+            .world_mut()
             .spawn(crate::magnetic::uniform::UniformMagneticField::gauss(
                 Vector3::new(0.1, 0.0, 0.0),
             ));
@@ -104,13 +104,13 @@ pub mod tests {
 
         // Reset position and velocity to zero.
         simulation
-            .world
+            .world_mut()
             .get_mut::<Position>(atom)
             .expect("Atom not found")
             .as_mut()
             .pos = Vector3::default();
         simulation
-            .world
+            .world_mut()
             .get_mut::<Velocity>(atom)
             .expect("Atom not found")
             .as_mut()
@@ -122,7 +122,7 @@ pub mod tests {
         let expected_scattered =
             analytic_scattering_rate(intensity, i_sat, delta, Rubidium87_780D2::gamma());
         let total_scattered = simulation
-            .world
+            .world()
             .get::<TotalPhotonsScattered<Rubidium87_780D2>>(atom)
             .expect("Could not find atom in storage.")
             .total
@@ -138,7 +138,7 @@ pub mod tests {
         let photon_momentum = crate::constant::HBAR * k;
         let analytic_force = (expected_scattered * dt) * photon_momentum / dt;
         let measured_force = simulation
-            .world
+            .world()
             .get::<Force>(atom)
             .expect("Atom does not have force component.")
             .force;

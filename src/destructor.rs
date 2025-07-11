@@ -12,7 +12,7 @@ fn delete_to_be_destroyed_entities(
     query: Query<Entity, With<ToBeDestroyed>>,
     mut commands: Commands,
 ) {
-    query.for_each(|entity| {
+    query.into_iter().for_each(|entity| {
         commands.entity(entity).despawn();
     });
 }
@@ -23,7 +23,7 @@ fn delete_to_be_destroyed_entities(
 pub struct DestroyAtomsPlugin;
 impl Plugin for DestroyAtomsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(delete_to_be_destroyed_entities.in_base_set(CoreSet::Update));
+        app.add_systems(Update, delete_to_be_destroyed_entities);
     }
 }
 
@@ -45,16 +45,16 @@ pub mod tests {
     #[test]
     fn test_to_be_destroyed_system() {
         let mut app = App::new();
-        app.add_plugin(DestroyAtomsPlugin);
+        app.add_plugins(DestroyAtomsPlugin);
 
-        let test_entity1 = app.world.spawn(Position::default()).id();
+        let test_entity1 = app.world_mut().spawn(Position::default()).id();
         let test_entity2 = app
-            .world
+            .world_mut()
             .spawn(Position::default())
             .insert(ToBeDestroyed)
             .id();
         app.update();
-        assert!(app.world.get_entity(test_entity1).is_some());
-        assert!(app.world.get_entity(test_entity2).is_none());
+        assert!(app.world().get_entity(test_entity1).is_ok());
+        assert!(app.world().get_entity(test_entity2).is_err());
     }
 }
