@@ -8,8 +8,8 @@
 extern crate atomecs_derive;
 
 pub mod atom;
-//pub mod atom_sources;
-//pub mod collisions;
+pub mod atom_sources;
+////pub mod collisions;
 pub mod constant;
 pub mod destructor;
 //pub mod dipole;

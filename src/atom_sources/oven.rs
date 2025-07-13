@@ -14,14 +14,13 @@ use crate::initiate::*;
 use super::VelocityCap;
 use super::WeightedProbabilityDistribution;
 use rand;
-use rand::distributions::Distribution;
+use rand::distr::Distribution;
 use rand::Rng;
 
-extern crate specs;
 use crate::atom::*;
 use nalgebra::Vector3;
 
-use specs::{Component, Entities, HashMapStorage, Join, LazyUpdate, Read, ReadStorage, System};
+use bevy::prelude::*;
 
 fn velocity_generate(
     v_mag: f64,
@@ -31,9 +30,9 @@ fn velocity_generate(
     let dir = &new_dir.normalize();
     let dir_1 = new_dir.cross(&Vector3::new(2.0, 1.0, 0.5)).normalize();
     let dir_2 = new_dir.cross(&dir_1).normalize();
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let theta = theta_distribution.sample(&mut rng);
-    let phi = rng.gen_range(0.0..2.0 * PI);
+    let phi = rng.random_range(0.0..2.0 * PI);
     let dir_div = dir_1 * theta.sin() * phi.cos() + dir_2 * theta.sin() * phi.sin();
     let dirf = dir * theta.cos() + dir_div;
     let v_out = dirf * v_mag;
@@ -120,6 +119,8 @@ impl<T> OvenBuilder<T> where T : AtomCreator {
 /// Additionally, any atom spawned with an angle greater than `max_theta` is ignored.
 /// For real ovens, the maximum theta is determined by geometric constraints, for example the presence of a 'lip' of given length and
 /// aperture radius.
+#[derive(Component)]
+#[component(storage = "SparseSet")]
 pub struct Oven<T> where T : AtomCreator {
     /// Temperature of the oven, in Kelvin
     pub temperature: f64,
@@ -146,27 +147,25 @@ impl<T> MaxwellBoltzmannSource for Oven<T> where T : AtomCreator {
         3.0
     }
 }
-impl<T> Component for Oven<T> where T : AtomCreator + 'static {
-    type Storage = HashMapStorage<Self>;
-}
+
 impl<T> Oven<T> where T : AtomCreator {
     pub fn get_random_spawn_position(&self) -> Vector3<f64> {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         match self.aperture {
             OvenAperture::Cubic { size } => {
                 let size = size;
-                let pos1 = rng.gen_range(-0.5 * size[0]..0.5 * size[0]);
-                let pos2 = rng.gen_range(-0.5 * size[1]..0.5 * size[1]);
-                let pos3 = rng.gen_range(-0.5 * size[2]..0.5 * size[2]);
+                let pos1 = rng.random_range(-0.5 * size[0]..0.5 * size[0]);
+                let pos2 = rng.random_range(-0.5 * size[1]..0.5 * size[1]);
+                let pos3 = rng.random_range(-0.5 * size[2]..0.5 * size[2]);
                 Vector3::new(pos1, pos2, pos3)
             }
             OvenAperture::Circular { radius, thickness } => {
                 let dir = self.direction.normalize();
                 let dir_1 = dir.cross(&Vector3::new(2.0, 1.0, 0.5)).normalize();
                 let dir_2 = dir.cross(&dir_1).normalize();
-                let theta = rng.gen_range(0.0..2. * constant::PI);
-                let r = rng.gen_range(0.0..radius);
-                let h = rng.gen_range(-0.5 * thickness..0.5 * thickness);
+                let theta = rng.random_range(0.0..2. * constant::PI);
+                let r = rng.random_range(0.0..radius);
+                let h = rng.random_range(-0.5 * thickness..0.5 * thickness);
                 dir * h + r * dir_1 * theta.sin() + r * dir_2 * theta.cos()
             }
         }
@@ -176,69 +175,48 @@ impl<T> Oven<T> where T : AtomCreator {
 /// This system creates atoms from an oven source.
 ///
 /// The oven points in the direction [Oven.direction].
-#[derive(Default)]
-pub struct OvenCreateAtomsSystem<T>(PhantomData<T>) where T : AtomCreator;
 
-impl<'a, T> System<'a> for OvenCreateAtomsSystem<T> where T : AtomCreator + 'static {
-    type SystemData = (
-        Entities<'a>,
-        ReadStorage<'a, Oven<T>>,
-        ReadStorage<'a, AtomNumberToEmit>,
-        ReadStorage<'a, Position>,
-        ReadStorage<'a, PrecalculatedSpeciesInformation>,
-        Option<Read<'a, VelocityCap>>,
-        Read<'a, LazyUpdate>,
-    );
+pub fn oven_create_atoms_system<T>(
+    mut commands: Commands,
+    query: Query<(
+        &Oven<T>,
+        &AtomNumberToEmit,
+        &Position,
+        &PrecalculatedSpeciesInformation,
+    )>,
+    velocity_cap: Res<VelocityCap>,)
+    where T: AtomCreator + 'static 
+    {
+    let max_vel = velocity_cap.value;
 
-    fn run(
-        &mut self,
-        (entities, oven, numbers_to_emit, pos, precalcs, velocity_cap, updater): Self::SystemData,
-    ) {
-        let max_vel = match velocity_cap {
-            Some(cap) => cap.value,
-            None => std::f64::MAX,
-        };
-
-        let mut rng = rand::thread_rng();
-        for (oven, number_to_emit, oven_position, precalcs) in
-            (&oven, &numbers_to_emit, &pos, &precalcs).join()
-        {
-            for _i in 0..number_to_emit.number {
-                let (mass, speed) = precalcs.generate_random_mass_v(&mut rng);
-                if speed > max_vel {
-                    continue;
-                }
-
-                let new_atom = entities.create();
-                let (new_vel, theta) =
-                    velocity_generate(speed, &oven.direction, &oven.theta_distribution);
-
-                if theta > oven.max_theta {
-                    continue;
-                }
-                let start_position = oven_position.pos + oven.get_random_spawn_position();
-                updater.insert(
-                    new_atom,
-                    Position {
-                        pos: start_position,
-                    },
-                );
-                updater.insert(
-                    new_atom,
-                    Velocity {
-                        vel: new_vel,
-                    },
-                );
-                updater.insert(new_atom, Force::new());
-                updater.insert(new_atom, Mass { value: mass });
-                updater.insert(new_atom, Atom);
-                updater.insert(new_atom, InitialVelocity { vel: new_vel });
-                updater.insert(new_atom, NewlyCreated);
-                T::mutate(&updater, new_atom);
+    let mut rng = rand::rng();
+    for (oven, number_to_emit, oven_position, precalcs) in query.iter() {
+        for _i in 0..number_to_emit.number {
+            let (mass, speed) = precalcs.generate_random_mass_v(&mut rng);
+            if speed > max_vel {
+                continue;
             }
+
+            let (new_vel, theta) =
+                velocity_generate(speed, &oven.direction, &oven.theta_distribution);
+
+            if theta > oven.max_theta {
+                continue;
+            }
+            let start_position = oven_position.pos + oven.get_random_spawn_position();
+            let new_atom = commands.spawn((
+                Position { pos: start_position },
+                Velocity { vel: new_vel },
+                Force::default(),
+                Mass { value: mass },
+                Atom,
+                InitialVelocity { vel: new_vel },
+                NewlyCreated,)).id();
+            T::mutate(&mut commands, new_atom);
         }
     }
 }
+
 
 /// The jtheta distribution describes the angular dependence of atoms emitted from an oven.
 /// It describes collision-free flow through a cylindrical channel (transparent mode of
@@ -316,3 +294,5 @@ fn create_jtheta_distribution(
 
     WeightedProbabilityDistribution::new(thetas, weights)
 }
+
+

@@ -3,10 +3,11 @@
 use crate::atom::Mass;
 use rand;
 use rand::Rng;
-extern crate specs;
+
 
 use serde::{Deserialize, Serialize};
-use specs::{Component, HashMapStorage};
+
+use bevy::prelude::*;
 
 /// A [MassRatio](struct.MassRatio.html) describes the abundance of a given isotope.
 #[derive(Deserialize, Serialize, Clone)]
@@ -20,14 +21,13 @@ pub struct MassRatio {
 /// Describes the abundance of each mass.
 ///
 /// When atoms are created, a random mass is drawn from the [MassDistribution](struct.MassDistribution.html) and assigned to the atom.
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Component)]
+#[component(storage = "SparseSet")]
 pub struct MassDistribution {
     pub distribution: Vec<MassRatio>,
     pub normalised: bool,
 }
-impl Component for MassDistribution {
-    type Storage = HashMapStorage<Self>;
-}
+
 impl MassDistribution {
     /// Creates a new [MassDistribution](struct.MassDistribution.html), with the specified [MassRatio](struct.MassRatio.html)s.
     ///
@@ -58,8 +58,8 @@ impl MassDistribution {
     pub fn draw_random_mass(&self) -> Mass {
         assert!(self.normalised);
         let mut level = 0.;
-        let mut rng = rand::thread_rng();
-        let luck = rng.gen_range(0.0..1.0);
+        let mut rng = rand::rng();
+        let luck = rng.random_range(0.0..1.0);
         let mut finalmass = 0.;
         for masspercent in self.distribution.iter() {
             level += masspercent.ratio;

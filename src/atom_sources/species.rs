@@ -1,11 +1,12 @@
 //! Different implementations for created atom species.
 
-use specs::prelude::*;
+use bevy::prelude::*;
+// use bevy::ecs::entity::Entity;
 
 /// Allows atoms to be modified after they are created.
 pub trait AtomCreationModifier {
     /// Modifies the created atom
-    fn mutate(updater: &LazyUpdate, new_atom: Entity);
+    fn mutate(commands: &mut Commands, new_atom: Entity);
 }
 pub trait AtomCreator : AtomCreationModifier + Copy + Send + Sync + Default {}
 impl<T> AtomCreator for T where T : AtomCreationModifier + Copy + Send + Sync + Default {}
@@ -29,8 +30,8 @@ macro_rules! species {
         #[derive(Copy, Clone, Default)]
         pub struct $species_name;
         impl $crate::atom_sources::species::AtomCreationModifier for $species_name {
-            fn mutate(updater: &specs::LazyUpdate, new_atom: specs::Entity) {
-                updater.insert(new_atom, $transition::default());
+            fn mutate(commands: &mut bevy::prelude::Commands, new_atom: bevy::ecs::entity::Entity) {
+                commands.entity(new_atom).insert($transition::default());
             }
         }
     };

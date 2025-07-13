@@ -5,12 +5,12 @@ use super::WeightedProbabilityDistribution;
 use crate::constant::{AMU, BOLTZCONST, EXP};
 
 use rand;
-use rand::distributions::Distribution;
-use rand::distributions::WeightedIndex;
+use rand::distr::Distribution;
+use rand::distr::weighted::WeightedIndex;
 use rand::Rng;
 use std::marker::PhantomData;
 
-use specs::{Component, Entities, Entity, HashMapStorage, Join, ReadStorage, System, WriteStorage};
+use bevy::prelude::*;
 
 /// Creates and precalculates a [WeightedProbabilityDistribution](struct.WeightedProbabilityDistribution.html)
 /// which can be used to sample values of velocity, based on the effusive Maxwell-Boltzmann distribution.
@@ -77,6 +77,8 @@ impl Species {
 }
 
 /// Holds all precalculated information required for generating atoms on a per-species basis.
+#[derive(Component)]
+#[component(storage = "SparseSet")]
 pub struct PrecalculatedSpeciesInformation {
     /// All species that can be generated
     species: Vec<Species>,
@@ -107,9 +109,7 @@ impl PrecalculatedSpeciesInformation {
         }
     }
 }
-impl Component for PrecalculatedSpeciesInformation {
-    type Storage = HashMapStorage<Self>;
-}
+
 
 pub trait MaxwellBoltzmannSource {
     fn get_temperature(&self) -> f64;
@@ -121,44 +121,25 @@ pub trait MaxwellBoltzmannSource {
 /// This system removes the [MassDistribution](struct.MassDistribution.html) component from
 /// the oven and replaces it with a [PrecalculatedForSpeciesSystem] that contains all
 /// precalculated information required to generate atoms from the distribution.
-#[derive(Default)]
-pub struct PrecalculateForSpeciesSystem<T: MaxwellBoltzmannSource> {
-    pub marker: PhantomData<T>,
-}
 
-impl<'a, T> System<'a> for PrecalculateForSpeciesSystem<T>
-where
+pub fn precalculate_for_species_system<T>(
+    mut commands: Commands,
+    query: Query<(Entity, &T, &mut MassDistribution), Without<PrecalculatedSpeciesInformation>>,
+) where
     T: MaxwellBoltzmannSource + Component,
 {
-    type SystemData = (
-        Entities<'a>,
-        ReadStorage<'a, T>,
-        WriteStorage<'a, MassDistribution>,
-        WriteStorage<'a, PrecalculatedSpeciesInformation>,
-    );
-
-    fn run(&mut self, (entities, sources, mut mass_distributions, mut precalcs): Self::SystemData) {
-        // Precalculate for ovens which do not currently have precalculated information.
-        let mut precalculated_data = Vec::<(Entity, PrecalculatedSpeciesInformation)>::new();
-        for (entity, source, mass_dist, _) in
-            (&entities, &sources, &mass_distributions, !&precalcs).join()
-        {
-            let precalculated = PrecalculatedSpeciesInformation::create(
-                source.get_temperature(),
-                mass_dist,
-                source.get_v_dist_power(),
-            );
-            //mass_distributions.remove(entity);
-            //precalcs.insert(entity, precalculated);
-            precalculated_data.push((entity, precalculated));
-            println!("Precalculated velocity and mass distributions for an oven.");
-        }
-
-        for (entity, precalculated) in precalculated_data {
-            mass_distributions.remove(entity);
-            precalcs
-                .insert(entity, precalculated)
-                .expect("Could not add precalculated data to oven.");
-        }
+    for (entity, source, mass_distribution) in query.iter() {
+        let precalculated = PrecalculatedSpeciesInformation::create(
+            source.get_temperature(),
+            mass_distribution,
+            source.get_v_dist_power(),
+        );
+        
+        // Remove MassDistribution and add PrecalculatedSpeciesInformation
+        commands.entity(entity)
+            .remove::<MassDistribution>()
+            .insert(precalculated);
+            
+        println!("Precalculated velocity and mass distributions for a species.");
     }
 }
