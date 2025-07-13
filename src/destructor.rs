@@ -23,7 +23,7 @@ fn delete_to_be_destroyed_entities(
 pub struct DestroyAtomsPlugin;
 impl Plugin for DestroyAtomsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, delete_to_be_destroyed_entities);
+        app.add_systems(PostUpdate, delete_to_be_destroyed_entities);
     }
 }
 
