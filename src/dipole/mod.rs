@@ -1,25 +1,27 @@
 //! A module that implements systems and components for dipole trapping in AtomECS.
 
-use specs::DispatcherBuilder;
+// use specs::DispatcherBuilder;
 
 use crate::laser::LaserPlugin;
-use crate::{constant, simulation::Plugin};
+use crate::{constant};
 use crate::laser::index::LaserIndex;
+use crate::laser::intensity_gradient::sample_gaussian_laser_intensity_gradient;
+use crate::integrator::AtomECSBatchStrategy;
+use crate::dipole::force::apply_dipole_force_system;
+use crate::laser::LaserSystemsSet;
 
 use serde::{Deserialize, Serialize};
-use specs::prelude::*;
+use bevy::prelude::*;
 
 pub mod force;
 
 /// A component marking the entity as laser beam for dipole forces and
 /// holding properties of the light
-#[derive(Deserialize, Serialize, Clone, Copy)]
+#[derive(Deserialize, Serialize, Clone, Copy, Component)]
+#[component(storage = "SparseSet")]
 pub struct DipoleLight {
     ///wavelength of the laser light in SI units of m.
     pub wavelength: f64,
-}
-impl Component for DipoleLight {
-    type Storage = HashMapStorage<Self>;
 }
 
 impl DipoleLight {
@@ -37,14 +39,13 @@ impl DipoleLight {
 ///
 /// The force exterted on the atom is equal to:
 /// `force = polarizability.prefactor * intensity_gradient`
-#[derive(Deserialize, Serialize, Clone, Copy)]
+#[derive(Deserialize, Serialize, Clone, Copy, Component)]
+#[component(storage = "SparseSet")]
 pub struct Polarizability {
     /// The prefactor is a constant of proportionality that relates the intensity gradient (in W/m) to the force on the atom (in N).
     pub prefactor: f64,
 }
-impl Component for Polarizability {
-    type Storage = VecStorage<Self>;
-}
+
 impl Polarizability {
     /// Calculate the polarizability of an atom in a dipole beam of given wavelength, detuned from a strong optical transition.
     ///
@@ -66,19 +67,13 @@ impl Polarizability {
 }
 
 /// A system that attaches `DipoleLightIndex` components to entities which have `DipoleLight` but no index.
-pub struct AttachIndexToDipoleLightSystem;
-impl<'a> System<'a> for AttachIndexToDipoleLightSystem {
-    type SystemData = (
-        Entities<'a>,
-        ReadStorage<'a, DipoleLight>,
-        ReadStorage<'a, LaserIndex>,
-        Read<'a, LazyUpdate>,
-    );
 
-    fn run(&mut self, (ent, dipole_light, indices, updater): Self::SystemData) {
-        for (ent, _, _) in (&ent, &dipole_light, !&indices).join() {
-            updater.insert(ent, LaserIndex::default());
-        }
+pub fn attach_index_to_dipole_light_system(
+    mut commands: Commands,
+    query: Query<(Entity, &DipoleLight), Without<LaserIndex>>,
+) {
+    for (entity, _) in query.iter() {
+        commands.entity(entity).insert(LaserIndex::default());
     }
 }
 
@@ -91,38 +86,12 @@ impl<'a> System<'a> for AttachIndexToDipoleLightSystem {
 /// * `N`: The maximum number of laser beams (must match the `LaserPlugin`).
 pub struct DipolePlugin<const N : usize>;
 impl<const N: usize> Plugin for DipolePlugin<N> {
-    fn build(&self, builder: &mut crate::simulation::SimulationBuilder) {
-        add_systems_to_dispatch::<N>(&mut builder.dispatcher_builder, &[]);
-        register_components(&mut builder.world);
+    fn build(&self, app: &mut App) {
+        app
+            .add_systems(Update, apply_dipole_force_system::<N>.after(LaserSystemsSet::Set));
+        app
+            .add_systems(Update, 
+                attach_index_to_dipole_light_system
+                .before(LaserSystemsSet::IndexLasers)); // Perhaps there is a better way of scheduling this?
     }
-    fn deps(&self) -> Vec::<Box<dyn Plugin>> {
-        vec![Box::new(LaserPlugin::<{N}>)]
-    }
-}
-
-/// Adds the systems required by the module to the dispatcher.
-///
-/// #Arguments
-///
-/// `builder`: the dispatch builder to modify
-///
-/// `deps`: any dependencies that must be completed before the systems run.
-fn add_systems_to_dispatch<const N: usize>(
-    builder: &mut DispatcherBuilder<'static, 'static>,
-    deps: &[&str],
-) {
-    builder.add(
-        force::ApplyDipoleForceSystem::<N>,
-        "apply_dipole_force",
-        &["sample_intensity_gradient"],
-    );
-    builder.add(
-        crate::dipole::AttachIndexToDipoleLightSystem,
-        "attach_dipole_index",
-        deps,
-    );
-}
-
-fn register_components(world: &mut World) {
-    world.register::<DipoleLight>();
 }
