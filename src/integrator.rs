@@ -31,8 +31,6 @@ impl Default for Timestep {
     }
 }
 
-pub const INTEGRATE_POSITION_SYSTEM_NAME: &str = "integrate_position";
-
 #[derive(Resource, Clone)]
 pub struct AtomECSBatchStrategy(pub BatchingStrategy);
 impl Default for AtomECSBatchStrategy {
