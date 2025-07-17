@@ -2,10 +2,8 @@
 
 // use specs::DispatcherBuilder;
 
-use crate::laser::LaserPlugin;
 use crate::{constant};
 use crate::laser::index::LaserIndex;
-use crate::laser::intensity_gradient::sample_gaussian_laser_intensity_gradient;
 use crate::integrator::AtomECSBatchStrategy;
 use crate::dipole::force::apply_dipole_force_system;
 use crate::laser::LaserSystemsSet;

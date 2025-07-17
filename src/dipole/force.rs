@@ -13,7 +13,6 @@ use crate::integrator::AtomECSBatchStrategy;
 /// to add the respective amount of force to `Force`
 
 pub fn apply_dipole_force_system<const N: usize>(
-    mut commands: Commands,
     mut atom_query: Query<(&Polarizability, &LaserIntensityGradientSamplers<N>, &mut Force)>,
     laser_query: Query<(&DipoleLight, &LaserIndex)>,
     batch_strategy: Res<AtomECSBatchStrategy>,

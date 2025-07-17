@@ -16,7 +16,6 @@ extern crate multimap;
 use crate::atom::{Position, Velocity, Atom};
 use crate::constant::{PI, SQRT2};
 use crate::integrator::Timestep;
-use crate::simulation::{SimulationBuilder};
 use hashbrown::HashMap;
 use nalgebra::Vector3;
 use rand::Rng;
@@ -65,7 +64,7 @@ impl Default for CollisionBox {
 impl CollisionBox {
     /// Perform collisions within a box.
     fn do_collisions(&mut self, params: CollisionParameters, dt: f64) {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         self.particle_number = self.entity_velocities.len() as i32;
         self.atom_number = self.particle_number as f64 * params.macroparticle;
 
@@ -100,14 +99,14 @@ impl CollisionBox {
             let collide = if num_collisions_left > 1.0 {
                 true
             } else {
-                rng.gen::<f64>() < num_collisions_left
+                rng.random::<f64>() < num_collisions_left
             };
 
             if collide {
-                let idx1 = rng.gen_range(0..self.entity_velocities.len());
+                let idx1 = rng.random_range(0..self.entity_velocities.len());
                 let mut idx2 = idx1;
                 while idx2 == idx1 {
-                    idx2 = rng.gen_range(0..self.entity_velocities.len())
+                    idx2 = rng.random_range(0..self.entity_velocities.len())
                 }
 
                 let v1 = self.entity_velocities[idx1].1;
@@ -153,20 +152,15 @@ pub struct CollisionsTracker {
 /// Initializes boxid component
 pub fn init_boxid_system(
     mut query: Query<(Entity, &Position), (Without<BoxID>, With<Atom>)>,
-    params: Res<CollisionParameters>,
     collisions_option: Res<ApplyCollisionsOption>,
     mut commands: Commands,
 ) {
     match collisions_option.apply_collision {
         false => return, // No need to initialize box IDs if collisions are not applied
         true => {
-            
-            //make hash table - dividing space up into grid
-            let n: i64 = params.box_number; // number of boxes per side
-        
             query
                 .iter_mut()
-                .for_each(|(entity, position)| {
+                .for_each(|(entity, _)| {
                     commands.entity(entity).insert(BoxID { id: 0 });
                 });},
     }
@@ -239,15 +233,15 @@ pub fn apply_collisions_system(
 
 
 fn do_collision(mut v1: Vector3<f64>, mut v2: Vector3<f64>) -> (Vector3<f64>, Vector3<f64>) {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     // Randomly modify velocities in CoM frame, conserving energy & momentum
     let vcm = 0.5 * (v1 + v2);
     let energy: f64 = 0.5 * ((v1 - vcm).norm().powi(2) + (v2 - vcm).norm().powi(2));
 
-    let cos_theta: f64 = rng.gen_range(-1.0..1.0);
+    let cos_theta: f64 = rng.random_range(-1.0..1.0);
     let sin_theta: f64 = (1.0 - cos_theta.powi(2)).sqrt();
-    let phi: f64 = rng.gen_range(0.0..2.0 * PI);
+    let phi: f64 = rng.random_range(0.0..2.0 * PI);
 
     let v_prime = Vector3::new(
         energy.sqrt() * sin_theta * phi.cos(),

@@ -164,7 +164,7 @@ fn main() {
 
     let vel_dist = Normal::new(0.0, 0.22).unwrap();
     let pos_dist = Normal::new(0.0, 1.2e-4).unwrap();
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     // Add atoms
     for _ in 0..configuration.n_atoms {
