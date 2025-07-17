@@ -13,33 +13,33 @@
 //!
 
 extern crate multimap;
-use crate::atom::{Position, Velocity};
+use crate::atom::{Position, Velocity, Atom};
 use crate::constant::{PI, SQRT2};
-use crate::integrator::{Timestep, INTEGRATE_VELOCITY_SYSTEM_NAME};
-use crate::simulation::{Plugin, SimulationBuilder};
+use crate::integrator::Timestep;
+use crate::simulation::{SimulationBuilder};
 use hashbrown::HashMap;
 use nalgebra::Vector3;
 use rand::Rng;
-use specs::{
-    Component, Entities, Join, LazyUpdate, Read, ReadExpect, ReadStorage, System, VecStorage,
-    WriteExpect, WriteStorage,
-};
+use bevy::prelude::*;
+use crate::integrator::IntegrationSet;
+use crate::integrator::AtomECSBatchStrategy;
 
 /// A resource that indicates that the simulation should apply scattering
-pub struct ApplyCollisionsOption;
+#[derive(Resource)]
+pub struct ApplyCollisionsOption{
+    pub apply_collision: bool,
+}
 
 /// Component that marks which box an atom is in for spatial partitioning
+#[derive(Component)]
 pub struct BoxID {
     /// ID of the box
     pub id: i64,
 }
-impl Component for BoxID {
-    type Storage = VecStorage<Self>;
-}
 
 /// A patition of space within which collisions can occur
-pub struct CollisionBox<'a> {
-    pub velocities: Vec<&'a mut Velocity>,
+pub struct CollisionBox<> {
+    pub entity_velocities: Vec<(Entity, Vector3<f64>)>,
     pub expected_collision_number: f64,
     pub collision_number: i32,
     pub density: f64,
@@ -48,10 +48,10 @@ pub struct CollisionBox<'a> {
     pub particle_number: i32,
 }
 
-impl Default for CollisionBox<'_> {
+impl Default for CollisionBox {
     fn default() -> Self {
         CollisionBox {
-            velocities: Vec::new(),
+            entity_velocities: Vec::new(),
             expected_collision_number: 0.0,
             density: 0.0,
             volume: 0.0,
@@ -62,11 +62,11 @@ impl Default for CollisionBox<'_> {
     }
 }
 
-impl CollisionBox<'_> {
+impl CollisionBox {
     /// Perform collisions within a box.
     fn do_collisions(&mut self, params: CollisionParameters, dt: f64) {
         let mut rng = rand::thread_rng();
-        self.particle_number = self.velocities.len() as i32;
+        self.particle_number = self.entity_velocities.len() as i32;
         self.atom_number = self.particle_number as f64 * params.macroparticle;
 
         // Only one atom or less in box - no collisions.
@@ -77,10 +77,10 @@ impl CollisionBox<'_> {
         ///// n*sigma*v total collisions
         // vbar is the average _speed_, not the average _velocity_.
         let mut vsum = 0.0;
-        for i in 0..self.velocities.len() {
-            vsum += self.velocities[i].vel.norm();
+        for (_, velocity) in &self.entity_velocities {
+            vsum += velocity.norm();
         }
-        let vbar = vsum / self.velocities.len() as f64;
+        let vbar = vsum / self.entity_velocities.len() as f64;
 
         // number of collisions is N*n*sigma*v*dt, where n is atom density and N is atom number
         // probability of one particle colliding is n*sigma*vrel*dt where n is the atom density, sigma cross section and vrel the average relative velocity
@@ -104,17 +104,17 @@ impl CollisionBox<'_> {
             };
 
             if collide {
-                let idx1 = rng.gen_range(0..self.velocities.len());
+                let idx1 = rng.gen_range(0..self.entity_velocities.len());
                 let mut idx2 = idx1;
                 while idx2 == idx1 {
-                    idx2 = rng.gen_range(0..self.velocities.len())
+                    idx2 = rng.gen_range(0..self.entity_velocities.len())
                 }
 
-                let v1 = self.velocities[idx1].vel;
-                let v2 = self.velocities[idx2].vel;
+                let v1 = self.entity_velocities[idx1].1;
+                let v2 = self.entity_velocities[idx2].1;
                 let (v1new, v2new) = do_collision(v1, v2);
-                self.velocities[idx1].vel = v1new;
-                self.velocities[idx2].vel = v2new;
+                self.entity_velocities[idx1].1 = v1new;
+                self.entity_velocities[idx2].1 = v2new;
                 self.collision_number += 1;
             }
 
@@ -125,7 +125,7 @@ impl CollisionBox<'_> {
 }
 
 /// Resource for defining collision relevant paramaters like macroparticle number, box width and number of boxes
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Resource)]
 pub struct CollisionParameters {
     /// number of real particles one simulation particle represents for collisions
     pub macroparticle: f64,
@@ -139,8 +139,8 @@ pub struct CollisionParameters {
     pub collision_limit: f64,
 }
 
-/// store stats about collisions
-#[derive(Clone)]
+/// Resource that stores stats about collisions
+#[derive(Clone, Resource)]
 pub struct CollisionsTracker {
     /// number of collisions in each box
     pub num_collisions: Vec<i32>,
@@ -150,91 +150,93 @@ pub struct CollisionsTracker {
     pub num_atoms: Vec<f64>,
 }
 
+/// Initializes boxid component
+pub fn init_boxid_system(
+    mut query: Query<(Entity, &Position), (Without<BoxID>, With<Atom>)>,
+    params: Res<CollisionParameters>,
+    collisions_option: Res<ApplyCollisionsOption>,
+    mut commands: Commands,
+) {
+    match collisions_option.apply_collision {
+        false => return, // No need to initialize box IDs if collisions are not applied
+        true => {
+            
+            //make hash table - dividing space up into grid
+            let n: i64 = params.box_number; // number of boxes per side
+        
+            query
+                .iter_mut()
+                .for_each(|(entity, position)| {
+                    commands.entity(entity).insert(BoxID { id: 0 });
+                });},
+    }
+}
+
 /// Performs collisions within the atom cloud using a spatially partitioned Monte-Carlo approach.
-pub struct ApplyCollisionsSystem;
-impl<'a> System<'a> for ApplyCollisionsSystem {
-    type SystemData = (
-        ReadStorage<'a, Position>,
-        ReadStorage<'a, crate::atom::Atom>,
-        WriteStorage<'a, Velocity>,
-        Option<Read<'a, ApplyCollisionsOption>>,
-        ReadExpect<'a, Timestep>,
-        Entities<'a>,
-        WriteStorage<'a, BoxID>,
-        Read<'a, LazyUpdate>,
-        ReadExpect<'a, CollisionParameters>,
-        WriteExpect<'a, CollisionsTracker>,
-    );
-
-    fn run(
-        &mut self,
-        (
-            positions,
-            atoms,
-            mut velocities,
-            collisions_option,
-            t,
-            entities,
-            mut boxids,
-            updater,
-            params,
-            mut tracker,
-        ): Self::SystemData,
-    ) {
-        use rayon::prelude::*;
-        use specs::ParJoin;
-
-        match collisions_option {
-            None => (),
-            Some(_) => {
-                //make hash table - dividing space up into grid
-                let n: i64 = params.box_number; // number of boxes per side
-
-                // Get all atoms which do not have boxIDs
-                for (entity, _, _) in (&entities, &atoms, !&boxids).join() {
-                    updater.insert(entity, BoxID { id: 0 });
-                }
-
-                // build list of ids for each atom
-                (&positions, &mut boxids)
-                    .par_join()
-                    .for_each(|(position, mut boxid)| {
-                        boxid.id = pos_to_id(position.pos, n, params.box_width);
-                    });
-
-                //insert atom velocity into hash
-                let mut map: HashMap<i64, CollisionBox> = HashMap::new();
-                for (velocity, boxid) in (&mut velocities, &boxids).join() {
-                    if boxid.id == i64::MAX {
-                        continue;
-                    } else {
-                        map.entry(boxid.id).or_default().velocities.push(velocity);
-                    }
-                }
-
-                // get immutable list of boxes and iterate in parallel
-                // (Note that using hashmap parallel values mut does not work in parallel, tested.)
-                let boxes: Vec<&mut CollisionBox> = map.values_mut().collect();
-                boxes.into_par_iter().for_each(|collision_box| {
-                    collision_box.do_collisions(*params, t.delta);
+pub fn apply_collisions_system(
+    mut query: Query<(Entity, &Position, &mut Velocity, &mut BoxID), With<Atom>>,
+    collisions_option: Res<ApplyCollisionsOption>,
+    timestep: Res<Timestep>,
+    params: Res<CollisionParameters>,
+    mut tracker: ResMut<CollisionsTracker>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
+) {
+    use rayon::prelude::*;
+    match collisions_option.apply_collision {
+        false => (),
+        true => {
+            // Assign box IDs to atoms
+            query
+                .par_iter_mut()
+                .batching_strategy(batch_strategy.0.clone())
+                .for_each(|(_, position, _, mut boxid)| {
+                    boxid.id = pos_to_id(position.pos, params.box_number, params.box_width);
                 });
 
-                tracker.num_atoms = map
-                    .values()
-                    .map(|collision_box| collision_box.atom_number)
-                    .collect();
-                tracker.num_collisions = map
-                    .values()
-                    .map(|collision_box| collision_box.collision_number)
-                    .collect();
-                tracker.num_particles = map
-                    .values()
-                    .map(|collision_box| collision_box.particle_number)
-                    .collect();
+            // insert atom velocity into hash
+            let mut map: HashMap<i64, CollisionBox> = HashMap::new();
+            for (entity, _, velocity, boxid) in query.iter() {
+                if boxid.id == i64::MAX {
+                    continue;
+                } else {
+                    map.entry(boxid.id).or_default()
+                        .entity_velocities.push((entity, velocity.vel));
+                }
             }
+
+            // get immutable list of boxes and iterate in parallel
+            // (Note that using hashmap parallel values mut does not work in parallel, tested.)
+            let boxes: Vec<&mut CollisionBox> = map.values_mut().collect();
+            boxes.into_par_iter().for_each(|collision_box| {
+                collision_box.do_collisions(*params, timestep.delta);
+            });
+
+            // Write back values.
+            for collision_box in map.values() {
+                for &(entity, new_velocity) in &collision_box.entity_velocities {
+                    if let Ok((_, _, mut velocity, _)) = query.get_mut(entity) {
+                        velocity.vel = new_velocity;
+                    }
+                }
+            }
+
+            // Update tracker
+            tracker.num_atoms = map
+                .values()
+                .map(|collision_box| collision_box.atom_number)
+                .collect();
+            tracker.num_collisions = map
+                .values()
+                .map(|collision_box| collision_box.collision_number)
+                .collect();
+            tracker.num_particles = map
+                .values()
+                .map(|collision_box| collision_box.particle_number)
+                .collect();
         }
     }
 }
+
 
 fn do_collision(mut v1: Vector3<f64>, mut v2: Vector3<f64>) -> (Vector3<f64>, Vector3<f64>) {
     let mut rng = rand::thread_rng();
@@ -287,16 +289,10 @@ fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
 
 pub struct CollisionPlugin;
 impl Plugin for CollisionPlugin {
-    fn build(&self, builder: &mut SimulationBuilder) {
+    fn build(&self, app: &mut App) {
         // Note that the collisions system must be applied after the velocity integrator or it will violate conservation of energy and cause heating
-        builder.dispatcher_builder.add(
-            ApplyCollisionsSystem,
-            "collisions",
-            &[INTEGRATE_VELOCITY_SYSTEM_NAME],
-        );
-    }
-    fn deps(&self) -> Vec<Box<dyn Plugin>> {
-        Vec::new()
+        app.add_systems(PostUpdate, init_boxid_system.after(IntegrationSet::EndIntegration));
+        app.add_systems(PostUpdate, apply_collisions_system.after(IntegrationSet::EndIntegration).after(init_boxid_system));
     }
 }
 
@@ -309,15 +305,14 @@ pub mod tests {
     use crate::initiate::NewlyCreated;
     #[allow(unused_imports)]
     use crate::integrator::{
-        Step, Timestep, VelocityVerletIntegratePositionSystem,
-        VelocityVerletIntegrateVelocitySystem,
+        Step, Timestep,
     };
 
     #[allow(unused_imports)]
     use nalgebra::Vector3;
     #[allow(unused_imports)]
-    use specs::prelude::*;
-    extern crate specs;
+    use bevy::prelude::*;
+    extern crate bevy;
 
     #[test]
     fn test_pos_to_id() {
@@ -375,44 +370,52 @@ pub mod tests {
     /// Test that the expected number of collisions in a CollisionBox is correct.
     #[test]
     fn collision_rate() {
-        use assert_approx_eq::assert_approx_eq;
-
-        let vel = Vector3::new(1.0, 0.0, 0.0);
-        const MACRO_ATOM_NUMBER: usize = 100;
-        let mut velocities: Vec<Velocity> = vec![Velocity { vel }; MACRO_ATOM_NUMBER];
-        let mut collision_box = CollisionBox {
-            velocities: velocities.iter_mut().collect(),
-            ..Default::default()
-        };
-
-        let params = CollisionParameters {
-            macroparticle: 10.0,
-            box_number: 1,
-            box_width: 1e-3,
-            sigma: 1e-8,
-            collision_limit: 10_000.0,
-        };
-        let dt = 1e-3;
-        collision_box.do_collisions(params, dt);
-        assert_eq!(collision_box.particle_number, MACRO_ATOM_NUMBER as i32);
-        let atom_number = params.macroparticle * MACRO_ATOM_NUMBER as f64;
-        assert_eq!(collision_box.atom_number, atom_number);
-        let density = atom_number / params.box_width.powi(3);
-        let expected_number =
-            (1.0 / SQRT2) * MACRO_ATOM_NUMBER as f64 * density * params.sigma * vel.norm() * dt;
-        assert_approx_eq!(
-            collision_box.expected_collision_number,
-            expected_number,
-            0.01
-        );
+    use assert_approx_eq::assert_approx_eq;
+    let vel = Vector3::new(1.0, 0.0, 0.0);
+    const MACRO_ATOM_NUMBER: usize = 100;
+    
+    // Create dummy entities for testing
+    let mut entity_velocities: Vec<(Entity, Vector3<f64>)> = Vec::new();
+    for i in 0..MACRO_ATOM_NUMBER {
+        let entity = Entity::PLACEHOLDER; // Or just use the same placeholder for all
+        entity_velocities.push((entity, vel));
     }
+    
+    let mut collision_box = CollisionBox {
+        entity_velocities,
+        ..Default::default()
+    };
+    
+    let params = CollisionParameters {
+        macroparticle: 10.0,
+        box_number: 1,
+        box_width: 1e-3,
+        sigma: 1e-8,
+        collision_limit: 10_000.0,
+    };
+    let dt = 1e-3;
+    collision_box.do_collisions(params, dt);
+    
+    assert_eq!(collision_box.particle_number, MACRO_ATOM_NUMBER as i32);
+    let atom_number = params.macroparticle * MACRO_ATOM_NUMBER as f64;
+    assert_eq!(collision_box.atom_number, atom_number);
+    let density = atom_number / params.box_width.powi(3);
+    let expected_number =
+        (1.0 / SQRT2) * MACRO_ATOM_NUMBER as f64 * density * params.sigma * vel.norm() * dt;
+    assert_approx_eq!(
+        collision_box.expected_collision_number,
+        expected_number,
+        0.01
+    );
+}
+
 
     /// Test that the system runs and causes nearby atoms to collide. More of an integration test than a unit test.
     #[test]
     fn test_collisions() {
         let mut simulation_builder = SimulationBuilder::default();
-        simulation_builder.add_end_frame_systems();
-        simulation_builder.add_plugin(CollisionPlugin);
+        // simulation_builder.add_end_frame_systems();
+        simulation_builder.add_plugins(CollisionPlugin);
         let mut sim = simulation_builder.build();
 
         let vel1 = Vector3::new(1.0, 0.0, 0.0);
@@ -423,37 +426,35 @@ pub mod tests {
 
         //atom 1 to collide
         let atom1 = sim
-            .world
-            .create_entity()
-            .with(Velocity { vel: vel1 })
-            .with(Position { pos: pos1 })
-            .with(Atom)
-            .with(Force::new())
-            .with(Mass { value: 87.0 })
-            .with(NewlyCreated)
-            .build();
+            .world_mut()
+            .spawn(Velocity { vel: vel1 })
+            .insert(Position { pos: pos1 })
+            .insert(Atom)
+            .insert(Force::default())
+            .insert(Mass { value: 87.0 })
+            .insert(NewlyCreated)
+            .id();
 
         //atom2 to collide
         let atom2 = sim
-            .world
-            .create_entity()
-            .with(Velocity { vel: vel2 })
-            .with(Position { pos: pos2 })
-            .with(Atom)
-            .with(Force::new())
-            .with(Mass { value: 87.0 })
-            .with(NewlyCreated)
-            .build();
+            .world_mut()
+            .spawn(Velocity { vel: vel2 })
+            .insert(Position { pos: pos2 })
+            .insert(Atom)
+            .insert(Force::default())
+            .insert(Mass { value: 87.0 })
+            .insert(NewlyCreated)
+            .id();
 
         let dt = 1.0;
-        sim.world.insert(Timestep { delta: dt });
-        sim.world.insert(ApplyCollisionsOption);
-        sim.world.insert(CollisionsTracker {
+        sim.world_mut().insert_resource(Timestep { delta: dt });
+        sim.world_mut().insert_resource(ApplyCollisionsOption{apply_collision: true});
+        sim.world_mut().insert_resource(CollisionsTracker {
             num_collisions: Vec::new(),
             num_atoms: Vec::new(),
             num_particles: Vec::new(),
         });
-        sim.world.insert(CollisionParameters {
+        sim.world_mut().insert_resource(CollisionParameters {
             macroparticle: 1.0,
             box_number: 10,
             box_width: 2.0,
@@ -462,16 +463,14 @@ pub mod tests {
         });
 
         for _i in 0..10 {
-            sim.step();
+            sim.update();
         }
 
-        let velocities = sim.world.read_storage::<Velocity>();
-        let vel1new = velocities.get(atom1).expect("atom1 not found");
-        let vel2new = velocities.get(atom2).expect("atom2 not found");
+        let vel1new = sim.world().entity(atom1).get::<Velocity>().expect("atom1 not found");
+        let vel2new = sim.world().entity(atom2).get::<Velocity>().expect("atom2 not found");
 
-        let positions = sim.world.read_storage::<Position>();
-        let pos1new = positions.get(atom1).expect("atom1 not found");
-        let pos2new = positions.get(atom2).expect("atom2 not found");
+        let pos1new = sim.world().entity(atom1).get::<Position>().expect("atom1 not found");
+        let pos2new = sim.world().entity(atom2).get::<Position>().expect("atom2 not found");
 
         assert_ne!(pos1, pos1new.pos);
         assert_ne!(pos2, pos2new.pos);
