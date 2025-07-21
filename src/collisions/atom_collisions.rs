@@ -151,7 +151,7 @@ pub struct CollisionsTracker {
 
 /// Initializes boxid component
 pub fn init_boxid_system(
-    mut query: Query<(Entity, &Position), (Without<BoxID>, With<Atom>)>,
+    mut query: Query<(Entity), (Without<BoxID>, With<Atom>)>,
     collisions_option: Res<ApplyCollisionsOption>,
     mut commands: Commands,
 ) {
@@ -160,7 +160,7 @@ pub fn init_boxid_system(
         true => {
             query
                 .iter_mut()
-                .for_each(|(entity, _)| {
+                .for_each(|(entity)| {
                     commands.entity(entity).insert(BoxID { id: 0 });
                 });},
     }
@@ -281,15 +281,6 @@ fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
     id
 }
 
-pub struct CollisionPlugin;
-impl Plugin for CollisionPlugin {
-    fn build(&self, app: &mut App) {
-        // Note that the collisions system must be applied after the velocity integrator or it will violate conservation of energy and cause heating
-        app.add_systems(PostUpdate, init_boxid_system.after(IntegrationSet::EndIntegration));
-        app.add_systems(PostUpdate, apply_collisions_system.after(IntegrationSet::EndIntegration).after(init_boxid_system));
-    }
-}
-
 pub mod tests {
     #[allow(unused_imports)]
     use super::*;
@@ -301,12 +292,14 @@ pub mod tests {
     use crate::integrator::{
         Step, Timestep,
     };
+    use crate::collisions::CollisionPlugin;
 
     #[allow(unused_imports)]
     use nalgebra::Vector3;
     #[allow(unused_imports)]
     use bevy::prelude::*;
     extern crate bevy;
+    use crate::simulation::SimulationBuilder;
 
     #[test]
     fn test_pos_to_id() {
@@ -341,13 +334,12 @@ pub mod tests {
     #[test]
     fn test_do_collision() {
         // do this test muliple times since there is a random element involved in do_collision
+        let v1 = Vector3::new(0.5, 1.0, 0.75);
+        let v2 = Vector3::new(0.2, 0.0, 1.25);
+        //calculate energy and momentum before
+        let ptoti = v1 + v2;
+        let energyi = 0.5 * (v1.norm_squared() + v2.norm_squared());
         for _i in 0..50 {
-            let v1 = Vector3::new(0.5, 1.0, 0.75);
-            let v2 = Vector3::new(0.2, 0.0, 1.25);
-            //calculate energy and momentum before
-            let ptoti = v1 + v2;
-            let energyi = 0.5 * (v1.norm_squared() + v2.norm_squared());
-
             let (v1new, v2new) = do_collision(v1, v2);
 
             //energy and momentum after
@@ -364,44 +356,44 @@ pub mod tests {
     /// Test that the expected number of collisions in a CollisionBox is correct.
     #[test]
     fn collision_rate() {
-    use assert_approx_eq::assert_approx_eq;
-    let vel = Vector3::new(1.0, 0.0, 0.0);
-    const MACRO_ATOM_NUMBER: usize = 100;
-    
-    // Create dummy entities for testing
-    let mut entity_velocities: Vec<(Entity, Vector3<f64>)> = Vec::new();
-    for i in 0..MACRO_ATOM_NUMBER {
-        let entity = Entity::PLACEHOLDER; // Or just use the same placeholder for all
-        entity_velocities.push((entity, vel));
+        use assert_approx_eq::assert_approx_eq;
+        let vel = Vector3::new(1.0, 0.0, 0.0);
+        const MACRO_ATOM_NUMBER: usize = 100;
+        
+        // Create dummy entities for testing
+        let mut entity_velocities: Vec<(Entity, Vector3<f64>)> = Vec::new();
+        for i in 0..MACRO_ATOM_NUMBER {
+            let entity = Entity::PLACEHOLDER; // Or just use the same placeholder for all
+            entity_velocities.push((entity, vel));
+        }
+        
+        let mut collision_box = CollisionBox {
+            entity_velocities,
+            ..Default::default()
+        };
+        
+        let params = CollisionParameters {
+            macroparticle: 10.0,
+            box_number: 1,
+            box_width: 1e-3,
+            sigma: 1e-8,
+            collision_limit: 10_000.0,
+        };
+        let dt = 1e-3;
+        collision_box.do_collisions(params, dt);
+        
+        assert_eq!(collision_box.particle_number, MACRO_ATOM_NUMBER as i32);
+        let atom_number = params.macroparticle * MACRO_ATOM_NUMBER as f64;
+        assert_eq!(collision_box.atom_number, atom_number);
+        let density = atom_number / params.box_width.powi(3);
+        let expected_number =
+            (1.0 / SQRT2) * MACRO_ATOM_NUMBER as f64 * density * params.sigma * vel.norm() * dt;
+        assert_approx_eq!(
+            collision_box.expected_collision_number,
+            expected_number,
+            0.01
+        );
     }
-    
-    let mut collision_box = CollisionBox {
-        entity_velocities,
-        ..Default::default()
-    };
-    
-    let params = CollisionParameters {
-        macroparticle: 10.0,
-        box_number: 1,
-        box_width: 1e-3,
-        sigma: 1e-8,
-        collision_limit: 10_000.0,
-    };
-    let dt = 1e-3;
-    collision_box.do_collisions(params, dt);
-    
-    assert_eq!(collision_box.particle_number, MACRO_ATOM_NUMBER as i32);
-    let atom_number = params.macroparticle * MACRO_ATOM_NUMBER as f64;
-    assert_eq!(collision_box.atom_number, atom_number);
-    let density = atom_number / params.box_width.powi(3);
-    let expected_number =
-        (1.0 / SQRT2) * MACRO_ATOM_NUMBER as f64 * density * params.sigma * vel.norm() * dt;
-    assert_approx_eq!(
-        collision_box.expected_collision_number,
-        expected_number,
-        0.01
-    );
-}
 
 
     /// Test that the system runs and causes nearby atoms to collide. More of an integration test than a unit test.

@@ -4,7 +4,7 @@ extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::collisions::CollisionPlugin;
-use lib::collisions::{ApplyCollisionsOption, CollisionParameters, CollisionsTracker};
+use lib::collisions::atom_collisions::{ApplyCollisionsOption, CollisionParameters, CollisionsTracker};
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::magnetic::force::{MagneticDipole};
