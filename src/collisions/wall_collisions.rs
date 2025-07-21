@@ -5,6 +5,7 @@ use crate::shapes::{
     Sphere as MySphere,
 }; // Aliasing issues.
 use crate::atom::{Atom, Position};
+use crate::integrator::AtomECSBatchStrategy;
 use nalgebra::Vector3;
 
 /// Struct to signify shape is a wall
@@ -162,9 +163,60 @@ fn init_wall_distance_system(
     query: Query<Entity, (With<Atom>, Without<WallDistance>)>,
 ) {
     for atom_entity in query.iter() {
-        commands.entity(atom_entity).insert(WallDistance { value: 0 }); // 0 = Far
+        commands.entity(atom_entity).insert(WallDistance { value: 0 }); 
     }
 }
+
+/// System that updates WallDistance for all atoms based on proximity to walls
+fn update_wall_distances_system(
+    mut atom_query: Query<(&Position, &mut WallDistance), With<Atom>>,
+    sphere_walls: Query<(&Position, &MySphere), With<Wall>>,
+    cuboid_walls: Query<(&Position, &MyCuboid), With<Wall>>,
+    cylinder_walls: Query<(&Position, &MyCylinder), With<Wall>>,
+    min_distance: Res<MinWallDistance>,
+    batch_strategy: Res<AtomECSBatchStrategy>, 
+) {
+    // use rayon::prelude::*;
+    // Currently not sure how to handle walls close to each other. This just extablishes a precedence for now.
+    
+    atom_query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each(|(atom_pos, mut wall_distance)| {
+            let mut new_distance = 0;
+            
+            for (wall_pos, sphere) in sphere_walls.iter() {
+                let distance = sphere.is_near_wall(&atom_pos.pos, &wall_pos.pos, min_distance.0);
+                if distance != 0 {
+                    new_distance = distance;
+                    break;
+                }
+            }
+            
+            if new_distance == 0 {
+                for (wall_pos, cuboid) in cuboid_walls.iter() {
+                    let distance = cuboid.is_near_wall(&atom_pos.pos, &wall_pos.pos, min_distance.0);
+                    if distance != 0 {
+                        new_distance = distance;
+                        break;
+                    }
+                }
+            }
+            
+            if new_distance == 0 {
+                for (wall_pos, cylinder) in cylinder_walls.iter() {
+                    let distance = cylinder.is_near_wall(&atom_pos.pos, &wall_pos.pos, min_distance.0);
+                    if distance != 0 {
+                        new_distance = distance;
+                        break;
+                    }
+                }
+            }
+            
+            wall_distance.value = new_distance;
+        });
+}
+
 
 #[cfg(test)]
 mod tests {
