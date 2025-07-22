@@ -22,18 +22,12 @@ use rand::Rng;
 use bevy::prelude::*;
 use crate::integrator::IntegrationSet;
 use crate::integrator::AtomECSBatchStrategy;
+use crate::collisions::spatial_grid::BoxID;
 
 /// A resource that indicates that the simulation should apply scattering
 #[derive(Resource)]
 pub struct ApplyCollisionsOption{
     pub apply_collision: bool,
-}
-
-/// Component that marks which box an atom is in for spatial partitioning
-#[derive(Component)]
-pub struct BoxID {
-    /// ID of the box
-    pub id: i64,
 }
 
 /// A patition of space within which collisions can occur
@@ -149,23 +143,6 @@ pub struct CollisionsTracker {
     pub num_atoms: Vec<f64>,
 }
 
-/// Initializes boxid component
-pub fn init_boxid_system(
-    mut query: Query<(Entity), (Without<BoxID>, With<Atom>)>,
-    collisions_option: Res<ApplyCollisionsOption>,
-    mut commands: Commands,
-) {
-    match collisions_option.apply_collision {
-        false => return, // No need to initialize box IDs if collisions are not applied
-        true => {
-            query
-                .iter_mut()
-                .for_each(|(entity)| {
-                    commands.entity(entity).insert(BoxID { id: 0 });
-                });},
-    }
-}
-
 /// Performs collisions within the atom cloud using a spatially partitioned Monte-Carlo approach.
 pub fn apply_collisions_system(
     mut query: Query<(Entity, &Position, &mut Velocity, &mut BoxID), With<Atom>>,
@@ -173,20 +150,11 @@ pub fn apply_collisions_system(
     timestep: Res<Timestep>,
     params: Res<CollisionParameters>,
     mut tracker: ResMut<CollisionsTracker>,
-    batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
     use rayon::prelude::*;
     match collisions_option.apply_collision {
         false => (),
         true => {
-            // Assign box IDs to atoms
-            query
-                .par_iter_mut()
-                .batching_strategy(batch_strategy.0.clone())
-                .for_each(|(_, position, _, mut boxid)| {
-                    boxid.id = pos_to_id(position.pos, params.box_number, params.box_width);
-                });
-
             // insert atom velocity into hash
             let mut map: HashMap<i64, CollisionBox> = HashMap::new();
             for (entity, _, velocity, boxid) in query.iter() {
@@ -254,33 +222,6 @@ fn do_collision(mut v1: Vector3<f64>, mut v2: Vector3<f64>) -> (Vector3<f64>, Ve
     (v1, v2)
 }
 
-fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
-    //Assume that atoms that leave the grid are too sparse to collide, so disregard them
-    //We'll assign them the max value of i64, and then check for this value when we do a collision and ignore them
-    let bound = (n as f64) / 2.0 * width;
-
-    let id: i64;
-    if pos[0].abs() > bound || pos[1].abs() > bound || pos[2].abs() > bound {
-        id = i64::MAX;
-    } else {
-        let xp: i64;
-        let yp: i64;
-        let zp: i64;
-
-        // even number of boxes, vertex of a box is on origin
-        // odd number of boxes, centre of a box is on the origin
-        // grid cells run from [0, width), i.e include lower bound but exclude upper
-
-        xp = (pos[0] / width + 0.5 * (n as f64)).floor() as i64;
-        yp = (pos[1] / width + 0.5 * (n as f64)).floor() as i64;
-        zp = (pos[2] / width + 0.5 * (n as f64)).floor() as i64;
-        //convert position to box id
-        id = xp + n * yp + n.pow(2) * zp;
-    }
-
-    id
-}
-
 pub mod tests {
     #[allow(unused_imports)]
     use super::*;
@@ -300,36 +241,6 @@ pub mod tests {
     use bevy::prelude::*;
     extern crate bevy;
     use crate::simulation::SimulationBuilder;
-
-    #[test]
-    fn test_pos_to_id() {
-        let n: i64 = 10;
-        let width: f64 = 2.0;
-
-        let pos1 = Vector3::new(0.0, 0.0, 0.0);
-        let pos2 = Vector3::new(1.0, 0.0, 0.0);
-        let pos3 = Vector3::new(2.0, 0.0, 0.0);
-        let pos4 = Vector3::new(9.9, 0.0, 0.0);
-        let pos5 = Vector3::new(-9.9, 0.0, 0.0);
-        let pos6 = Vector3::new(10.1, 0.0, 0.0);
-        let pos7 = Vector3::new(-9.9, -9.9, -9.9);
-
-        let id1 = pos_to_id(pos1, n, width);
-        let id2 = pos_to_id(pos2, n, width);
-        let id3 = pos_to_id(pos3, n, width);
-        let id4 = pos_to_id(pos4, n, width);
-        let id5 = pos_to_id(pos5, n, width);
-        let id6 = pos_to_id(pos6, n, width);
-        let id7 = pos_to_id(pos7, n, width);
-
-        assert_eq!(id1, 555);
-        assert_eq!(id2, 555);
-        assert_eq!(id3, 556);
-        assert_eq!(id4, 559);
-        assert_eq!(id5, 550);
-        assert_eq!(id6, i64::MAX);
-        assert_eq!(id7, 0);
-    }
 
     #[test]
     fn test_do_collision() {
@@ -362,7 +273,7 @@ pub mod tests {
         
         // Create dummy entities for testing
         let mut entity_velocities: Vec<(Entity, Vector3<f64>)> = Vec::new();
-        for i in 0..MACRO_ATOM_NUMBER {
+        for _i in 0..MACRO_ATOM_NUMBER {
             let entity = Entity::PLACEHOLDER; // Or just use the same placeholder for all
             entity_velocities.push((entity, vel));
         }

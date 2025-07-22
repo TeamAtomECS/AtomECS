@@ -176,7 +176,6 @@ fn update_wall_distances_system(
     min_distance: Res<MinWallDistance>,
     batch_strategy: Res<AtomECSBatchStrategy>, 
 ) {
-    // use rayon::prelude::*;
     // Currently not sure how to handle walls close to each other. This just extablishes a precedence for now.
     
     atom_query
@@ -225,13 +224,6 @@ mod tests {
     use crate::shapes::Sphere;
     use crate::atom::{Atom, Position};
     use nalgebra::Vector3;
-
-    // Helper to create test app with resources
-    fn setup_test_app() -> App {
-        let mut app = App::new();
-        app.insert_resource(MinWallDistance(0.2)); // 0.2 threshold
-        app
-    }
 
     #[test]
     fn test_sphere_near_wall_detection() {
