@@ -2,14 +2,101 @@ use bevy::prelude::*;
 use crate::integrator::AtomECSBatchStrategy;
 use crate::collisions::atom_collisions::CollisionParameters;
 use crate::collisions::atom_collisions::ApplyCollisionsOption;
+use crate::collisions::wall_collisions::{Wall, MinWallDistance};
 use crate::atom::{Position, Atom};
+use crate::shapes::{Cylinder as MyCylinder, Cuboid as MyCuboid, Sphere as MySphere};
 use nalgebra::Vector3;
+use hashbrown::HashSet;
+use crate::collisions::wall_collisions::NearWall;
 
 /// Component that marks which box an atom is in for spatial partitioning
 #[derive(Component)]
 pub struct BoxID {
     /// ID of the box
     pub id: i64,
+}
+
+/// Resource that stores which boxes are close enough to walls to need collision checking
+#[derive(Resource, Default)]
+pub struct WallProximityMap {
+    /// Set of box IDs that contain atoms that might be close to walls
+    pub wall_affected_boxes: HashSet<i64>,
+}
+
+/// One-time calculation of which boxes are near walls (since walls are static)
+pub fn calculate_wall_proximity_system(
+    sphere_walls: Query<(&Position, &MySphere), With<Wall>>,
+    cuboid_walls: Query<(&Position, &MyCuboid), With<Wall>>,
+    cylinder_walls: Query<(&Position, &MyCylinder), With<Wall>>,
+    params: Res<CollisionParameters>,
+    min_distance: Res<MinWallDistance>,
+    mut proximity_map: ResMut<WallProximityMap>,
+    collision_option: Res<ApplyCollisionsOption>,
+) {
+    if !collision_option.apply_collision {
+        return;
+    }
+
+    proximity_map.wall_affected_boxes.clear();
+    
+    let box_diagonal = params.box_width * 3.0_f64.sqrt();
+    let threshold = min_distance.0 + box_diagonal / 2.0; 
+
+    let half_grid = params.box_number / 2;
+
+    let (start, end) = if params.box_number % 2 == 0 {
+        (-half_grid, half_grid - 1)
+    } else {
+        (-half_grid, half_grid)
+    };
+
+    for x in start..=end {
+        for y in start..=end {
+            for z in start..=end {                
+                let box_center = Vector3::new(
+                x as f64 * params.box_width,
+                y as f64 * params.box_width,
+                z as f64 * params.box_width,
+            );
+            
+            let box_id = pos_to_id(box_center, params.box_number, params.box_width);
+                
+                let mut is_near_wall = false;
+
+                for (wall_pos, sphere) in sphere_walls.iter() {
+                    let distance = sphere.is_near_wall(&box_center, &wall_pos.pos, min_distance.0);
+                    if distance != 0 {
+                        is_near_wall = true;
+                        break;
+                    }
+                }
+                
+                if !is_near_wall {
+                    for (wall_pos, cuboid) in cuboid_walls.iter() {
+                        let distance = cuboid.is_near_wall(&box_center, &wall_pos.pos, min_distance.0);
+                        if distance != 0 {
+                            is_near_wall = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if !is_near_wall {
+                    for (wall_pos, cylinder) in cylinder_walls.iter() {
+                        let distance = cylinder.is_near_wall(&box_center, &wall_pos.pos, min_distance.0);
+                        if distance != 0 {
+                            is_near_wall = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if is_near_wall {
+                    proximity_map.wall_affected_boxes.insert(box_id);
+                }
+            }
+        }
+    }
 }
 
 /// Initializes boxid component
@@ -80,22 +167,6 @@ fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
 pub mod tests {
     #[allow(unused_imports)]
     use super::*;
-    #[allow(unused_imports)]
-    use crate::atom::{Atom, Force, Mass, Position, Velocity};
-    #[allow(unused_imports)]
-    use crate::initiate::NewlyCreated;
-    #[allow(unused_imports)]
-    use crate::integrator::{
-        Step, Timestep,
-    };
-    use crate::collisions::CollisionPlugin;
-
-    #[allow(unused_imports)]
-    use nalgebra::Vector3;
-    #[allow(unused_imports)]
-    use bevy::prelude::*;
-    extern crate bevy;
-    use crate::simulation::SimulationBuilder;
 
     #[test]
     fn test_pos_to_id() {

@@ -14,6 +14,6 @@ impl Plugin for CollisionPlugin {
         // Note that the collisions system must be applied after the velocity integrator or it will violate conservation of energy and cause heating
         app.add_systems(PostUpdate, init_boxid_system.after(IntegrationSet::EndIntegration));
         app.add_systems(PostUpdate, assign_boxid_system.after(init_boxid_system));
-        app.add_systems(PostUpdate, apply_collisions_system.after(IntegrationSet::EndIntegration).after(assign_boxid_system));
+        app.add_systems(PostUpdate, apply_collisions_system.after(assign_boxid_system));
     }
 }
