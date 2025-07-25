@@ -3,15 +3,40 @@ use crate::shapes::{
     Cylinder as MyCylinder,
     Cuboid as MyCuboid,
     Sphere as MySphere,
-}; // Aliasing issues.
-use crate::atom::{Atom, Position};
-use crate::integrator::AtomECSBatchStrategy;
+    Volume
+}; // Aliasing issues with bevy.
+use crate::atom::{Atom, Position, Velocity};
+use crate::integrator::{Timestep, AtomECSBatchStrategy};
 use nalgebra::Vector3;
+use approx::abs_diff_eq;
+use std::sync::Mutex;
+
+/// Stolen from sim_region.
+pub enum VolumeType {
+    /// Entities within the volume are accepted
+    /// Accounts for collision from the inside
+    Inclusive,
+    /// Entities outside the volume are accepted, entities within are rejected.
+    /// Accounts for collisions from the outside
+    Exclusive,
+}
 
 /// Struct to signify shape is a wall
 #[derive(Component)]
 #[component(storage = "SparseSet")]
-pub struct Wall;
+pub struct Wall{
+    pub volume_type: VolumeType,
+}
+
+/// Collision event
+/// Not sure if events are the best tool here, as opposed to components use elsewhere in the code.
+#[derive(Event)]
+pub struct CollisionEvent{
+    pub atom: Entity,
+    pub wall: Entity,
+    pub collision_point: Vector3<f64>,
+    pub collision_normal: Vector3<f64>
+}
 
 pub trait Intersect{
     /// Calculate intersection point between atom trajectory and shape and return point of intersection
@@ -25,7 +50,7 @@ pub trait Intersect{
 
 pub trait Normal{
     /// Calculate normal at point of intersection (collision point)
-    fn calculate_normal(&self, point: Vector3<f64>, wall_pos: Vector3<f64>) -> Vector3<f64>;
+    fn calculate_normal(&self, point: &Vector3<f64>, wall_pos: &Vector3<f64>) -> Option<Vector3<f64>>;
 }
 
 impl Intersect for MySphere{
@@ -35,9 +60,10 @@ impl Intersect for MySphere{
         wall_pos: &Vector3<f64>,
         time: f64
     ) -> Option<Vector3<f64>> {
+        // Calculate intersection
         let delta = atom_pos - wall_pos;
         let a = atom_vel.dot(atom_vel);
-        let b = 2.0 * atom_vel.dot(&delta);
+        let b = -2.0 * atom_vel.dot(&delta); // System is meant to run backwards i.e. calculate collision point after collision.
         let c = delta.dot(&delta) - &self.radius.powi(2);
         
         let discriminant = b.powi(2) - 4.0 * a * c;
@@ -86,54 +112,79 @@ impl Intersect for MyCylinder{
 }
 
 impl Normal for MySphere {
-    fn calculate_normal(&self, point: Vector3<f64>, wall_pos: Vector3<f64>) -> Vector3<f64> {
+    fn calculate_normal(&self, point: &Vector3<f64>, wall_pos: &Vector3<f64>) -> Option<Vector3<f64>> {
         let normal_vector = point - wall_pos;
-        normal_vector.normalize()
+        if abs_diff_eq!(normal_vector.norm(), self.radius, epsilon = 1e-10) {
+            Some(normal_vector.normalize())
+        } else { None } // Should never happen
     }
 }
 
 impl Normal for MyCuboid{
-    fn calculate_normal(&self, point: Vector3<f64>, wall_pos: Vector3<f64>) -> Vector3<f64> {
+    fn calculate_normal(&self, point: &Vector3<f64>, wall_pos: &Vector3<f64>) -> Option<Vector3<f64>> {
         todo!("Implement calculate normal")
     }
 }
 
 impl Normal for MyCylinder{
-    fn calculate_normal(&self, point: Vector3<f64>, wall_pos: Vector3<f64>) -> Vector3<f64> {
+    fn calculate_normal(&self, point: &Vector3<f64>, wall_pos: &Vector3<f64>) -> Option<Vector3<f64>> {
         todo!("Implement calculate normal")
     }
 }
 
-/// Calculates collision point and normal
-/// Should be run right after verlet integrate position
-pub fn calculate_collision_info_system(
-    query: Query<(&Position, &Velocity, &WallDistance, &OldWallDistance), With<Atom>>,
-    sphere_walls: Query<(&Position, &MySphere), With<Wall>>,
-    cuboid_walls: Query<(&Position, &MyCuboid), With<Wall>>,
-    cylinder_walls: Query<(&Position, &MyCylinder), With<Wall>>,
-    batch_strategy: Res<AtomECSBatchStrategy>, 
+/// Checks which atoms have collided by checking if they have exited the containing volume.
+/// Almost the same as perform_region_tests in sim_region.rs
+pub fn collision_check_system<T: Volume + Component + Intersect + Normal + Sync>(
+    wall_query: Query<(Entity, &T, &Wall, &Position)>,
+    atom_query: Query<(Entity, &Position, &Velocity), With<Atom>>,
+    batch_strategy: Res<AtomECSBatchStrategy>,
     timestep: Res<Timestep>,
-) {
-    // Makes no distinction between the positive (+1) and negative (-1) sides of two 
-    // different wall entities. Could be an issue with multiple walls close to each other.
-    dt = timestep.delta;
+    mut writer: EventWriter<CollisionEvent>,) {
 
-    query
-        .par_iter()
-        .batching_strategy(batch_strategy.0.clone())
-        .for_each(|atom_pos, atom_vel, wall_distance, old_wall_distance| {
-            if wall_distance*old_wall_distance == -1 { //collided
+    let dt = timestep.delta;
+    let all_events = Mutex::new(Vec::new());
 
-            for (wall_pos, sphere) in sphere_walls.iter() {
-                collision_point = sphere.intersect(atom_pos, atom_vel, wall_pos, dt);
-                normal = sphere.normal(collision_point.unwrap(), wall_pos);
-            }
+    for (wall, shape, wall_volume, wall_pos) in wall_query.iter() {
+        atom_query
+            .par_iter()
+            .batching_strategy(batch_strategy.0.clone())
+            .for_each_init(|| Vec::new(), |local_buffer, (atom, pos, vel)| {
+                let contained = shape.contains(&wall_pos.pos, &pos.pos);
+                let should_collide = match wall_volume.volume_type {
+                    VolumeType::Inclusive => !contained,
+                    VolumeType::Exclusive => contained,
+                };
 
-            for (wall_pos, cuboid) in cuboid_walls.iter() {
-            }
+                if should_collide {
+                    if let Some(collision_point) = shape.intersect(&pos.pos, &vel.vel, &wall_pos.pos, dt) {
+                        if let Some(collision_normal) = shape.calculate_normal(&collision_point, &wall_pos.pos) {
+                            let event = CollisionEvent {
+                                atom,
+                                wall,
+                                collision_point,
+                                collision_normal,
+                            };
 
-            for (wall_pos, cylinder) in cylinder_walls.iter() {
-            } 
-        }
-    });
+                            local_buffer.push(event);
+                        } else {
+                            eprintln!(
+                                "Collision point found not on surface. Atom pos: {}, Wall pos: {}",
+                                pos.pos, wall_pos.pos
+                            );
+                        }
+                    } else {
+                        eprintln!(
+                            "Collision point not found for collided atom. Atom pos: {}, Wall pos: {}",
+                            pos.pos, wall_pos.pos
+                        );
+                    }
+                }
+                let mut all = all_events.lock().unwrap();
+                all.extend(local_buffer.drain(..));
+            });
+    }
+    
+    for event in all_events.into_inner().unwrap() {
+        writer.write(event);
+    }
 }

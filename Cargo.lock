@@ -99,6 +99,7 @@ dependencies = [
 name = "atomecs"
 version = "0.8.1"
 dependencies = [
+ "approx",
  "assert_approx_eq",
  "atomecs-derive",
  "bevy",
