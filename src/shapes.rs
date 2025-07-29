@@ -36,8 +36,8 @@ pub struct Cylinder {
 impl Cylinder {
     pub fn new(radius: f64, length: f64, direction: Vector3<f64>) -> Cylinder {
         let dir = Vector3::new(0.23, 1.2, 0.4563).normalize();
-        let perp_x = direction.normalize().cross(&dir);
-        let perp_y = direction.normalize().cross(&perp_x);
+        let perp_x = direction.normalize().cross(&dir).normalize();
+        let perp_y = direction.normalize().cross(&perp_x).normalize();
         Cylinder {
             radius,
             length,
