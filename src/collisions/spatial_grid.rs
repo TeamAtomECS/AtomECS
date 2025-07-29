@@ -3,7 +3,6 @@ use crate::integrator::AtomECSBatchStrategy;
 use crate::collisions::atom_collisions::CollisionParameters;
 use crate::collisions::atom_collisions::ApplyCollisionsOption;
 use crate::atom::{Position, Atom};
-use crate::shapes::{Cylinder as MyCylinder, Cuboid as MyCuboid, Sphere as MySphere};
 use nalgebra::Vector3;
 
 /// Component that marks which box an atom is in for spatial partitioning
