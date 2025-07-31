@@ -10,6 +10,7 @@ use lib::integrator::Timestep;
 use lib::magnetic::force::{MagneticDipole};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::magnetic::top::UniformFieldRotator;
+use lib::magnetic::uniform::UniformMagneticField;
 use lib::output::file::FileOutputPlugin;
 use lib::output::file::Text;
 use lib::simulation::SimulationBuilder;
@@ -38,7 +39,9 @@ fn main() {
         .spawn(UniformFieldRotator{
             amplitude: 2e-3,
             frequency: 3000.0,
-        }); // Time averaged TOP theory assumes rotation frequency much greater than velocity of atoms
+        })
+        .insert(UniformMagneticField {field: Vector3::new(0.0, 0.0, 0.0)})
+        .insert(Position::default()); // Time averaged TOP theory assumes rotation frequency much greater than velocity of atoms
 
     let p_dist = Normal::new(0.0, 50e-6).unwrap();
     let v_dist = Normal::new(0.0, 0.004).unwrap(); // ~100nK
