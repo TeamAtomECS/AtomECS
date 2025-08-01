@@ -24,12 +24,6 @@ use crate::integrator::IntegrationSet;
 use crate::integrator::AtomECSBatchStrategy;
 use crate::collisions::spatial_grid::BoxID;
 
-/// A resource that indicates that the simulation should apply scattering
-#[derive(Resource)]
-pub struct ApplyCollisionsOption{
-    pub apply_collision: bool,
-}
-
 /// A patition of space within which collisions can occur
 pub struct CollisionBox<> {
     pub entity_velocities: Vec<(Entity, Vector3<f64>)>,
@@ -146,57 +140,51 @@ pub struct CollisionsTracker {
 /// Performs collisions within the atom cloud using a spatially partitioned Monte-Carlo approach.
 pub fn apply_collisions_system(
     mut query: Query<(Entity, &Position, &mut Velocity, &mut BoxID), With<Atom>>,
-    collisions_option: Res<ApplyCollisionsOption>,
     timestep: Res<Timestep>,
     params: Res<CollisionParameters>,
     mut tracker: ResMut<CollisionsTracker>,
 ) {
     use rayon::prelude::*;
-    match collisions_option.apply_collision {
-        false => (),
-        true => {
-            // insert atom velocity into hash
-            let mut map: HashMap<i64, CollisionBox> = HashMap::new();
-            for (entity, _, velocity, boxid) in query.iter() {
-                if boxid.id == i64::MAX {
-                    continue;
-                } else {
-                    map.entry(boxid.id).or_default()
-                        .entity_velocities.push((entity, velocity.vel));
-                }
-            }
-
-            // get immutable list of boxes and iterate in parallel
-            // (Note that using hashmap parallel values mut does not work in parallel, tested.)
-            let boxes: Vec<&mut CollisionBox> = map.values_mut().collect();
-            boxes.into_par_iter().for_each(|collision_box| {
-                collision_box.do_collisions(*params, timestep.delta);
-            });
-
-            // Write back values.
-            for collision_box in map.values() {
-                for &(entity, new_velocity) in &collision_box.entity_velocities {
-                    if let Ok((_, _, mut velocity, _)) = query.get_mut(entity) {
-                        velocity.vel = new_velocity;
-                    }
-                }
-            }
-
-            // Update tracker
-            tracker.num_atoms = map
-                .values()
-                .map(|collision_box| collision_box.atom_number)
-                .collect();
-            tracker.num_collisions = map
-                .values()
-                .map(|collision_box| collision_box.collision_number)
-                .collect();
-            tracker.num_particles = map
-                .values()
-                .map(|collision_box| collision_box.particle_number)
-                .collect();
+    // insert atom velocity into hash
+    let mut map: HashMap<i64, CollisionBox> = HashMap::new();
+    for (entity, _, velocity, boxid) in query.iter() {
+        if boxid.id == i64::MAX {
+            continue;
+        } else {
+            map.entry(boxid.id).or_default()
+                .entity_velocities.push((entity, velocity.vel));
         }
     }
+
+    // get immutable list of boxes and iterate in parallel
+    // (Note that using hashmap parallel values mut does not work in parallel, tested.)
+    let boxes: Vec<&mut CollisionBox> = map.values_mut().collect();
+    boxes.into_par_iter().for_each(|collision_box| {
+        collision_box.do_collisions(*params, timestep.delta);
+    });
+
+    // Write back values.
+    for collision_box in map.values() {
+        for &(entity, new_velocity) in &collision_box.entity_velocities {
+            if let Ok((_, _, mut velocity, _)) = query.get_mut(entity) {
+                velocity.vel = new_velocity;
+            }
+        }
+    }
+
+    // Update tracker
+    tracker.num_atoms = map
+        .values()
+        .map(|collision_box| collision_box.atom_number)
+        .collect();
+    tracker.num_collisions = map
+        .values()
+        .map(|collision_box| collision_box.collision_number)
+        .collect();
+    tracker.num_particles = map
+        .values()
+        .map(|collision_box| collision_box.particle_number)
+        .collect();
 }
 
 

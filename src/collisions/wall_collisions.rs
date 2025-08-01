@@ -1,6 +1,9 @@
 /// Wall collision logic. Does not work with forces/accelertions, or multiple entities.
 
 use bevy::prelude::*;
+use nalgebra::Vector3;
+use rand::Rng;
+use rand::distr::Distribution;
 use crate::shapes::{
     Cylinder as MyCylinder,
     Cuboid as MyCuboid,
@@ -9,7 +12,8 @@ use crate::shapes::{
 }; // Aliasing issues with bevy.
 use crate::atom::{Atom, Position, Velocity};
 use crate::integrator::{Timestep, AtomECSBatchStrategy};
-use nalgebra::Vector3;
+use crate::constant::PI;
+use super::LambertianProbabilityDistribution;
 
 #[derive(Resource)]
 pub struct MaxSteps(pub i32); // Max steps for sdf convergence
@@ -235,12 +239,45 @@ fn specular(
     reflected
 }
 
+// To be run once at startup
+pub fn create_cosine_distribution(mut commands: Commands) {
+    // tuple list of (theta, weight)
+    let mut thetas = Vec::<f64>::new();
+    let mut weights = Vec::<f64>::new();
+
+    // precalculate the discretized cosine distribution.
+    let n = 1000; // resolution over which to discretize `theta`.
+    for i in 0..n {
+        let theta = (i as f64) / (n as f64 + 1.0) * PI / 2.0;
+        let weight = theta.cos();
+        thetas.push(theta);
+        weights.push(weight);
+        // Note: we can exclude d_theta because it is constant and the distribution will be normalized.
+    }
+    let cosine_distribution = LambertianProbabilityDistribution::new(thetas, weights);
+    commands.insert_resource::<LambertianProbabilityDistribution>(cosine_distribution);
+}
 
 /// Diffuse collision (Lambertian)
 fn diffuse( 
     collision_normal: &Vector3<f64>, 
-    velocity: &Vector3<f64>) -> Vector3<f64> {
-    todo!()
+    velocity: &Vector3<f64>,
+    distribution: &LambertianProbabilityDistribution) -> Vector3<f64> {
+    // Get random weighted angles
+    let phi = rand::rng().random_range(0.0..2.0 * PI);
+    let theta = distribution.sample(&mut rand::rng());
+
+    // Get basis vectors
+    let dir = Vector3::new(65.514, 5.54, 41.5).normalize();
+    let perp_x = collision_normal.cross(&dir).normalize();
+    let perp_y = collision_normal.cross(&perp_x).normalize();
+    
+    // Get scattered velocity
+    let x = phi.cos() * theta.sin();
+    let y = phi.sin() * theta.sin();
+    let z = theta.cos();
+
+    (x * perp_x + y * perp_y + z * collision_normal) * velocity.norm()
 }
 
 /// Checks which atoms have collided by checking if they have exited the containing volume.
@@ -290,6 +327,7 @@ fn collision_check<T: Volume + Intersect + Normal>(
 fn do_wall_collision(
     atom: (&mut Position, &mut Velocity, &mut DistanceToTravel),
     collision: &CollisionInfo,
+    distribution: &LambertianProbabilityDistribution,
     dt: f64,
 ) -> f64 {
     let (mut atom_pos, mut atom_vel, mut distance) = atom;
@@ -338,6 +376,7 @@ pub fn wall_collision_system<T: Volume + Component + Intersect + Normal>(
     timestep: Res<Timestep>,
     threshold: Res<SurfaceThreshold>, 
     max_steps: Res<MaxSteps>,
+    distribution: Res<LambertianProbabilityDistribution>,
 ) {
     let tolerance = threshold.0;
     let max_steps = max_steps.0;
@@ -361,7 +400,7 @@ pub fn wall_collision_system<T: Volume + Component + Intersect + Normal>(
                         max_steps,
                     ) {
                         // Handle the collision
-                        let time_used = do_wall_collision((&mut pos, &mut vel, &mut distance), &collision_info, dt_atom);
+                        let time_used = do_wall_collision((&mut pos, &mut vel, &mut distance), &collision_info, &distribution, dt_atom);
                         collided = true;
                         dt_atom -= time_used;
                         if dt_atom < 0.0 {
@@ -381,7 +420,7 @@ pub fn wall_collision_system<T: Volume + Component + Intersect + Normal>(
 }
 
 /// Calculate distance to travel at the end of every frame
-/// To be run after verlet integrate velocity
+/// To be run before wall collision system
 pub fn reset_distance_to_travel_system(
     mut query: Query<(&Velocity, &mut DistanceToTravel), With<Atom>>,
     timestep: Res<Timestep>,
@@ -864,7 +903,8 @@ mod tests {
 
         fn test_system(
             mut query: Query<(Entity, &mut Position, &mut Velocity, &mut DistanceToTravel)>,
-            wall: Query<Entity, With<Wall>>) {
+            wall: Query<Entity, With<Wall>>,
+            distribution: Res<LambertianProbabilityDistribution>,) {
             query.iter_mut().for_each(|(atom, mut atom_pos, mut atom_vel, mut distance)| {
                 for wall in wall.iter() {
                     let dt = 1.0; // If you change this make sure to change the dt above as well
@@ -876,11 +916,12 @@ mod tests {
                         collision_point,
                         collision_normal,
                     };
-                    let time_used = do_wall_collision((&mut atom_pos, &mut atom_vel, &mut distance), &collision_info, dt);
+                    let time_used = do_wall_collision((&mut atom_pos, &mut atom_vel, &mut distance), &collision_info, &distribution, dt);
                     assert_approx_eq!(time_used, ((atom_pos.pos - atom_vel.vel*dt) - collision_point).norm()/atom_vel.vel.norm())
                 }
             });
         }
+        app.add_systems(Startup, create_cosine_distribution);
         app.add_systems(Update, test_system);
         app.update();
 
@@ -913,8 +954,8 @@ mod tests {
     //// Test multiple collisions
     //// Basically an integration test
     //// Needs to be changed to work with any reflection. 
-    //// Will also fail as is because OldForces Force element is private
     //// But with only specular reflection it does work 
+    //// Will also fail as is because OldForces Force element is private
     // #[test]
     // fn test_systems() {
     //     use crate::integrator::{IntegrationPlugin, IntegrationSet, Timestep, AtomECSBatchStrategy, OldForce};
@@ -955,7 +996,7 @@ mod tests {
     //     assert_approx_eq!(new_position[0], 0.0, 10*TOLERANCE);
     //     assert_approx_eq!(new_position[1], -1.0, 10*TOLERANCE);
     //     assert_approx_eq!(new_position[2], 0.0, 10*TOLERANCE);
-    }
+    // }
 }
 
 

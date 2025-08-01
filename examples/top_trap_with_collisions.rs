@@ -4,7 +4,8 @@ extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::collisions::CollisionPlugin;
-use lib::collisions::atom_collisions::{ApplyCollisionsOption, CollisionParameters, CollisionsTracker};
+use lib::collisions::atom_collisions::{CollisionParameters, CollisionsTracker};
+use lib::collisions::{ApplyAtomCollisions, ApplyWallCollisions};
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::magnetic::force::{MagneticDipole};
@@ -69,7 +70,8 @@ fn main() {
             .insert(Mass { value: 87.0 });
     }
 
-    sim.world_mut().insert_resource(ApplyCollisionsOption{apply_collision: true });
+    sim.world_mut().insert_resource(ApplyAtomCollisions{apply_atom_collision: true });
+    sim.world_mut().insert_resource(ApplyWallCollisions{apply_wall_collision: false });
     sim.world_mut().insert_resource(CollisionParameters {
         macroparticle: 4e2,
         box_number: 200, //Any number large enough to cover entire cloud with collision boxes. Overestimating box number will not affect performance.

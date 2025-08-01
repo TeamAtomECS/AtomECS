@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use crate::integrator::AtomECSBatchStrategy;
 use crate::collisions::atom_collisions::CollisionParameters;
-use crate::collisions::atom_collisions::ApplyCollisionsOption;
 use crate::atom::{Position, Atom};
 use nalgebra::Vector3;
 
@@ -15,40 +14,30 @@ pub struct BoxID {
 /// Initializes boxid component
 pub fn init_boxid_system(
     mut query: Query<(Entity), (Without<BoxID>, With<Atom>)>,
-    collisions_option: Res<ApplyCollisionsOption>,
     mut commands: Commands,
 ) {
-    match collisions_option.apply_collision {
-        false => return, // No need to initialize box IDs if collisions are not applied
-        true => {
-            query
-                .iter_mut()
-                .for_each(|(entity)| {
-                    commands.entity(entity).insert(BoxID { id: 0 });
-                });},
-    }
+    query
+        .iter_mut()
+        .for_each(|(entity)| {
+            commands.entity(entity).insert(BoxID { id: 0 });
+        });
 }
 
 
 /// Assigns box IDs to atoms
 pub fn assign_boxid_system(
     mut query: Query<(&Position, &mut BoxID), With<Atom>>,
-    collisions_option: Res<ApplyCollisionsOption>,
     params: Res<CollisionParameters>,
     batch_strategy: Res<AtomECSBatchStrategy>,
 ) {
-    match collisions_option.apply_collision {
-        false => return,
-        true => {
-            query
-                .par_iter_mut()
-                .batching_strategy(batch_strategy.0.clone())
-                .for_each(|(position, mut boxid)| {
-                    boxid.id = pos_to_id(position.pos, params.box_number, params.box_width);
-                });
-        }
-    }
+    query
+        .par_iter_mut()
+        .batching_strategy(batch_strategy.0.clone())
+        .for_each(|(position, mut boxid)| {
+            boxid.id = pos_to_id(position.pos, params.box_number, params.box_width);
+        });
 }
+
 
 fn pos_to_id(pos: Vector3<f64>, n: i64, width: f64) -> i64 {
     //Assume that atoms that leave the grid are too sparse to collide, so disregard them
