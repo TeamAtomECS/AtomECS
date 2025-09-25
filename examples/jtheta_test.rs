@@ -18,7 +18,7 @@ use lib::atom_sources::emit::{EmitFixedRate, AtomNumberToEmit};
 use lib::atom_sources::mass::{MassRatio, MassDistribution};
 use lib::atom_sources::oven::{OvenAperture, Oven};
 use lib::collisions::{CollisionPlugin, ApplyAtomCollisions, ApplyWallCollisions};
-use lib::collisions::wall_collisions::{WallData, WallType, NumberOfWallCollisions};
+use lib::collisions::wall_collisions::{WallData, WallType};
 
 fn main() {
     let now = Instant::now();
