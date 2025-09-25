@@ -306,6 +306,8 @@ pub mod tests {
     use nalgebra::Vector3;
     #[allow(unused_imports)]
     use bevy::prelude::*;
+    #[allow(unused_imports)]
+    use crate::simulation::SimulationBuilder;
     extern crate bevy;
 
     #[test]
