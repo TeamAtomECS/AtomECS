@@ -20,7 +20,7 @@ pub struct LaserIntensitySampler {
 impl Default for LaserIntensitySampler {
     fn default() -> Self {
         LaserIntensitySampler {
-            /// Intensity in SI units of W/m^2
+            // Intensity in SI units of W/m^2
             intensity: f64::NAN,
         }
     }

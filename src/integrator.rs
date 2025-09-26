@@ -101,7 +101,7 @@ fn clear_force(mut query: Query<&mut Force>, batch_strategy: Res<AtomECSBatchStr
 
 /// Stores the value of the force calculation from the previous frame.
 #[derive(Component, Default)]
-pub struct OldForce(Force);
+pub struct OldForce(pub Force);
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum IntegrationSet {
@@ -135,8 +135,8 @@ impl Plugin for IntegrationPlugin {
     }
 }
 
-pub mod tests {
-    #[allow(unused_imports)]
+#[cfg(test)]
+mod tests {
     use super::*;
 
     #[test]
@@ -192,8 +192,7 @@ pub mod tests {
         app.world_mut().insert_resource(Timestep { delta: dt });
 
         // run simulation loop 1_000 times.
-        
-        let n_steps = 50000;
+        let n_steps = 1000;
         for _i in 0..n_steps {
             app.update()
         }

@@ -16,3 +16,7 @@
 *.blend
 *.blend1
 .idea/
+/images
+/data_analysis
+*.png
+*.gif

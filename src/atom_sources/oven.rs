@@ -7,7 +7,6 @@ use std::marker::PhantomData;
 use super::emit::AtomNumberToEmit;
 use super::precalc::{MaxwellBoltzmannSource, PrecalculatedSpeciesInformation};
 use super::species::{AtomCreator};
-use crate::constant;
 use crate::constant::PI;
 use crate::initiate::*;
 
@@ -132,12 +131,12 @@ pub struct Oven<T> where T : AtomCreator {
     pub direction: Vector3<f64>,
 
     /// Angular distribution for atoms emitted by the oven.
-    theta_distribution: WeightedProbabilityDistribution,
+    pub theta_distribution: WeightedProbabilityDistribution,
 
     /// The maximum angle theta at which atoms can be emitted from the oven. This can be constricted eg by a heat shield, or 'hot lip'.
     pub max_theta: f64,
 
-    phantom : PhantomData<T>
+    pub phantom : PhantomData<T>
 }
 impl<T> MaxwellBoltzmannSource for Oven<T> where T : AtomCreator {
     fn get_temperature(&self) -> f64 {
@@ -161,12 +160,17 @@ impl<T> Oven<T> where T : AtomCreator {
             }
             OvenAperture::Circular { radius, thickness } => {
                 let dir = self.direction.normalize();
-                let dir_1 = dir.cross(&Vector3::new(2.0, 1.0, 0.5)).normalize();
+                let dir_1 = dir.cross(&Vector3::new(2.3, 1.2, 0.3)).normalize();
                 let dir_2 = dir.cross(&dir_1).normalize();
-                let theta = rng.random_range(0.0..2. * constant::PI);
-                let r = rng.random_range(0.0..radius);
+                let (x, y) = loop {
+                    let x = rng.random_range(-radius..radius);
+                    let y = rng.random_range(-radius..radius);
+                    if x.powi(2) + y.powi(2) < radius.powi(2){
+                        break (x, y);
+                    }
+                };
                 let h = rng.random_range(-0.5 * thickness..0.5 * thickness);
-                dir * h + r * dir_1 * theta.sin() + r * dir_2 * theta.cos()
+                dir * h + x * dir_1 + y * dir_2
             }
         }
     }
@@ -294,5 +298,3 @@ fn create_jtheta_distribution(
 
     WeightedProbabilityDistribution::new(thetas, weights)
 }
-
-

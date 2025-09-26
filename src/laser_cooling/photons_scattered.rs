@@ -35,7 +35,7 @@ where
 {
     fn default() -> Self {
         TotalPhotonsScattered {
-            /// Number of photons scattered from all beams
+            // Number of photons scattered from all beams
             total: f64::NAN,
             phantom: PhantomData,
         }
@@ -74,7 +74,7 @@ where
 {
     fn default() -> Self {
         ExpectedPhotonsScattered {
-            ///photons scattered by the atom from a specific beam
+            // photons scattered by the atom from a specific beam
             scattered: f64::NAN,
             phantom: PhantomData,
         }
@@ -163,7 +163,7 @@ where
 {
     fn default() -> Self {
         ActualPhotonsScattered {
-            ///  number of photons actually scattered by the atom from a specific beam
+            //  number of photons actually scattered by the atom from a specific beam
             scattered: 0.0,
             phantom: PhantomData,
         }

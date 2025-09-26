@@ -36,12 +36,12 @@ fn deflag_new_atoms(mut commands: Commands, query: Query<Entity, With<NewlyCreat
 pub struct InitiatePlugin;
 impl Plugin for InitiatePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, deflag_new_atoms.before(crate::atom_sources::emit::emit_once_system));
+        app.add_systems(Update, deflag_new_atoms.before(crate::atom_sources::emit::emit_number_per_frame_system));
     }
 }
 
-pub mod tests {
-    #[allow(unused_imports)]
+#[cfg(test)]
+mod tests {
     use super::*;
 
     /// Test the [NewlyCreated] component is properly removed from atoms after an update.

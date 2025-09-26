@@ -1,6 +1,5 @@
 use crate::laser::intensity_gradient::LaserIntensityGradientSamplers;
 use bevy::prelude::*;
-extern crate nalgebra;
 use crate::atom::Force;
 use crate::dipole::DipoleLight;
 use crate::dipole::Polarizability;
@@ -30,14 +29,12 @@ pub fn apply_dipole_force_system<const N: usize>(
 
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::*;
-
-    extern crate bevy;
     use assert_approx_eq::assert_approx_eq;
+    use nalgebra::Vector3;
+    // use bevy::prelude::*;
     use crate::integrator::AtomECSBatchStrategy;
-    use bevy::prelude::*;
-    extern crate nalgebra;
     use crate::constant;
     use crate::laser;
     use crate::laser::*;
@@ -45,9 +42,8 @@ pub mod tests {
     use crate::laser::gaussian::GaussianBeam;
     use crate::laser::DEFAULT_BEAM_LIMIT;
     use crate::laser::intensity_gradient::LaserIntensityGradientSampler;
-    use nalgebra::Vector3;
     use crate::atom::Force;
-    use crate::atom::Position;
+    // use crate::atom::Position;
 
     #[test]
     fn test_apply_dipole_force_system() {

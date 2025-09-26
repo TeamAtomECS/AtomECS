@@ -34,12 +34,9 @@ impl Plugin for DestroyAtomsPlugin {
 #[derive(Default, Component)]
 pub struct ToBeDestroyed;
 
-pub mod tests {
-    // These imports are actually needed! The compiler is getting confused and warning they are not.
-    #[allow(unused_imports)]
+#[cfg(test)]
+mod tests {
     use super::*;
-
-    #[allow(unused_imports)]
     use crate::atom::Position;
 
     #[test]

@@ -3,7 +3,7 @@
 //! This module tests the rate equation implementation in atomecs by comparison to the exact analytic results for a single beam.
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use crate::atom::{Atom, Force, Mass, Position, Velocity};
     use crate::initiate::NewlyCreated;
     use crate::integrator::Timestep;
@@ -17,9 +17,7 @@ pub mod tests {
     use crate::laser_cooling::{CoolingLight, LaserCoolingPlugin};
     use crate::simulation;
     use crate::species::Rubidium87_780D2;
-    extern crate nalgebra;
     use assert_approx_eq::assert_approx_eq;
-    use bevy::prelude::*;
     use nalgebra::Vector3;
 
     #[test]

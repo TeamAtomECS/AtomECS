@@ -22,7 +22,6 @@ pub struct Position {
 impl Default for Position {
     fn default() -> Self {
         Position {
-            /// position in 3D in units of m
             pos: Vector3::new(0.0, 0.0, 0.0),
         }
     }

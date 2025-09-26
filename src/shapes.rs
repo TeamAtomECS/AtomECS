@@ -36,8 +36,8 @@ pub struct Cylinder {
 impl Cylinder {
     pub fn new(radius: f64, length: f64, direction: Vector3<f64>) -> Cylinder {
         let dir = Vector3::new(0.23, 1.2, 0.4563).normalize();
-        let perp_x = direction.normalize().cross(&dir);
-        let perp_y = direction.normalize().cross(&perp_x);
+        let perp_x = direction.normalize().cross(&dir).normalize();
+        let perp_y = direction.normalize().cross(&perp_x).normalize();
         Cylinder {
             radius,
             length,
@@ -182,5 +182,50 @@ impl Surface for Cuboid {
         };
         let position = surface_position + point;
         (position, normal)
+    }
+}
+
+/// A cylindrical Pipe, open at both ends.
+#[derive(Component)]
+#[component(storage = "SparseSet")]
+pub struct CylindricalPipe {
+    /// Radius of the cylindrical volume.
+    pub radius: f64,
+    /// Length of the cylindrical volume.
+    pub length: f64,
+    /// A normalised vector, aligned to the direction of the cylinder.
+    pub direction: Vector3<f64>,
+    /// A normalised vector, aligned perpendicular to the cylinder.
+    pub perp_x: Vector3<f64>,
+    /// A normalised vector, aligned perpendicular to the cylinder.
+    pub perp_y: Vector3<f64>,
+}
+
+impl CylindricalPipe {
+    pub fn new(radius: f64, length: f64, direction: Vector3<f64>) -> CylindricalPipe {
+        let dir = Vector3::new(0.23, 1.2, 0.4563).normalize();
+        let perp_x = direction.normalize().cross(&dir).normalize();
+        let perp_y = direction.normalize().cross(&perp_x).normalize();
+        CylindricalPipe {
+            radius,
+            length,
+            direction: direction.normalize(),
+            perp_x,
+            perp_y,
+        }
+    }
+}
+
+impl Surface for CylindricalPipe {
+    fn get_random_point_on_surface(
+        &self,
+        surface_position: &Vector3<f64>,
+    ) -> (Vector3<f64>, Vector3<f64>) {
+        let mut rng = rand::rng();
+        let angle = rng.random_range(0.0..2.0 * std::f64::consts::PI);
+        let axial = rng.random_range(-self.length..self.length) / 2.0;
+        let normal = self.perp_x * angle.cos() + self.perp_y * angle.sin();
+        let point = surface_position + normal * self.radius + self.direction * axial;
+        (point, normal)
     }
 }

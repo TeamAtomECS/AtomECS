@@ -20,6 +20,8 @@ use std::fs::read_to_string;
 use std::fs::File;
 use std::time::Instant;
 
+use bevy::app::TaskPoolThreadAssignmentPolicy;
+
 extern crate serde;
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +34,7 @@ pub struct BenchmarkConfiguration {
 impl Default for BenchmarkConfiguration {
     fn default() -> Self {
         BenchmarkConfiguration {
-            n_atoms: 10000,
+            n_atoms: 1_000_000,
             n_threads: 12,
             n_steps: 5000,
         }
@@ -56,14 +58,6 @@ fn main() {
     let mut app = App::new();
     app.add_plugins(LaserPlugin::<{ BEAM_NUMBER }>);
     app.add_plugins(LaserCoolingPlugin::<Rubidium87_780D2, { BEAM_NUMBER }>::default());
-    app.add_plugins(
-        DefaultPlugins.set(TaskPoolPlugin {
-            task_pool_options: TaskPoolOptions::with_num_threads(10),
-        }), // .set(LogPlugin {
-            //     level: Level::DEBUG,
-            //     filter: "bevy_core=trace".to_string(),
-            // }),
-    );
     app.add_plugins(atomecs::integrator::IntegrationPlugin);
     app.add_plugins(atomecs::initiate::InitiatePlugin);
     app.add_plugins(atomecs::magnetic::MagneticsPlugin);
@@ -72,6 +66,60 @@ fn main() {
     //app.add_startup_system(setup_world);
 
     // TODO: Configure bevy compute pool size
+    
+    // Enabling the task pool plugin with custom thread assignment policy settings,
+    // requires the regex features to be enabled in Cargo.toml. This seems to perform the same as the default settings.
+    let task_pool_options = TaskPoolOptions {
+        // Use 25% of cores for IO, at least 1, no more than 4
+        io: TaskPoolThreadAssignmentPolicy {
+            min_threads: 0,
+            max_threads: 0,
+            percent: 0.0,
+            on_thread_spawn: None,
+            on_thread_destroy: None,
+        },
+
+        // Use 25% of cores for async compute, at least 1, no more than 4
+        async_compute: TaskPoolThreadAssignmentPolicy {
+            min_threads: 0,
+            max_threads: 0,
+            percent: 0.0,
+            on_thread_spawn: None,
+            on_thread_destroy: None,
+        },
+        min_total_threads: 1,
+        max_total_threads: usize::MAX,
+        compute: TaskPoolThreadAssignmentPolicy {
+            min_threads: 1,
+            max_threads: usize::MAX,
+            percent: 100.0,
+            on_thread_spawn: None,
+            on_thread_destroy: None,
+        },
+    };
+    
+    app.add_plugins(
+        DefaultPlugins
+        .set(TaskPoolPlugin {
+            task_pool_options
+        }),
+        // .set(LogPlugin {
+        //     level: Level::DEBUG,
+        //     filter: "bevy_core=trace".to_string(),
+        // }),
+    );
+
+    // This (original) however seems to be worse
+    // app.add_plugins(
+    //     DefaultPlugins
+    //     .set(TaskPoolPlugin {
+    //         task_pool_options: TaskPoolOptions::with_num_threads(10),
+    //     }),
+    //     // .set(LogPlugin {
+    //     //     level: Level::DEBUG,
+    //     //     filter: "bevy_core=trace".to_string(),
+    //     // }),
+    // );
 
     // Create magnetic field.
     app.world_mut()

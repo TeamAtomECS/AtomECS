@@ -19,7 +19,7 @@ pub struct DopplerShiftSampler {
 impl Default for DopplerShiftSampler {
     fn default() -> Self {
         DopplerShiftSampler {
-            /// Doppler shift with respect to laser beam, in SI units of rad/s.
+            // Doppler shift with respect to laser beam, in SI units of rad/s.
             doppler_shift: f64::NAN,
         }
     }

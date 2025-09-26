@@ -21,7 +21,7 @@ pub struct RateCoefficient<T>
 where
     T: TransitionComponent,
 {
-    /// rate coefficient in Hz
+    // rate coefficient in Hz
     pub rate: f64,
     phantom: PhantomData<T>,
 }
@@ -31,7 +31,7 @@ where
 {
     fn default() -> Self {
         RateCoefficient {
-            /// rate coefficient in Hz
+            // rate coefficient in Hz
             rate: f64::NAN,
             phantom: PhantomData,
         }

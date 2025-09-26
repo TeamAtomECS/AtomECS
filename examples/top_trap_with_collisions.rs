@@ -4,12 +4,14 @@ extern crate atomecs as lib;
 extern crate nalgebra;
 use lib::atom::{Atom, Force, Mass, Position, Velocity};
 use lib::collisions::CollisionPlugin;
-use lib::collisions::{ApplyCollisionsOption, CollisionParameters, CollisionsTracker};
+use lib::collisions::atom_collisions::{CollisionParameters, CollisionsTracker};
+use lib::collisions::{ApplyAtomCollisions, ApplyWallCollisions};
 use lib::initiate::NewlyCreated;
 use lib::integrator::Timestep;
 use lib::magnetic::force::{MagneticDipole};
 use lib::magnetic::quadrupole::QuadrupoleField3D;
 use lib::magnetic::top::UniformFieldRotator;
+use lib::magnetic::uniform::UniformMagneticField;
 use lib::output::file::FileOutputPlugin;
 use lib::output::file::Text;
 use lib::simulation::SimulationBuilder;
@@ -38,7 +40,9 @@ fn main() {
         .spawn(UniformFieldRotator{
             amplitude: 2e-3,
             frequency: 3000.0,
-        }); // Time averaged TOP theory assumes rotation frequency much greater than velocity of atoms
+        })
+        .insert(UniformMagneticField {field: Vector3::new(0.0, 0.0, 0.0)})
+        .insert(Position::default()); // Time averaged TOP theory assumes rotation frequency much greater than velocity of atoms
 
     let p_dist = Normal::new(0.0, 50e-6).unwrap();
     let v_dist = Normal::new(0.0, 0.004).unwrap(); // ~100nK
@@ -66,7 +70,8 @@ fn main() {
             .insert(Mass { value: 87.0 });
     }
 
-    sim.world_mut().insert_resource(ApplyCollisionsOption{apply_collision: true });
+    sim.world_mut().insert_resource(ApplyAtomCollisions(true));
+    sim.world_mut().insert_resource(ApplyWallCollisions(false));
     sim.world_mut().insert_resource(CollisionParameters {
         macroparticle: 4e2,
         box_number: 200, //Any number large enough to cover entire cloud with collision boxes. Overestimating box number will not affect performance.

@@ -35,7 +35,6 @@ pub struct AtomNumberToEmit {
 
 
 /// Calculates the number of atoms to emit per frame for fixed atoms-per-timestep ovens
-/// Not doing parallel iteration here, expect few ovens.
 pub fn emit_number_per_frame_system(
     mut query: Query<(&EmitNumberPerFrame, &mut AtomNumberToEmit)>,
 ) {
@@ -77,17 +76,8 @@ pub fn emit_once_system(
 }
 
 #[cfg(test)]
-pub mod tests {
-    // These imports are actually needed! The compiler is getting confused and warning they are not.
-    #[allow(unused_imports)]
+mod tests {
     use super::*;
-    // extern crate specs;
-    #[allow(unused_imports)]
-    // use specs::{Builder, Entity, RunNow, World};
-    use bevy::prelude::*;
-    extern crate nalgebra;
-    #[allow(unused_imports)]
-    use nalgebra::Vector3;
 
     #[test]
     fn test_fixed_rate_emitter() {

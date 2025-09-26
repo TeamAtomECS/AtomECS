@@ -75,8 +75,8 @@ pub enum LaserSystemsSet {
     IndexLasers,
 }
 
-pub mod tests {
-    #[allow(unused_imports)]
+#[cfg(test)]
+mod tests {
     use super::*;
 
     /// Test samplers are added to [NewlyCreated] entities.

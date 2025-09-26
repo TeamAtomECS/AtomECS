@@ -21,7 +21,7 @@ pub struct LaserIntensityGradientSampler {
 impl Default for LaserIntensityGradientSampler {
     fn default() -> Self {
         LaserIntensityGradientSampler {
-            /// Intensity in SI units of W/m^2
+            // Intensity in SI units of W/m^2
             gradient: Vector3::new(f64::NAN, f64::NAN, f64::NAN),
         }
     }

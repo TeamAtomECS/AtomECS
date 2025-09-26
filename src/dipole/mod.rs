@@ -4,7 +4,6 @@
 
 use crate::{constant};
 use crate::laser::index::LaserIndex;
-use crate::integrator::AtomECSBatchStrategy;
 use crate::dipole::force::apply_dipole_force_system;
 use crate::laser::LaserSystemsSet;
 
