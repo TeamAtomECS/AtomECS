@@ -16,8 +16,6 @@ use rand::distr::weighted::WeightedIndex;
 use rand::Rng;
 use std::marker::PhantomData;
 
-// use crate::simulation::Plugin;
-
 use self::species::AtomCreator;
 
 #[derive(Resource)]

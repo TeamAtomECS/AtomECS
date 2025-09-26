@@ -90,6 +90,6 @@ impl<const N: usize> Plugin for DipolePlugin<N> {
         app
             .add_systems(Update, 
                 attach_index_to_dipole_light_system
-                .before(LaserSystemsSet::IndexLasers)); // Perhaps there is a better way of scheduling this?
+                .before(LaserSystemsSet::IndexLasers)); 
     }
 }
