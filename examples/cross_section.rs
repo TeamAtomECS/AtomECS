@@ -41,11 +41,12 @@ fn main() {
         .create_entity()
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: radius,
+            w0_x: radius,
+            w0_y: radius,
             power,
             direction: Vector3::x(),
-            rayleigh_range: f64::INFINITY,
-            ellipticity: 0.0,
+            rayleigh_range_x: f64::INFINITY,
+            rayleigh_range_y: f64::INFINITY,
         })
         .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,

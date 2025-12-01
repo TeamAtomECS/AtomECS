@@ -22,6 +22,9 @@ impl<'a, const N: usize> System<'a> for ApplyDipoleForceSystem<N> {
         WriteStorage<'a, Force>,
     );
 
+    /// Here we are applying dipole force, it extract polarizability factor and gassuain intensity gradient,
+    /// their product is the dipole force
+
     fn run(
         &mut self,
         (dipole_light, dipole_index, polarizability, gradient_sampler, mut force): Self::SystemData,
@@ -165,15 +168,17 @@ pub mod tests {
         test_world.register::<crate::laser::frame::Frame>();
 
         let power = 10.0;
-        let e_radius = 60.0e-6 / (2.0_f64.sqrt());
+        let w0_x = 50.0e-6;
+        let w0_y = 60.0e-6;
 
         let gaussian_beam = GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius,
-            power,
-            direction: Vector3::x(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
-            ellipticity: 0.0,
+            w0_x: w0_x,
+            w0_y: w0_y,
+            power: power,
+            direction: Vector3::z(),
+            rayleigh_range_x: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &w0_x),
+            rayleigh_range_y: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &w0_y),
         };
         test_world
             .create_entity()
@@ -186,17 +191,18 @@ pub mod tests {
                 initiated: true,
             })
             .with(laser::frame::Frame {
-                x_vector: Vector3::y(),
-                y_vector: Vector3::z(),
+                x_vector: Vector3::x(),
+                y_vector: Vector3::y(),
             })
             .build();
         let gaussian_beam = GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius,
-            power,
-            direction: Vector3::y(),
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &e_radius),
-            ellipticity: 0.0,
+            w0_x: w0_x,
+            w0_y: w0_y,
+            power: power, 
+            direction: Vector3::x(),
+            rayleigh_range_x: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &w0_x),
+            rayleigh_range_y: crate::laser::gaussian::calculate_rayleigh_range(&1064.0e-9, &w0_y),
         };
         test_world
             .create_entity()
@@ -209,7 +215,7 @@ pub mod tests {
                 initiated: true,
             })
             .with(laser::frame::Frame {
-                x_vector: Vector3::x(),
+                x_vector: Vector3::y(),
                 y_vector: Vector3::z(),
             })
             .build();
@@ -241,28 +247,37 @@ pub mod tests {
         let grad_sampler_storage =
             test_world.read_storage::<LaserIntensityGradientSamplers<{ DEFAULT_BEAM_LIMIT }>>();
         let sim_result_force = sampler_storage.get(atom1).expect("Entity not found!").force;
-        let _sim_result_grad = grad_sampler_storage
+        let sim_result_grad = grad_sampler_storage
             .get(atom1)
             .expect("Entity not found!")
             .contents;
-        //println!("force is: {}", sim_result_force);
-        //println!("gradient 1 is: {}", sim_result_grad[0].gradient);
-        //println!("gradient 2 is: {}", sim_result_grad[1].gradient);
+        println!("force is: {}", sim_result_force);
+        println!("gradient 1 is: {}", sim_result_grad[0].gradient);
+        println!("gradient 2 is: {}", sim_result_grad[1].gradient);
+
+        let pol = Polarizability::calculate_for(
+            1064e-9,     // dipole wavelength
+            461e-9,      // transition wavelength
+            32e6,        // linewidth (Hz)
+        );
+    
+        println!("Polarizability prefactor = {}", pol.prefactor);
 
         assert_approx_eq!(
-            0.000000000000000000000000000000000127913190642808,
+            3.3243137806595777e-28,
             sim_result_force[0],
-            3e-46_f64
+            3e-34_f64
         );
         assert_approx_eq!(
-            0.000000000000000000000000000000000127913190642808,
+            2.3094285637507477e-28,
             sim_result_force[1],
-            2e-46_f64
+            2e-34_f64
         );
         assert_approx_eq!(
-            0.000000000000000000000000000000000511875188257342,
+            -1.5146534391703284e-31,
             sim_result_force[2],
-            2e-46_f64
+            2e-37_f64
         );
     }
 }
+

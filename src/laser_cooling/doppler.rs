@@ -139,10 +139,11 @@ pub mod tests {
             .with(GaussianBeam {
                 direction: Vector3::new(1.0, 0.0, 0.0),
                 intersection: Vector3::new(0.0, 0.0, 0.0),
-                e_radius: 2.0,
+                w0_x: 2.0,
+                w0_y: 2.0,
                 power: 1.0,
-                rayleigh_range: gaussian::calculate_rayleigh_range(&wavelength, &2.0),
-                ellipticity: 0.0,
+                rayleigh_range_x: gaussian::calculate_rayleigh_range(&wavelength, &2.0),
+                rayleigh_range_y: gaussian::calculate_rayleigh_range(&wavelength, &2.0),
             })
             .build();
 

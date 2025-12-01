@@ -30,16 +30,18 @@ fn main() {
 
     // Create dipole laser.
     let power = 10.0;
-    let e_radius = 60.0e-6 / (2.0_f64.sqrt());
+    let w0_x = 60.0e-6; 
+    let w0_y = 60.0e-6;
     let wavelength = 1064.0e-9;
 
     let gaussian_beam = GaussianBeam {
         intersection: Vector3::new(0.0, 0.0, 0.0),
-        e_radius,
+        w0_x,
+        w0_y,
         power,
         direction: Vector3::x(),
-        rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &e_radius),
-        ellipticity: 0.0,
+        rayleigh_range_x: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &w0_x),
+        rayleigh_range_y: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &w0_y),
     };
     sim.world
         .create_entity()
@@ -53,11 +55,12 @@ fn main() {
 
     let gaussian_beam = GaussianBeam {
         intersection: Vector3::new(0.0, 0.0, 0.0),
-        e_radius,
+        w0_x,
+        w0_y,
         power,
         direction: Vector3::y(),
-        rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &e_radius),
-        ellipticity: 0.0,
+        rayleigh_range_x: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &w0_x),
+        rayleigh_range_y: crate::laser::gaussian::calculate_rayleigh_range(&wavelength, &w0_y),
     };
     sim.world
         .create_entity()

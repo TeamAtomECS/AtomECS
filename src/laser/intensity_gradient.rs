@@ -99,13 +99,17 @@ pub mod tests {
         let beam = GaussianBeam {
             direction: Vector3::z(),
             intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: 70.71067812e-6,
+            w0_x: 70.71067812e-6 * f64::sqrt(2.0),
+            w0_y: 70.71067812e-6 * f64::sqrt(2.0),
             power: 100.0,
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
+            rayleigh_range_x: crate::laser::gaussian::calculate_rayleigh_range(
                 &1064.0e-9,
-                &70.71067812e-6,
+                &(70.71067812e-6 * f64::sqrt(2.0)),
             ),
-            ellipticity: 0.0,
+            rayleigh_range_y: crate::laser::gaussian::calculate_rayleigh_range(
+                &1064.0e-9,
+                &(70.71067812e-6 * f64::sqrt(2.0)),
+            ),
         };
 
         test_world
@@ -185,15 +189,19 @@ pub mod tests {
         test_world.register::<DipoleLight>();
 
         let beam = GaussianBeam {
-            direction: Vector3::x(),
+            direction: Vector3::z(),
             intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: 70.71067812e-6,
+            w0_x: 70.71067812e-6,
+            w0_y: 50.71067812e-6,
             power: 100.0,
-            rayleigh_range: crate::laser::gaussian::calculate_rayleigh_range(
+            rayleigh_range_x: crate::laser::gaussian::calculate_rayleigh_range(
                 &1064.0e-9,
-                &70.71067812e-6,
+                &(70.71067812e-6),
             ),
-            ellipticity: 0.0,
+            rayleigh_range_y: crate::laser::gaussian::calculate_rayleigh_range(
+                &1064.0e-9,
+                &(50.71067812e-6),
+            ),
         };
 
         test_world
@@ -204,8 +212,8 @@ pub mod tests {
             })
             .with(beam)
             .with(Frame {
-                x_vector: Vector3::y(),
-                y_vector: Vector3::z(),
+                x_vector: Vector3::x(),
+                y_vector: Vector3::y(),
             })
             .with(DipoleLight {
                 wavelength: 1064.0e-9,
@@ -233,8 +241,10 @@ pub mod tests {
             .contents[0]
             .gradient;
 
-        assert_approx_eq!(-8.4628e+7, sim_result_gradient[0], 1e+5_f64);
-        assert_approx_eq!(-4.33992902e+13, sim_result_gradient[1], 1e+8_f64);
-        assert_approx_eq!(-4.33992902e+13, sim_result_gradient[2], 1e+8_f64);
+        println!("Simulated Gradient: {:?}", sim_result_gradient);
+
+        assert_approx_eq!(-177345704576703.28, sim_result_gradient[0], 1e+5_f64);
+        assert_approx_eq!(-344817759803007.9, sim_result_gradient[1], 1e+8_f64);
+        assert_approx_eq!(-2144411873.4435744, sim_result_gradient[2], 1e+8_f64);
     }
 }

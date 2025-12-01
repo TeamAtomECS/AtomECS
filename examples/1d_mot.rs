@@ -43,11 +43,12 @@ fn main() {
         .create_entity()
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: 0.01,
+            w0_x: 0.01,
+            w0_y: 0.01,
             power,
             direction: -Vector3::z(),
-            rayleigh_range: f64::INFINITY,
-            ellipticity: 0.0,
+            rayleigh_range_x: f64::INFINITY,
+            rayleigh_range_y: f64::INFINITY,
         })
         .with(CoolingLight::for_transition::<Strontium88_461>(
             detuning,
@@ -58,11 +59,12 @@ fn main() {
         .create_entity()
         .with(GaussianBeam {
             intersection: Vector3::new(0.0, 0.0, 0.0),
-            e_radius: 0.01,
+            w0_x: 0.01,
+            w0_y: 0.01,
             power,
             direction: Vector3::z(),
-            rayleigh_range: f64::INFINITY,
-            ellipticity: 0.0,
+            rayleigh_range_x: f64::INFINITY,
+            rayleigh_range_y: f64::INFINITY,
         })
         .with(CoolingLight::for_transition::<Strontium88_461>(
             detuning,

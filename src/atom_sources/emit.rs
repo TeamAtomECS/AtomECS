@@ -49,7 +49,7 @@ impl<'a> System<'a> for EmitNumberPerFrameSystem {
     );
 
     fn run(&mut self, (emit_numbers, mut numbers_to_emit): Self::SystemData) {
-        for (emit_number, mut number_to_emit) in (&emit_numbers, &mut numbers_to_emit).join() {
+       for (emit_number, mut number_to_emit) in (&emit_numbers, &mut numbers_to_emit).join() {
             number_to_emit.number = emit_number.number;
         }
     }

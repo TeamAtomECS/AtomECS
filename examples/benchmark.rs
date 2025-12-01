@@ -86,11 +86,12 @@ fn main() {
         .create_entity()
         .with(GaussianBeam {
             intersection: beam_centre,
-            e_radius: radius,
+            w0_x: radius,
+            w0_y: radius,
             power,
             direction: Vector3::new(0.0, 0.0, 1.0),
-            rayleigh_range: f64::INFINITY,
-            ellipticity: 0.0,
+            rayleigh_range_x: f64::INFINITY,
+            rayleigh_range_y: f64::INFINITY,
         })
         .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,
@@ -101,11 +102,12 @@ fn main() {
         .create_entity()
         .with(GaussianBeam {
             intersection: beam_centre,
-            e_radius: radius,
+            w0_x: radius,
+            w0_y: radius,
             power,
             direction: Vector3::new(0.0, 0.0, -1.0),
-            rayleigh_range: f64::INFINITY,
-            ellipticity: 0.0,
+            rayleigh_range_x: f64::INFINITY,
+            rayleigh_range_y: f64::INFINITY,
         })
         .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,
@@ -116,11 +118,12 @@ fn main() {
         .create_entity()
         .with(GaussianBeam {
             intersection: beam_centre,
-            e_radius: radius,
+            w0_x: radius,
+            w0_y: radius,
             power,
             direction: Vector3::new(-1.0, 0.0, 0.0),
-            rayleigh_range: f64::INFINITY,
-            ellipticity: 0.0,
+            rayleigh_range_x: f64::INFINITY,
+            rayleigh_range_y: f64::INFINITY,
         })
         .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,
@@ -131,11 +134,12 @@ fn main() {
         .create_entity()
         .with(GaussianBeam {
             intersection: beam_centre,
-            e_radius: radius,
+            w0_x: radius,
+            w0_y: radius,
             power,
             direction: Vector3::new(1.0, 0.0, 0.0),
-            rayleigh_range: f64::INFINITY,
-            ellipticity: 0.0,
+            rayleigh_range_x: f64::INFINITY,
+            rayleigh_range_y: f64::INFINITY,
         })
         .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,
@@ -146,11 +150,12 @@ fn main() {
         .create_entity()
         .with(GaussianBeam {
             intersection: beam_centre,
-            e_radius: radius,
+            w0_x: radius,
+            w0_y: radius,
             power,
             direction: Vector3::new(0.0, 1.0, 0.0),
-            rayleigh_range: f64::INFINITY,
-            ellipticity: 0.0,
+            rayleigh_range_x: f64::INFINITY,
+            rayleigh_range_y: f64::INFINITY,
         })
         .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,
@@ -161,11 +166,12 @@ fn main() {
         .create_entity()
         .with(GaussianBeam {
             intersection: beam_centre,
-            e_radius: radius,
+            w0_x: radius,
+            w0_y: radius,
             power,
             direction: Vector3::new(0.0, -1.0, 0.0),
-            rayleigh_range: f64::INFINITY,
-            ellipticity: 0.0,
+            rayleigh_range_x: f64::INFINITY,
+            rayleigh_range_y: f64::INFINITY,
         })
         .with(CoolingLight::for_transition::<Rubidium87_780D2>(
             detuning,
