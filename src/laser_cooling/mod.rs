@@ -170,14 +170,17 @@ where
         if !app.is_plugin_added::<LaserPlugin<N>>() {
             panic!("This plugin requires a LaserPlugin<N> to be added to the app first.");
         }
-        app.add_systems(Update,
+        app.add_systems(
+            PreUpdate,
             (
                 attach_components_to_newly_created_atoms::<N, T>,
                 zeeman::attach_zeeman_shift_samplers_to_newly_created_atoms::<T>,
-                attach_components_to_cooling_lasers,
             )
-                .in_set(LaserCoolingSystemsSet::Set),
+                .in_set(crate::initiate::InitiateSet::AttachToNewlyCreated),
         );
+        // Configure cooling lasers in PreUpdate, so they carry `RequiresIntensityCalculation` and
+        // `LaserIndex` before the Update systems that sample laser intensity read them.
+        app.add_systems(PreUpdate, attach_components_to_cooling_lasers);
         app.add_systems(Update,
             (
                 sampler_masks::populate_cooling_light_masks::<N>
@@ -193,7 +196,9 @@ where
                     .after(LaserCoolingSystemsSet::DetuningRequirements),
                 rate::calculate_rate_coefficients::<N, T>
                     .in_set(LaserCoolingSystemsSet::TwoLevelPopulationRequirements)
-                    .after(sampler::calculate_laser_detuning::<N, T>),
+                    .after(sampler::calculate_laser_detuning::<N, T>)
+                    // Rate reads `LaserIntensitySamplers`, so it must run after intensity sampling.
+                    .after(crate::laser::LaserSystemsSet::Set),
                 twolevel::calculate_two_level_population::<N, T>
                     .after(LaserCoolingSystemsSet::TwoLevelPopulationRequirements),
                 photons_scattered::calculate_mean_total_photons_scattered::<T>

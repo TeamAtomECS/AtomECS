@@ -49,7 +49,6 @@ impl<const N: usize> Plugin for LaserPlugin<N> {
     fn build(&self, app: &mut App) {
         app.add_systems(Update,
             (
-                attach_laser_components_to_newly_created_atoms::<N>,
                 index::index_lasers
                     .in_set(LaserSystemsSet::SamplersReady)
                     .in_set(LaserSystemsSet::IndexLasers),
@@ -64,6 +63,11 @@ impl<const N: usize> Plugin for LaserPlugin<N> {
                     .after(LaserSystemsSet::SamplersReady),
             )
                 .in_set(LaserSystemsSet::Set),
+        );
+        app.add_systems(
+            PreUpdate,
+            attach_laser_components_to_newly_created_atoms::<N>
+                .in_set(crate::initiate::InitiateSet::AttachToNewlyCreated),
         );
     }
 }

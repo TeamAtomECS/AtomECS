@@ -154,9 +154,13 @@ impl Plugin for MagneticsPlugin {
                 calculate_magnetic_field_magnitude_gradient
                     .after(calculate_magnetic_field_magnitude),
                 force::apply_magnetic_forces.after(calculate_magnetic_field_magnitude_gradient),
-                attach_field_samplers_to_new_atoms,
             )
                 .in_set(MagneticSystemsSet::Set),
+        );
+        app.add_systems(
+            PreUpdate,
+            attach_field_samplers_to_new_atoms
+                .in_set(crate::initiate::InitiateSet::AttachToNewlyCreated),
         );
     }
 }

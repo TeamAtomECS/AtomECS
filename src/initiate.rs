@@ -27,16 +27,36 @@ pub struct NewlyCreated;
 ///
 /// This system runs *just before* new atoms are added to the world.
 /// Thus, any atoms flagged as [NewlyCreated] from the previous frame are deflagged before the new flagged atoms are created.
+///
+/// It runs in `Update`, after the [`InitiateSet::AttachToNewlyCreated`] systems (which run in
+/// `PreUpdate`) have attached the required components.
 fn deflag_new_atoms(mut commands: Commands, query: Query<Entity, With<NewlyCreated>>) {
     for ent in query.iter() {
         commands.entity(ent).remove::<NewlyCreated>();
     }
 }
 
+/// System set, in the [`bevy::app::PreUpdate`] schedule, for systems that attach per-atom
+/// components to [NewlyCreated] atoms.
+///
+/// Any system that reads the [NewlyCreated] marker to attach components (e.g. the sampler components
+/// added by the `magnetic`, `laser`, `laser_cooling` and `sim_region` modules) should be registered
+/// in this set. Running in `PreUpdate` guarantees the attachment happens before [`deflag_new_atoms`]
+/// (in `Update`) removes the marker, regardless of the rest of the system graph.
+#[derive(PartialEq, Clone, Hash, Debug, Eq, SystemSet)]
+pub enum InitiateSet {
+    /// Systems that attach per-atom components to [NewlyCreated] atoms.
+    AttachToNewlyCreated,
+}
+
 pub struct InitiatePlugin;
 impl Plugin for InitiatePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, deflag_new_atoms.before(crate::atom_sources::emit::emit_once_system));
+        app.configure_sets(PreUpdate, InitiateSet::AttachToNewlyCreated);
+        app.add_systems(
+            Update,
+            deflag_new_atoms.before(crate::atom_sources::emit::emit_once_system),
+        );
     }
 }
 

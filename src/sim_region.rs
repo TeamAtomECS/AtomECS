@@ -145,9 +145,13 @@ impl Plugin for SimulationRegionPlugin {
                 perform_region_tests::<Cuboid>.in_set(SimRegionSet::RegionTestVolume),
                 perform_region_tests::<Cylinder>.in_set(SimRegionSet::RegionTestVolume),
                 delete_failed_region_tests.after(SimRegionSet::RegionTestVolume),
-                attach_region_tests_to_newly_created,
             )
                 .in_set(SimRegionSet::Set),
+        );
+        app.add_systems(
+            PreUpdate,
+            attach_region_tests_to_newly_created
+                .in_set(crate::initiate::InitiateSet::AttachToNewlyCreated),
         );
         app.init_resource::<AtomECSBatchStrategy>();
     }
